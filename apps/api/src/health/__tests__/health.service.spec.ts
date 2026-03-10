@@ -1,7 +1,6 @@
 import { HealthService } from '../health.service';
 import { getConfig } from '@samachat/config';
 import { createQueueClients } from '../../observability/queues';
-import IORedis from 'ioredis';
 
 type MockQueue = { getJobCounts: jest.Mock };
 
@@ -9,6 +8,8 @@ type RedisMock = {
   ping: jest.Mock;
   get: jest.Mock;
 };
+
+const redisInstances: RedisMock[] = [];
 
 jest.mock('@samachat/config', () => ({
   getConfig: jest.fn(),
@@ -19,17 +20,22 @@ jest.mock('../../observability/queues', () => ({
 }));
 
 jest.mock('ioredis', () => {
-  return jest.fn().mockImplementation(() => ({
-    ping: jest.fn(),
-    get: jest.fn(),
-  }));
+  return jest.fn().mockImplementation(() => {
+    const instance = {
+      ping: jest.fn(),
+      get: jest.fn(),
+    };
+    redisInstances.push(instance);
+    return instance;
+  });
 });
 
 describe('HealthService', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
+    redisInstances.length = 0;
     process.env = { ...originalEnv };
   });
 
@@ -52,7 +58,10 @@ describe('HealthService', () => {
     (createQueueClients as jest.Mock).mockReturnValue([]);
 
     const service = new HealthService();
-    const redis = (IORedis as unknown as jest.Mock).mock.instances[0] as RedisMock;
+    const redis = redisInstances[0];
+    if (!redis) {
+      throw new Error('Redis instance was not created.');
+    }
     redis.ping.mockResolvedValueOnce('PONG');
 
     await expect(service.checkRedis()).resolves.toEqual({ ok: true });
@@ -63,7 +72,10 @@ describe('HealthService', () => {
     (createQueueClients as jest.Mock).mockReturnValue([]);
 
     const service = new HealthService();
-    const redis = (IORedis as unknown as jest.Mock).mock.instances[0] as RedisMock;
+    const redis = redisInstances[0];
+    if (!redis) {
+      throw new Error('Redis instance was not created.');
+    }
     redis.ping.mockRejectedValueOnce(new Error('boom'));
 
     await expect(service.checkRedis()).resolves.toEqual({
@@ -100,7 +112,10 @@ describe('HealthService', () => {
     (createQueueClients as jest.Mock).mockReturnValue([]);
 
     const service = new HealthService();
-    const redis = (IORedis as unknown as jest.Mock).mock.instances[0] as RedisMock;
+    const redis = redisInstances[0];
+    if (!redis) {
+      throw new Error('Redis instance was not created.');
+    }
     redis.get.mockResolvedValueOnce(null);
 
     await expect(service.checkWorkerHeartbeat()).resolves.toEqual({
@@ -115,7 +130,10 @@ describe('HealthService', () => {
 
     process.env.WORKER_HEARTBEAT_TTL_SECONDS = '60';
     const service = new HealthService();
-    const redis = (IORedis as unknown as jest.Mock).mock.instances[0] as RedisMock;
+    const redis = redisInstances[0];
+    if (!redis) {
+      throw new Error('Redis instance was not created.');
+    }
     redis.get.mockResolvedValueOnce(
       JSON.stringify({ timestamp: new Date().toISOString() }),
     );

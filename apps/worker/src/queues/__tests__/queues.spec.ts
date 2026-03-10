@@ -14,6 +14,22 @@ type WorkerInstance = {
 
 const workerState: WorkerInstance[] = [];
 
+const getWorker = (): WorkerInstance => {
+  const worker = workerState[0];
+  if (!worker) {
+    throw new Error('Worker was not initialized.');
+  }
+  return worker;
+};
+
+const getFailedHandler = (worker: WorkerInstance) => {
+  const handler = worker.__handlers.failed;
+  if (!handler) {
+    throw new Error('Failed handler was not registered.');
+  }
+  return handler;
+};
+
 jest.mock('bullmq', () => ({
   Worker: jest.fn().mockImplementation((name: string, processor: (job: Job<any>) => Promise<any>) => {
     const handlers: Record<string, any> = {};
@@ -100,7 +116,7 @@ describe('worker queues', () => {
     (resolveProviderName as jest.Mock).mockReturnValue('waba');
 
     startInboundProcessor(connection, queues);
-    const worker = workerState[0];
+    const worker = getWorker();
 
     const job = {
       id: 'job-1',
@@ -146,7 +162,7 @@ describe('worker queues', () => {
     });
 
     startOutboundProcessor(connection, queues);
-    const worker = workerState[0];
+    const worker = getWorker();
 
     const job = {
       id: 'job-2',
@@ -163,7 +179,8 @@ describe('worker queues', () => {
 
   it('tracks retries without DLQ when attempts remain', async () => {
     startOutboundProcessor(connection, queues);
-    const worker = workerState[0];
+    const worker = getWorker();
+    const failedHandler = getFailedHandler(worker);
 
     const job = {
       id: 'job-3',
@@ -172,7 +189,7 @@ describe('worker queues', () => {
       data: { provider: 'waba' },
     } as Job<any>;
 
-    await worker.__handlers.failed(job, new Error('fail'));
+    await failedHandler(job, new Error('fail'));
 
     expect(incrementQueueMetric).toHaveBeenCalledWith(
       connection,
@@ -184,7 +201,8 @@ describe('worker queues', () => {
 
   it('moves jobs to DLQ when retries exhausted', async () => {
     startOutboundProcessor(connection, queues);
-    const worker = workerState[0];
+    const worker = getWorker();
+    const failedHandler = getFailedHandler(worker);
 
     const job = {
       id: 'job-4',
@@ -193,7 +211,7 @@ describe('worker queues', () => {
       data: { provider: 'waba' },
     } as Job<any>;
 
-    await worker.__handlers.failed(job, new Error('fail'));
+    await failedHandler(job, new Error('fail'));
 
     expect(incrementQueueMetric).toHaveBeenCalledWith(
       connection,
