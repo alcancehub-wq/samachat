@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@samachat/config": ["packages/config/src"],
+      "@samachat/config/*": ["packages/config/src/*"],
+      "@samachat/shared": ["packages/shared/src"],
+      "@samachat/shared/*": ["packages/shared/src/*"],
+      "@samachat/logger": ["packages/logger/src"],
+      "@samachat/logger/*": ["packages/logger/src/*"],
+      "@samachat/db": ["packages/db/src"],
+      "@samachat/db/*": ["packages/db/src/*"],
+      "@samachat/messaging": ["packages/messaging/index.ts"],
+      "@samachat/messaging/*": ["packages/messaging/*"],
+      "@samachat/storage": ["packages/storage/index.ts"],
+      "@samachat/storage/*": ["packages/storage/*"]
+    },
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "paths": {
+      "@samachat/config": ["../config/dist"],
+      "@samachat/config/*": ["../config/dist/*"],
+      "@samachat/logger": ["../logger/dist"],
+      "@samachat/logger/*": ["../logger/dist/*"],
+      "@samachat/shared": ["../shared/dist"],
+      "@samachat/shared/*": ["../shared/dist/*"]
+    }
+  }
+}

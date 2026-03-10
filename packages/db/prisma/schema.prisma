@@ -1,0 +1,354 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  status        String         @default("active")
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+  audit_logs    AuditLog[]
+  campaigns     Campaign[]
+  conversations Conversation[]
+  flows         Flow[]
+  flow_nodes    FlowNode[]
+  legal_docs    LegalDocument[]
+  consents      UserConsent[]
+  legal_acceptances LegalAcceptance[]
+  preferences   UserPreference[]
+  data_requests DataRequest[]
+  data_retention_policy DataRetentionPolicy?
+  memberships   Membership[]
+  messages      Message[]
+  invites       Invite[]
+  tags          Tag[]
+  tickets       Ticket[]
+}
+
+model UserProfile {
+  id          String       @id @default(cuid())
+  auth_user_id String?     @unique
+  email       String       @unique
+  full_name   String?
+  avatar_url  String?
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+  audit_logs  AuditLog[]
+  consents    UserConsent[]
+  legal_acceptances LegalAcceptance[]
+  preferences UserPreference[]
+  data_requests DataRequest[]
+  memberships Membership[]
+  messages    Message[]
+  invites_created Invite[]
+}
+
+model Membership {
+  id         String      @id @default(cuid())
+  tenant_id  String
+  user_id    String
+  role       Role
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  tenant     Tenant      @relation(fields: [tenant_id], references: [id])
+  user       UserProfile @relation(fields: [user_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([user_id])
+}
+
+model Invite {
+  id               String      @id @default(cuid())
+  tenant_id        String
+  email            String
+  role             Role
+  token            String      @unique
+  expires_at       DateTime
+  accepted_at      DateTime?
+  created_at       DateTime    @default(now())
+  created_by_user_id String?
+  tenant           Tenant      @relation(fields: [tenant_id], references: [id])
+  created_by       UserProfile? @relation(fields: [created_by_user_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([email])
+  @@index([expires_at])
+}
+
+model LegalAcceptance {
+  id             String      @id @default(cuid())
+  tenant_id      String
+  user_id        String
+  terms_version  String
+  privacy_version String
+  accepted_at    DateTime    @default(now())
+  ip_address     String?
+  user_agent     String?
+  tenant         Tenant      @relation(fields: [tenant_id], references: [id])
+  user           UserProfile @relation(fields: [user_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([user_id])
+  @@index([terms_version])
+  @@index([privacy_version])
+}
+
+model DataRetentionPolicy {
+  id                    String   @id @default(cuid())
+  tenant_id             String   @unique
+  message_retention_days Int
+  audit_retention_days  Int
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+  tenant                Tenant   @relation(fields: [tenant_id], references: [id])
+}
+
+model Conversation {
+  id         String             @id @default(cuid())
+  tenant_id  String
+  status     ConversationStatus @default(open)
+  subject    String?
+  created_at DateTime           @default(now())
+  updated_at DateTime           @updatedAt
+  tenant     Tenant             @relation(fields: [tenant_id], references: [id])
+  messages   Message[]
+  tickets    Ticket[]
+
+  @@index([tenant_id])
+}
+
+model Message {
+  id              String       @id @default(cuid())
+  tenant_id       String
+  conversation_id String
+  sender_user_id  String?
+  direction       String
+  body            String
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+  sender          UserProfile? @relation(fields: [sender_user_id], references: [id])
+  tenant          Tenant       @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([conversation_id])
+}
+
+model Tag {
+  id         String   @id @default(cuid())
+  tenant_id  String
+  name       String
+  color      String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  tenant     Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id])
+}
+
+model Ticket {
+  id              String       @id @default(cuid())
+  tenant_id       String
+  conversation_id String
+  status          TicketStatus @default(new)
+  priority        String?
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+  tenant          Tenant       @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([conversation_id])
+}
+
+model Flow {
+  id         String     @id @default(cuid())
+  tenant_id  String
+  name       String
+  status     FlowStatus @default(draft)
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+  tenant     Tenant     @relation(fields: [tenant_id], references: [id])
+  nodes      FlowNode[]
+
+  @@index([tenant_id])
+}
+
+model FlowNode {
+  id         String   @id @default(cuid())
+  tenant_id  String
+  flow_id    String
+  type       String
+  data       Json
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  flow       Flow     @relation(fields: [flow_id], references: [id])
+  tenant     Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([flow_id])
+}
+
+model Campaign {
+  id           String         @id @default(cuid())
+  tenant_id    String
+  name         String
+  status       CampaignStatus @default(draft)
+  scheduled_at DateTime?
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
+  tenant       Tenant         @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id])
+}
+
+model AuditLog {
+  id         String       @id @default(cuid())
+  tenant_id  String
+  actor_id   String?
+  action     String
+  entity     String
+  entity_id  String?
+  metadata   Json?
+  created_at DateTime     @default(now())
+  actor      UserProfile? @relation(fields: [actor_id], references: [id])
+  tenant     Tenant       @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([actor_id])
+}
+
+model LegalDocument {
+  id         String            @id @default(cuid())
+  tenant_id  String
+  type       LegalDocumentType
+  version    String
+  content    String
+  is_active  Boolean           @default(true)
+  created_at DateTime          @default(now())
+  updated_at DateTime          @updatedAt
+  tenant     Tenant            @relation(fields: [tenant_id], references: [id])
+  consents   UserConsent[]
+
+  @@index([tenant_id])
+  @@index([type, is_active])
+}
+
+model UserConsent {
+  id          String        @id @default(cuid())
+  tenant_id   String
+  user_id     String
+  document_id String
+  accepted_at DateTime      @default(now())
+  ip_address  String?
+  user_agent  String?
+  tenant      Tenant        @relation(fields: [tenant_id], references: [id])
+  user        UserProfile   @relation(fields: [user_id], references: [id])
+  document    LegalDocument @relation(fields: [document_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([user_id])
+  @@index([document_id])
+}
+
+model UserPreference {
+  id                     String      @id @default(cuid())
+  tenant_id              String
+  user_id                String
+  theme                  String?
+  notifications_enabled  Boolean     @default(true)
+  created_at             DateTime    @default(now())
+  updated_at             DateTime    @updatedAt
+  tenant                 Tenant      @relation(fields: [tenant_id], references: [id])
+  user                   UserProfile @relation(fields: [user_id], references: [id])
+
+  @@unique([tenant_id, user_id])
+}
+
+model DataRequest {
+  id           String           @id @default(cuid())
+  tenant_id    String
+  user_id      String
+  type         DataRequestType
+  status       DataRequestStatus @default(requested)
+  details      Json?
+  requested_at DateTime         @default(now())
+  resolved_at  DateTime?
+  tenant       Tenant            @relation(fields: [tenant_id], references: [id])
+  user         UserProfile       @relation(fields: [user_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([user_id])
+}
+
+enum Role {
+  admin
+  manager
+  agent
+}
+
+enum ConversationStatus {
+  open
+  waiting
+  active
+  closed
+}
+
+enum TicketStatus {
+  new
+  open
+  pending
+  resolved
+}
+
+enum FlowStatus {
+  draft
+  active
+  archived
+}
+
+enum CampaignStatus {
+  draft
+  scheduled
+  running
+  completed
+  cancelled
+}
+
+enum LegalDocumentType {
+  terms
+  privacy
+}
+
+enum DataRequestType {
+  export
+  delete
+}
+
+enum DataRequestStatus {
+  requested
+  in_review
+  completed
+  rejected
+}
+
+model StorageAsset {
+  id           String   @id @default(cuid())
+  provider     String
+  storage_key  String
+  url          String
+  filename     String?
+  content_type String?
+  size_bytes   Int?
+  created_at   DateTime @default(now())
+
+  @@unique([provider, storage_key])
+}
+

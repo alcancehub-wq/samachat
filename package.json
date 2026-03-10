@@ -1,0 +1,49 @@
+{
+  "name": "samachat",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "predev": "pnpm -r --filter @samachat/shared build",
+    "dev": "node scripts/ensure-redis.mjs && node scripts/ensure-ports.mjs && pnpm -r --filter @samachat/web --filter @samachat/api --filter @samachat/worker dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "reset": "node scripts/reset.mjs",
+    "reset:hard": "node scripts/reset.mjs --hard",
+    "doctor": "node scripts/doctor.mjs",
+    "infra:up": "docker compose up -d redis",
+    "infra:down": "docker compose down",
+    "db:generate": "pnpm prisma:generate",
+    "db:migrate": "pnpm prisma:migrate",
+    "prisma:pull": "dotenv -e packages/db/.env -- prisma db pull --schema packages/db/prisma/schema.prisma",
+    "prisma:migrate": "dotenv -e packages/db/.env -- prisma migrate dev --schema packages/db/prisma/schema.prisma",
+    "prisma:generate": "dotenv -e packages/db/.env -- prisma generate --schema packages/db/prisma/schema.prisma",
+    "validate:p3": "ts-node scripts/validate-responsive.ts && ts-node scripts/validate-chat-flow.ts && ts-node scripts/validate-pwa.ts && ts-node scripts/smoke-dev.ts",
+    "test": "pnpm -r --filter @samachat/api --filter @samachat/worker test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.21.0",
+    "@typescript-eslint/parser": "^8.21.0",
+    "dotenv-cli": "^8.0.0",
+    "eslint": "^9.19.0",
+    "eslint-config-next": "^15.1.6",
+    "prettier": "^3.4.2",
+    "prisma": "^6.19.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  },
+  "packageManager": "pnpm@10.30.1",
+  "dependencies": {
+    "@prisma/client": "^6.19.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "ioredis": "5.9.3",
+      "@opentelemetry/api": "1.8.0"
+    }
+  }
+}
