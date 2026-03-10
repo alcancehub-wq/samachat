@@ -52,7 +52,7 @@ describe('HealthService', () => {
     (createQueueClients as jest.Mock).mockReturnValue([]);
 
     const service = new HealthService();
-    const redis = (IORedis as jest.Mock).mock.instances[0] as RedisMock;
+    const redis = (IORedis as unknown as jest.Mock).mock.instances[0] as RedisMock;
     redis.ping.mockResolvedValueOnce('PONG');
 
     await expect(service.checkRedis()).resolves.toEqual({ ok: true });
@@ -63,7 +63,7 @@ describe('HealthService', () => {
     (createQueueClients as jest.Mock).mockReturnValue([]);
 
     const service = new HealthService();
-    const redis = (IORedis as jest.Mock).mock.instances[0] as RedisMock;
+    const redis = (IORedis as unknown as jest.Mock).mock.instances[0] as RedisMock;
     redis.ping.mockRejectedValueOnce(new Error('boom'));
 
     await expect(service.checkRedis()).resolves.toEqual({
@@ -100,7 +100,7 @@ describe('HealthService', () => {
     (createQueueClients as jest.Mock).mockReturnValue([]);
 
     const service = new HealthService();
-    const redis = (IORedis as jest.Mock).mock.instances[0] as RedisMock;
+    const redis = (IORedis as unknown as jest.Mock).mock.instances[0] as RedisMock;
     redis.get.mockResolvedValueOnce(null);
 
     await expect(service.checkWorkerHeartbeat()).resolves.toEqual({
@@ -115,7 +115,7 @@ describe('HealthService', () => {
 
     process.env.WORKER_HEARTBEAT_TTL_SECONDS = '60';
     const service = new HealthService();
-    const redis = (IORedis as jest.Mock).mock.instances[0] as RedisMock;
+    const redis = (IORedis as unknown as jest.Mock).mock.instances[0] as RedisMock;
     redis.get.mockResolvedValueOnce(
       JSON.stringify({ timestamp: new Date().toISOString() }),
     );
