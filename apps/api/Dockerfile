@@ -21,8 +21,6 @@ COPY apps/api/package.json apps/api/package.json
 COPY --from=build /app/packages /app/packages
 
 RUN pnpm install --prod --frozen-lockfile
-RUN pnpm dlx prisma@6.1.0 generate --schema packages/db/prisma/schema.prisma
-
 COPY --from=build /app/apps/api/dist /app/apps/api/dist
 
 CMD ["node", "apps/api/dist/main.js"]
