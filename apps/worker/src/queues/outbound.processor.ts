@@ -2,10 +2,12 @@ import { Worker, Job } from 'bullmq';
 import { context } from '@opentelemetry/api';
 import type IORedis from 'ioredis';
 import { createJobLoggerContext, getLogger } from '@samachat/logger';
+import { getConfig } from '@samachat/config';
 import { getProviderByName } from '@samachat/messaging';
 import type { MessagingProviderName, SendMessageInput } from '@samachat/messaging';
 import type { WorkerQueues } from './index';
 import { enqueueDeadLetter } from './dead-letter';
+import { acquireQueueLock, releaseQueueLock } from './redis-lock';
 import { incrementQueueMetric } from '../observability/queue-metrics';
 import { extractTraceContext, getTracer, TraceCarrier } from '../observability/trace';
 
@@ -30,6 +32,14 @@ export function startOutboundProcessor(connection: IORedis, queues: WorkerQueues
       const parentContext = extractTraceContext(job.data?.trace);
       return context.with(parentContext, async () => {
         return tracer.startActiveSpan('queue.process outbound-messages', async (span) => {
+          const { queueLockTtlMs } = getConfig();
+          const lockKey = `samachat:lock:queue:outbound-messages:${job.id}`;
+          const lockToken = await acquireQueueLock(connection, lockKey, queueLockTtlMs);
+          if (!lockToken) {
+            outboundLogger.warn({ jobId: job.id }, 'Outbound job lock already held');
+            return { status: 'skipped', reason: 'lock-unavailable' };
+          }
+
           const { provider, input, requestId, eventId, correlationId, tenantId } = job.data;
           const providerClient = getProviderByName(provider);
           const logContext = createJobLoggerContext({
@@ -72,6 +82,7 @@ export function startOutboundProcessor(connection: IORedis, queues: WorkerQueues
             span.recordException(error as Error);
             throw error;
           } finally {
+            await releaseQueueLock(connection, lockKey, lockToken);
             span.end();
           }
         });

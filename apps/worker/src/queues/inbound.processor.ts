@@ -2,10 +2,13 @@ import { Worker, Job } from 'bullmq';
 import { context } from '@opentelemetry/api';
 import type IORedis from 'ioredis';
 import { createJobLoggerContext, getLogger } from '@samachat/logger';
+import { getConfig } from '@samachat/config';
 import { resolveProviderName } from '@samachat/messaging';
 import type { NormalizedWebhookEvent, SendMessageInput } from '@samachat/messaging';
 import type { WorkerQueues } from './index';
 import { enqueueDeadLetter } from './dead-letter';
+import { applyQueueBackpressure } from './backpressure';
+import { acquireQueueLock, releaseQueueLock } from './redis-lock';
 import { incrementQueueMetric } from '../observability/queue-metrics';
 import { extractTraceContext, getTracer, injectTraceContext, TraceCarrier } from '../observability/trace';
 
@@ -26,6 +29,14 @@ export function startInboundProcessor(connection: IORedis, queues: WorkerQueues)
       const parentContext = extractTraceContext(job.data?.trace);
       return context.with(parentContext, async () => {
         return tracer.startActiveSpan('queue.process inbound-events', async (span) => {
+          const { queueLockTtlMs } = getConfig();
+          const lockKey = `samachat:lock:queue:inbound-events:${job.id}`;
+          const lockToken = await acquireQueueLock(connection, lockKey, queueLockTtlMs);
+          if (!lockToken) {
+            logger.warn({ jobId: job.id }, 'Inbound job lock already held');
+            return { status: 'skipped', reason: 'lock-unavailable' };
+          }
+
           try {
             const { event, requestId, correlationId } = job.data;
             const providerName = resolveProviderName(event);
@@ -54,6 +65,7 @@ export function startInboundProcessor(connection: IORedis, queues: WorkerQueues)
             await tracer.startActiveSpan('queue.enqueue outbound-messages', async (enqueueSpan) => {
               try {
                 const trace = injectTraceContext();
+                await applyQueueBackpressure(connection, queues.outboundMessagesQueue, 'outbound-messages');
                 await queues.outboundMessagesQueue.add(
                   'outbound-message',
                   {
@@ -78,6 +90,7 @@ export function startInboundProcessor(connection: IORedis, queues: WorkerQueues)
               await tracer.startActiveSpan('queue.enqueue media-download', async (enqueueSpan) => {
                 try {
                   const trace = injectTraceContext();
+                  await applyQueueBackpressure(connection, queues.mediaDownloadQueue, 'media-download');
                   await queues.mediaDownloadQueue.add(
                     'media-download',
                     {
@@ -102,6 +115,7 @@ export function startInboundProcessor(connection: IORedis, queues: WorkerQueues)
             logger.info(logContext, 'Inbound event queued for outbound processing');
             return { status: 'queued', provider: providerName };
           } finally {
+            await releaseQueueLock(connection, lockKey, lockToken);
             span.end();
           }
         });

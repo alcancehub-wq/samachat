@@ -21,6 +21,17 @@ export interface QueueSettings {
   deadLetter: QueueConfig;
 }
 
+export interface QueueBackpressureConfig {
+  threshold: number;
+  delayMs: number;
+  warningCooldownMs: number;
+}
+
+export interface ProviderPoolConfig {
+  defaultSize: number;
+  sizes: Record<string, number>;
+}
+
 export interface AppConfig {
   appVersion: string;
   providerMode: ProviderMode;
@@ -52,6 +63,9 @@ export interface AppConfig {
   };
   webhook: WebhookConfig;
   queues: QueueSettings;
+  queueBackpressure: QueueBackpressureConfig;
+  queueLockTtlMs: number;
+  providerPool: ProviderPoolConfig;
 }
 
 const DEFAULTS = {
@@ -72,6 +86,11 @@ const DEFAULTS = {
   queueBackoffMs: 2000,
   queueTimeoutMs: 30000,
   queueDlqTimeoutMs: 30000,
+  queueBackpressureThreshold: 2000,
+  queueBackpressureDelayMs: 250,
+  queueBackpressureWarningCooldownMs: 30000,
+  queueLockTtlMs: 120000,
+  providerPoolSize: 1,
 };
 
 const REQUEST_MAX_BYTES = 1024 * 1024;
@@ -168,6 +187,25 @@ export const config: AppConfig = {
       attempts: 1,
       backoffMs: 0,
       timeoutMs: getNumberEnv('QUEUE_DLQ_TIMEOUT_MS', DEFAULTS.queueDlqTimeoutMs),
+    },
+  },
+  queueBackpressure: {
+    threshold: getNumberEnv(
+      'QUEUE_BACKPRESSURE_THRESHOLD',
+      DEFAULTS.queueBackpressureThreshold,
+    ),
+    delayMs: getNumberEnv('QUEUE_BACKPRESSURE_DELAY_MS', DEFAULTS.queueBackpressureDelayMs),
+    warningCooldownMs: getNumberEnv(
+      'QUEUE_BACKPRESSURE_WARNING_COOLDOWN_MS',
+      DEFAULTS.queueBackpressureWarningCooldownMs,
+    ),
+  },
+  queueLockTtlMs: getNumberEnv('QUEUE_LOCK_TTL_MS', DEFAULTS.queueLockTtlMs),
+  providerPool: {
+    defaultSize: getNumberEnv('PROVIDER_POOL_SIZE', DEFAULTS.providerPoolSize),
+    sizes: {
+      qr: getNumberEnv('PROVIDER_POOL_QR_SIZE', DEFAULTS.providerPoolSize),
+      waba: getNumberEnv('PROVIDER_POOL_WABA_SIZE', DEFAULTS.providerPoolSize),
     },
   },
 };

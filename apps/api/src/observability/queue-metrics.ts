@@ -1,14 +1,12 @@
 import type IORedis from 'ioredis';
 import { getLogger } from '@samachat/logger';
 
-export type QueueMetric = 'completed' | 'failed' | 'retries' | 'backpressure';
-
-const logger = getLogger({ service: 'worker', component: 'queue-metrics' });
+const logger = getLogger({ service: 'api', component: 'queue-metrics' });
 
 export async function incrementQueueMetric(
   connection: IORedis,
   queueName: string,
-  metric: QueueMetric,
+  metric: string,
   amount = 1,
 ) {
   try {

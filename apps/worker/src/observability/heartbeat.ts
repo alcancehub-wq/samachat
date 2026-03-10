@@ -1,10 +1,12 @@
 import type IORedis from 'ioredis';
+import { hostname } from 'os';
 import { getLogger } from '@samachat/logger';
 
 const logger = getLogger({ service: 'worker', component: 'heartbeat' });
 
 export function startWorkerHeartbeat(connection: IORedis) {
-  const workerId = process.env.WORKER_ID || 'default';
+  const workerId =
+    process.env.WORKER_ID || `worker-${hostname()}-${process.pid}-${Math.random().toString(16).slice(2)}`;
   const key = `samachat:worker:heartbeat:${workerId}`;
   const ttlSeconds = Number(process.env.WORKER_HEARTBEAT_TTL_SECONDS || 30);
   const intervalMs = Number(process.env.WORKER_HEARTBEAT_INTERVAL_MS || 10000);

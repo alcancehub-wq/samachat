@@ -2,10 +2,12 @@
 import { context } from '@opentelemetry/api';
 import type IORedis from 'ioredis';
 import { createJobLoggerContext, getLogger } from '@samachat/logger';
+import { getConfig } from '@samachat/config';
 import { createStorageProvider } from '@samachat/storage';
 import type { StorageMetadata } from '@samachat/storage';
 import type { WorkerQueues } from './index';
 import { enqueueDeadLetter } from './dead-letter';
+import { acquireQueueLock, releaseQueueLock } from './redis-lock';
 import { persistStorageMetadata } from '../storage/storage-metadata';
 import { incrementQueueMetric } from '../observability/queue-metrics';
 import { extractTraceContext, getTracer, TraceCarrier } from '../observability/trace';
@@ -31,6 +33,14 @@ export function startMediaDownloadProcessor(connection: IORedis, queues: WorkerQ
       const parentContext = extractTraceContext(job.data?.trace);
       return context.with(parentContext, async () => {
         return tracer.startActiveSpan('queue.process media-download', async (span) => {
+          const { queueLockTtlMs } = getConfig();
+          const lockKey = `samachat:lock:queue:media-download:${job.id}`;
+          const lockToken = await acquireQueueLock(connection, lockKey, queueLockTtlMs);
+          if (!lockToken) {
+            logger.warn({ jobId: job.id }, 'Media download lock already held');
+            return { status: 'skipped', reason: 'lock-unavailable' };
+          }
+
           try {
             const { mediaUrl, provider, eventId, requestId, correlationId, tenantId } = job.data;
             const logContext = createJobLoggerContext({
@@ -76,6 +86,7 @@ export function startMediaDownloadProcessor(connection: IORedis, queues: WorkerQ
 
             return { storageKey: result.storageKey, url: result.url };
           } finally {
+            await releaseQueueLock(connection, lockKey, lockToken);
             span.end();
           }
         });

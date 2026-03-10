@@ -23,21 +23,21 @@ jobs:
       - name: Build and push web image
         uses: docker/build-push-action@v6
         with:
-          context: ./apps/web
+          context: .
           file: ./apps/web/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/samachat-web:${{ github.sha }}
       - name: Build and push api image
         uses: docker/build-push-action@v6
         with:
-          context: ./apps/api
+          context: .
           file: ./apps/api/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/samachat-api:${{ github.sha }}
       - name: Build and push worker image
         uses: docker/build-push-action@v6
         with:
-          context: ./apps/worker
+          context: .
           file: ./apps/worker/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/samachat-worker:${{ github.sha }}

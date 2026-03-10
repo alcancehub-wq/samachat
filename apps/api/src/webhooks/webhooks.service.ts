@@ -4,6 +4,7 @@ import IORedis from 'ioredis';
 import { getConfig } from '@samachat/config';
 import { getLogger } from '@samachat/logger';
 import { getTracer, injectTraceContext } from '../observability/trace';
+import { incrementQueueMetric, setQueueDepthMetric } from '../observability/queue-metrics';
 import type { NormalizedWebhookEvent } from '@samachat/messaging';
 import type { InboundJobPayload } from './webhooks.types';
 import { checkAndSetIdempotency, checkAndSetReplayProtection } from './idempotency';
@@ -56,6 +57,7 @@ export class WebhooksService {
     }
 
     await this.tracer.startActiveSpan('queue.enqueue inbound-events', async (span) => {
+      await this.applyQueueBackpressure(inboundQueue, 'inbound-events');
       const trace = injectTraceContext();
       await inboundQueue.add(
         'inbound-event',
@@ -73,6 +75,40 @@ export class WebhooksService {
     );
 
     return { status: 'queued' as const, eventId: event.eventId };
+  }
+
+  private async applyQueueBackpressure(queue: Queue, queueName: string) {
+    if (!this.redis) {
+      return;
+    }
+
+    const { queueBackpressure } = getConfig();
+    const waiting = await queue.getWaitingCount();
+    const delayed = await queue.getDelayedCount();
+    const depth = waiting + delayed;
+
+    await setQueueDepthMetric(this.redis, queueName, depth);
+
+    if (depth < queueBackpressure.threshold) {
+      return;
+    }
+
+    const cooldownKey = `samachat:metrics:queue:${queueName}:backpressure-cooldown`;
+    const cooldownMs = queueBackpressure.warningCooldownMs;
+    const cooldownSet = await this.redis.set(
+      cooldownKey,
+      String(Date.now()),
+      'PX',
+      cooldownMs,
+      'NX',
+    );
+
+    if (cooldownSet) {
+      await incrementQueueMetric(this.redis, queueName, 'backpressure');
+      this.logger.warn({ queue: queueName, depth }, 'Queue backpressure applied');
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, queueBackpressure.delayMs));
   }
 
   async ensureWebhookFreshness(params: {

@@ -1,0 +1,8 @@
+flowchart LR
+  client[client] --> api[API]
+  api --> queue[queue]
+  queue --> worker[worker]
+  worker --> provider[provider]
+  provider --> callback[callback]
+  callback --> api
+  api --> client

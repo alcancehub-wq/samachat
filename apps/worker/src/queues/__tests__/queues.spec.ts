@@ -74,6 +74,15 @@ jest.mock('../dead-letter', () => ({
   enqueueDeadLetter: jest.fn(),
 }));
 
+jest.mock('../backpressure', () => ({
+  applyQueueBackpressure: jest.fn().mockResolvedValue(0),
+}));
+
+jest.mock('../redis-lock', () => ({
+  acquireQueueLock: jest.fn().mockResolvedValue('lock-token'),
+  releaseQueueLock: jest.fn().mockResolvedValue(undefined),
+}));
+
 describe('worker queues', () => {
   const connection = {} as any;
   const queues = {

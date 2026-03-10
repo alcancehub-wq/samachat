@@ -1,0 +1,10 @@
+flowchart LR
+  web[web] --> api[api]
+  api --> queue[queue]
+  queue --> worker[worker]
+  api --> redis[redis]
+  worker --> redis
+  worker --> providers[providers]
+  api --> observability[observability]
+  worker --> observability
+  web --> observability
