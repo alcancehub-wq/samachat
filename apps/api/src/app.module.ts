@@ -22,8 +22,12 @@ import { MeModule } from './me/me.module';
 @Module({
   imports: [
     ThrottlerModule.forRoot({
-      ttl: 60,
-      limit: 100,
+      throttlers: [
+        {
+          ttl: 60,
+          limit: 100,
+        },
+      ],
     }),
     CommonModule,
     HealthModule,
