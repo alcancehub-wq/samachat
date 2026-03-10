@@ -17,6 +17,15 @@ export interface QueueSettings {
     mediaDownload: QueueConfig;
     deadLetter: QueueConfig;
 }
+export interface QueueBackpressureConfig {
+    threshold: number;
+    delayMs: number;
+    warningCooldownMs: number;
+}
+export interface ProviderPoolConfig {
+    defaultSize: number;
+    sizes: Record<string, number>;
+}
 export interface AppConfig {
     appVersion: string;
     providerMode: ProviderMode;
@@ -48,6 +57,9 @@ export interface AppConfig {
     };
     webhook: WebhookConfig;
     queues: QueueSettings;
+    queueBackpressure: QueueBackpressureConfig;
+    queueLockTtlMs: number;
+    providerPool: ProviderPoolConfig;
 }
 export declare const config: AppConfig;
 export declare function getConfig(): AppConfig;

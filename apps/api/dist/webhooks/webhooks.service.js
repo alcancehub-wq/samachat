@@ -19,6 +19,7 @@ const ioredis_1 = __importDefault(require("ioredis"));
 const config_1 = require("@samachat/config");
 const logger_1 = require("@samachat/logger");
 const trace_1 = require("../observability/trace");
+const queue_metrics_1 = require("../observability/queue-metrics");
 const idempotency_1 = require("./idempotency");
 let WebhooksService = class WebhooksService {
     logger = (0, logger_1.getLogger)({ service: 'api', component: 'webhooks' });
@@ -50,6 +51,7 @@ let WebhooksService = class WebhooksService {
             return { status: 'duplicate', eventId: event.eventId };
         }
         await this.tracer.startActiveSpan('queue.enqueue inbound-events', async (span) => {
+            await this.applyQueueBackpressure(inboundQueue, 'inbound-events');
             const trace = (0, trace_1.injectTraceContext)();
             await inboundQueue.add('inbound-event', { event, requestId, correlationId, trace }, { jobId: `${event.provider}:${event.eventId}` });
             span.setAttribute('queue.name', 'inbound-events');
@@ -58,6 +60,27 @@ let WebhooksService = class WebhooksService {
         });
         this.logger.info({ provider: event.provider, eventId: event.eventId, requestId, correlationId }, 'Inbound event queued');
         return { status: 'queued', eventId: event.eventId };
+    }
+    async applyQueueBackpressure(queue, queueName) {
+        if (!this.redis) {
+            return;
+        }
+        const { queueBackpressure } = (0, config_1.getConfig)();
+        const waiting = await queue.getWaitingCount();
+        const delayed = await queue.getDelayedCount();
+        const depth = waiting + delayed;
+        await (0, queue_metrics_1.setQueueDepthMetric)(this.redis, queueName, depth);
+        if (depth < queueBackpressure.threshold) {
+            return;
+        }
+        const cooldownKey = `samachat:metrics:queue:${queueName}:backpressure-cooldown`;
+        const cooldownMs = queueBackpressure.warningCooldownMs;
+        const cooldownSet = await this.redis.set(cooldownKey, String(Date.now()), 'PX', cooldownMs, 'NX');
+        if (cooldownSet) {
+            await (0, queue_metrics_1.incrementQueueMetric)(this.redis, queueName, 'backpressure');
+            this.logger.warn({ queue: queueName, depth }, 'Queue backpressure applied');
+        }
+        await new Promise((resolve) => setTimeout(resolve, queueBackpressure.delayMs));
     }
     async ensureWebhookFreshness(params) {
         const redis = this.redis;

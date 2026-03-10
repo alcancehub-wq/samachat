@@ -8,6 +8,7 @@ COPY apps ./apps
 COPY packages ./packages
 
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @samachat/db generate
 RUN pnpm --filter @samachat/api build
 
 FROM node:20-alpine AS runner
@@ -17,9 +18,10 @@ RUN corepack enable
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
-COPY packages ./packages
+COPY --from=build /app/packages /app/packages
 
 RUN pnpm install --prod --frozen-lockfile
+RUN pnpm dlx prisma@6.1.0 generate --schema packages/db/prisma/schema.prisma
 
 COPY --from=build /app/apps/api/dist /app/apps/api/dist
 

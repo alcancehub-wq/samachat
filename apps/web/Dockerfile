@@ -7,6 +7,9 @@ COPY tsconfig.base.json ./
 COPY apps ./apps
 COPY packages ./packages
 
+# Ensure local dev env does not override runtime env in production.
+RUN rm -f /app/apps/web/.env.local
+
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @samachat/web build
 
@@ -25,4 +28,4 @@ COPY --from=build /app/apps/web/.next /app/apps/web/.next
 COPY --from=build /app/apps/web/public /app/apps/web/public
 COPY --from=build /app/apps/web/next.config.mjs /app/apps/web/next.config.mjs
 
-CMD ["pnpm", "--filter", "@samachat/web", "start", "--", "-p", "3000"]
+CMD ["pnpm", "--filter", "@samachat/web", "start"]

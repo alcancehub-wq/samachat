@@ -3,7 +3,7 @@ primary_region = "iad"
 
 [env]
   PORT = "3000"
-  NEXT_PUBLIC_API_URL = "https://api.samachat.example"
+  NEXT_PUBLIC_API_URL = "https://samachat-api.fly.dev"
 
 [[services]]
   internal_port = 3000

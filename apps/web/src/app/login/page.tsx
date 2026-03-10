@@ -18,11 +18,19 @@ export default function LoginPage() {
     document.cookie = 'samachat-auth=1; path=/; max-age=604800; samesite=lax';
   };
 
+  const redirectToDashboard = () => {
+    router.replace('/dashboard');
+    // Force a full navigation so middleware sees the auth cookie reliably.
+    setTimeout(() => {
+      window.location.assign('/dashboard');
+    }, 150);
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         setAuthCookie();
-        router.replace('/dashboard');
+        redirectToDashboard();
       }
     });
   }, [router]);
@@ -43,7 +51,7 @@ export default function LoginPage() {
     } else {
       setAuthCookie();
       setSuccess('Login realizado. Redirecione para o dashboard.');
-      router.replace('/dashboard');
+      redirectToDashboard();
     }
 
     setLoading(false);

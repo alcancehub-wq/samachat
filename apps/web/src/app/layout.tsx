@@ -24,6 +24,8 @@ export const metadata: Metadata = {
   themeColor: '#0b0f17',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({
   children,
 }: {

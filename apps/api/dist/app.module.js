@@ -34,8 +34,12 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
             throttler_1.ThrottlerModule.forRoot({
-                ttl: 60,
-                limit: 100,
+                throttlers: [
+                    {
+                        ttl: 60,
+                        limit: 100,
+                    },
+                ],
             }),
             common_module_1.CommonModule,
             health_module_1.HealthModule,

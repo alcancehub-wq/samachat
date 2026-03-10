@@ -1,3 +1,18 @@
 {
-  "/page": "app/page.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/cookies/page": "app/cookies/page.js",
+  "/offline/page": "app/offline/page.js",
+  "/login/page": "app/login/page.js",
+  "/onboarding/done/page": "app/onboarding/done/page.js",
+  "/onboarding/invite/page": "app/onboarding/invite/page.js",
+  "/onboarding/tenant/page": "app/onboarding/tenant/page.js",
+  "/onboarding/legal/page": "app/onboarding/legal/page.js",
+  "/page": "app/page.js",
+  "/onboarding/page": "app/onboarding/page.js",
+  "/privacy/page": "app/privacy/page.js",
+  "/terms/page": "app/terms/page.js",
+  "/dashboard/automations/page": "app/dashboard/automations/page.js",
+  "/dashboard/settings/team/page": "app/dashboard/settings/team/page.js",
+  "/dashboard/inbox/page": "app/dashboard/inbox/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
 }

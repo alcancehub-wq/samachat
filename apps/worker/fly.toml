@@ -1,5 +1,8 @@
 app = "samachat-worker"
 primary_region = "iad"
 
+[env]
+  WORKER_ID = "default"
+
 [processes]
-  app = "node dist/index.js"
+  app = "node apps/worker/dist/index.js"

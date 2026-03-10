@@ -9,13 +9,13 @@ export interface PublicConfig {
 }
 
 function readPublic(key: string): string | undefined {
-  const g = globalThis as any;
-  const injected = g?.__SAMACHAT_PUBLIC_CONFIG__?.[key];
+  const g = globalThis as typeof globalThis & {
+    __SAMACHAT_PUBLIC_CONFIG__?: Record<string, string | undefined>;
+  };
+  const injected = g.__SAMACHAT_PUBLIC_CONFIG__?.[key];
   if (typeof injected === 'string' && injected.length > 0) return injected;
 
-  const pe = (typeof process !== 'undefined' ? (process as any).env : undefined) as
-    | Record<string, string | undefined>
-    | undefined;
+  const pe = typeof process !== 'undefined' ? process.env : undefined;
   const fromProcess = pe?.[key];
   if (typeof fromProcess === 'string' && fromProcess.length > 0) return fromProcess;
 
