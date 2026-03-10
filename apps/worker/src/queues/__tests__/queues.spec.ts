@@ -15,12 +15,12 @@ type WorkerInstance = {
 const workerState: WorkerInstance[] = [];
 
 jest.mock('bullmq', () => ({
-  Worker: jest.fn().mockImplementation((name, processor) => {
+  Worker: jest.fn().mockImplementation((name: string, processor: (job: Job<any>) => Promise<any>) => {
     const handlers: Record<string, any> = {};
     const instance = {
       name,
       processor,
-      on: jest.fn((event: string, handler: any) => {
+      on: jest.fn((event: string, handler: (job?: Job<any>, error?: Error) => Promise<void>) => {
         handlers[event] = handler;
       }),
       __handlers: handlers,
