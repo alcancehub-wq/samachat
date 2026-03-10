@@ -10,7 +10,7 @@ export class ProviderPool<T> {
   }
 
   next(): T {
-    const provider = this.providers[this.index % this.providers.length];
+    const provider = this.providers[this.index % this.providers.length]!;
     this.index = (this.index + 1) % this.providers.length;
     return provider;
   }
