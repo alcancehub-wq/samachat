@@ -92,7 +92,7 @@
       "static/chunks/main-app-6b671558a19a762f.js",
       "static/chunks/973-7678ea0d59bd350f.js",
       "static/chunks/952-1818a9723c595c0e.js",
-      "static/chunks/app/login/page-a3cc81d3353029d1.js"
+      "static/chunks/app/login/page-e233e0702bb948e7.js"
     ],
     "/onboarding/error": [
       "static/chunks/webpack-7f0915f952815d0b.js",
@@ -126,15 +126,6 @@
       "static/chunks/952-1818a9723c595c0e.js",
       "static/chunks/app/onboarding/invite/page-1cd619e6d464e16d.js"
     ],
-    "/onboarding/tenant/page": [
-      "static/chunks/webpack-7f0915f952815d0b.js",
-      "static/chunks/5f049661-dadc41aceb25ef11.js",
-      "static/chunks/221-1ac5bf83a4581580.js",
-      "static/chunks/main-app-6b671558a19a762f.js",
-      "static/chunks/973-7678ea0d59bd350f.js",
-      "static/chunks/952-1818a9723c595c0e.js",
-      "static/chunks/app/onboarding/tenant/page-cbb3ec671c3e61e8.js"
-    ],
     "/onboarding/legal/page": [
       "static/chunks/webpack-7f0915f952815d0b.js",
       "static/chunks/5f049661-dadc41aceb25ef11.js",
@@ -144,6 +135,14 @@
       "static/chunks/952-1818a9723c595c0e.js",
       "static/chunks/app/onboarding/legal/page-e4744c0f93eda5be.js"
     ],
+    "/onboarding/page": [
+      "static/chunks/webpack-7f0915f952815d0b.js",
+      "static/chunks/5f049661-dadc41aceb25ef11.js",
+      "static/chunks/221-1ac5bf83a4581580.js",
+      "static/chunks/main-app-6b671558a19a762f.js",
+      "static/chunks/365-77ab4f7f3ff87d0a.js",
+      "static/chunks/app/onboarding/page-982da55fab48d12d.js"
+    ],
     "/page": [
       "static/chunks/webpack-7f0915f952815d0b.js",
       "static/chunks/5f049661-dadc41aceb25ef11.js",
@@ -152,13 +151,14 @@
       "static/chunks/365-77ab4f7f3ff87d0a.js",
       "static/chunks/app/page-982da55fab48d12d.js"
     ],
-    "/onboarding/page": [
+    "/onboarding/tenant/page": [
       "static/chunks/webpack-7f0915f952815d0b.js",
       "static/chunks/5f049661-dadc41aceb25ef11.js",
       "static/chunks/221-1ac5bf83a4581580.js",
       "static/chunks/main-app-6b671558a19a762f.js",
-      "static/chunks/365-77ab4f7f3ff87d0a.js",
-      "static/chunks/app/onboarding/page-982da55fab48d12d.js"
+      "static/chunks/973-7678ea0d59bd350f.js",
+      "static/chunks/952-1818a9723c595c0e.js",
+      "static/chunks/app/onboarding/tenant/page-cbb3ec671c3e61e8.js"
     ],
     "/privacy/page": [
       "static/chunks/webpack-7f0915f952815d0b.js",
