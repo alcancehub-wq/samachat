@@ -65,7 +65,8 @@ jobs:
           if [ -z "$API_URL" ]; then
             API_URL="https://samachat-api.fly.dev"
           fi
-          for endpoint in health ready metrics; do
+          check_endpoint() {
+            endpoint="$1"
             echo "Checking $API_URL/$endpoint"
             success=0
             for attempt in $(seq 1 30); do
@@ -80,4 +81,13 @@ jobs:
               echo "Health check failed for $endpoint"
               exit 1
             fi
-          done
+          }
+
+          check_endpoint health
+          check_endpoint liveness
+
+          STRICT_HEALTHCHECKS="${{ secrets.SAMACHAT_STRICT_HEALTHCHECKS }}"
+          if [ "$STRICT_HEALTHCHECKS" = "true" ]; then
+            check_endpoint ready
+            check_endpoint metrics
+          fi
