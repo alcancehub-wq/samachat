@@ -6,7 +6,7 @@ interface ApiError extends Error {
   status?: number;
 }
 
-const API_TIMEOUT_MS = 7000;
+const API_TIMEOUT_MS = 20000;
 
 function resolveGetPublicConfig(): () => ReturnType<typeof getPublicConfig> {
   return getPublicConfig;

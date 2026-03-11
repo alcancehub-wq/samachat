@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { apiFetch } from '@/lib/api';
+import { getTenantId } from '@/lib/tenant';
 
 interface WorkspaceItem {
   id: string;
@@ -101,6 +102,28 @@ export default function WorkspaceSettingsPage() {
       setStatus('Usuario adicionado.');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Falha ao adicionar usuario';
+      if (message.includes('User not found')) {
+        const tenantId = getTenantId();
+        if (!tenantId) {
+          setStatus('Selecione um workspace antes de convidar usuarios.');
+          return;
+        }
+        try {
+          await apiFetch(`/tenants/${tenantId}/invites`, {
+            method: 'POST',
+            body: JSON.stringify({ email: email.trim(), role }),
+          });
+          setEmail('');
+          setRole('agent');
+          setStatus('Convite enviado.');
+          return;
+        } catch (inviteError) {
+          const inviteMessage =
+            inviteError instanceof Error ? inviteError.message : 'Falha ao enviar convite';
+          setStatus(inviteMessage);
+          return;
+        }
+      }
       setStatus(message);
     }
   };
@@ -131,7 +154,7 @@ export default function WorkspaceSettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <select
-              className="w-full rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-sm"
+              className="min-h-[44px] w-full rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-sm"
               value={activeId}
               onChange={(event) => {
                 const id = event.target.value;
@@ -140,11 +163,17 @@ export default function WorkspaceSettingsPage() {
                 setName(selected?.name ?? '');
               }}
             >
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
+              {workspaces.length === 0 ? (
+                <option value="" disabled>
+                  Nenhum workspace disponivel
                 </option>
-              ))}
+              ) : (
+                workspaces.map((workspace) => (
+                  <option key={workspace.id} value={workspace.id}>
+                    {workspace.name}
+                  </option>
+                ))
+              )}
             </select>
             <div className="space-y-2">
               <label className="text-xs font-semibold">Nome</label>

@@ -118,7 +118,11 @@ export class MessagesService {
       throw new ServiceUnavailableException('No active WhatsApp session');
     }
 
-    const client = this.sessionManager.getClientByTenant(params.tenantId);
+    let client = this.sessionManager.getClientByTenant(params.tenantId);
+    if (!client) {
+      await this.sessionManager.startSession(session);
+      client = await this.waitForClient(params.tenantId, 10, 500);
+    }
     if (!client) {
       throw new ServiceUnavailableException('WhatsApp client unavailable');
     }
@@ -274,5 +278,16 @@ export class MessagesService {
       return path.resolve(storageLocalPath, storageKey);
     }
     return url;
+  }
+
+  private async waitForClient(tenantId: string, attempts: number, delayMs: number) {
+    for (let index = 0; index < attempts; index += 1) {
+      const client = this.sessionManager.getClientByTenant(tenantId);
+      if (client) {
+        return client;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    return null;
   }
 }

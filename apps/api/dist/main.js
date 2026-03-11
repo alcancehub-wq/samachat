@@ -44,13 +44,13 @@ const app_module_1 = require("./app.module");
 async function bootstrap() {
     const requiredEnv = ['REDIS_URL', 'DATABASE_URL', 'PROVIDER_SECRET'];
     const missingEnv = requiredEnv.filter((key) => !process.env[key]);
-    if (missingEnv.length > 0) {
-        throw new Error(`Missing required env vars: ${missingEnv.join(', ')}`);
-    }
     process.env.SAMACHAT_SERVICE = process.env.SAMACHAT_SERVICE || 'api';
     const app = await core_1.NestFactory.create(app_module_1.AppModule, { cors: true });
     const appConfig = (0, config_1.getConfig)();
     const logger = (0, logger_1.getLogger)({ service: 'api' });
+    if (missingEnv.length > 0) {
+        logger.error({ missingEnv }, 'Missing required env vars');
+    }
     const maxBodyBytes = 1024 * 1024;
     app.use(express.json({
         limit: maxBodyBytes,
@@ -67,7 +67,7 @@ async function bootstrap() {
         .build();
     const document = swagger_1.SwaggerModule.createDocument(app, swaggerConfig);
     swagger_1.SwaggerModule.setup('docs', app, document);
-    const port = appConfig.ports.api;
+    const port = Number(process.env.PORT) || appConfig.ports.api;
     await app.listen(port, '0.0.0.0');
     logger.info({ port }, 'API listening');
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import { getTenantId } from '@/lib/tenant';
+import { getTenantId, setTenantId } from '@/lib/tenant';
 
 interface OnboardingStatus {
   hasMembership: boolean;
@@ -49,7 +49,7 @@ export default function OnboardingGuard({ children }: { children: React.ReactNod
         setCookie('samachat-membership', status.hasMembership ? '1' : '0');
         setCookie('samachat-legal', status.legalAccepted ? '1' : '0');
         if (status.activeTenantId) {
-          setCookie('samachat-tenant', status.activeTenantId);
+          setTenantId(status.activeTenantId);
         }
 
         if (status.pendingInvites > 0) {

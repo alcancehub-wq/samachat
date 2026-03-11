@@ -16,6 +16,10 @@ interface SupabaseUser {
   role?: string;
 }
 
+const TOKEN_CACHE_TTL_MS = 5 * 60 * 1000;
+const SUPABASE_FETCH_TIMEOUT_MS = 5000;
+const tokenCache = new Map<string, { user: RequestUser; expiresAt: number }>();
+
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -30,6 +34,12 @@ export class SupabaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing bearer token');
     }
 
+    const cached = tokenCache.get(token);
+    if (cached && cached.expiresAt > Date.now()) {
+      request.user = cached.user;
+      return true;
+    }
+
     const config = getConfig();
     const supabaseUrl = config.supabase.url;
     const supabaseApiKey = config.supabase.serviceRoleKey;
@@ -40,13 +50,18 @@ export class SupabaseAuthGuard implements CanActivate {
 
     let payload: SupabaseUser;
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), SUPABASE_FETCH_TIMEOUT_MS);
       const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
           apikey: supabaseApiKey,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeout);
 
       if (!response.ok) {
         throw new UnauthorizedException('Invalid token');
@@ -85,6 +100,7 @@ export class SupabaseAuthGuard implements CanActivate {
     };
 
     request.user = user;
+    tokenCache.set(token, { user, expiresAt: Date.now() + TOKEN_CACHE_TTL_MS });
     return true;
   }
 }

@@ -18,7 +18,7 @@ const tenants_module_1 = require("./tenants/tenants.module");
 const users_module_1 = require("./users/users.module");
 const conversations_module_1 = require("./conversations/conversations.module");
 const flows_module_1 = require("./flows/flows.module");
-const campaigns_module_1 = require("./campaigns/campaigns.module");
+const campaigns_module_1 = require("./modules/campaigns/campaigns.module");
 const integrations_module_1 = require("./integrations/integrations.module");
 const waba_module_1 = require("./waba/waba.module");
 const legal_module_1 = require("./legal/legal.module");
@@ -27,6 +27,10 @@ const webhooks_module_1 = require("./webhooks/webhooks.module");
 const common_module_1 = require("./common/common.module");
 const invites_module_1 = require("./invites/invites.module");
 const me_module_1 = require("./me/me.module");
+const connections_module_1 = require("./modules/connections/connections.module");
+const crm_module_1 = require("./modules/crm/crm.module");
+const automation_module_1 = require("./modules/automation/automation.module");
+const workspaces_module_1 = require("./workspaces/workspaces.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -58,6 +62,10 @@ exports.AppModule = AppModule = __decorate([
             webhooks_module_1.WebhooksModule,
             invites_module_1.InvitesModule,
             me_module_1.MeModule,
+            connections_module_1.ConnectionsModule,
+            crm_module_1.CrmModule,
+            automation_module_1.AutomationModule,
+            workspaces_module_1.WorkspacesModule,
         ],
         providers: [
             {

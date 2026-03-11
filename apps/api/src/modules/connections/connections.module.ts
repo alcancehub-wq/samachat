@@ -12,6 +12,6 @@ import { MetricsModule } from '../../metrics/metrics.module';
   imports: [forwardRef(() => MessagesModule), MetricsModule],
   controllers: [ConnectionsController],
   providers: [ConnectionsService, ConnectionGateway, SessionManager, SessionStore, ConnectionPoolManager],
-  exports: [ConnectionPoolManager],
+  exports: [ConnectionPoolManager, SessionManager],
 })
 export class ConnectionsModule {}

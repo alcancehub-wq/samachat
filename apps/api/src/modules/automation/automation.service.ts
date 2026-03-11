@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AutomationInput } from './types';
 
@@ -35,7 +36,7 @@ export class AutomationService {
         actions: {
           create: input.actions.map((action) => ({
             action_type: action.action_type,
-            payload: action.payload,
+            payload: action.payload as Prisma.InputJsonValue,
           })),
         },
       },
@@ -73,7 +74,7 @@ export class AutomationService {
             ? {
                 create: input.actions.map((action) => ({
                   action_type: action.action_type,
-                  payload: action.payload,
+                  payload: action.payload as Prisma.InputJsonValue,
                 })),
               }
             : undefined,

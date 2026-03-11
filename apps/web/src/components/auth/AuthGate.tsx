@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { apiFetch } from '@/lib/api';
+import { setTenantId } from '@/lib/tenant';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -14,10 +15,17 @@ interface OnboardingStatus {
   activeTenantId: string | null;
 }
 
-const AUTH_GATE_TIMEOUT_MS = 8000;
+const AUTH_GATE_TIMEOUT_MS = 20000;
 
 function setCookie(name: string, value: string) {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=604800; samesite=lax`;
+}
+
+function getCookie(name: string) {
+  return document.cookie
+    .split('; ')
+    .find((row) => row.startsWith(`${name}=`))
+    ?.split('=')[1];
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
@@ -42,9 +50,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const checkStatus = async () => {
-    setLoading(true);
-    setError(null);
+  const checkStatus = async (background = false) => {
+    if (!background) {
+      setLoading(true);
+      setError(null);
+    }
 
     const timeoutController = new AbortController();
     const timeout = setTimeout(() => timeoutController.abort(), AUTH_GATE_TIMEOUT_MS);
@@ -69,6 +79,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
       setCookie('samachat-membership', status.hasMembership ? '1' : '0');
       setCookie('samachat-legal', status.legalAccepted ? '1' : '0');
+      if (status.activeTenantId) {
+        setTenantId(status.activeTenantId);
+      }
       if (!status.hasMembership) {
         router.replace('/onboarding/tenant');
         return;
@@ -83,11 +96,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       }
 
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Falha ao validar sessao';
-      setError(message);
+      if (!background) {
+        const message = err instanceof Error ? err.message : 'Falha ao validar sessao';
+        setError(message);
+      }
     } finally {
       clearTimeout(timeout);
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   };
 
@@ -95,6 +112,17 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     if (pathname?.startsWith('/onboarding')) {
       return;
     }
+
+    const hasAuth = getCookie('samachat-auth') === '1';
+    const hasMembership = getCookie('samachat-membership') === '1';
+    const hasLegal = getCookie('samachat-legal') === '1';
+
+    if (hasAuth && hasMembership && hasLegal) {
+      setLoading(false);
+      checkStatus(true);
+      return;
+    }
+
     checkStatus();
   }, [pathname]);
 

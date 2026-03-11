@@ -13,10 +13,13 @@ exports.TenantsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../common/prisma/prisma.service");
 const tenant_utils_1 = require("../common/tenant/tenant.utils");
+const workspaces_service_1 = require("../workspaces/workspaces.service");
 let TenantsService = class TenantsService {
     prisma;
-    constructor(prisma) {
+    workspacesService;
+    constructor(prisma, workspacesService) {
         this.prisma = prisma;
+        this.workspacesService = workspacesService;
     }
     async createTenant(input, user) {
         const profile = await (0, tenant_utils_1.ensureUserProfile)(this.prisma, user);
@@ -32,6 +35,7 @@ let TenantsService = class TenantsService {
                 },
             },
         });
+        await this.workspacesService.ensureDefaultWorkspace(tenant.id, user, tenant.name);
         return tenant;
     }
     async listTenants(user) {
@@ -80,5 +84,6 @@ let TenantsService = class TenantsService {
 exports.TenantsService = TenantsService;
 exports.TenantsService = TenantsService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        workspaces_service_1.WorkspacesService])
 ], TenantsService);

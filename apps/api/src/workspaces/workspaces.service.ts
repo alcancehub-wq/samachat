@@ -8,7 +8,25 @@ import { ensureUserProfile } from '../common/tenant/tenant.utils';
 export class WorkspacesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listWorkspaces(tenantId: string) {
+  async listWorkspaces(tenantId: string, user: RequestUser) {
+    const existing = await this.prisma.workspace.findMany({
+      where: { tenant_id: tenantId },
+      include: { users: true },
+      orderBy: { created_at: 'asc' },
+    });
+
+    if (existing.length > 0) {
+      return existing;
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
+
+    if (tenant) {
+      await this.ensureDefaultWorkspace(tenantId, user, tenant.name);
+    }
+
     return this.prisma.workspace.findMany({
       where: { tenant_id: tenantId },
       include: { users: true },

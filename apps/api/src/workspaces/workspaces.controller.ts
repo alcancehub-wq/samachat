@@ -15,6 +15,7 @@ import { TenantGuard } from '../common/guards/tenant.guard';
 import { RbacGuard } from '../common/guards/rbac.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import type { TenantRequestContext } from '../common/interfaces/request-tenant';
+import type { RequestUser } from '../common/interfaces/request-user';
 import { WorkspacesService } from './workspaces.service';
 import { WorkspaceRole } from '@prisma/client';
 
@@ -33,11 +34,11 @@ export class WorkspacesController {
   constructor(private readonly workspacesService: WorkspacesService) {}
 
   @Get()
-  async list(@Req() req: TenantRequestContext) {
+  async list(@Req() req: TenantRequestContext & { user: RequestUser }) {
     if (!req.tenantId) {
       throw new BadRequestException('Missing tenant context');
     }
-    return this.workspacesService.listWorkspaces(req.tenantId);
+    return this.workspacesService.listWorkspaces(req.tenantId, req.user);
   }
 
   @Patch(':id')

@@ -28,6 +28,15 @@ let MetricsService = class MetricsService {
     queueFailedGauge;
     queueRetriesGauge;
     queueDlqGauge;
+    messagesReceivedCounter;
+    messagesSentCounter;
+    automationExecutionsCounter;
+    eventsProcessedCounter;
+    eventsFailedCounter;
+    connectionsGauge;
+    connectionsPerWorkerGauge;
+    workerLoadGauge;
+    reconnectEventsCounter;
     constructor() {
         (0, prom_client_1.collectDefaultMetrics)({ register: this.registry, prefix: `${METRIC_PREFIX}_` });
         this.queueDepthGauge = new prom_client_1.Gauge({
@@ -60,6 +69,54 @@ let MetricsService = class MetricsService {
             labelNames: ['queue'],
             registers: [this.registry],
         });
+        this.messagesReceivedCounter = new prom_client_1.Counter({
+            name: `${METRIC_PREFIX}_messages_received_total`,
+            help: 'Total inbound messages received.',
+            registers: [this.registry],
+        });
+        this.messagesSentCounter = new prom_client_1.Counter({
+            name: `${METRIC_PREFIX}_messages_sent_total`,
+            help: 'Total outbound messages sent.',
+            registers: [this.registry],
+        });
+        this.automationExecutionsCounter = new prom_client_1.Counter({
+            name: `${METRIC_PREFIX}_automation_executions_total`,
+            help: 'Total automation actions executed.',
+            registers: [this.registry],
+        });
+        this.eventsProcessedCounter = new prom_client_1.Counter({
+            name: `${METRIC_PREFIX}_events_processed_total`,
+            help: 'Total events processed from Redis pipeline.',
+            registers: [this.registry],
+        });
+        this.eventsFailedCounter = new prom_client_1.Counter({
+            name: `${METRIC_PREFIX}_events_failed_total`,
+            help: 'Total events failed while processing.',
+            registers: [this.registry],
+        });
+        this.connectionsGauge = new prom_client_1.Gauge({
+            name: `${METRIC_PREFIX}_active_connections`,
+            help: 'Active WhatsApp connections by status.',
+            labelNames: ['status'],
+            registers: [this.registry],
+        });
+        this.connectionsPerWorkerGauge = new prom_client_1.Gauge({
+            name: `${METRIC_PREFIX}_connections_per_worker`,
+            help: 'Active WhatsApp connections per worker.',
+            labelNames: ['worker'],
+            registers: [this.registry],
+        });
+        this.workerLoadGauge = new prom_client_1.Gauge({
+            name: `${METRIC_PREFIX}_worker_load`,
+            help: 'Worker load ratio based on max connections per worker.',
+            labelNames: ['worker'],
+            registers: [this.registry],
+        });
+        this.reconnectEventsCounter = new prom_client_1.Counter({
+            name: `${METRIC_PREFIX}_reconnect_events_total`,
+            help: 'Total reconnection attempts scheduled.',
+            registers: [this.registry],
+        });
         const { redisUrl } = (0, config_1.getConfig)();
         if (redisUrl) {
             this.redis = new ioredis_1.default(redisUrl, {
@@ -75,6 +132,33 @@ let MetricsService = class MetricsService {
     }
     getContentType() {
         return this.registry.contentType;
+    }
+    incrementMessagesReceived(amount = 1) {
+        this.messagesReceivedCounter.inc(amount);
+    }
+    incrementMessagesSent(amount = 1) {
+        this.messagesSentCounter.inc(amount);
+    }
+    incrementAutomationExecutions(amount = 1) {
+        this.automationExecutionsCounter.inc(amount);
+    }
+    incrementEventsProcessed(amount = 1) {
+        this.eventsProcessedCounter.inc(amount);
+    }
+    incrementEventsFailed(amount = 1) {
+        this.eventsFailedCounter.inc(amount);
+    }
+    setConnectionStatusCount(status, count) {
+        this.connectionsGauge.set({ status }, count);
+    }
+    setConnectionsPerWorker(worker, count) {
+        this.connectionsPerWorkerGauge.set({ worker }, count);
+    }
+    setWorkerLoad(worker, load) {
+        this.workerLoadGauge.set({ worker }, load);
+    }
+    incrementReconnectEvents(amount = 1) {
+        this.reconnectEventsCounter.inc(amount);
     }
     async updateQueueMetrics() {
         const redis = this.redis;

@@ -67,27 +67,31 @@ export class SessionStore {
 
     const keyStore: SignalKeyStore = {
       get: async (type, ids) => {
-        const typeKeys = keys[type] ?? {};
-        const response: Record<string, unknown> = {};
+        const typeKeys = (keys[type] ?? {}) as Record<string, SignalDataTypeMap[typeof type]>;
+        const response: Record<string, SignalDataTypeMap[typeof type]> = {};
         for (const id of ids) {
           const value = typeKeys[id];
-          if (value) {
+          if (value !== undefined) {
             response[id] = value;
           }
         }
-        return response as SignalDataTypeMap[typeof type];
+        return response;
       },
       set: async (data) => {
-        const entries = Object.entries(data) as [keyof SignalDataTypeMap, SignalDataTypeMap[keyof SignalDataTypeMap]][];
+        const entries = Object.entries(data) as [
+          keyof SignalDataTypeMap,
+          SignalDataTypeMap[keyof SignalDataTypeMap] | null | undefined,
+        ][];
         for (const [category, categoryData] of entries) {
           if (!categoryData) continue;
-          keys[category as string] = keys[category as string] ?? {};
-          for (const id of Object.keys(categoryData)) {
-            const value = categoryData[id];
-            if (value) {
-              keys[category as string][id] = value as unknown;
+          const bucket = (keys[category as string] ?? {}) as Record<string, unknown>;
+          keys[category as string] = bucket;
+          for (const id of Object.keys(categoryData as Record<string, unknown>)) {
+            const value = (categoryData as Record<string, unknown>)[id];
+            if (value !== undefined && value !== null) {
+              bucket[id] = value;
             } else {
-              delete keys[category as string][id];
+              delete bucket[id];
             }
           }
         }

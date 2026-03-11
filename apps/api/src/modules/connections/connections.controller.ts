@@ -25,8 +25,8 @@ export class ConnectionsController {
 
   @Post()
   createConnection(
-    @Body() payload?: CreateConnectionPayload,
     @Req() req: TenantRequestContext,
+    @Body() payload?: CreateConnectionPayload,
   ) {
     if (!req.tenantId) {
       throw new BadRequestException('Missing tenant context');

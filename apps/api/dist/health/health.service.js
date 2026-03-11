@@ -17,12 +17,19 @@ const common_1 = require("@nestjs/common");
 const ioredis_1 = __importDefault(require("ioredis"));
 const config_1 = require("@samachat/config");
 const queues_1 = require("../observability/queues");
+const prisma_service_1 = require("../common/prisma/prisma.service");
+const connection_pool_manager_1 = require("../modules/connections/connection-pool.manager");
+const client_1 = require("@prisma/client");
 let HealthService = class HealthService {
+    prisma;
+    poolManager;
     redis;
     queues = [];
     heartbeatKey;
     heartbeatTtlMs;
-    constructor() {
+    constructor(prisma, poolManager) {
+        this.prisma = prisma;
+        this.poolManager = poolManager;
         const { redisUrl } = (0, config_1.getConfig)();
         if (redisUrl) {
             this.redis = new ioredis_1.default(redisUrl, {
@@ -106,8 +113,12 @@ let HealthService = class HealthService {
     }
     async getHealth() {
         const readiness = await this.getReadiness();
+        const connections = await this.getConnectionSummary();
+        const workers = await this.poolManager.getWorkerSummary();
         return {
             ...readiness,
+            connections,
+            workers,
             uptime: process.uptime(),
         };
     }
@@ -118,9 +129,21 @@ let HealthService = class HealthService {
             timestamp: new Date().toISOString(),
         };
     }
+    async getConnectionSummary() {
+        const grouped = await this.prisma.whatsappSession.groupBy({
+            by: ['status'],
+            _count: { _all: true },
+        });
+        const summary = {};
+        for (const status of Object.values(client_1.ConnectionStatus)) {
+            summary[status] = grouped.find((item) => item.status === status)?._count._all ?? 0;
+        }
+        return summary;
+    }
 };
 exports.HealthService = HealthService;
 exports.HealthService = HealthService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        connection_pool_manager_1.ConnectionPoolManager])
 ], HealthService);

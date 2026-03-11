@@ -247,15 +247,21 @@ export default function CampaignsPage() {
             <div className="space-y-2">
               <label className="text-xs font-semibold">Workspace</label>
               <select
-                className="w-full rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-sm"
+                className="min-h-[44px] w-full rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-sm"
                 value={activeWorkspace}
                 onChange={(event) => setActiveWorkspace(event.target.value)}
               >
-                {workspaces.map((workspace) => (
-                  <option key={workspace.id} value={workspace.id}>
-                    {workspace.name}
+                {workspaces.length === 0 ? (
+                  <option value="" disabled>
+                    Nenhum workspace disponivel
                   </option>
-                ))}
+                ) : (
+                  workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
             <div className="space-y-2">

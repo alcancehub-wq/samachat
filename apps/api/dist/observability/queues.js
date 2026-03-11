@@ -9,6 +9,7 @@ exports.QUEUE_NAMES = [
     'media-download',
     'dead-letter',
     'campaign-scheduler',
+    'campaign-dispatch',
 ];
 function createQueueClients(connection) {
     return exports.QUEUE_NAMES.map((queueName) => new bullmq_1.Queue(queueName, { connection }));

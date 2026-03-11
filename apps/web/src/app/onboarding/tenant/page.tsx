@@ -29,6 +29,10 @@ function slugify(value: string) {
     .replace(/(^-|-$)/g, '');
 }
 
+function setCookie(name: string, value: string) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=604800; samesite=lax`;
+}
+
 export default function OnboardingTenantPage() {
   const router = useRouter();
   const [memberships, setMemberships] = useState<MembershipItem[]>([]);
@@ -55,6 +59,8 @@ export default function OnboardingTenantPage() {
 
   const handleSelect = (tenantId: string) => {
     setTenantId(tenantId);
+    setCookie('samachat-auth', '1');
+    setCookie('samachat-membership', '1');
     router.push('/onboarding/legal');
   };
 
@@ -71,6 +77,8 @@ export default function OnboardingTenantPage() {
         body: JSON.stringify({ name: tenantName, slug: tenantSlug }),
       });
       setTenantId(tenant.id);
+      setCookie('samachat-auth', '1');
+      setCookie('samachat-membership', '1');
       router.push('/onboarding/legal');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar tenant');

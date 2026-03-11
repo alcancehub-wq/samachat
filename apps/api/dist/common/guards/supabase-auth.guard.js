@@ -9,6 +9,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SupabaseAuthGuard = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@samachat/config");
+const TOKEN_CACHE_TTL_MS = 5 * 60 * 1000;
+const SUPABASE_FETCH_TIMEOUT_MS = 5000;
+const tokenCache = new Map();
 let SupabaseAuthGuard = class SupabaseAuthGuard {
     async canActivate(context) {
         const request = context.switchToHttp().getRequest();
@@ -20,6 +23,11 @@ let SupabaseAuthGuard = class SupabaseAuthGuard {
         if (!token) {
             throw new common_1.UnauthorizedException('Missing bearer token');
         }
+        const cached = tokenCache.get(token);
+        if (cached && cached.expiresAt > Date.now()) {
+            request.user = cached.user;
+            return true;
+        }
         const config = (0, config_1.getConfig)();
         const supabaseUrl = config.supabase.url;
         const supabaseApiKey = config.supabase.serviceRoleKey;
@@ -28,13 +36,17 @@ let SupabaseAuthGuard = class SupabaseAuthGuard {
         }
         let payload;
         try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), SUPABASE_FETCH_TIMEOUT_MS);
             const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${token}`,
                     apikey: supabaseApiKey,
                 },
+                signal: controller.signal,
             });
+            clearTimeout(timeout);
             if (!response.ok) {
                 throw new common_1.UnauthorizedException('Invalid token');
             }
@@ -62,6 +74,7 @@ let SupabaseAuthGuard = class SupabaseAuthGuard {
             name,
         };
         request.user = user;
+        tokenCache.set(token, { user, expiresAt: Date.now() + TOKEN_CACHE_TTL_MS });
         return true;
     }
 };

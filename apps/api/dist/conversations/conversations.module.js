@@ -9,11 +9,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ConversationsModule = void 0;
 const common_1 = require("@nestjs/common");
 const conversations_controller_1 = require("./conversations.controller");
+const messages_module_1 = require("../modules/messages/messages.module");
 let ConversationsModule = class ConversationsModule {
 };
 exports.ConversationsModule = ConversationsModule;
 exports.ConversationsModule = ConversationsModule = __decorate([
     (0, common_1.Module)({
+        imports: [messages_module_1.MessagesModule],
         controllers: [conversations_controller_1.ConversationsController],
     })
 ], ConversationsModule);

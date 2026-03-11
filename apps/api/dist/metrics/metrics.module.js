@@ -10,12 +10,14 @@ exports.MetricsModule = void 0;
 const common_1 = require("@nestjs/common");
 const metrics_controller_1 = require("./metrics.controller");
 const metrics_service_1 = require("./metrics.service");
+const observability_service_1 = require("./observability.service");
 let MetricsModule = class MetricsModule {
 };
 exports.MetricsModule = MetricsModule;
 exports.MetricsModule = MetricsModule = __decorate([
     (0, common_1.Module)({
         controllers: [metrics_controller_1.MetricsController],
-        providers: [metrics_service_1.MetricsService],
+        providers: [metrics_service_1.MetricsService, observability_service_1.ObservabilityService],
+        exports: [metrics_service_1.MetricsService],
     })
 ], MetricsModule);

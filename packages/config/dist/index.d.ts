@@ -60,6 +60,14 @@ export interface AppConfig {
     queueBackpressure: QueueBackpressureConfig;
     queueLockTtlMs: number;
     providerPool: ProviderPoolConfig;
+    alerts: {
+        webhookUrl?: string;
+        messageFailureThreshold: number;
+        messageFailureWindowSeconds: number;
+    };
+    uploads: {
+        maxUploadMb: number;
+    };
 }
 export declare const config: AppConfig;
 export declare function getConfig(): AppConfig;

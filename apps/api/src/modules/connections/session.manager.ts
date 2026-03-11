@@ -1,9 +1,10 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import {
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeWASocket,
   WAMessageStatus,
+  type WAMessageUpdate,
   type ConnectionState,
   type WASocket,
 } from '@whiskeysockets/baileys';
@@ -37,6 +38,7 @@ export class SessionManager implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly sessionStore: SessionStore,
     private readonly gateway: ConnectionGateway,
+    @Inject(forwardRef(() => MessagesService))
     private readonly messagesService: MessagesService,
   ) {}
 
@@ -347,11 +349,13 @@ export class SessionManager implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async handleMessagesUpdate(updates: { key?: proto.IMessageKey; update?: { status?: number } }[]) {
+  private async handleMessagesUpdate(
+    updates: WAMessageUpdate[] | { key?: proto.IMessageKey; update?: { status?: number } }[],
+  ) {
     for (const update of updates) {
       const externalId = update.key?.id;
       const statusCode = update.update?.status;
-      if (!externalId || statusCode === undefined) {
+      if (!externalId || typeof statusCode !== 'number') {
         continue;
       }
 

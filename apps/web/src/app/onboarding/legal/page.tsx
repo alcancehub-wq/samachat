@@ -8,6 +8,10 @@ import { apiFetch } from '@/lib/api';
 import { getPublicConfig } from '@/lib/public-config';
 import { getTenantId } from '@/lib/tenant';
 
+function setCookie(name: string, value: string) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=604800; samesite=lax`;
+}
+
 export default function OnboardingLegalPage() {
   const router = useRouter();
   const config = getPublicConfig();
@@ -44,6 +48,9 @@ export default function OnboardingLegalPage() {
         },
         tenantId,
       );
+      setCookie('samachat-auth', '1');
+      setCookie('samachat-membership', '1');
+      setCookie('samachat-legal', '1');
       router.push('/onboarding/done');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao salvar aceite');
