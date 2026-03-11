@@ -67,5 +67,17 @@ jobs:
           fi
           for endpoint in health ready metrics; do
             echo "Checking $API_URL/$endpoint"
-            curl --retry 12 --retry-all-errors --retry-delay 5 -fsSL "$API_URL/$endpoint"
+            success=0
+            for attempt in $(seq 1 30); do
+              if curl -fsSL "$API_URL/$endpoint"; then
+                success=1
+                break
+              fi
+              echo "Retry $attempt/30 failed, waiting 10s..."
+              sleep 10
+            done
+            if [ "$success" -ne 1 ]; then
+              echo "Health check failed for $endpoint"
+              exit 1
+            fi
           done
