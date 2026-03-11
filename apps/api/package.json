@@ -14,6 +14,9 @@
     "postinstall": "pnpm run prisma:generate",
     "test": "jest"
   },
+  "prisma": {
+    "schema": "../../packages/db/prisma/schema.prisma"
+  },
   "dependencies": {
     "@opentelemetry/api": "^1.8.0",
     "@opentelemetry/auto-instrumentations-node": "^0.51.0",

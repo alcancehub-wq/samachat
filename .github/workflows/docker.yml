@@ -53,12 +53,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - name: Sync secrets (web)
-        run: flyctl secrets set REDIS_URL="${{ secrets.REDIS_URL }}" DATABASE_URL="${{ secrets.DATABASE_URL }}" PROVIDER_SECRET="${{ secrets.PROVIDER_SECRET }}" --app samachat-web
-      - name: Sync secrets (api)
-        run: flyctl secrets set REDIS_URL="${{ secrets.REDIS_URL }}" DATABASE_URL="${{ secrets.DATABASE_URL }}" PROVIDER_SECRET="${{ secrets.PROVIDER_SECRET }}" --app samachat-api
-      - name: Sync secrets (worker)
-        run: flyctl secrets set REDIS_URL="${{ secrets.REDIS_URL }}" DATABASE_URL="${{ secrets.DATABASE_URL }}" PROVIDER_SECRET="${{ secrets.PROVIDER_SECRET }}" --app samachat-worker
       - name: Deploy web
         run: flyctl deploy --config apps/web/fly.toml --image ghcr.io/${{ github.repository_owner }}/samachat-web:${{ github.sha }} --app samachat-web
       - name: Deploy api
