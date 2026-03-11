@@ -1,10 +1,17 @@
 'use client';
 
 import { Bell, Menu, PanelLeft, Search } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { useUiStore } from '@/store/ui';
+import { apiFetch } from '@/lib/api';
+
+interface WorkspaceItem {
+  id: string;
+  name: string;
+}
 
 interface TopbarProps {
   title: string;
@@ -13,6 +20,24 @@ interface TopbarProps {
 
 export function Topbar({ title, subtitle }: TopbarProps) {
   const { toggleSidebar, toggleSidebarCollapsed } = useUiStore();
+  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
+  const [activeWorkspace, setActiveWorkspace] = useState<string>('');
+
+  const loadWorkspaces = useCallback(async () => {
+    try {
+      const data = await apiFetch<WorkspaceItem[]>('/workspaces');
+      setWorkspaces(data);
+      if (data.length > 0) {
+        setActiveWorkspace((prev) => prev || data[0].id);
+      }
+    } catch {
+      setWorkspaces([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadWorkspaces();
+  }, [loadWorkspaces]);
 
   return (
     <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 border-b border-border/60 bg-card/80 px-4 py-4 backdrop-blur md:px-6 lg:px-10">
@@ -45,6 +70,20 @@ export function Topbar({ title, subtitle }: TopbarProps) {
         </div>
       </div>
       <div className="flex flex-1 items-center justify-end gap-3">
+        {workspaces.length > 0 && (
+          <select
+            className="hidden max-w-[200px] rounded-full border border-border/60 bg-background/60 px-3 py-2 text-xs text-muted-foreground lg:block"
+            value={activeWorkspace}
+            onChange={(event) => setActiveWorkspace(event.target.value)}
+            aria-label="Selecionar workspace"
+          >
+            {workspaces.map((workspace) => (
+              <option key={workspace.id} value={workspace.id}>
+                {workspace.name}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="hidden items-center gap-2 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-sm text-muted-foreground lg:flex">
           <Search size={16} />
           <span>Buscar conversas</span>

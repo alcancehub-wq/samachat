@@ -2,6 +2,7 @@ export interface PublicConfig {
   apiUrl: string;
   termsVersion: string;
   privacyVersion: string;
+  maxUploadMb: number;
   supabase: {
     url: string;
     anonKey: string;
@@ -23,10 +24,14 @@ function readPublic(key: string): string | undefined {
 }
 
 export function getPublicConfig(): PublicConfig {
+  const rawUpload = readPublic('NEXT_PUBLIC_MAX_UPLOAD_MB');
+  const parsedUpload = rawUpload ? Number(rawUpload) : NaN;
+  const safeUpload = Number.isFinite(parsedUpload) ? parsedUpload : 20;
   return {
     apiUrl: readPublic('NEXT_PUBLIC_API_URL') || 'http://localhost:3001',
     termsVersion: readPublic('NEXT_PUBLIC_TERMS_VERSION') || '2026-02-22',
     privacyVersion: readPublic('NEXT_PUBLIC_PRIVACY_VERSION') || '2026-02-22',
+    maxUploadMb: safeUpload,
     supabase: {
       url: readPublic('NEXT_PUBLIC_SUPABASE_URL') || '',
       anonKey: readPublic('NEXT_PUBLIC_SUPABASE_ANON_KEY') || '',

@@ -9,7 +9,7 @@ import { TenantsModule } from './tenants/tenants.module';
 import { UsersModule } from './users/users.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { FlowsModule } from './flows/flows.module';
-import { CampaignsModule } from './campaigns/campaigns.module';
+import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { WabaModule } from './waba/waba.module';
 import { LegalModule } from './legal/legal.module';
@@ -18,6 +18,10 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { CommonModule } from './common/common.module';
 import { InvitesModule } from './invites/invites.module';
 import { MeModule } from './me/me.module';
+import { ConnectionsModule } from './modules/connections/connections.module';
+import { CrmModule } from './modules/crm/crm.module';
+import { AutomationModule } from './modules/automation/automation.module';
+import { WorkspacesModule } from './workspaces/workspaces.module';
 
 @Module({
   imports: [
@@ -46,6 +50,10 @@ import { MeModule } from './me/me.module';
     WebhooksModule,
     InvitesModule,
     MeModule,
+    ConnectionsModule,
+    CrmModule,
+    AutomationModule,
+    WorkspacesModule,
   ],
   providers: [
     {

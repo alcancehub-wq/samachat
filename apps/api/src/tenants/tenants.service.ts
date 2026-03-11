@@ -3,10 +3,14 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import type { RequestUser } from '../common/interfaces/request-user';
 import { ensureUserProfile } from '../common/tenant/tenant.utils';
 import type { MembershipUpdateInput, TenantCreateInput } from '@samachat/shared';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 
 @Injectable()
 export class TenantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly workspacesService: WorkspacesService,
+  ) {}
 
   async createTenant(input: TenantCreateInput, user: RequestUser) {
     const profile = await ensureUserProfile(this.prisma, user);
@@ -23,6 +27,8 @@ export class TenantsService {
         },
       },
     });
+
+    await this.workspacesService.ensureDefaultWorkspace(tenant.id, user, tenant.name);
 
     return tenant;
   }

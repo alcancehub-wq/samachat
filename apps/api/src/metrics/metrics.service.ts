@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
-import { Registry, collectDefaultMetrics, Gauge } from 'prom-client';
+import { Registry, collectDefaultMetrics, Gauge, Counter } from 'prom-client';
 import { getConfig } from '@samachat/config';
 import { createQueueClients } from '../observability/queues';
 
@@ -17,6 +17,15 @@ export class MetricsService {
   private readonly queueFailedGauge: Gauge<string>;
   private readonly queueRetriesGauge: Gauge<string>;
   private readonly queueDlqGauge: Gauge<string>;
+  private readonly messagesReceivedCounter: Counter<string>;
+  private readonly messagesSentCounter: Counter<string>;
+  private readonly automationExecutionsCounter: Counter<string>;
+  private readonly eventsProcessedCounter: Counter<string>;
+  private readonly eventsFailedCounter: Counter<string>;
+  private readonly connectionsGauge: Gauge<string>;
+  private readonly connectionsPerWorkerGauge: Gauge<string>;
+  private readonly workerLoadGauge: Gauge<string>;
+  private readonly reconnectEventsCounter: Counter<string>;
 
   constructor() {
     collectDefaultMetrics({ register: this.registry, prefix: `${METRIC_PREFIX}_` });
@@ -56,6 +65,63 @@ export class MetricsService {
       registers: [this.registry],
     });
 
+    this.messagesReceivedCounter = new Counter({
+      name: `${METRIC_PREFIX}_messages_received_total`,
+      help: 'Total inbound messages received.',
+      registers: [this.registry],
+    });
+
+    this.messagesSentCounter = new Counter({
+      name: `${METRIC_PREFIX}_messages_sent_total`,
+      help: 'Total outbound messages sent.',
+      registers: [this.registry],
+    });
+
+    this.automationExecutionsCounter = new Counter({
+      name: `${METRIC_PREFIX}_automation_executions_total`,
+      help: 'Total automation actions executed.',
+      registers: [this.registry],
+    });
+
+    this.eventsProcessedCounter = new Counter({
+      name: `${METRIC_PREFIX}_events_processed_total`,
+      help: 'Total events processed from Redis pipeline.',
+      registers: [this.registry],
+    });
+
+    this.eventsFailedCounter = new Counter({
+      name: `${METRIC_PREFIX}_events_failed_total`,
+      help: 'Total events failed while processing.',
+      registers: [this.registry],
+    });
+
+    this.connectionsGauge = new Gauge({
+      name: `${METRIC_PREFIX}_active_connections`,
+      help: 'Active WhatsApp connections by status.',
+      labelNames: ['status'],
+      registers: [this.registry],
+    });
+
+    this.connectionsPerWorkerGauge = new Gauge({
+      name: `${METRIC_PREFIX}_connections_per_worker`,
+      help: 'Active WhatsApp connections per worker.',
+      labelNames: ['worker'],
+      registers: [this.registry],
+    });
+
+    this.workerLoadGauge = new Gauge({
+      name: `${METRIC_PREFIX}_worker_load`,
+      help: 'Worker load ratio based on max connections per worker.',
+      labelNames: ['worker'],
+      registers: [this.registry],
+    });
+
+    this.reconnectEventsCounter = new Counter({
+      name: `${METRIC_PREFIX}_reconnect_events_total`,
+      help: 'Total reconnection attempts scheduled.',
+      registers: [this.registry],
+    });
+
     const { redisUrl } = getConfig();
     if (redisUrl) {
       this.redis = new IORedis(redisUrl, {
@@ -73,6 +139,42 @@ export class MetricsService {
 
   getContentType(): string {
     return this.registry.contentType;
+  }
+
+  incrementMessagesReceived(amount = 1) {
+    this.messagesReceivedCounter.inc(amount);
+  }
+
+  incrementMessagesSent(amount = 1) {
+    this.messagesSentCounter.inc(amount);
+  }
+
+  incrementAutomationExecutions(amount = 1) {
+    this.automationExecutionsCounter.inc(amount);
+  }
+
+  incrementEventsProcessed(amount = 1) {
+    this.eventsProcessedCounter.inc(amount);
+  }
+
+  incrementEventsFailed(amount = 1) {
+    this.eventsFailedCounter.inc(amount);
+  }
+
+  setConnectionStatusCount(status: string, count: number) {
+    this.connectionsGauge.set({ status }, count);
+  }
+
+  setConnectionsPerWorker(worker: string, count: number) {
+    this.connectionsPerWorkerGauge.set({ worker }, count);
+  }
+
+  setWorkerLoad(worker: string, load: number) {
+    this.workerLoadGauge.set({ worker }, load);
+  }
+
+  incrementReconnectEvents(amount = 1) {
+    this.reconnectEventsCounter.inc(amount);
   }
 
   private async updateQueueMetrics() {

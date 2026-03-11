@@ -66,6 +66,14 @@ export interface AppConfig {
   queueBackpressure: QueueBackpressureConfig;
   queueLockTtlMs: number;
   providerPool: ProviderPoolConfig;
+  alerts: {
+    webhookUrl?: string;
+    messageFailureThreshold: number;
+    messageFailureWindowSeconds: number;
+  };
+  uploads: {
+    maxUploadMb: number;
+  };
 }
 
 const DEFAULTS = {
@@ -91,6 +99,9 @@ const DEFAULTS = {
   queueBackpressureWarningCooldownMs: 30000,
   queueLockTtlMs: 120000,
   providerPoolSize: 1,
+  alertMessageFailureThreshold: 5,
+  alertMessageFailureWindowSeconds: 300,
+  uploadMaxMb: 20,
 };
 
 const REQUEST_MAX_BYTES = 1024 * 1024;
@@ -207,6 +218,20 @@ export const config: AppConfig = {
       qr: getNumberEnv('PROVIDER_POOL_QR_SIZE', DEFAULTS.providerPoolSize),
       waba: getNumberEnv('PROVIDER_POOL_WABA_SIZE', DEFAULTS.providerPoolSize),
     },
+  },
+  alerts: {
+    webhookUrl: getEnv('ALERT_WEBHOOK_URL'),
+    messageFailureThreshold: getNumberEnv(
+      'ALERT_MESSAGE_FAILURE_THRESHOLD',
+      DEFAULTS.alertMessageFailureThreshold,
+    ),
+    messageFailureWindowSeconds: getNumberEnv(
+      'ALERT_MESSAGE_FAILURE_WINDOW_SECONDS',
+      DEFAULTS.alertMessageFailureWindowSeconds,
+    ),
+  },
+  uploads: {
+    maxUploadMb: getNumberEnv('MAX_UPLOAD_MB', DEFAULTS.uploadMaxMb),
   },
 };
 

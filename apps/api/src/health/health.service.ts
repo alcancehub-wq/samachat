@@ -3,6 +3,9 @@ import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 import { getConfig } from '@samachat/config';
 import { createQueueClients } from '../observability/queues';
+import { PrismaService } from '../common/prisma/prisma.service';
+import { ConnectionPoolManager } from '../modules/connections/connection-pool.manager';
+import { ConnectionStatus } from '@prisma/client';
 
 interface CheckResult {
   ok: boolean;
@@ -16,7 +19,10 @@ export class HealthService {
   private readonly heartbeatKey: string;
   private readonly heartbeatTtlMs: number;
 
-  constructor() {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly poolManager: ConnectionPoolManager,
+  ) {
     const { redisUrl } = getConfig();
     if (redisUrl) {
       this.redis = new IORedis(redisUrl, {
@@ -105,8 +111,12 @@ export class HealthService {
 
   async getHealth() {
     const readiness = await this.getReadiness();
+    const connections = await this.getConnectionSummary();
+    const workers = await this.poolManager.getWorkerSummary();
     return {
       ...readiness,
+      connections,
+      workers,
       uptime: process.uptime(),
     };
   }
@@ -117,5 +127,19 @@ export class HealthService {
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     };
+  }
+
+  private async getConnectionSummary() {
+    const grouped = await this.prisma.whatsappSession.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+    });
+
+    const summary: Record<string, number> = {};
+    for (const status of Object.values(ConnectionStatus)) {
+      summary[status] = grouped.find((item) => item.status === status)?._count._all ?? 0;
+    }
+
+    return summary;
   }
 }

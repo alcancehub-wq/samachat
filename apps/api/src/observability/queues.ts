@@ -7,6 +7,7 @@ export const QUEUE_NAMES = [
   'media-download',
   'dead-letter',
   'campaign-scheduler',
+  'campaign-dispatch',
 ] as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[number];

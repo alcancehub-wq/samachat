@@ -29,6 +29,11 @@ export interface AppConfig {
         maxAttempts: number;
         delayMs: number;
     };
+    alerts: {
+        webhookUrl?: string;
+        messageFailureThreshold: number;
+        messageFailureWindowSeconds: number;
+    };
 }
 export declare const config: AppConfig;
 export declare function getConfig(): AppConfig;

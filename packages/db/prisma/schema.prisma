@@ -12,11 +12,16 @@ model Tenant {
   name          String
   slug          String         @unique
   status        String         @default("active")
+  plan          PlanType       @default(free)
+  max_connections Int          @default(1)
+  max_users     Int            @default(3)
+  max_automations Int          @default(1)
   created_at    DateTime       @default(now())
   updated_at    DateTime       @updatedAt
   audit_logs    AuditLog[]
   campaigns     Campaign[]
   conversations Conversation[]
+  workspaces    Workspace[]
   flows         Flow[]
   flow_nodes    FlowNode[]
   legal_docs    LegalDocument[]
@@ -30,6 +35,8 @@ model Tenant {
   invites       Invite[]
   tags          Tag[]
   tickets       Ticket[]
+  whatsapp_sessions WhatsappSession[]
+  automations   Automation[]
 }
 
 model UserProfile {
@@ -46,6 +53,7 @@ model UserProfile {
   preferences UserPreference[]
   data_requests DataRequest[]
   memberships Membership[]
+  workspace_users WorkspaceUser[]
   messages    Message[]
   invites_created Invite[]
 }
@@ -62,6 +70,32 @@ model Membership {
 
   @@index([tenant_id])
   @@index([user_id])
+}
+
+model Workspace {
+  id          String          @id @default(uuid()) @db.Uuid
+  tenant_id   String
+  name        String
+  created_at  DateTime        @default(now())
+  tenant      Tenant          @relation(fields: [tenant_id], references: [id])
+  users       WorkspaceUser[]
+
+  @@index([tenant_id])
+  @@map("workspaces")
+}
+
+model WorkspaceUser {
+  id           String         @id @default(uuid()) @db.Uuid
+  workspace_id String         @db.Uuid
+  user_id      String
+  role         WorkspaceRole
+  created_at   DateTime       @default(now())
+  workspace    Workspace      @relation(fields: [workspace_id], references: [id])
+  user         UserProfile    @relation(fields: [user_id], references: [id])
+
+  @@index([workspace_id])
+  @@index([user_id])
+  @@map("workspace_users")
 }
 
 model Invite {
@@ -111,34 +145,81 @@ model DataRetentionPolicy {
 }
 
 model Conversation {
-  id         String             @id @default(cuid())
-  tenant_id  String
-  status     ConversationStatus @default(open)
-  subject    String?
-  created_at DateTime           @default(now())
-  updated_at DateTime           @updatedAt
-  tenant     Tenant             @relation(fields: [tenant_id], references: [id])
-  messages   Message[]
-  tickets    Ticket[]
+  id              String             @id @default(uuid()) @db.Uuid
+  tenant_id       String
+  contact_id      String             @db.Uuid
+  status          ConversationStatus @default(open)
+  subject         String?
+  crm_contact_id  String?
+  crm_deal_id     String?
+  last_message_id String?            @db.Uuid @unique
+  last_message_at DateTime?
+  created_at      DateTime           @default(now())
+  updated_at      DateTime           @updatedAt
+  tenant          Tenant             @relation(fields: [tenant_id], references: [id])
+  contact         Contact            @relation(fields: [contact_id], references: [id])
+  messages        Message[]          @relation("ConversationMessages")
+  last_message    Message?           @relation("ConversationLastMessage", fields: [last_message_id], references: [id])
+  tickets         Ticket[]
 
   @@index([tenant_id])
+  @@index([contact_id])
+}
+
+model Automation {
+  id           String              @id @default(uuid()) @db.Uuid
+  tenant_id    String
+  name         String
+  trigger_type String
+  is_active    Boolean             @default(true)
+  created_at   DateTime            @default(now())
+  updated_at   DateTime            @updatedAt
+  tenant       Tenant              @relation(fields: [tenant_id], references: [id])
+  actions      AutomationAction[]
+
+  @@index([tenant_id])
+  @@map("automations")
+}
+
+model AutomationAction {
+  id             String     @id @default(uuid()) @db.Uuid
+  automation_id  String     @db.Uuid
+  action_type    String
+  payload        Json
+  automation     Automation @relation(fields: [automation_id], references: [id])
+
+  @@index([automation_id])
+  @@map("automation_actions")
 }
 
 model Message {
-  id              String       @id @default(cuid())
+  id              String           @id @default(uuid()) @db.Uuid
   tenant_id       String
-  conversation_id String
+  conversation_id String           @db.Uuid
+  contact_id      String           @db.Uuid
   sender_user_id  String?
-  direction       String
+  direction       MessageDirection
+  type            String
+  content         String?
+  media_url       String?
+  media_type      String?
+  media_mime      String?
+  media_size      Int?
+  status          MessageStatus
+  external_id     String           @unique
+  timestamp       DateTime
   body            String
-  created_at      DateTime     @default(now())
-  updated_at      DateTime     @updatedAt
-  conversation    Conversation @relation(fields: [conversation_id], references: [id])
-  sender          UserProfile? @relation(fields: [sender_user_id], references: [id])
-  tenant          Tenant       @relation(fields: [tenant_id], references: [id])
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+  conversation    Conversation     @relation("ConversationMessages", fields: [conversation_id], references: [id])
+  last_message_of Conversation?    @relation("ConversationLastMessage")
+  contact         Contact          @relation(fields: [contact_id], references: [id])
+  sender          UserProfile?     @relation(fields: [sender_user_id], references: [id])
+  tenant          Tenant           @relation(fields: [tenant_id], references: [id])
 
   @@index([tenant_id])
   @@index([conversation_id])
+  @@index([contact_id])
 }
 
 model Tag {
@@ -156,7 +237,7 @@ model Tag {
 model Ticket {
   id              String       @id @default(cuid())
   tenant_id       String
-  conversation_id String
+  conversation_id String       @db.Uuid
   status          TicketStatus @default(new)
   priority        String?
   created_at      DateTime     @default(now())
@@ -197,16 +278,40 @@ model FlowNode {
 }
 
 model Campaign {
-  id           String         @id @default(cuid())
-  tenant_id    String
-  name         String
-  status       CampaignStatus @default(draft)
-  scheduled_at DateTime?
-  created_at   DateTime       @default(now())
-  updated_at   DateTime       @updatedAt
-  tenant       Tenant         @relation(fields: [tenant_id], references: [id])
+  id              String         @id @default(uuid()) @db.Uuid
+  tenant_id       String
+  workspace_id    String         @db.Uuid
+  name            String
+  message_content String
+  media_url       String?
+  status          CampaignStatus @default(draft)
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+  tenant          Tenant         @relation(fields: [tenant_id], references: [id])
+  workspace       Workspace      @relation(fields: [workspace_id], references: [id])
+  targets         CampaignTarget[]
 
   @@index([tenant_id])
+  @@index([workspace_id])
+  @@map("campaigns")
+}
+
+model CampaignTarget {
+  id              String               @id @default(uuid()) @db.Uuid
+  campaign_id     String               @db.Uuid
+  contact_id      String               @db.Uuid
+  conversation_id String               @db.Uuid
+  status          CampaignTargetStatus @default(pending)
+  sent_at         DateTime?
+  campaign        Campaign             @relation(fields: [campaign_id], references: [id])
+  contact         Contact              @relation(fields: [contact_id], references: [id])
+  conversation    Conversation         @relation(fields: [conversation_id], references: [id])
+
+  @@unique([campaign_id, conversation_id])
+  @@index([campaign_id])
+  @@index([contact_id])
+  @@index([conversation_id])
+  @@map("campaign_targets")
 }
 
 model AuditLog {
@@ -288,10 +393,51 @@ model DataRequest {
   @@index([user_id])
 }
 
+model WhatsappSession {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenant_id         String
+  phone_number      String?
+  session_id        String           @unique
+  status            ConnectionStatus
+  qr_code           String?
+  last_connected_at DateTime?
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
+  tenant            Tenant           @relation(fields: [tenant_id], references: [id])
+
+  @@map("whatsapp_sessions")
+  @@index([tenant_id])
+}
+
+model Contact {
+  id           String         @id @default(uuid()) @db.Uuid
+  phone_number String         @unique
+  name         String?
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
+  conversations Conversation[]
+  messages     Message[]
+  contact_tags ContactTag[]
+
+  @@map("contacts")
+}
+
 enum Role {
   admin
   manager
   agent
+}
+
+enum WorkspaceRole {
+  owner
+  admin
+  agent
+}
+
+enum PlanType {
+  free
+  pro
+  enterprise
 }
 
 enum ConversationStatus {
@@ -316,10 +462,15 @@ enum FlowStatus {
 
 enum CampaignStatus {
   draft
-  scheduled
   running
+  paused
   completed
-  cancelled
+}
+
+enum CampaignTargetStatus {
+  pending
+  sent
+  failed
 }
 
 enum LegalDocumentType {
@@ -339,6 +490,25 @@ enum DataRequestStatus {
   rejected
 }
 
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  RECONNECTING
+  WAITING_QR
+}
+
 model StorageAsset {
   id           String   @id @default(cuid())
   provider     String
@@ -347,6 +517,23 @@ model StorageAsset {
   filename     String?
   content_type String?
   size_bytes   Int?
+  contact_tags ContactTag[]
+  model ContactTag {
+    id         String   @id @default(uuid()) @db.Uuid
+    tenant_id  String
+    contact_id String   @db.Uuid
+    tag_id     String
+    created_at DateTime @default(now())
+    tenant     Tenant   @relation(fields: [tenant_id], references: [id])
+    contact    Contact  @relation(fields: [contact_id], references: [id])
+    tag        Tag      @relation(fields: [tag_id], references: [id])
+
+    @@unique([tenant_id, contact_id, tag_id])
+    @@index([tenant_id])
+    @@index([contact_id])
+    @@index([tag_id])
+    @@map("contact_tags")
+  }
   created_at   DateTime @default(now())
 
   @@unique([provider, storage_key])
