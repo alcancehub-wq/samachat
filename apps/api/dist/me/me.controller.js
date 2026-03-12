@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MeController = void 0;
 const common_1 = require("@nestjs/common");
 const supabase_auth_guard_1 = require("../common/guards/supabase-auth.guard");
+const tenant_guard_1 = require("../common/guards/tenant.guard");
 const me_service_1 = require("./me.service");
 let MeController = class MeController {
     meService;
@@ -27,6 +28,12 @@ let MeController = class MeController {
     async onboardingStatus(req, tenantHeader) {
         const tenantId = typeof tenantHeader === 'string' ? tenantHeader : undefined;
         return this.meService.onboardingStatus(req.user, tenantId);
+    }
+    async permissions(req) {
+        if (!req.tenantId) {
+            return { permissions: [] };
+        }
+        return this.meService.listPermissions(req.user, req.tenantId);
     }
 };
 exports.MeController = MeController;
@@ -47,6 +54,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], MeController.prototype, "onboardingStatus", null);
+__decorate([
+    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard, tenant_guard_1.TenantGuard),
+    (0, common_1.Get)('permissions'),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MeController.prototype, "permissions", null);
 exports.MeController = MeController = __decorate([
     (0, common_1.Controller)('me'),
     __metadata("design:paramtypes", [me_service_1.MeService])

@@ -194,6 +194,8 @@ export class MessageProcessor {
     id: string;
     conversation_id: string;
     contact_id: string;
+    sender_user_id?: string | null;
+    senderName?: string | null;
     direction: MessageDirection;
     content: string | null;
     timestamp: Date;
@@ -214,6 +216,8 @@ export class MessageProcessor {
       media_mime: message.media_mime ?? undefined,
       media_size: message.media_size ?? undefined,
       timestamp: message.timestamp.toISOString(),
+      sender_id: message.sender_user_id ?? null,
+      sender_name: message.senderName ?? null,
     };
 
     await this.redis.publish(

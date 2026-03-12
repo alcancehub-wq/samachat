@@ -13,6 +13,8 @@ exports.CampaignsController = void 0;
 const common_1 = require("@nestjs/common");
 const supabase_auth_guard_1 = require("../common/guards/supabase-auth.guard");
 const tenant_guard_1 = require("../common/guards/tenant.guard");
+const permissions_guard_1 = require("../common/guards/permissions.guard");
+const permissions_decorator_1 = require("../common/decorators/permissions.decorator");
 let CampaignsController = class CampaignsController {
     listCampaigns() {
         return {
@@ -22,7 +24,8 @@ let CampaignsController = class CampaignsController {
 };
 exports.CampaignsController = CampaignsController;
 __decorate([
-    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard, tenant_guard_1.TenantGuard),
+    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard, tenant_guard_1.TenantGuard, permissions_guard_1.PermissionsGuard),
+    (0, permissions_decorator_1.Permissions)('campaigns:view'),
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),

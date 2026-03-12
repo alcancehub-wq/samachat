@@ -39,16 +39,17 @@ export class ConnectionsService {
     return this.mapSession(record);
   }
 
-  async listConnections() {
+  async listConnections(tenantId: string) {
     const records = await this.prisma.whatsappSession.findMany({
+      where: { tenant_id: tenantId },
       orderBy: { created_at: 'desc' },
     });
     return records.map((record) => this.mapSession(record));
   }
 
-  async getQrCode(id: string) {
-    const record = await this.prisma.whatsappSession.findUnique({
-      where: { id },
+  async getQrCode(id: string, tenantId: string) {
+    const record = await this.prisma.whatsappSession.findFirst({
+      where: { id, tenant_id: tenantId },
     });
 
     if (!record) {
@@ -63,9 +64,9 @@ export class ConnectionsService {
     };
   }
 
-  async disconnect(id: string) {
-    const record = await this.prisma.whatsappSession.findUnique({
-      where: { id },
+  async disconnect(id: string, tenantId: string) {
+    const record = await this.prisma.whatsappSession.findFirst({
+      where: { id, tenant_id: tenantId },
     });
 
     if (!record) {
@@ -84,6 +85,24 @@ export class ConnectionsService {
     });
 
     return this.mapSession(updated);
+  }
+
+  async remove(id: string, tenantId: string) {
+    const record = await this.prisma.whatsappSession.findFirst({
+      where: { id, tenant_id: tenantId },
+    });
+
+    if (!record) {
+      throw new NotFoundException('Connection not found');
+    }
+
+    if (record.status !== ConnectionStatus.DISCONNECTED) {
+      await this.sessionManager.stopSession(record.session_id, true);
+      await this.poolManager.unassignSession(record.session_id);
+    }
+
+    await this.prisma.whatsappSession.delete({ where: { id: record.id } });
+    return { id: record.id };
   }
 
   private mapSession(session: WhatsappSession): ConnectionSession {

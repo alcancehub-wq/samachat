@@ -16,6 +16,7 @@ const config_1 = require("@samachat/config");
 const prisma_service_1 = require("./prisma/prisma.service");
 const tenant_guard_1 = require("./guards/tenant.guard");
 const rbac_guard_1 = require("./guards/rbac.guard");
+const permissions_guard_1 = require("./guards/permissions.guard");
 const session_store_1 = require("../modules/connections/session.store");
 let CommonModule = class CommonModule {
 };
@@ -27,6 +28,7 @@ exports.CommonModule = CommonModule = __decorate([
             prisma_service_1.PrismaService,
             tenant_guard_1.TenantGuard,
             rbac_guard_1.RbacGuard,
+            permissions_guard_1.PermissionsGuard,
             {
                 provide: session_store_1.CONNECTIONS_REDIS,
                 useFactory: () => {
@@ -38,6 +40,6 @@ exports.CommonModule = CommonModule = __decorate([
                 },
             },
         ],
-        exports: [prisma_service_1.PrismaService, tenant_guard_1.TenantGuard, rbac_guard_1.RbacGuard, session_store_1.CONNECTIONS_REDIS],
+        exports: [prisma_service_1.PrismaService, tenant_guard_1.TenantGuard, rbac_guard_1.RbacGuard, permissions_guard_1.PermissionsGuard, session_store_1.CONNECTIONS_REDIS],
     })
 ], CommonModule);

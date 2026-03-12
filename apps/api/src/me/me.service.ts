@@ -3,6 +3,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { ensureUserProfile } from '../common/tenant/tenant.utils';
 import { getConfig } from '@samachat/config';
 import type { RequestUser } from '../common/interfaces/request-user';
+import { getEffectivePermissions } from '../common/permissions/permissions.utils';
 
 @Injectable()
 export class MeService {
@@ -42,19 +43,15 @@ export class MeService {
       },
     });
 
-    let legalAccepted = false;
-    if (activeTenantId) {
-      const acceptance = await this.prisma.legalAcceptance.findFirst({
-        where: {
-          tenant_id: activeTenantId,
-          user_id: profile.id,
-          terms_version: config.legal.termsVersion,
-          privacy_version: config.legal.privacyVersion,
-        },
-        orderBy: { accepted_at: 'desc' },
-      });
-      legalAccepted = Boolean(acceptance);
-    }
+    const acceptance = await this.prisma.legalAcceptance.findFirst({
+      where: {
+        user_id: profile.id,
+        terms_version: config.legal.termsVersion,
+        privacy_version: config.legal.privacyVersion,
+      },
+      orderBy: { accepted_at: 'desc' },
+    });
+    const legalAccepted = Boolean(acceptance);
 
     return {
       hasMembership: memberships.length > 0,
@@ -62,5 +59,19 @@ export class MeService {
       legalAccepted,
       activeTenantId,
     };
+  }
+
+  async listPermissions(user: RequestUser, tenantId: string) {
+    const profile = await ensureUserProfile(this.prisma, user);
+    const membership = await this.prisma.membership.findFirst({
+      where: { tenant_id: tenantId, user_id: profile.id },
+      include: {
+        access_profile: true,
+        access_profiles: { include: { access_profile: true } },
+      },
+    });
+
+    const permissions = getEffectivePermissions(membership ?? undefined);
+    return { permissions };
   }
 }

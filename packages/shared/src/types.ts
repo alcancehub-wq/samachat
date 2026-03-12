@@ -31,6 +31,19 @@ export interface Membership {
   tenant_id: string;
   user_id: string;
   role: Role;
+  access_profile_id?: string | null;
+  access_profile_ids?: string[] | null;
+  permissions_override?: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AccessProfile {
+  id: string;
+  tenant_id: string;
+  name: string;
+  system_role: Role;
+  permissions: string[];
   created_at: string;
   updated_at: string;
 }

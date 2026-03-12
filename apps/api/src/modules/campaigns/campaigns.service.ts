@@ -38,15 +38,31 @@ export class CampaignsService {
     return { ...campaign, progress };
   }
 
-  async createCampaign(tenantId: string, input: CampaignCreateInput) {
+  async createCampaign(tenantId: string, input: CampaignCreateInput, actorId: string | null) {
     if (!input?.name?.trim()) {
       throw new BadRequestException('Campaign name is required');
     }
-    if (!input.message_content?.trim()) {
-      throw new BadRequestException('Message content is required');
+    const hasMessage = Boolean(input.message_content?.trim());
+    const hasDialog = Boolean(input.dialog_id);
+    if (!hasMessage && !hasDialog) {
+      throw new BadRequestException('Message content or dialog is required');
     }
     if (!input.workspace_id) {
       throw new BadRequestException('Workspace is required');
+    }
+    if (!input.start_at) {
+      throw new BadRequestException('Start date is required');
+    }
+    if (!Number.isFinite(input.interval_seconds) || input.interval_seconds <= 0) {
+      throw new BadRequestException('Interval is required');
+    }
+    if (!input.warning_acknowledged) {
+      throw new BadRequestException('Campaign warning acknowledgement is required');
+    }
+
+    const startAt = new Date(input.start_at);
+    if (Number.isNaN(startAt.getTime())) {
+      throw new BadRequestException('Start date is invalid');
     }
 
     const workspace = await this.prisma.workspace.findUnique({
@@ -56,16 +72,52 @@ export class CampaignsService {
       throw new BadRequestException('Workspace not found');
     }
 
+    let dialogMessage: string | null = null;
+    let dialogMedia: string | null = null;
+    if (hasDialog) {
+      const dialog = await this.prisma.dialog.findFirst({
+        where: { id: input.dialog_id as string, tenant_id: tenantId },
+      });
+      if (!dialog) {
+        throw new BadRequestException('Dialog not found');
+      }
+      if (dialog.type === 'automation') {
+        throw new BadRequestException('Automation dialog is not allowed in campaigns');
+      }
+      dialogMessage = dialog.message_text ?? null;
+      dialogMedia = dialog.media_url ?? null;
+      if (!hasMessage && dialog.type === 'message' && !dialogMessage) {
+        throw new BadRequestException('Dialog message content is empty');
+      }
+    }
+
     const targets = await this.buildTargets(tenantId, input.targets);
 
     const campaign = await this.prisma.campaign.create({
       data: {
         tenant_id: tenantId,
         workspace_id: input.workspace_id,
+        dialog_id: input.dialog_id ?? null,
         name: input.name.trim(),
-        message_content: input.message_content.trim(),
-        media_url: input.media_url ?? null,
+        message_content: hasMessage ? input.message_content.trim() : dialogMessage ?? '',
+        media_url: input.media_url ?? dialogMedia ?? null,
+        start_at: startAt,
+        interval_seconds: Math.floor(input.interval_seconds),
         status: CampaignStatus.draft,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        tenant_id: tenantId,
+        actor_id: actorId ?? null,
+        action: 'campaign_created',
+        entity: 'campaign',
+        entity_id: campaign.id,
+        metadata: {
+          warning_version: input.warning_version ?? null,
+          warning_acknowledged: true,
+        },
       },
     });
 
@@ -133,6 +185,36 @@ export class CampaignsService {
     });
 
     return this.getCampaign(tenantId, id);
+  }
+
+  async deleteCampaign(tenantId: string, id: string, actorId: string | null) {
+    const campaign = await this.prisma.campaign.findFirst({
+      where: { id, tenant_id: tenantId },
+    });
+
+    if (!campaign) {
+      throw new NotFoundException('Campaign not found');
+    }
+
+    await this.prisma.campaignTarget.deleteMany({
+      where: { campaign_id: campaign.id },
+    });
+
+    await this.prisma.campaign.delete({
+      where: { id: campaign.id },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        tenant_id: tenantId,
+        actor_id: actorId ?? null,
+        action: 'campaign_deleted',
+        entity: 'campaign',
+        entity_id: campaign.id,
+      },
+    });
+
+    return { id: campaign.id };
   }
 
   private async buildTargets(tenantId: string, selection: CampaignTargetSelection) {

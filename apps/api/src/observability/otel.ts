@@ -7,21 +7,26 @@ import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 
 const serviceName = process.env.OTEL_SERVICE_NAME || 'samachat-api';
 const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+const otelEnabled = process.env.OTEL_ENABLED === 'true' || Boolean(otlpEndpoint);
 
-const traceExporter = otlpEndpoint
-  ? new OTLPTraceExporter({ url: otlpEndpoint })
-  : new ConsoleSpanExporter();
+if (otelEnabled) {
+  const traceExporter = otlpEndpoint
+    ? new OTLPTraceExporter({ url: otlpEndpoint })
+    : process.env.OTEL_CONSOLE_EXPORTER === 'true'
+      ? new ConsoleSpanExporter()
+      : undefined;
 
-const sdk = new NodeSDK({
-  resource: new Resource({
-    [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
-  }),
-  traceExporter,
-  instrumentations: [getNodeAutoInstrumentations()],
-});
+  const sdk = new NodeSDK({
+    resource: new Resource({
+      [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
+    }),
+    traceExporter,
+    instrumentations: [getNodeAutoInstrumentations()],
+  });
 
-sdk.start();
+  sdk.start();
 
-process.on('SIGTERM', () => {
-  sdk.shutdown();
-});
+  process.on('SIGTERM', () => {
+    sdk.shutdown();
+  });
+}

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { apiFetch } from '@/lib/api';
+import { setTenantId } from '@/lib/tenant';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -18,9 +20,43 @@ export default function LoginPage() {
     document.cookie = 'samachat-auth=1; path=/; max-age=604800; samesite=lax';
   };
 
-  const redirectToDashboard = () => {
+  const setCookie = (name: string, value: string) => {
+    document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=604800; samesite=lax`;
+  };
+
+  interface OnboardingStatus {
+    hasMembership: boolean;
+    pendingInvites: number;
+    legalAccepted: boolean;
+    activeTenantId: string | null;
+  }
+
+  const redirectAfterLogin = async () => {
+    const status = await apiFetch<OnboardingStatus>('/me/onboarding-status');
+
+    setCookie('samachat-membership', status.hasMembership ? '1' : '0');
+    setCookie('samachat-legal', status.legalAccepted ? '1' : '0');
+    if (status.activeTenantId) {
+      setTenantId(status.activeTenantId);
+    }
+
+    if (status.pendingInvites > 0) {
+      router.replace('/onboarding/invite');
+      return;
+    }
+
+    if (!status.hasMembership) {
+      router.replace('/onboarding/tenant');
+      return;
+    }
+
+    if (!status.legalAccepted) {
+      router.replace('/onboarding/legal');
+      return;
+    }
+
     router.replace('/dashboard');
-    // Force a full navigation so middleware sees the auth cookie reliably.
+    // Force a full navigation so middleware sees cookies reliably.
     setTimeout(() => {
       window.location.assign('/dashboard');
     }, 150);
@@ -30,7 +66,9 @@ export default function LoginPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         setAuthCookie();
-        redirectToDashboard();
+        redirectAfterLogin().catch(() => {
+          router.replace('/dashboard');
+        });
       }
     });
   }, [router]);
@@ -50,8 +88,13 @@ export default function LoginPage() {
       setError(signInError.message);
     } else {
       setAuthCookie();
-      setSuccess('Login realizado. Redirecione para o dashboard.');
-      redirectToDashboard();
+      setSuccess('Login realizado. Redirecionando...');
+      try {
+        await redirectAfterLogin();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Falha ao finalizar login');
+        router.replace('/dashboard');
+      }
     }
 
     setLoading(false);

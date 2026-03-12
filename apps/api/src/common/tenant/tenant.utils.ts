@@ -1,6 +1,6 @@
 import type { PrismaService } from '../prisma/prisma.service';
 import type { RequestUser } from '../interfaces/request-user';
-import type { Membership, UserProfile } from '@prisma/client';
+import type { AccessProfile, Membership, MembershipAccessProfile, UserProfile } from '@prisma/client';
 import { Role } from '@samachat/shared';
 
 const ROLE_ORDER: Record<Role, number> = {
@@ -20,13 +20,14 @@ export async function ensureUserProfile(
   });
 
   if (existing) {
-    if (!existing.auth_user_id) {
+    const shouldUpdateName = Boolean(user.name) && existing.full_name !== user.name;
+    if (!existing.auth_user_id || shouldUpdateName) {
       return prisma.userProfile.update({
         where: { id: existing.id },
         data: {
-          auth_user_id: user.id,
+          auth_user_id: existing.auth_user_id ?? user.id,
           email: user.email,
-          full_name: user.name ?? null,
+          full_name: user.name ?? existing.full_name ?? null,
         },
       });
     }
@@ -42,17 +43,27 @@ export async function ensureUserProfile(
   });
 }
 
+export type MembershipWithProfile = Membership & { access_profile?: AccessProfile | null };
+export type MembershipWithProfiles = Membership & {
+  access_profile?: AccessProfile | null;
+  access_profiles?: MembershipAccessProfile[] | null;
+};
+
 export async function requireMembership(
   prisma: PrismaService,
   user: RequestUser,
   tenantId: string,
-): Promise<{ membership: Membership; profile: UserProfile }>
+): Promise<{ membership: MembershipWithProfiles; profile: UserProfile }>
 {
   const profile = await ensureUserProfile(prisma, user);
   const membership = await prisma.membership.findFirst({
     where: {
       tenant_id: tenantId,
       user_id: profile.id,
+    },
+    include: {
+      access_profile: true,
+      access_profiles: { include: { access_profile: true } },
     },
   });
 

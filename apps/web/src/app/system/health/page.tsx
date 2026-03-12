@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { getPublicConfig } from '@/lib/public-config';
+import { hasPermission } from '@/lib/permissions';
+import { usePermissions } from '@/lib/use-permissions';
 
 interface HealthResponse {
   status: string;
@@ -36,10 +38,13 @@ interface MetricsSummary {
 }
 
 export default function SystemHealthPage() {
+  const { permissions, loading: permissionsLoading } = usePermissions();
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const canViewHealth = hasPermission(permissions, 'system:health');
 
   const fetchMetrics = useCallback(async () => {
     const config = getPublicConfig();
@@ -49,6 +54,12 @@ export default function SystemHealthPage() {
   }, []);
 
   const loadHealth = useCallback(async () => {
+    if (!canViewHealth) {
+      setHealth(null);
+      setMetrics(null);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const data = await apiFetch<HealthResponse>('/health');
@@ -62,11 +73,14 @@ export default function SystemHealthPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchMetrics]);
+  }, [fetchMetrics, canViewHealth]);
 
   useEffect(() => {
+    if (permissionsLoading) {
+      return;
+    }
     void loadHealth();
-  }, [loadHealth]);
+  }, [loadHealth, permissionsLoading]);
 
   return (
     <PageShell title="Saude do sistema" subtitle="Observabilidade">
@@ -84,7 +98,11 @@ export default function SystemHealthPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {error && <p className="text-sm text-destructive">{error}</p>}
-            {loading || !health ? (
+            {!canViewHealth ? (
+              <p className="text-sm text-muted-foreground">
+                Voce nao possui permissao para ver a saude do sistema.
+              </p>
+            ) : loading || !health ? (
               <p className="text-sm text-muted-foreground">Carregando status...</p>
             ) : (
               <div className="grid gap-4 md:grid-cols-3">

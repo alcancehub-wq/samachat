@@ -12,6 +12,8 @@ import { getPublicConfig } from '@/lib/public-config';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { getTenantId } from '@/lib/tenant';
+import { hasPermission } from '@/lib/permissions';
+import { usePermissions } from '@/lib/use-permissions';
 
 interface ConversationItem {
   conversation_id: string;
@@ -32,6 +34,9 @@ interface MessageItem {
   media_size?: number | null;
   timestamp: string;
   status: string;
+  senderId?: string | null;
+  senderName?: string | null;
+  senderType?: 'agent' | 'customer' | 'bot' | string | null;
 }
 
 interface MessageListResponse {
@@ -40,6 +45,7 @@ interface MessageListResponse {
 }
 
 export default function InboxPage() {
+  const { permissions, loading: permissionsLoading } = usePermissions();
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
@@ -59,8 +65,21 @@ export default function InboxPage() {
   const socketRef = useRef<Socket | null>(null);
   const activeIdRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
+  const isUserScrolledUpRef = useRef(false);
+
+  const canViewChats = hasPermission(permissions, 'chats:view');
+  const canViewMessages = hasPermission(permissions, 'messages:view');
+  const canSendMessages = hasPermission(permissions, 'messages:send');
+  const canUploadFiles = hasPermission(permissions, 'files:create');
+  const canCreateLead = hasPermission(permissions, 'crm:create_lead');
 
   const loadConversations = useCallback(async () => {
+    if (!canViewChats) {
+      setConversations([]);
+      setLoadingConversations(false);
+      return;
+    }
     try {
       const data = await apiFetch<ConversationItem[]>('/conversations');
       setConversations(data);
@@ -77,9 +96,14 @@ export default function InboxPage() {
     } finally {
       setLoadingConversations(false);
     }
-  }, [activeId]);
+  }, [activeId, canViewChats]);
 
   const loadMessages = useCallback(async (conversationId: string) => {
+    if (!canViewMessages) {
+      setMessages([]);
+      setLoadingMessages(false);
+      return;
+    }
     setLoadingMessages(true);
     try {
       const response = await apiFetch<MessageListResponse>(
@@ -93,23 +117,56 @@ export default function InboxPage() {
     } finally {
       setLoadingMessages(false);
     }
-  }, []);
+  }, [canViewMessages]);
 
   useEffect(() => {
+    if (permissionsLoading) {
+      return;
+    }
     void loadConversations();
-  }, [loadConversations]);
+  }, [loadConversations, permissionsLoading]);
 
   useEffect(() => {
+    if (!canViewMessages) {
+      return;
+    }
     if (activeId) {
       void loadMessages(activeId);
       setCrmResult(null);
       setCrmStatus(null);
     }
-  }, [activeId, loadMessages]);
+  }, [activeId, loadMessages, canViewMessages]);
 
   useEffect(() => {
     activeIdRef.current = activeId;
   }, [activeId]);
+
+  const scrollToBottom = useCallback(() => {
+    const container = messageListRef.current;
+    if (!container) {
+      return;
+    }
+    container.scrollTop = container.scrollHeight;
+  }, []);
+
+  const handleMessageScroll = useCallback(() => {
+    const container = messageListRef.current;
+    if (!container) {
+      return;
+    }
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    isUserScrolledUpRef.current = distanceFromBottom > 120;
+  }, []);
+
+  useEffect(() => {
+    if (!messageListRef.current) {
+      return;
+    }
+    if (!isUserScrolledUpRef.current) {
+      requestAnimationFrame(() => scrollToBottom());
+    }
+  }, [messages, scrollToBottom]);
 
   const setupSocket = useCallback(() => {
     const config = getPublicConfig();
@@ -176,6 +233,8 @@ export default function InboxPage() {
             media_size: payload.media_size as number | null,
             timestamp: String(payload.timestamp),
             status: 'SENT',
+            senderId: payload.sender_id as string | null | undefined,
+            senderName: payload.sender_name as string | null | undefined,
           },
         ]);
       }
@@ -231,6 +290,10 @@ export default function InboxPage() {
     if (!activeId) {
       return;
     }
+    if (!canSendMessages) {
+      setError('Sem permissao para enviar mensagens.');
+      return;
+    }
 
     const hasMedia = Boolean(uploadedMedia);
     const textPayload = composerText.trim();
@@ -239,6 +302,8 @@ export default function InboxPage() {
     }
 
     setComposerText('');
+    isUserScrolledUpRef.current = false;
+    requestAnimationFrame(() => scrollToBottom());
 
     try {
       await apiFetch('/messages/send', {
@@ -260,10 +325,19 @@ export default function InboxPage() {
   };
 
   const handleFileClick = () => {
+    if (!canUploadFiles) {
+      setError('Sem permissao para enviar arquivos.');
+      return;
+    }
     fileInputRef.current?.click();
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canUploadFiles) {
+      setError('Sem permissao para enviar arquivos.');
+      event.target.value = '';
+      return;
+    }
     const file = event.target.files?.[0];
     if (!file) {
       return;
@@ -336,6 +410,10 @@ export default function InboxPage() {
     if (!activeId) {
       return;
     }
+    if (!canCreateLead) {
+      setCrmStatus('Sem permissao para criar lead no CRM.');
+      return;
+    }
     setCrmStatus('Criando lead no CRM...');
     try {
       const result = await apiFetch<{ contact_id: string; deal_id: string; pipeline_id: string; already_linked?: boolean }>(
@@ -355,10 +433,10 @@ export default function InboxPage() {
 
   return (
     <PageShell title="Inbox" subtitle="Conversas">
-      <div className="grid min-h-[70vh] gap-6 lg:grid-cols-[320px_1fr] lg:gap-8">
+      <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[320px_1fr] lg:gap-8">
         <section
           className={cn(
-            'flex flex-col rounded-2xl border border-border/60 bg-card/60 p-4 backdrop-blur',
+            'flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-4 backdrop-blur',
             showChat ? 'hidden lg:flex' : 'flex',
           )}
         >
@@ -376,6 +454,11 @@ export default function InboxPage() {
           </div>
           {loadingConversations ? (
             <SkeletonList rows={6} />
+          ) : !canViewChats ? (
+            <EmptyState
+              title="Sem permissao"
+              description="Voce nao possui permissao para ver conversas."
+            />
           ) : conversations.length === 0 ? (
             <EmptyState
               title="Nenhuma conversa"
@@ -424,7 +507,7 @@ export default function InboxPage() {
 
         <section
           className={cn(
-            'flex flex-col rounded-2xl border border-border/60 bg-card/60 p-4 backdrop-blur',
+            'flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-4 backdrop-blur',
             showChat ? 'flex' : 'hidden lg:flex',
           )}
         >
@@ -446,10 +529,12 @@ export default function InboxPage() {
               </h2>
               <p className="text-xs text-muted-foreground">Atendimento ativo</p>
             </div>
-            <Button size="sm" variant="secondary" onClick={handleCreateLead}>
-              <Sparkles size={14} className="mr-2" />
-              Create in CRM
-            </Button>
+            {canCreateLead && (
+              <Button size="sm" variant="secondary" onClick={handleCreateLead}>
+                <Sparkles size={14} className="mr-2" />
+                Create in CRM
+              </Button>
+            )}
           </div>
 
           {error && (
@@ -470,77 +555,47 @@ export default function InboxPage() {
             </div>
           )}
 
-          <div className="flex-1 space-y-3 overflow-y-auto pr-1">
-            {loadingMessages ? (
-              <SkeletonList rows={6} />
-            ) : messages.length === 0 ? (
-              <EmptyState
-                title="Sem mensagens"
-                description="Envie a primeira mensagem para iniciar o atendimento."
-              />
-            ) : (
-              messages.map((message) => {
-                const isOutbound = message.direction === 'OUTBOUND';
-                return (
-                  <div
-                    key={message.message_id}
-                    className={cn(
-                      'max-w-[80%] rounded-2xl px-4 py-3 text-sm',
-                      isOutbound
-                        ? 'ml-auto bg-primary text-primary-foreground'
-                        : 'bg-muted/60 text-foreground',
-                    )}
-                  >
-                    {renderMessageContent(message)}
-                    <div
-                      className={cn(
-                        'mt-2 flex items-center justify-end gap-2 text-[0.65rem]',
-                        isOutbound ? 'text-primary-foreground/70' : 'text-muted-foreground',
-                      )}
-                    >
-                      <span>
-                        {new Date(message.timestamp).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                      <span>{message.status}</span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <ChatContainer>
+            <MessageList
+              messages={messages}
+              loadingMessages={loadingMessages}
+              canViewMessages={canViewMessages}
+              listRef={messageListRef}
+              onScroll={handleMessageScroll}
+            />
+          </ChatContainer>
 
-          <form className="mt-4 flex items-center gap-2" onSubmit={handleSend}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept="image/jpeg,image/png,video/mp4,audio/mpeg,application/pdf"
-              onChange={handleFileChange}
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="h-11 w-11 p-0"
-              aria-label="Enviar arquivo"
-              onClick={handleFileClick}
-              disabled={uploading}
-            >
-              <Paperclip size={16} />
-            </Button>
-            <input
-              className="flex-1 rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-sm"
-              placeholder="Digite sua mensagem"
-              value={composerText}
-              onChange={(event) => setComposerText(event.target.value)}
-            />
-            <Button type="submit" size="sm" className="h-11 w-11 p-0" aria-label="Enviar">
-              <SendHorizontal size={16} />
-            </Button>
-          </form>
+          {canSendMessages && (
+            <form className="mt-4 flex items-center gap-2" onSubmit={handleSend}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/jpeg,image/png,video/mp4,audio/mpeg,application/pdf"
+                onChange={handleFileChange}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-11 w-11 p-0"
+                aria-label="Enviar arquivo"
+                onClick={handleFileClick}
+                disabled={uploading || !canUploadFiles}
+              >
+                <Paperclip size={16} />
+              </Button>
+              <input
+                className="flex-1 rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-sm"
+                placeholder="Digite sua mensagem"
+                value={composerText}
+                onChange={(event) => setComposerText(event.target.value)}
+              />
+              <Button type="submit" size="sm" className="h-11 w-11 p-0" aria-label="Enviar">
+                <SendHorizontal size={16} />
+              </Button>
+            </form>
+          )}
           {uploadedMedia && (
             <div className="mt-2 text-xs text-muted-foreground">
               Arquivo anexado: {uploadedMedia.mime} ({Math.round(uploadedMedia.size / 1024)} KB)
@@ -598,4 +653,218 @@ function renderMessageContent(message: MessageItem) {
   }
 
   return <p>{message.content}</p>;
+}
+
+function ChatContainer({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-1 overflow-hidden rounded-xl">
+      {children}
+    </div>
+  );
+}
+
+function MessageList({
+  messages,
+  loadingMessages,
+  canViewMessages,
+  listRef,
+  onScroll,
+}: {
+  messages: MessageItem[];
+  loadingMessages: boolean;
+  canViewMessages: boolean;
+  listRef: React.RefObject<HTMLDivElement | null>;
+  onScroll: () => void;
+}) {
+  if (loadingMessages) {
+    return (
+      <div className="flex-1 overflow-y-auto px-3 py-2" ref={listRef} onScroll={onScroll}>
+        <SkeletonList rows={6} />
+      </div>
+    );
+  }
+
+  if (!canViewMessages) {
+    return (
+      <div className="flex-1 overflow-y-auto px-3 py-2" ref={listRef} onScroll={onScroll}>
+        <EmptyState
+          title="Sem permissao"
+          description="Voce nao possui permissao para ver mensagens."
+        />
+      </div>
+    );
+  }
+
+  if (messages.length === 0) {
+    return (
+      <div className="flex-1 overflow-y-auto px-3 py-2" ref={listRef} onScroll={onScroll}>
+        <EmptyState
+          title="Sem mensagens"
+          description="Envie a primeira mensagem para iniciar o atendimento."
+        />
+      </div>
+    );
+  }
+
+  const messageViews = messages.map((message, index) => {
+    const prev = index > 0 ? messages[index - 1] : null;
+    const next = index < messages.length - 1 ? messages[index + 1] : null;
+    const currentTime = new Date(message.timestamp).getTime();
+    const prevTime = prev ? new Date(prev.timestamp).getTime() : 0;
+    const nextTime = next ? new Date(next.timestamp).getTime() : 0;
+    const senderKey = getSenderKey(message);
+    const prevSenderKey = prev ? getSenderKey(prev) : null;
+    const nextSenderKey = next ? getSenderKey(next) : null;
+    const groupedWithPrev =
+      Boolean(prev) &&
+      senderKey === prevSenderKey &&
+      currentTime - prevTime <= 3 * 60 * 1000;
+    const groupedWithNext =
+      Boolean(next) &&
+      senderKey === nextSenderKey &&
+      nextTime - currentTime <= 3 * 60 * 1000;
+    const showMeta = !groupedWithNext;
+    const showSender = message.direction === 'OUTBOUND' && showMeta;
+
+    return (
+      <MessageRow
+        key={message.message_id}
+        message={message}
+        groupedWithPrev={groupedWithPrev}
+        showMeta={showMeta}
+        showSender={showSender}
+      />
+    );
+  });
+
+  return (
+    <div className="flex-1 overflow-y-auto px-3 py-2" ref={listRef} onScroll={onScroll}>
+      {messageViews}
+    </div>
+  );
+}
+
+function MessageRow({
+  message,
+  groupedWithPrev,
+  showMeta,
+  showSender,
+}: {
+  message: MessageItem;
+  groupedWithPrev: boolean;
+  showMeta: boolean;
+  showSender: boolean;
+}) {
+  const [metaOpen, setMetaOpen] = useState(false);
+  const isOutbound = message.direction === 'OUTBOUND';
+  const statusIndicator = isOutbound ? getStatusIndicator(message.status) : null;
+
+  return (
+    <div className={cn('flex w-full', isOutbound ? 'justify-end' : 'justify-start')}>
+      <div className={cn('flex max-w-[60%] flex-col', groupedWithPrev ? 'mt-1' : 'mt-4')}>
+        <MessageBubble direction={message.direction}>{renderMessageContent(message)}</MessageBubble>
+        {showMeta && (
+          <MessageMeta
+            timestamp={message.timestamp}
+            status={statusIndicator}
+            isOutbound={isOutbound}
+            isOpen={metaOpen}
+            onToggle={() => setMetaOpen((prev) => !prev)}
+          />
+        )}
+        {showSender && metaOpen && (
+          <SenderLabel name={message.senderName || 'Atendente'} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MessageBubble({
+  direction,
+  children,
+}: {
+  direction: MessageItem['direction'];
+  children: React.ReactNode;
+}) {
+  const isOutbound = direction === 'OUTBOUND';
+  return (
+    <div
+      className={cn(
+        'w-fit rounded-xl px-3.5 py-2.5 text-sm leading-[1.4]',
+        isOutbound ? 'bg-[#d9fdd3] text-foreground' : 'bg-white text-foreground',
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function MessageMeta({
+  timestamp,
+  status,
+  isOutbound,
+  isOpen,
+  onToggle,
+}: {
+  timestamp: string;
+  status: { text: string; className?: string } | null;
+  isOutbound: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#9e9e9e]">
+      <span>{formatMessageTime(timestamp)}</span>
+      {isOutbound && status && (
+        <span className={status.className}>{status.text}</span>
+      )}
+      {isOutbound && (
+        <button
+          type="button"
+          className="ml-1 text-[11px] text-[#9e9e9e]"
+          onClick={onToggle}
+          aria-label={isOpen ? 'Ocultar detalhes' : 'Mostrar detalhes'}
+        >
+          {isOpen ? '▴' : '▾'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SenderLabel({ name }: { name: string }) {
+  return (
+    <div className="mt-1 rounded-md bg-[rgba(0,0,0,0.65)] px-2 py-1.5 text-xs text-white">
+      Enviada por {name}
+    </div>
+  );
+}
+
+function formatMessageTime(value: string) {
+  return new Date(value).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function getStatusIndicator(status: string | null | undefined) {
+  const normalized = status?.toLowerCase?.() ?? '';
+  if (normalized === 'read') {
+    return { text: '✓✓', className: 'text-sky-500' };
+  }
+  if (normalized === 'delivered') {
+    return { text: '✓✓' };
+  }
+  if (normalized === 'sent') {
+    return { text: '✓' };
+  }
+  return null;
+}
+
+function getSenderKey(message: MessageItem) {
+  if (message.direction === 'OUTBOUND') {
+    return message.senderId ?? message.senderName ?? 'outbound';
+  }
+  return 'inbound';
 }

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { navItems } from './nav-items';
@@ -11,7 +11,9 @@ import { Button } from '@/components/ui/button';
 
 export function MobileSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { sidebarOpen, closeSidebar } = useUiStore();
+  const visibleItems = navItems;
 
   useEffect(() => {
     document.body.style.overflow = sidebarOpen ? 'hidden' : '';
@@ -51,24 +53,59 @@ export function MobileSidebar() {
           </Button>
         </div>
         <nav className="mt-8 space-y-2">
-          {navItems.map((item) => {
-            const active = pathname === item.href;
+          {visibleItems.map((item) => {
             const Icon = item.icon;
+            const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+            const isActive = (href: string) => {
+              if (href.includes('?')) {
+                const [path, query] = href.split('?');
+                if (pathname !== path) return false;
+                const params = new URLSearchParams(query);
+                const tab = params.get('tab');
+                const currentTab = searchParams.get('tab') ?? 'biblioteca';
+                return tab === currentTab;
+              }
+              return pathname === href;
+            };
+
+            const childActive = hasChildren ? item.children.some((child) => isActive(child.href)) : false;
+            const active = isActive(item.href) || childActive;
+
             return (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={closeSidebar}
-                className={cn(
-                  'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition',
-                  active
-                    ? 'bg-primary text-primary-foreground shadow-glow'
-                    : 'text-muted-foreground hover:bg-muted',
+              <div key={item.label} className="space-y-1">
+                <Link
+                  href={item.href}
+                  onClick={closeSidebar}
+                  className={cn(
+                    'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition',
+                    active
+                      ? 'bg-primary text-primary-foreground shadow-glow'
+                      : 'text-muted-foreground hover:bg-muted',
+                  )}
+                >
+                  <Icon size={18} />
+                  {item.label}
+                </Link>
+                {hasChildren && (
+                  <div className="space-y-1 pl-8">
+                    {item.children.map((child) => (
+                      <Link
+                        key={child.label}
+                        href={child.href}
+                        onClick={closeSidebar}
+                        className={cn(
+                          'flex items-center rounded-lg px-3 py-2 text-xs font-medium transition',
+                          isActive(child.href)
+                            ? 'bg-muted text-foreground'
+                            : 'text-muted-foreground hover:bg-muted/60',
+                        )}
+                      >
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
                 )}
-              >
-                <Icon size={18} />
-                {item.label}
-              </Link>
+              </div>
             );
           })}
         </nav>

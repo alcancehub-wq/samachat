@@ -14,6 +14,7 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../common/prisma/prisma.service");
 const tenant_utils_1 = require("../common/tenant/tenant.utils");
 const config_1 = require("@samachat/config");
+const permissions_utils_1 = require("../common/permissions/permissions.utils");
 let MeService = class MeService {
     prisma;
     constructor(prisma) {
@@ -47,25 +48,33 @@ let MeService = class MeService {
                 expires_at: { gt: new Date() },
             },
         });
-        let legalAccepted = false;
-        if (activeTenantId) {
-            const acceptance = await this.prisma.legalAcceptance.findFirst({
-                where: {
-                    tenant_id: activeTenantId,
-                    user_id: profile.id,
-                    terms_version: config.legal.termsVersion,
-                    privacy_version: config.legal.privacyVersion,
-                },
-                orderBy: { accepted_at: 'desc' },
-            });
-            legalAccepted = Boolean(acceptance);
-        }
+        const acceptance = await this.prisma.legalAcceptance.findFirst({
+            where: {
+                user_id: profile.id,
+                terms_version: config.legal.termsVersion,
+                privacy_version: config.legal.privacyVersion,
+            },
+            orderBy: { accepted_at: 'desc' },
+        });
+        const legalAccepted = Boolean(acceptance);
         return {
             hasMembership: memberships.length > 0,
             pendingInvites,
             legalAccepted,
             activeTenantId,
         };
+    }
+    async listPermissions(user, tenantId) {
+        const profile = await (0, tenant_utils_1.ensureUserProfile)(this.prisma, user);
+        const membership = await this.prisma.membership.findFirst({
+            where: { tenant_id: tenantId, user_id: profile.id },
+            include: {
+                access_profile: true,
+                access_profiles: { include: { access_profile: true } },
+            },
+        });
+        const permissions = (0, permissions_utils_1.getEffectivePermissions)(membership ?? undefined);
+        return { permissions };
     }
 };
 exports.MeService = MeService;

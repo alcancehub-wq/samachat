@@ -183,6 +183,8 @@ let MessageProcessor = class MessageProcessor {
             media_mime: message.media_mime ?? undefined,
             media_size: message.media_size ?? undefined,
             timestamp: message.timestamp.toISOString(),
+            sender_id: message.sender_user_id ?? null,
+            sender_name: message.senderName ?? null,
         };
         await this.redis.publish('samachat.events', JSON.stringify({
             event: 'message_sent',

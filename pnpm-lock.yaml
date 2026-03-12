@@ -282,6 +282,9 @@ importers:
       '@samachat/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@whiskeysockets/baileys':
+        specifier: ^6.7.12
+        version: 6.17.16(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
       bullmq:
         specifier: ^5.15.0
         version: 5.70.0

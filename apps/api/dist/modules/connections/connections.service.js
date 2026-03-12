@@ -48,15 +48,16 @@ let ConnectionsService = class ConnectionsService {
         }
         return this.mapSession(record);
     }
-    async listConnections() {
+    async listConnections(tenantId) {
         const records = await this.prisma.whatsappSession.findMany({
+            where: { tenant_id: tenantId },
             orderBy: { created_at: 'desc' },
         });
         return records.map((record) => this.mapSession(record));
     }
-    async getQrCode(id) {
-        const record = await this.prisma.whatsappSession.findUnique({
-            where: { id },
+    async getQrCode(id, tenantId) {
+        const record = await this.prisma.whatsappSession.findFirst({
+            where: { id, tenant_id: tenantId },
         });
         if (!record) {
             throw new common_1.NotFoundException('Connection not found');
@@ -68,9 +69,9 @@ let ConnectionsService = class ConnectionsService {
             qrCode: record.qr_code,
         };
     }
-    async disconnect(id) {
-        const record = await this.prisma.whatsappSession.findUnique({
-            where: { id },
+    async disconnect(id, tenantId) {
+        const record = await this.prisma.whatsappSession.findFirst({
+            where: { id, tenant_id: tenantId },
         });
         if (!record) {
             throw new common_1.NotFoundException('Connection not found');
@@ -85,6 +86,20 @@ let ConnectionsService = class ConnectionsService {
             },
         });
         return this.mapSession(updated);
+    }
+    async remove(id, tenantId) {
+        const record = await this.prisma.whatsappSession.findFirst({
+            where: { id, tenant_id: tenantId },
+        });
+        if (!record) {
+            throw new common_1.NotFoundException('Connection not found');
+        }
+        if (record.status !== types_1.ConnectionStatus.DISCONNECTED) {
+            await this.sessionManager.stopSession(record.session_id, true);
+            await this.poolManager.unassignSession(record.session_id);
+        }
+        await this.prisma.whatsappSession.delete({ where: { id: record.id } });
+        return { id: record.id };
     }
     mapSession(session) {
         return {

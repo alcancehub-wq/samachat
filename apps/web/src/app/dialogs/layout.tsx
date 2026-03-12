@@ -1,6 +1,6 @@
 import { AuthGate } from '@/components/auth/AuthGate';
 
-export default function WorkspaceSettingsLayout({
+export default function DialogsLayout({
   children,
 }: {
   children: React.ReactNode;

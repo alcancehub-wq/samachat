@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getPublicConfig } from '@/lib/public-config';
+import { legalMeta, termsSections } from '@/lib/legal-docs';
 
 export default function TermsPage() {
   const config = getPublicConfig();
@@ -9,10 +10,33 @@ export default function TermsPage() {
         <CardHeader>
           <CardTitle>Termos de Uso</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm text-muted-foreground">
-          <p>Estes Termos definem as regras de uso do Samachat para equipes internas.</p>
-          <p>Ao utilizar o produto, voce concorda com o uso de dados para operacao, suporte e seguranca.</p>
-          <p>Versao vigente: {config.termsVersion}.</p>
+        <CardContent className="space-y-6 text-sm text-muted-foreground">
+          <p>
+            Versao vigente: {config.termsVersion}. Ultima atualizacao:{' '}
+            {legalMeta.termsLastUpdate}.
+          </p>
+          {termsSections.map((section) => (
+            <div key={section.heading} className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">{section.heading}</p>
+              {section.paragraphs.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+            </div>
+          ))}
+          <div className="space-y-1 border-t border-border/60 pt-4 text-xs text-muted-foreground">
+            <p>
+              {legalMeta.companyName} | CNPJ {legalMeta.companyCnpj}
+            </p>
+            <p>
+              {legalMeta.website} | {legalMeta.phone}
+            </p>
+            <p>
+              Contato LGPD: {legalMeta.emailLgpd}
+            </p>
+            <p>
+              Vigencia: {legalMeta.termsLastUpdate}
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

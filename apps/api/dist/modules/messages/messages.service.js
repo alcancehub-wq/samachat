@@ -18,6 +18,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessagesService = void 0;
 const common_1 = require("@nestjs/common");
 const baileys_1 = require("@whiskeysockets/baileys");
+const bullmq_1 = require("bullmq");
 const path_1 = __importDefault(require("path"));
 const prisma_service_1 = require("../../common/prisma/prisma.service");
 const message_normalizer_1 = require("./message.normalizer");
@@ -27,19 +28,24 @@ const client_1 = require("@prisma/client");
 const logger_1 = require("@samachat/logger");
 const config_1 = require("@samachat/config");
 const storage_service_1 = require("../../storage/storage.service");
+const session_store_1 = require("../connections/session.store");
 let MessagesService = class MessagesService {
     prisma;
     normalizer;
     processor;
     sessionManager;
     storage;
+    redis;
     logger = (0, logger_1.getLogger)({ service: 'api', component: 'messages' });
-    constructor(prisma, normalizer, processor, sessionManager, storage) {
+    outboundQueue;
+    constructor(prisma, normalizer, processor, sessionManager, storage, redis) {
         this.prisma = prisma;
         this.normalizer = normalizer;
         this.processor = processor;
         this.sessionManager = sessionManager;
         this.storage = storage;
+        this.redis = redis;
+        this.outboundQueue = new bullmq_1.Queue('outbound-messages', { connection: this.redis });
     }
     async processIncomingMessage(sessionId, message) {
         const normalized = this.normalizer.normalize(message);
@@ -97,24 +103,22 @@ let MessagesService = class MessagesService {
         if (!session) {
             throw new common_1.ServiceUnavailableException('No active WhatsApp session');
         }
-        let client = this.sessionManager.getClientByTenant(params.tenantId);
-        if (!client) {
-            await this.sessionManager.startSession(session);
-            client = await this.waitForClient(params.tenantId, 10, 500);
-        }
-        if (!client) {
-            throw new common_1.ServiceUnavailableException('WhatsApp client unavailable');
-        }
-        const jid = phone.includes('@') ? phone : `${phone}@s.whatsapp.net`;
-        const mediaUrl = this.resolveMediaUrl(params.mediaUrl);
-        const sendPayload = this.buildSendPayload(messageType, params.content, mediaUrl, params.mediaMime ?? undefined);
-        const response = await client.sendMessage(jid, sendPayload);
-        const externalId = response?.key?.id || `outbound:${Date.now()}:${conversation.contact_id}`;
+        const jid = this.buildJid(phone);
+        const provider = (0, config_1.getConfig)().providerMode === 'waba' ? 'waba' : 'qr';
+        this.logger.info({
+            tenantId: params.tenantId,
+            conversationId: conversation.id,
+            contactId: conversation.contact_id,
+            jid,
+            messageType,
+        }, 'Sending WhatsApp outbound message');
+        const externalId = `outbound:${Date.now()}:${conversation.contact_id}`;
         const message = await this.prisma.message.create({
             data: {
                 tenant_id: params.tenantId,
                 conversation_id: conversation.id,
                 contact_id: conversation.contact_id,
+                sender_user_id: params.senderUserId ?? null,
                 direction: client_1.MessageDirection.OUTBOUND,
                 type: messageType,
                 content: params.content ?? null,
@@ -135,7 +139,31 @@ let MessagesService = class MessagesService {
                 last_message_at: message.timestamp,
             },
         });
-        await this.processor.publishMessageSent(message);
+        await this.processor.publishMessageSent({
+            ...message,
+            senderName: params.senderName ?? null,
+        });
+        await this.outboundQueue.add('send-message', {
+            provider,
+            tenantId: params.tenantId,
+            messageId: message.id,
+            sessionId: session.session_id,
+            connectionId: session.id,
+            jid,
+            text: params.content ?? '',
+            type: messageType,
+            mediaUrl: params.mediaUrl ?? null,
+            mediaMime: params.mediaMime ?? null,
+            mediaSize: params.mediaSize ?? null,
+        }, {
+            removeOnComplete: true,
+            removeOnFail: false,
+        });
+        this.logger.info({
+            tenantId: params.tenantId,
+            messageId: message.id,
+            jid,
+        }, 'QUEUE PUSH');
         this.logger.info({ conversationId: conversation.id, messageId: message.id }, 'Outbound message sent');
         return message;
     }
@@ -189,6 +217,52 @@ let MessagesService = class MessagesService {
             return null;
         }
     }
+    buildJid(raw) {
+        if (raw.includes('@')) {
+            return raw;
+        }
+        const digits = raw.replace(/[^\d]/g, '');
+        if (!digits) {
+            return raw;
+        }
+        return `${digits}@c.us`;
+    }
+    async sendQueuedMessage(payload) {
+        const tenantId = payload.tenantId;
+        if (!tenantId) {
+            throw new common_1.BadRequestException('Missing tenantId');
+        }
+        const session = await this.prisma.whatsappSession.findFirst({
+            where: {
+                tenant_id: tenantId,
+                status: client_1.ConnectionStatus.CONNECTED,
+            },
+        });
+        if (!session) {
+            throw new common_1.ServiceUnavailableException('No active WhatsApp session');
+        }
+        let client = this.sessionManager.getClientByTenant(tenantId);
+        if (!client) {
+            await this.sessionManager.startSession(session);
+            client = await this.waitForClient(tenantId, 10, 500);
+        }
+        if (!client) {
+            throw new common_1.ServiceUnavailableException('WhatsApp client unavailable');
+        }
+        const jid = this.buildJid(payload.jid);
+        const mediaUrl = this.resolveMediaUrl(payload.mediaUrl ?? null);
+        const sendPayload = this.buildSendPayload(payload.type ?? 'text', payload.text, mediaUrl, payload.mediaMime ?? undefined);
+        this.logger.info({ tenantId, messageId: payload.messageId, jid }, 'BAILEYS SEND (API)');
+        const response = await client.sendMessage(jid, sendPayload);
+        const externalId = response?.key?.id;
+        if (payload.messageId && externalId) {
+            await this.prisma.message.update({
+                where: { id: payload.messageId },
+                data: { external_id: externalId, status: client_1.MessageStatus.SENT },
+            });
+        }
+        return { externalId };
+    }
     buildSendPayload(type, content, mediaUrl, mediaMime) {
         switch (type) {
             case 'image':
@@ -233,9 +307,10 @@ exports.MessagesService = MessagesService;
 exports.MessagesService = MessagesService = __decorate([
     (0, common_1.Injectable)(),
     __param(3, (0, common_1.Inject)((0, common_1.forwardRef)(() => session_manager_1.SessionManager))),
+    __param(5, (0, common_1.Inject)(session_store_1.CONNECTIONS_REDIS)),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         message_normalizer_1.MessageNormalizer,
         message_processor_1.MessageProcessor,
         session_manager_1.SessionManager,
-        storage_service_1.StorageService])
+        storage_service_1.StorageService, Function])
 ], MessagesService);

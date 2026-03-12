@@ -22,6 +22,19 @@ interface InboundJobData {
 const logger = getLogger({ service: 'worker', worker: 'inbound-events' });
 const tracer = getTracer();
 
+function buildJid(raw: string) {
+  if (raw.includes('@')) {
+    return raw;
+  }
+
+  const digits = raw.replace(/[^\d]/g, '');
+  if (!digits) {
+    return raw;
+  }
+
+  return `${digits}@c.us`;
+}
+
 export function startInboundProcessor(connection: IORedis, queues: WorkerQueues) {
   const worker = new Worker(
     'inbound-events',
@@ -53,7 +66,8 @@ export function startInboundProcessor(connection: IORedis, queues: WorkerQueues)
             span.setAttribute('job.id', String(job.id));
 
             const payload = event.normalizedPayload || {};
-            const to = typeof payload.to === 'string' ? payload.to : event.contactId || 'stub';
+            const toRaw = typeof payload.to === 'string' ? payload.to : event.contactId || 'stub';
+            const to = buildJid(toRaw);
             const body = typeof payload.body === 'string' ? payload.body : 'Inbound event received';
 
             const input: SendMessageInput = {
@@ -77,7 +91,7 @@ export function startInboundProcessor(connection: IORedis, queues: WorkerQueues)
                     tenantId: event.tenantId,
                     trace,
                   },
-                  { jobId: `${event.eventId}:${providerName}` },
+                  { jobId: `${event.eventId}-${providerName}` },
                 );
                 enqueueSpan.setAttribute('queue.name', 'outbound-messages');
               } finally {

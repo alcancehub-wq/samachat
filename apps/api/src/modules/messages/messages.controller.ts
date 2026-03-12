@@ -2,8 +2,10 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Headers,
   Post,
   Req,
+  UnauthorizedException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -11,10 +13,13 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SupabaseAuthGuard } from '../../common/guards/supabase-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import type { TenantRequestContext } from '../../common/interfaces/request-tenant';
 import { MessagesService } from './messages.service';
 import { StorageService } from '../../storage/storage.service';
 import { getConfig } from '@samachat/config';
+import { getLogger } from '@samachat/logger';
 
 interface SendMessagePayload {
   conversation_id: string;
@@ -25,15 +30,31 @@ interface SendMessagePayload {
   media_size?: number;
 }
 
+interface SendQueuedPayload {
+  tenantId?: string;
+  sessionId?: string;
+  messageId?: string;
+  jid: string;
+  text: string;
+  type?: 'text' | 'image' | 'video' | 'audio' | 'document';
+  mediaUrl?: string | null;
+  mediaMime?: string | null;
+  mediaSize?: number | null;
+}
+
 @UseGuards(SupabaseAuthGuard, TenantGuard)
 @Controller('messages')
 export class MessagesController {
+  private readonly logger = getLogger({ service: 'api', component: 'messages-controller' });
+
   constructor(
     private readonly messagesService: MessagesService,
     private readonly storage: StorageService,
   ) {}
 
   @Post('send')
+  @UseGuards(PermissionsGuard)
+  @Permissions('messages:send')
   async sendMessage(
     @Body() payload: SendMessagePayload,
     @Req() req: TenantRequestContext,
@@ -41,6 +62,15 @@ export class MessagesController {
     if (!req.tenantId) {
       throw new BadRequestException('Missing tenant context');
     }
+
+    this.logger.info(
+      {
+        tenantId: req.tenantId,
+        conversationId: payload.conversation_id,
+        type: payload.type ?? 'text',
+      },
+      'OUTBOUND API',
+    );
 
     return this.messagesService.sendWhatsAppMessage({
       tenantId: req.tenantId,
@@ -50,10 +80,31 @@ export class MessagesController {
       mediaUrl: payload.media_url ?? null,
       mediaMime: payload.media_mime ?? null,
       mediaSize: payload.media_size ?? null,
+      senderUserId: req.userProfile?.id,
+      senderName: req.userProfile?.full_name ?? null,
     });
   }
 
+  @Post('send-queued')
+  async sendQueuedMessage(
+    @Body() payload: SendQueuedPayload,
+    @Headers('x-provider-secret') secret?: string,
+  ) {
+    const expected = process.env.PROVIDER_SECRET;
+    if (!expected || !secret || secret !== expected) {
+      throw new UnauthorizedException('Invalid provider secret');
+    }
+
+    if (!payload?.jid || !payload.text) {
+      throw new BadRequestException('Missing jid or text');
+    }
+
+    return this.messagesService.sendQueuedMessage(payload);
+  }
+
   @Post('upload')
+  @UseGuards(PermissionsGuard)
+  @Permissions('files:create')
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {

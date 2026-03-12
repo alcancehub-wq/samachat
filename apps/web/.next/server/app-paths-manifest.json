@@ -1,1 +1,9 @@
-{}
+{
+  "/campaigns/page": "app/campaigns/page.js",
+  "/inbox/page": "app/inbox/page.js",
+  "/dialogs/tags/page": "app/dialogs/tags/page.js",
+  "/settings/workspace/page": "app/settings/workspace/page.js",
+  "/settings/usuarios/page": "app/settings/usuarios/page.js",
+  "/connections/page": "app/connections/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
+}

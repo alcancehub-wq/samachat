@@ -39,6 +39,36 @@ export const inviteCreateSchema = z.object({
   role: roleSchema,
 });
 
+export const permissionsSchema = z.array(z.string());
+
+export const accessProfileSchema = z.object({
+  name: z.string().min(2),
+  system_role: roleSchema,
+  permissions: permissionsSchema,
+});
+
+export const accessProfileUpdateSchema = accessProfileSchema.partial().extend({
+  permissions: permissionsSchema.optional(),
+});
+
+export const userCreateSchema = z.object({
+  email: z.string().email(),
+  full_name: z.string().min(2),
+  password: z.string().min(8),
+  access_profile_id: z.string().min(1).optional(),
+  access_profile_ids: z.array(z.string().min(1)).min(1).optional(),
+  permissions_override: permissionsSchema.optional(),
+}).refine((value) => value.access_profile_id || value.access_profile_ids?.length, {
+  message: 'access_profile_id or access_profile_ids is required',
+});
+
+export const userUpdateSchema = z.object({
+  full_name: z.string().min(2).optional(),
+  access_profile_id: z.string().min(1).optional(),
+  access_profile_ids: z.array(z.string().min(1)).min(1).optional(),
+  permissions_override: permissionsSchema.nullable().optional(),
+});
+
 export const legalAcceptanceSchema = z.object({
   terms_version: z.string().min(3),
   privacy_version: z.string().min(3),
@@ -59,3 +89,7 @@ export type DataRequestInput = z.infer<typeof dataRequestSchema>;
 export type InviteCreateInput = z.infer<typeof inviteCreateSchema>;
 export type LegalAcceptanceInput = z.infer<typeof legalAcceptanceSchema>;
 export type MembershipUpdateInput = z.infer<typeof membershipUpdateSchema>;
+export type AccessProfileInput = z.infer<typeof accessProfileSchema>;
+export type AccessProfileUpdateInput = z.infer<typeof accessProfileUpdateSchema>;
+export type UserCreateInput = z.infer<typeof userCreateSchema>;
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>;

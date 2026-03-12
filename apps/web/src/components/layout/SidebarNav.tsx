@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/store/ui';
@@ -10,12 +10,14 @@ import { navItems } from './nav-items';
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useUiStore();
+  const visibleItems = navItems;
 
   return (
     <aside
       className={cn(
-        'hidden min-h-screen flex-col border-r border-border/60 bg-card/80 p-6 md:flex',
+        'hidden min-h-screen flex-col border-r border-border/60 bg-card/80 p-6 md:sticky md:top-0 md:h-screen md:overflow-y-auto md:flex',
         sidebarCollapsed ? 'md:w-20 lg:w-72' : 'md:w-64 lg:w-72',
       )}
     >
@@ -39,30 +41,66 @@ export function SidebarNav() {
         </p>
       </div>
       <nav className="space-y-2">
-        {navItems.map((item) => {
-          const active = pathname === item.href;
+        {visibleItems.map((item) => {
           const Icon = item.icon;
+          const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+          const isActive = (href: string) => {
+            if (href.includes('?')) {
+              const [path, query] = href.split('?');
+              if (pathname !== path) return false;
+              const params = new URLSearchParams(query);
+              const tab = params.get('tab');
+              const currentTab = searchParams.get('tab') ?? 'biblioteca';
+              return tab === currentTab;
+            }
+            return pathname === href;
+          };
+
+          const childActive = hasChildren ? item.children.some((child) => isActive(child.href)) : false;
+          const active = isActive(item.href) || childActive;
+
           return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition',
-                active
-                  ? 'bg-primary text-primary-foreground shadow-glow'
-                  : 'text-muted-foreground hover:bg-muted',
-              )}
-            >
-              <Icon size={18} />
-              <span
+            <div key={item.label} className="space-y-1">
+              <Link
+                href={item.href}
                 className={cn(
-                  'transition-opacity',
-                  sidebarCollapsed ? 'md:opacity-0 md:w-0 md:overflow-hidden lg:opacity-100 lg:w-auto' : '',
+                  'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition',
+                  active
+                    ? 'bg-primary text-primary-foreground shadow-glow'
+                    : 'text-muted-foreground hover:bg-muted',
                 )}
               >
-                {item.label}
-              </span>
-            </Link>
+                <Icon size={18} />
+                <span
+                  className={cn(
+                    'transition-opacity',
+                    sidebarCollapsed
+                      ? 'md:opacity-0 md:w-0 md:overflow-hidden lg:opacity-100 lg:w-auto'
+                      : '',
+                  )}
+                >
+                  {item.label}
+                </span>
+              </Link>
+              {hasChildren && (
+                <div className={cn('space-y-1 pl-8', sidebarCollapsed ? 'md:hidden lg:block' : '')}>
+                  {item.children.map((child) => (
+                    <Link
+                      key={child.label}
+                      href={child.href}
+                      className={cn(
+                        'flex items-center rounded-lg px-3 py-2 text-xs font-medium transition',
+                        isActive(child.href)
+                          ? 'bg-muted text-foreground'
+                          : 'text-muted-foreground hover:bg-muted/60',
+                      )}
+                    >
+                      {child.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>

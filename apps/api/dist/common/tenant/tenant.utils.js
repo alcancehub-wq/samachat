@@ -15,13 +15,14 @@ async function ensureUserProfile(prisma, user) {
         },
     });
     if (existing) {
-        if (!existing.auth_user_id) {
+        const shouldUpdateName = Boolean(user.name) && existing.full_name !== user.name;
+        if (!existing.auth_user_id || shouldUpdateName) {
             return prisma.userProfile.update({
                 where: { id: existing.id },
                 data: {
-                    auth_user_id: user.id,
+                    auth_user_id: existing.auth_user_id ?? user.id,
                     email: user.email,
-                    full_name: user.name ?? null,
+                    full_name: user.name ?? existing.full_name ?? null,
                 },
             });
         }
@@ -41,6 +42,10 @@ async function requireMembership(prisma, user, tenantId) {
         where: {
             tenant_id: tenantId,
             user_id: profile.id,
+        },
+        include: {
+            access_profile: true,
+            access_profiles: { include: { access_profile: true } },
         },
     });
     if (!membership) {

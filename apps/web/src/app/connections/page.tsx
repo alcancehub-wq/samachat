@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SkeletonList } from '@/components/ui/skeletons';
 import { apiFetch } from '@/lib/api';
+import { hasPermission } from '@/lib/permissions';
+import { usePermissions } from '@/lib/use-permissions';
 
 interface ConnectionItem {
   id: string;
@@ -36,6 +38,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default function ConnectionsPage() {
+  const { permissions, loading: permissionsLoading } = usePermissions();
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +46,17 @@ export default function ConnectionsPage() {
   const [qrSession, setQrSession] = useState<ConnectionItem | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
+  const canViewConnections = hasPermission(permissions, 'connections:view');
+  const canCreateConnections = hasPermission(permissions, 'connections:create');
+  const canViewQr = hasPermission(permissions, 'connections:qr');
+  const canDisconnect = hasPermission(permissions, 'connections:disconnect');
+
   const loadConnections = useCallback(async () => {
+    if (!canViewConnections) {
+      setConnections([]);
+      setLoading(false);
+      return;
+    }
     try {
       const data = await apiFetch<ConnectionItem[]>('/connections');
       setConnections(data);
@@ -54,7 +67,7 @@ export default function ConnectionsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canViewConnections]);
 
   const fetchQr = useCallback(async (id: string) => {
     try {
@@ -76,12 +89,15 @@ export default function ConnectionsPage() {
   }, []);
 
   useEffect(() => {
+    if (permissionsLoading) {
+      return;
+    }
     void loadConnections();
     const interval = setInterval(() => {
       void loadConnections();
     }, 5000);
     return () => clearInterval(interval);
-  }, [loadConnections]);
+  }, [loadConnections, permissionsLoading]);
 
   useEffect(() => {
     if (!qrOpen || !qrSession) return;
@@ -93,6 +109,10 @@ export default function ConnectionsPage() {
   }, [fetchQr, qrOpen, qrSession]);
 
   const handleCreate = async () => {
+    if (!canCreateConnections) {
+      setError('Sem permissao para criar conexao.');
+      return;
+    }
     setLoading(true);
     try {
       const created = await apiFetch<ConnectionItem>('/connections', { method: 'POST' });
@@ -109,6 +129,10 @@ export default function ConnectionsPage() {
   };
 
   const handleDisconnect = async (connection: ConnectionItem) => {
+    if (!canDisconnect) {
+      setError('Sem permissao para desconectar.');
+      return;
+    }
     setLoading(true);
     try {
       const updated = await apiFetch<ConnectionItem>(`/connections/${connection.id}`, {
@@ -120,6 +144,24 @@ export default function ConnectionsPage() {
       setError(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Falha ao desconectar';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemove = async (connection: ConnectionItem) => {
+    if (!canDisconnect) {
+      setError('Sem permissao para excluir conexao.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await apiFetch(`/connections/${connection.id}/remove`, { method: 'DELETE' });
+      setConnections((prev) => prev.filter((item) => item.id !== connection.id));
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Falha ao excluir conexao';
       setError(message);
     } finally {
       setLoading(false);
@@ -147,10 +189,12 @@ export default function ConnectionsPage() {
               <RefreshCcw size={16} className="mr-2" />
               Atualizar
             </Button>
-            <Button size="sm" onClick={handleCreate}>
-              <Plus size={16} className="mr-2" />
-              Nova conexao
-            </Button>
+            {canCreateConnections && (
+              <Button size="sm" onClick={handleCreate}>
+                <Plus size={16} className="mr-2" />
+                Nova conexao
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -161,6 +205,11 @@ export default function ConnectionsPage() {
           )}
           {loading ? (
             <SkeletonList rows={4} />
+          ) : !canViewConnections ? (
+            <EmptyState
+              title="Sem permissao"
+              description="Voce nao possui permissao para ver conexoes."
+            />
           ) : sortedConnections.length === 0 ? (
             <EmptyState
               title="Nenhuma conexao ativa"
@@ -191,23 +240,36 @@ export default function ConnectionsPage() {
                       >
                         {statusLabel}
                       </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setQrSession(connection);
-                          setQrOpen(true);
-                        }}
-                      >
-                        Ver QR
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleDisconnect(connection)}
-                      >
-                        Desconectar
-                      </Button>
+                      {canViewQr && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setQrSession(connection);
+                            setQrOpen(true);
+                          }}
+                        >
+                          Ver QR
+                        </Button>
+                      )}
+                      {canDisconnect && connection.status !== 'DISCONNECTED' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleDisconnect(connection)}
+                        >
+                          Desconectar
+                        </Button>
+                      )}
+                      {canDisconnect && connection.status === 'DISCONNECTED' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleRemove(connection)}
+                        >
+                          Excluir
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );

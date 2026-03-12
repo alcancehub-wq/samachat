@@ -74,6 +74,86 @@ export declare const inviteCreateSchema: z.ZodObject<{
     email: string;
     role: "admin" | "manager" | "agent";
 }>;
+export declare const permissionsSchema: z.ZodArray<z.ZodString, "many">;
+export declare const accessProfileSchema: z.ZodObject<{
+    name: z.ZodString;
+    system_role: z.ZodEnum<["admin", "manager", "agent"]>;
+    permissions: z.ZodArray<z.ZodString, "many">;
+}, "strip", z.ZodTypeAny, {
+    name: string;
+    system_role: "admin" | "manager" | "agent";
+    permissions: string[];
+}, {
+    name: string;
+    system_role: "admin" | "manager" | "agent";
+    permissions: string[];
+}>;
+export declare const accessProfileUpdateSchema: z.ZodObject<{
+    name: z.ZodOptional<z.ZodString>;
+    system_role: z.ZodOptional<z.ZodEnum<["admin", "manager", "agent"]>>;
+} & {
+    permissions: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+}, "strip", z.ZodTypeAny, {
+    name?: string | undefined;
+    system_role?: "admin" | "manager" | "agent" | undefined;
+    permissions?: string[] | undefined;
+}, {
+    name?: string | undefined;
+    system_role?: "admin" | "manager" | "agent" | undefined;
+    permissions?: string[] | undefined;
+}>;
+export declare const userCreateSchema: z.ZodEffects<z.ZodObject<{
+    email: z.ZodString;
+    full_name: z.ZodString;
+    password: z.ZodString;
+    access_profile_id: z.ZodOptional<z.ZodString>;
+    access_profile_ids: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    permissions_override: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+}, "strip", z.ZodTypeAny, {
+    email: string;
+    full_name: string;
+    password: string;
+    access_profile_id?: string | undefined;
+    access_profile_ids?: string[] | undefined;
+    permissions_override?: string[] | undefined;
+}, {
+    email: string;
+    full_name: string;
+    password: string;
+    access_profile_id?: string | undefined;
+    access_profile_ids?: string[] | undefined;
+    permissions_override?: string[] | undefined;
+}>, {
+    email: string;
+    full_name: string;
+    password: string;
+    access_profile_id?: string | undefined;
+    access_profile_ids?: string[] | undefined;
+    permissions_override?: string[] | undefined;
+}, {
+    email: string;
+    full_name: string;
+    password: string;
+    access_profile_id?: string | undefined;
+    access_profile_ids?: string[] | undefined;
+    permissions_override?: string[] | undefined;
+}>;
+export declare const userUpdateSchema: z.ZodObject<{
+    full_name: z.ZodOptional<z.ZodString>;
+    access_profile_id: z.ZodOptional<z.ZodString>;
+    access_profile_ids: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    permissions_override: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString, "many">>>;
+}, "strip", z.ZodTypeAny, {
+    full_name?: string | undefined;
+    access_profile_id?: string | undefined;
+    access_profile_ids?: string[] | undefined;
+    permissions_override?: string[] | null | undefined;
+}, {
+    full_name?: string | undefined;
+    access_profile_id?: string | undefined;
+    access_profile_ids?: string[] | undefined;
+    permissions_override?: string[] | null | undefined;
+}>;
 export declare const legalAcceptanceSchema: z.ZodObject<{
     terms_version: z.ZodString;
     privacy_version: z.ZodString;
@@ -108,4 +188,8 @@ export type DataRequestInput = z.infer<typeof dataRequestSchema>;
 export type InviteCreateInput = z.infer<typeof inviteCreateSchema>;
 export type LegalAcceptanceInput = z.infer<typeof legalAcceptanceSchema>;
 export type MembershipUpdateInput = z.infer<typeof membershipUpdateSchema>;
+export type AccessProfileInput = z.infer<typeof accessProfileSchema>;
+export type AccessProfileUpdateInput = z.infer<typeof accessProfileUpdateSchema>;
+export type UserCreateInput = z.infer<typeof userCreateSchema>;
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
 //# sourceMappingURL=schemas.d.ts.map

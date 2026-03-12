@@ -20,6 +20,9 @@ model Tenant {
   updated_at            DateTime             @updatedAt
   audit_logs            AuditLog[]
   campaigns             Campaign[]
+  dialogs               Dialog[]
+  dialog_variables      DialogVariable[]
+  dialog_tag_meta       DialogTagMeta[]
   conversations         Conversation[]
   workspaces            Workspace[]
   flows                 Flow[]
@@ -31,6 +34,7 @@ model Tenant {
   data_requests         DataRequest[]
   data_retention_policy DataRetentionPolicy?
   memberships           Membership[]
+  access_profiles       AccessProfile[]
   messages              Message[]
   invites               Invite[]
   tags                  Tag[]
@@ -64,13 +68,47 @@ model Membership {
   tenant_id  String
   user_id    String
   role       Role
+  access_profile_id String?
+  permissions_override Json?
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
   tenant     Tenant      @relation(fields: [tenant_id], references: [id])
   user       UserProfile @relation(fields: [user_id], references: [id])
+  access_profile AccessProfile? @relation("PrimaryAccessProfile", fields: [access_profile_id], references: [id])
+  access_profiles MembershipAccessProfile[]
 
   @@index([tenant_id])
   @@index([user_id])
+  @@index([access_profile_id])
+}
+
+model MembershipAccessProfile {
+  id                String        @id @default(cuid())
+  membership_id     String
+  access_profile_id String
+  created_at        DateTime      @default(now())
+  membership        Membership    @relation(fields: [membership_id], references: [id])
+  access_profile    AccessProfile @relation(fields: [access_profile_id], references: [id])
+
+  @@unique([membership_id, access_profile_id])
+  @@index([membership_id])
+  @@index([access_profile_id])
+}
+
+model AccessProfile {
+  id          String   @id @default(cuid())
+  tenant_id   String
+  name        String
+  system_role Role     @default(agent)
+  permissions Json
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenant_id], references: [id])
+  memberships MembershipAccessProfile[]
+  primary_memberships Membership[] @relation("PrimaryAccessProfile")
+
+  @@index([tenant_id])
+  @@unique([tenant_id, name])
 }
 
 model Workspace {
@@ -234,6 +272,7 @@ model Tag {
   updated_at   DateTime     @updatedAt
   tenant       Tenant       @relation(fields: [tenant_id], references: [id])
   contact_tags ContactTag[]
+  dialog_tag_meta DialogTagMeta?
 
   @@index([tenant_id])
 }
@@ -285,19 +324,83 @@ model Campaign {
   id              String           @id @default(uuid()) @db.Uuid
   tenant_id       String
   workspace_id    String           @db.Uuid
+  dialog_id       String?
   name            String
   message_content String
   media_url       String?
+  start_at        DateTime
+  interval_seconds Int
   status          CampaignStatus   @default(draft)
   created_at      DateTime         @default(now())
   updated_at      DateTime         @updatedAt
   tenant          Tenant           @relation(fields: [tenant_id], references: [id])
   workspace       Workspace        @relation(fields: [workspace_id], references: [id])
+  dialog          Dialog?           @relation(fields: [dialog_id], references: [id])
   targets         CampaignTarget[]
 
   @@index([tenant_id])
   @@index([workspace_id])
+  @@index([dialog_id])
   @@map("campaigns")
+}
+
+model Dialog {
+  id               String        @id @default(cuid())
+  tenant_id        String
+  name             String
+  group_name       String?
+  type             DialogType
+  channel          DialogChannel @default(whatsapp)
+  status           DialogStatus  @default(active)
+  message_text     String?
+  media_url        String?
+  template_name    String?
+  template_id      String?
+  template_language String?
+  template_variables Json?
+  automation_actions Json?
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+  tenant           Tenant        @relation(fields: [tenant_id], references: [id])
+  campaigns        Campaign[]
+
+  @@index([tenant_id])
+  @@index([type])
+  @@index([group_name])
+}
+
+model DialogVariable {
+  id          String   @id @default(cuid())
+  tenant_id   String
+  name        String
+  placeholder String
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id])
+  @@unique([tenant_id, placeholder])
+  @@unique([tenant_id, name])
+  @@map("dialog_variables")
+}
+
+model DialogTagMeta {
+  id               String   @id @default(cuid())
+  tenant_id        String
+  tag_id           String
+  color_background String
+  color_text       String
+  sort_order       Int      @default(0)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  tag              Tag      @relation(fields: [tag_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([sort_order])
+  @@unique([tag_id])
+  @@map("dialog_tag_meta")
 }
 
 model CampaignTarget {
@@ -476,6 +579,21 @@ enum CampaignTargetStatus {
   pending
   sent
   failed
+}
+
+enum DialogType {
+  message
+  template
+  automation
+}
+
+enum DialogChannel {
+  whatsapp
+}
+
+enum DialogStatus {
+  active
+  inactive
 }
 
 enum LegalDocumentType {

@@ -10,6 +10,40 @@ import { enqueueDeadLetter } from './dead-letter';
 import { acquireQueueLock, releaseQueueLock } from './redis-lock';
 import { incrementQueueMetric } from '../observability/queue-metrics';
 import { extractTraceContext, getTracer, TraceCarrier } from '../observability/trace';
+const API_URL = process.env.API_URL || 'http://localhost:3001';
+const PROVIDER_SECRET = process.env.PROVIDER_SECRET || '';
+
+async function sendViaApi(payload: {
+  tenantId?: string;
+  sessionId?: string;
+  messageId?: string;
+  jid: string;
+  text: string;
+  type?: string;
+  mediaUrl?: string | null;
+  mediaMime?: string | null;
+  mediaSize?: number | null;
+}) {
+  if (!PROVIDER_SECRET) {
+    throw new Error('Missing PROVIDER_SECRET for queued send');
+  }
+
+  const response = await fetch(`${API_URL}/messages/send-queued`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-provider-secret': PROVIDER_SECRET,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || 'Queued send failed');
+  }
+
+  return (await response.json()) as { externalId?: string };
+}
 
 interface OutboundJobData {
   provider: MessagingProviderName;
@@ -19,6 +53,16 @@ interface OutboundJobData {
   correlationId?: string;
   tenantId?: string;
   trace?: TraceCarrier;
+  jid?: string;
+  text?: string;
+  type?: string;
+  mediaUrl?: string | null;
+  mediaMime?: string | null;
+  mediaSize?: number | null;
+  sessionId?: string;
+  connectionId?: string;
+  conversationId?: string;
+  messageId?: string;
 }
 
 const outboundLogger = getLogger({ service: 'worker', worker: 'outbound-messages' });
@@ -40,7 +84,24 @@ export function startOutboundProcessor(connection: IORedis, queues: WorkerQueues
             return { status: 'skipped', reason: 'lock-unavailable' };
           }
 
-          const { provider, input, requestId, eventId, correlationId, tenantId } = job.data;
+          const {
+            provider,
+            input,
+            requestId,
+            eventId,
+            correlationId,
+            tenantId,
+            jid,
+            text,
+            type,
+            mediaUrl,
+            mediaMime,
+            mediaSize,
+            sessionId,
+            messageId,
+            conversationId,
+          } = job.data;
+
           const providerClient = getProviderByName(provider);
           const logContext = createJobLoggerContext({
             jobId: job.id,
@@ -56,11 +117,40 @@ export function startOutboundProcessor(connection: IORedis, queues: WorkerQueues
             span.setAttribute('job.id', String(job.id));
             span.setAttribute('provider', provider);
 
-            outboundLogger.info(logContext, 'Processing outbound message');
+            outboundLogger.info(
+              {
+                ...logContext,
+                to: input?.to,
+              },
+              'Processing outbound message',
+            );
 
             const result = await tracer.startActiveSpan('provider.sendMessage', async (providerSpan) => {
               try {
                 providerSpan.setAttribute('provider', provider);
+                if (jid) {
+                  outboundLogger.info(
+                    { ...logContext, jid, messageId, conversationId },
+                    'WORKER RECEIVED',
+                  );
+                  const response = await sendViaApi({
+                    tenantId,
+                    sessionId,
+                    jid,
+                    text: text ?? '',
+                    type,
+                    mediaUrl,
+                    mediaMime,
+                    mediaSize,
+                    messageId,
+                  });
+                  return {
+                    messageId: response?.externalId ?? `queued:${Date.now()}`,
+                    status: 'sent' as const,
+                    provider,
+                  };
+                }
+
                 return await providerClient.sendMessage(input);
               } finally {
                 providerSpan.end();

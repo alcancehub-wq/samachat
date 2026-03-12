@@ -22,6 +22,7 @@ import { ConnectionsModule } from './modules/connections/connections.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { AutomationModule } from './modules/automation/automation.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { DialogsModule } from './modules/dialogs/dialogs.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
     CrmModule,
     AutomationModule,
     WorkspacesModule,
+    DialogsModule,
   ],
   providers: [
     {

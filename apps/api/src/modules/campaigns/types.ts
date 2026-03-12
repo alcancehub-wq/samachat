@@ -8,7 +8,12 @@ export interface CampaignCreateInput {
   message_content: string;
   media_url?: string | null;
   workspace_id: string;
+  dialog_id?: string | null;
   targets: CampaignTargetSelection;
+  warning_acknowledged?: boolean;
+  warning_version?: string;
+  start_at: string;
+  interval_seconds: number;
 }
 
 export interface CampaignProgress {

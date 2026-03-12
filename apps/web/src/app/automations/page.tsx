@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { apiFetch } from '@/lib/api';
+import { hasPermission } from '@/lib/permissions';
+import { usePermissions } from '@/lib/use-permissions';
 
 interface AutomationAction {
   id: string;
@@ -23,13 +25,23 @@ interface Automation {
 }
 
 export default function AutomationsPage() {
+  const { permissions, loading: permissionsLoading } = usePermissions();
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState<string | null>(null);
 
+  const canViewAutomations = hasPermission(permissions, 'automations:view');
+  const canCreateAutomations = hasPermission(permissions, 'automations:create');
+  const canToggleAutomations = hasPermission(permissions, 'automations:toggle');
+
   const loadAutomations = useCallback(async () => {
+    if (!canViewAutomations) {
+      setAutomations([]);
+      setLoading(false);
+      return;
+    }
     try {
       const data = await apiFetch<Automation[]>('/automations');
       setAutomations(data);
@@ -40,13 +52,20 @@ export default function AutomationsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canViewAutomations]);
 
   useEffect(() => {
+    if (permissionsLoading) {
+      return;
+    }
     void loadAutomations();
-  }, [loadAutomations]);
+  }, [loadAutomations, permissionsLoading]);
 
   const handleCreate = async () => {
+    if (!canCreateAutomations) {
+      setStatus('Sem permissao para criar automacao.');
+      return;
+    }
     if (!name.trim() || !message.trim()) {
       setStatus('Preencha nome e mensagem para criar a automacao.');
       return;
@@ -79,6 +98,10 @@ export default function AutomationsPage() {
   };
 
   const toggleAutomation = async (automation: Automation) => {
+    if (!canToggleAutomations) {
+      setStatus('Sem permissao para alterar automacao.');
+      return;
+    }
     try {
       const updated = await apiFetch<Automation>(`/automations/${automation.id}`, {
         method: 'PATCH',
@@ -97,14 +120,15 @@ export default function AutomationsPage() {
   return (
     <PageShell title="Automacoes" subtitle="Workflows">
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Criar automacao</CardTitle>
-            <CardDescription>
-              Trigger: message_received · Action: send_message
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        {canCreateAutomations && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Criar automacao</CardTitle>
+              <CardDescription>
+                Trigger: message_received · Action: send_message
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
             <div className="space-y-2">
               <label className="text-xs font-semibold">Nome</label>
               <input
@@ -132,8 +156,9 @@ export default function AutomationsPage() {
                 {status}
               </div>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader className="flex flex-wrap items-start justify-between gap-2">
@@ -149,6 +174,11 @@ export default function AutomationsPage() {
           <CardContent className="space-y-3">
             {loading ? (
               <EmptyState title="Carregando automacoes" />
+            ) : !canViewAutomations ? (
+              <EmptyState
+                title="Sem permissao"
+                description="Voce nao possui permissao para ver automacoes."
+              />
             ) : automations.length === 0 ? (
               <EmptyState
                 title="Sem automacoes"
@@ -170,6 +200,7 @@ export default function AutomationsPage() {
                     variant="secondary"
                     size="sm"
                     onClick={() => toggleAutomation(automation)}
+                    disabled={!canToggleAutomations}
                   >
                     {automation.is_active ? (
                       <ToggleRight size={16} className="mr-2" />

@@ -16,6 +16,8 @@ exports.ConversationsController = void 0;
 const common_1 = require("@nestjs/common");
 const supabase_auth_guard_1 = require("../common/guards/supabase-auth.guard");
 const tenant_guard_1 = require("../common/guards/tenant.guard");
+const permissions_guard_1 = require("../common/guards/permissions.guard");
+const permissions_decorator_1 = require("../common/decorators/permissions.decorator");
 const conversation_query_1 = require("../modules/messages/conversation.query");
 let ConversationsController = class ConversationsController {
     conversationQuery;
@@ -42,7 +44,8 @@ let ConversationsController = class ConversationsController {
 };
 exports.ConversationsController = ConversationsController;
 __decorate([
-    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard, tenant_guard_1.TenantGuard),
+    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard, tenant_guard_1.TenantGuard, permissions_guard_1.PermissionsGuard),
+    (0, permissions_decorator_1.Permissions)('chats:view'),
     (0, common_1.Get)(),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
@@ -50,7 +53,8 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ConversationsController.prototype, "listConversations", null);
 __decorate([
-    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard, tenant_guard_1.TenantGuard),
+    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard, tenant_guard_1.TenantGuard, permissions_guard_1.PermissionsGuard),
+    (0, permissions_decorator_1.Permissions)('messages:view'),
     (0, common_1.Get)(':id/messages'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Req)()),

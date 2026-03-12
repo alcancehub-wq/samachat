@@ -4,7 +4,6 @@ import { Manrope, Space_Grotesk } from 'next/font/google';
 
 import { ThemeProvider } from '@/providers/theme-provider';
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
-import { Footer } from '@/components/layout/Footer';
 import OnboardingGuard from '@/components/onboarding/OnboardingGuard';
 
 const manrope = Manrope({
@@ -51,7 +50,6 @@ export default function RootLayout({
         />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <OnboardingGuard>{children}</OnboardingGuard>
-          <Footer />
           <ServiceWorkerRegister />
         </ThemeProvider>
       </body>

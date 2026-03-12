@@ -31,6 +31,7 @@ const connections_module_1 = require("./modules/connections/connections.module")
 const crm_module_1 = require("./modules/crm/crm.module");
 const automation_module_1 = require("./modules/automation/automation.module");
 const workspaces_module_1 = require("./workspaces/workspaces.module");
+const dialogs_module_1 = require("./modules/dialogs/dialogs.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -66,6 +67,7 @@ exports.AppModule = AppModule = __decorate([
             crm_module_1.CrmModule,
             automation_module_1.AutomationModule,
             workspaces_module_1.WorkspacesModule,
+            dialogs_module_1.DialogsModule,
         ],
         providers: [
             {

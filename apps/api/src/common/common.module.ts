@@ -4,6 +4,7 @@ import { requireRedisUrl } from '@samachat/config';
 import { PrismaService } from './prisma/prisma.service';
 import { TenantGuard } from './guards/tenant.guard';
 import { RbacGuard } from './guards/rbac.guard';
+import { PermissionsGuard } from './guards/permissions.guard';
 import { CONNECTIONS_REDIS } from '../modules/connections/session.store';
 
 @Global()
@@ -12,6 +13,7 @@ import { CONNECTIONS_REDIS } from '../modules/connections/session.store';
     PrismaService,
     TenantGuard,
     RbacGuard,
+    PermissionsGuard,
     {
       provide: CONNECTIONS_REDIS,
       useFactory: () => {
@@ -23,6 +25,6 @@ import { CONNECTIONS_REDIS } from '../modules/connections/session.store';
       },
     },
   ],
-  exports: [PrismaService, TenantGuard, RbacGuard, CONNECTIONS_REDIS],
+  exports: [PrismaService, TenantGuard, RbacGuard, PermissionsGuard, CONNECTIONS_REDIS],
 })
 export class CommonModule {}

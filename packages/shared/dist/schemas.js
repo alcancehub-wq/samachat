@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.membershipUpdateSchema = exports.legalAcceptanceSchema = exports.inviteCreateSchema = exports.dataRequestSchema = exports.preferenceSchema = exports.consentCreateSchema = exports.dataRequestTypeSchema = exports.legalDocumentTypeSchema = exports.authUserSchema = exports.tenantCreateSchema = exports.roleSchema = void 0;
+exports.membershipUpdateSchema = exports.legalAcceptanceSchema = exports.userUpdateSchema = exports.userCreateSchema = exports.accessProfileUpdateSchema = exports.accessProfileSchema = exports.permissionsSchema = exports.inviteCreateSchema = exports.dataRequestSchema = exports.preferenceSchema = exports.consentCreateSchema = exports.dataRequestTypeSchema = exports.legalDocumentTypeSchema = exports.authUserSchema = exports.tenantCreateSchema = exports.roleSchema = void 0;
 const zod_1 = require("zod");
 exports.roleSchema = zod_1.z.enum(['admin', 'manager', 'agent']);
 exports.tenantCreateSchema = zod_1.z.object({
@@ -32,6 +32,31 @@ exports.dataRequestSchema = zod_1.z.object({
 exports.inviteCreateSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
     role: exports.roleSchema,
+});
+exports.permissionsSchema = zod_1.z.array(zod_1.z.string());
+exports.accessProfileSchema = zod_1.z.object({
+    name: zod_1.z.string().min(2),
+    system_role: exports.roleSchema,
+    permissions: exports.permissionsSchema,
+});
+exports.accessProfileUpdateSchema = exports.accessProfileSchema.partial().extend({
+    permissions: exports.permissionsSchema.optional(),
+});
+exports.userCreateSchema = zod_1.z.object({
+    email: zod_1.z.string().email(),
+    full_name: zod_1.z.string().min(2),
+    password: zod_1.z.string().min(8),
+    access_profile_id: zod_1.z.string().min(1).optional(),
+    access_profile_ids: zod_1.z.array(zod_1.z.string().min(1)).min(1).optional(),
+    permissions_override: exports.permissionsSchema.optional(),
+}).refine((value) => value.access_profile_id || value.access_profile_ids?.length, {
+    message: 'access_profile_id or access_profile_ids is required',
+});
+exports.userUpdateSchema = zod_1.z.object({
+    full_name: zod_1.z.string().min(2).optional(),
+    access_profile_id: zod_1.z.string().min(1).optional(),
+    access_profile_ids: zod_1.z.array(zod_1.z.string().min(1)).min(1).optional(),
+    permissions_override: exports.permissionsSchema.nullable().optional(),
 });
 exports.legalAcceptanceSchema = zod_1.z.object({
     terms_version: zod_1.z.string().min(3),

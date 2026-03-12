@@ -1,21 +1,26 @@
 import {
   Activity,
+  FileText,
   LayoutDashboard,
   MessageSquare,
   Megaphone,
   QrCode,
   Settings,
   Sparkles,
-  ShieldCheck,
 } from 'lucide-react';
 
 export const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Conversas', href: '/inbox', icon: MessageSquare },
-  { label: 'Conexoes', href: '/connections', icon: QrCode },
-  { label: 'Campanhas', href: '/campaigns', icon: Megaphone },
-  { label: 'Automacoes', href: '/automations', icon: Sparkles },
-  { label: 'Saude', href: '/system/health', icon: Activity },
-  { label: 'LGPD', href: '/onboarding', icon: ShieldCheck },
-  { label: 'Configuracoes', href: '/settings/workspace', icon: Settings },
+  { label: 'Conexoes', href: '/connections', icon: QrCode, permissions: ['connections:view'] },
+  { label: 'Campanhas', href: '/campaigns', icon: Megaphone, permissions: ['campaigns:view'] },
+  {
+    label: 'Dialogos',
+    href: '/dialogs',
+    icon: FileText,
+    permissions: ['dialogs:view'],
+  },
+  { label: 'Automacoes', href: '/automations', icon: Sparkles, permissions: ['automations:view'] },
+  { label: 'Saude', href: '/system/health', icon: Activity, permissions: ['system:health'] },
+  { label: 'Configuracoes', href: '/settings/workspace', icon: Settings, permissions: ['users:view'] },
 ];

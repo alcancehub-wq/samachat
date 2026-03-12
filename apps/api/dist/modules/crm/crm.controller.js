@@ -16,6 +16,8 @@ exports.CrmController = void 0;
 const common_1 = require("@nestjs/common");
 const supabase_auth_guard_1 = require("../../common/guards/supabase-auth.guard");
 const tenant_guard_1 = require("../../common/guards/tenant.guard");
+const permissions_guard_1 = require("../../common/guards/permissions.guard");
+const permissions_decorator_1 = require("../../common/decorators/permissions.decorator");
 const crm_service_1 = require("./crm.service");
 let CrmController = class CrmController {
     crmService;
@@ -39,6 +41,7 @@ let CrmController = class CrmController {
 exports.CrmController = CrmController;
 __decorate([
     (0, common_1.Post)('create-lead'),
+    (0, permissions_decorator_1.Permissions)('crm:create_lead'),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
@@ -46,7 +49,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CrmController.prototype, "createLead", null);
 exports.CrmController = CrmController = __decorate([
-    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard, tenant_guard_1.TenantGuard),
+    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard, tenant_guard_1.TenantGuard, permissions_guard_1.PermissionsGuard),
     (0, common_1.Controller)('crm'),
     __metadata("design:paramtypes", [crm_service_1.CrmService])
 ], CrmController);

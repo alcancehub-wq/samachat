@@ -27,4 +27,6 @@ export interface MessageEventPayload {
   media_mime?: string | null;
   media_size?: number | null;
   timestamp: string;
+  sender_id?: string | null;
+  sender_name?: string | null;
 }

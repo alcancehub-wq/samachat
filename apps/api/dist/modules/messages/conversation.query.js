@@ -44,6 +44,9 @@ let ConversationQuery = class ConversationQuery {
                 tenant_id: params.tenantId,
                 conversation_id: params.conversationId,
             },
+            include: {
+                sender: true,
+            },
             orderBy: {
                 timestamp: 'asc',
             },
@@ -63,6 +66,13 @@ let ConversationQuery = class ConversationQuery {
                 media_size: message.media_size,
                 timestamp: message.timestamp.toISOString(),
                 status: message.status,
+                senderId: message.sender_user_id ?? null,
+                senderName: message.sender?.full_name ?? null,
+                senderType: message.direction === 'INBOUND'
+                    ? 'customer'
+                    : message.sender_user_id
+                        ? 'agent'
+                        : 'bot',
             })),
             next_cursor: nextCursor,
         };
