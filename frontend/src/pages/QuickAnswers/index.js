@@ -11,6 +11,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Typography,
   InputAdornment,
   TextField,
 } from "@material-ui/core";
@@ -80,6 +81,16 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+  },
+  headerTitle: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: theme.spacing(0.5),
+  },
+  headerSubtitle: {
+    color: theme.palette.text.secondary,
+    fontSize: "0.9rem",
   },
 }));
 
@@ -207,7 +218,12 @@ const QuickAnswers = () => {
         quickAnswerId={selectedQuickAnswers && selectedQuickAnswers.id}
       ></QuickAnswersModal>
       <MainHeader>
-        <Title>{i18n.t("quickAnswers.title")}</Title>
+        <div className={classes.headerTitle}>
+          <Title>{i18n.t("quickAnswers.title")}</Title>
+          <Typography className={classes.headerSubtitle}>
+            {i18n.t("quickAnswers.subtitle")}
+          </Typography>
+        </div>
         <MainHeaderButtonsWrapper>
           <TextField
             placeholder={i18n.t("quickAnswers.searchPlaceholder")}

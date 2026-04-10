@@ -161,7 +161,11 @@ const QuickAnswersModal = ({
                     name="shortcut"
                     autoFocus
                     error={touched.shortcut && Boolean(errors.shortcut)}
-                    helperText={touched.shortcut && errors.shortcut}
+                    helperText={
+                      touched.shortcut && errors.shortcut
+                        ? errors.shortcut
+                        : i18n.t("quickAnswersModal.form.shortcutHelper")
+                    }
                     variant="outlined"
                     margin="dense"
                     className={classes.textField}
@@ -174,7 +178,11 @@ const QuickAnswersModal = ({
                     label={i18n.t("quickAnswersModal.form.message")}
                     name="message"
                     error={touched.message && Boolean(errors.message)}
-                    helperText={touched.message && errors.message}
+                    helperText={
+                      touched.message && errors.message
+                        ? errors.message
+                        : i18n.t("quickAnswersModal.form.messageHelper")
+                    }
                     variant="outlined"
                     margin="dense"
                     className={classes.textField}

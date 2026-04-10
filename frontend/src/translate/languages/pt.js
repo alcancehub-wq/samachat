@@ -34,25 +34,29 @@ const messages = {
         },
       },
       dashboard: {
+        title: "Visão geral",
+        subtitle: "Indicadores principais do SamaChat em tempo real.",
         charts: {
           perDay: {
-            title: "Tickets hoje: ",
+            title: "Atendimentos hoje: ",
+            yLabel: "Atendimentos",
           },
         },
         messages: {
           inAttendance: {
-            title: "Em Atendimento"
+            title: "Em atendimento"
           },
           waiting: {
-            title: "Aguardando"
+            title: "Aguardando atendimento"
           },
           closed: {
-            title: "Finalizado"
+            title: "Finalizados"
           }
         }
       },
       connections: {
         title: "Conexões",
+        subtitle: "Gerencie conexoes ativas do SamaChat.",
         toasts: {
           deleted: "Conexão com o WhatsApp excluída com sucesso!",
         },
@@ -64,8 +68,8 @@ const messages = {
             "Tem certeza? Você precisará ler o QR Code novamente.",
         },
         buttons: {
-          add: "Adicionar WhatsApp",
-          disconnect: "desconectar",
+          add: "Adicionar conexão",
+          disconnect: "Desconectar",
           tryAgain: "Tentar novamente",
           qrcode: "QR CODE",
           newQr: "Novo QR CODE",
@@ -121,21 +125,22 @@ const messages = {
         message: "Leia o QrCode para iniciar a sessão",
       },
       contacts: {
-        title: "Contatos",
+        title: "Clientes",
+        subtitle: "Centralize clientes e historico do SamaChat.",
         toasts: {
           deleted: "Contato excluído com sucesso!",
         },
         searchPlaceholder: "Pesquisar...",
         confirmationModal: {
           deleteTitle: "Deletar ",
-          importTitlte: "Importar contatos",
+          importTitlte: "Importar clientes",
           deleteMessage:
             "Tem certeza que deseja deletar este contato? Todos os tickets relacionados serão perdidos.",
           importMessage: "Deseja importas todos os contatos do telefone?",
         },
         buttons: {
-          import: "Importar Contatos",
-          add: "Adicionar Contato",
+          import: "Importar clientes",
+          add: "Adicionar cliente",
         },
         table: {
           name: "Nome",
@@ -146,17 +151,22 @@ const messages = {
       },
       contactModal: {
         title: {
-          add: "Adicionar contato",
-          edit: "Editar contato",
+          add: "Adicionar cliente",
+          edit: "Editar cliente",
         },
         form: {
-          mainInfo: "Dados do contato",
+          mainInfo: "Dados do cliente",
           extraInfo: "Informações adicionais",
           name: "Nome",
+          nameHelper: "Nome completo do cliente.",
           number: "Número do Whatsapp",
+          numberHelper: "Inclua DDI e DDD. Ex: 5511999999999.",
           email: "Email",
+          emailHelper: "Opcional. Usado para contato e avisos.",
           extraName: "Nome do campo",
+          extraNameHelper: "Ex: Empresa, Cargo, Cidade.",
           extraValue: "Valor",
+          extraValueHelper: "Ex: Acme, Gestor, Curitiba.",
         },
         buttons: {
           addExtraInfo: "Adicionar informação",
@@ -168,19 +178,21 @@ const messages = {
       },
       quickAnswersModal: {
         title: {
-          add: "Adicionar Resposta Rápida",
-          edit: "Editar Resposta Rápida",
+          add: "Adicionar atalho",
+          edit: "Editar atalho",
         },
         form: {
           shortcut: "Atalho",
-          message: "Resposta Rápida",
+          shortcutHelper: "Ex: /saudacao",
+          message: "Mensagem do atalho",
+          messageHelper: "Texto enviado quando o atalho for usado.",
         },
         buttons: {
           okAdd: "Adicionar",
           okEdit: "Salvar",
           cancel: "Cancelar",
         },
-        success: "Resposta Rápida salva com sucesso.",
+        success: "Atalho salvo com sucesso.",
       },
       queueModal: {
         title: {
@@ -189,9 +201,13 @@ const messages = {
         },
         form: {
           name: "Nome",
+          nameHelper: "Ex: Suporte, Comercial, Financeiro.",
           color: "Cor",
+          colorHelper: "Use uma cor para identificar a fila.",
           greetingMessage: "Mensagem de saudação",
+          greetingMessageHelper: "Opcional. Enviada no inicio do atendimento.",
         },
+        success: "Fila salva com sucesso.",
         buttons: {
           okAdd: "Adicionar",
           okEdit: "Salvar",
@@ -205,10 +221,19 @@ const messages = {
         },
         form: {
           name: "Nome",
+          nameHelper: "Nome completo do usuário.",
           email: "Email",
+          emailHelper: "Email usado para login e avisos.",
           password: "Senha",
-          profile: "Perfil",
+          passwordHelper: "Minimo 5 caracteres.",
+          profile: "Perfil de acesso",
+          profileHelper: "Define o nível de acesso do usuário.",
           whatsapp: "Conexão Padrão",
+          whatsappHelper: "Conexão padrão para novos atendimentos.",
+        },
+        profileOptions: {
+          admin: "Administrador",
+          user: "Atendente",
         },
         buttons: {
           okAdd: "Adicionar",
@@ -222,7 +247,7 @@ const messages = {
       },
       ticketsManager: {
         buttons: {
-          newTicket: "Novo",
+          newTicket: "Novo atendimento",
         },
       },
       ticketsQueueSelect: {
@@ -230,25 +255,25 @@ const messages = {
       },
       tickets: {
         toasts: {
-          deleted: "O ticket que você estava foi deletado.",
+          deleted: "O atendimento que você estava foi deletado.",
         },
         notification: {
           message: "Mensagem de",
         },
         tabs: {
-          open: { title: "Inbox" },
+          open: { title: "Atendimentos" },
           closed: { title: "Resolvidos" },
           search: { title: "Busca" },
         },
         search: {
-          placeholder: "Buscar tickets e mensagens",
+          placeholder: "Buscar atendimentos e mensagens",
         },
         buttons: {
           showAll: "Todos",
         },
       },
       transferTicketModal: {
-        title: "Transferir Ticket",
+        title: "Transferir atendimento",
         fieldLabel: "Digite para buscar usuários",
         fieldQueueLabel: "Transferir para fila",
         fieldConnectionLabel: "Transferir para conexão",
@@ -265,15 +290,15 @@ const messages = {
         assignedHeader: "Atendendo",
         noTicketsTitle: "Nada aqui!",
         noTicketsMessage:
-          "Nenhum ticket encontrado com esse status ou termo pesquisado",
+          "Nenhum atendimento encontrado com esse status ou termo pesquisado",
         connectionTitle: "Conexão que está sendo utilizada atualmente.",
         buttons: {
           accept: "Aceitar",
         },
       },
       newTicketModal: {
-        title: "Criar Ticket",
-        fieldLabel: "Digite para pesquisar o contato",
+        title: "Criar atendimento",
+        fieldLabel: "Digite para pesquisar o cliente",
         add: "Adicionar",
         buttons: {
           ok: "Salvar",
@@ -282,15 +307,15 @@ const messages = {
       },
       mainDrawer: {
         listItems: {
-          dashboard: "Dashboard",
+          dashboard: "Visão geral",
           connections: "Conexões",
-          tickets: "Tickets",
-          contacts: "Contatos",
-          quickAnswers: "Respostas Rápidas",
+          tickets: "Atendimentos",
+          contacts: "Clientes",
+          quickAnswers: "Atalhos",
           queues: "Filas",
           administration: "Administração",
           users: "Usuários",
-          settings: "Configurações",
+          settings: "Ajustes",
         },
         appBar: {
           user: {
@@ -304,11 +329,15 @@ const messages = {
       },
       queues: {
         title: "Filas",
+        subtitle: "Organize atendimentos por equipe ou assunto.",
         table: {
           name: "Nome",
           color: "Cor",
           greeting: "Mensagem de saudação",
           actions: "Ações",
+        },
+        toasts: {
+          deleted: "Fila excluída com sucesso.",
         },
         buttons: {
           add: "Adicionar fila",
@@ -323,33 +352,40 @@ const messages = {
         inputLabel: "Filas",
       },
       quickAnswers: {
-        title: "Respostas Rápidas",
+        title: "Atalhos",
+        subtitle: "Padronize respostas rapidas e reduz tempo de digitacao.",
         table: {
           shortcut: "Atalho",
-          message: "Resposta Rápida",
+          message: "Mensagem",
           actions: "Ações",
         },
         buttons: {
-          add: "Adicionar Resposta Rápida",
+          add: "Adicionar atalho",
         },
         toasts: {
-          deleted: "Resposta Rápida excluída com sucesso.",
+          deleted: "Atalho excluído com sucesso.",
         },
-        searchPlaceholder: "Pesquisar...",
+        searchPlaceholder: "Pesquisar atalhos...",
         confirmationModal: {
           deleteTitle:
-            "Você tem certeza que quer excluir esta Resposta Rápida: ",
+            "Você tem certeza que quer excluir este atalho: ",
           deleteMessage: "Esta ação não pode ser revertida.",
         },
       },
       users: {
         title: "Usuários",
+        subtitle: "Gerencie acesso, filas e conexões padrão.",
+        searchPlaceholder: "Pesquisar usuários...",
         table: {
           name: "Nome",
           email: "Email",
-          profile: "Perfil",
+          profile: "Perfil de acesso",
           whatsapp: "Conexão Padrão",
           actions: "Ações",
+        },
+        profiles: {
+          admin: "Administrador",
+          user: "Atendente",
         },
         buttons: {
           add: "Adicionar usuário",
@@ -364,11 +400,17 @@ const messages = {
         },
       },
       settings: {
-        success: "Configurações salvas com sucesso.",
-        title: "Configurações",
+        success: "Ajustes salvos com sucesso.",
+        title: "Ajustes",
+        description: "Controle permissoes administrativas e dados de acesso.",
+        apiToken: {
+          label: "Token da API",
+          helper: "Somente leitura. Use em integracoes internas seguras.",
+        },
         settings: {
           userCreation: {
             name: "Criação de usuário",
+            description: "Define se novos usuarios podem se cadastrar.",
             options: {
               enabled: "Ativado",
               disabled: "Desativado",

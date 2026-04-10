@@ -11,6 +11,7 @@ import TableCell from "@material-ui/core/TableCell";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import IconButton from "@material-ui/core/IconButton";
+import Typography from "@material-ui/core/Typography";
 import SearchIcon from "@material-ui/icons/Search";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
@@ -80,6 +81,16 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+  },
+  headerTitle: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: theme.spacing(0.5),
+  },
+  headerSubtitle: {
+    color: theme.palette.text.secondary,
+    fontSize: "0.9rem",
   },
 }));
 
@@ -204,10 +215,15 @@ const Users = () => {
         userId={selectedUser && selectedUser.id}
       />
       <MainHeader>
-        <Title>{i18n.t("users.title")}</Title>
+        <div className={classes.headerTitle}>
+          <Title>{i18n.t("users.title")}</Title>
+          <Typography className={classes.headerSubtitle}>
+            {i18n.t("users.subtitle")}
+          </Typography>
+        </div>
         <MainHeaderButtonsWrapper>
           <TextField
-            placeholder={i18n.t("contacts.searchPlaceholder")}
+            placeholder={i18n.t("users.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={handleSearch}
@@ -257,7 +273,11 @@ const Users = () => {
                 <TableRow key={user.id}>
                   <TableCell align="center">{user.name}</TableCell>
                   <TableCell align="center">{user.email}</TableCell>
-                  <TableCell align="center">{user.profile}</TableCell>
+                  <TableCell align="center">
+                    {i18n.t(`users.profiles.${user.profile}`, {
+                      defaultValue: user.profile,
+                    })}
+                  </TableCell>
                   <TableCell align="center">{user.whatsapp?.name}</TableCell>
                   <TableCell align="center">
                     <IconButton

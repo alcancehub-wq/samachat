@@ -34,17 +34,20 @@ const messages = {
         },
       },
       dashboard: {
+        title: "Overview",
+        subtitle: "Main SamaChat operational indicators in real time.",
         charts: {
           perDay: {
-            title: "Tickets today: ",
+            title: "Attendances today: ",
+            yLabel: "Attendances",
           },
         },
         messages: {
           inAttendance: {
-            title: "In Service"
+            title: "In service"
           },
           waiting: {
-            title: "Waiting"
+            title: "Waiting for service"
           },
           closed: {
             title: "Closed"
@@ -53,6 +56,7 @@ const messages = {
       },
       connections: {
         title: "Connections",
+        subtitle: "Manage active SamaChat connections.",
         toasts: {
           deleted: "WhatsApp connection deleted sucessfully!",
         },
@@ -63,7 +67,7 @@ const messages = {
           disconnectMessage: "Are you sure? You'll need to read QR Code again.",
         },
         buttons: {
-          add: "Add WhatsApp",
+          add: "Add connection",
           disconnect: "Disconnect",
           tryAgain: "Try Again",
           qrcode: "QR CODE",
@@ -119,21 +123,22 @@ const messages = {
         message: "Read QrCode to start the session",
       },
       contacts: {
-        title: "Contacts",
+        title: "Clients",
+        subtitle: "Centralize clients and SamaChat history.",
         toasts: {
           deleted: "Contact deleted sucessfully!",
         },
         searchPlaceholder: "Search ...",
         confirmationModal: {
           deleteTitle: "Delete",
-          importTitlte: "Import contacts",
+          importTitlte: "Import clients",
           deleteMessage:
             "Are you sure you want to delete this contact? All related tickets will be lost.",
           importMessage: "Do you want to import all contacts from the phone?",
         },
         buttons: {
-          import: "Import Contacts",
-          add: "Add Contact",
+          import: "Import clients",
+          add: "Add client",
         },
         table: {
           name: "Name",
@@ -144,17 +149,22 @@ const messages = {
       },
       contactModal: {
         title: {
-          add: "Add contact",
-          edit: "Edit contact",
+          add: "Add client",
+          edit: "Edit client",
         },
         form: {
-          mainInfo: "Contact details",
+          mainInfo: "Client details",
           extraInfo: "Additional information",
           name: "Name",
+          nameHelper: "Client full name.",
           number: "Whatsapp number",
+          numberHelper: "Include country and area code.",
           email: "Email",
+          emailHelper: "Optional. Used for contact and notices.",
           extraName: "Field name",
+          extraNameHelper: "Example: Company, Role, City.",
           extraValue: "Value",
+          extraValueHelper: "Example: Acme, Manager, Austin.",
         },
         buttons: {
           addExtraInfo: "Add information",
@@ -166,19 +176,21 @@ const messages = {
       },
       quickAnswersModal: {
         title: {
-          add: "Add Quick Reply",
-          edit: "Edit Quick Answer",
+          add: "Add shortcut",
+          edit: "Edit shortcut",
         },
         form: {
           shortcut: "Shortcut",
-          message: "Quick Reply",
+          shortcutHelper: "Example: /greeting",
+          message: "Shortcut message",
+          messageHelper: "Message sent when the shortcut is used.",
         },
         buttons: {
           okAdd: "Add",
           okEdit: "Save",
           cancel: "Cancel",
         },
-        success: "Quick Reply saved successfully.",
+        success: "Shortcut saved successfully.",
       },
       queueModal: {
         title: {
@@ -187,9 +199,14 @@ const messages = {
         },
         form: {
           name: "Name",
+          nameHelper: "Example: Support, Sales, Finance.",
           color: "Color",
+          colorHelper: "Use a color to identify the queue.",
           greetingMessage: "Greeting Message",
+          greetingMessageHelper:
+            "Optional. Sent at the start of the conversation.",
         },
+        success: "Queue saved successfully.",
         buttons: {
           okAdd: "Add",
           okEdit: "Save",
@@ -203,10 +220,19 @@ const messages = {
         },
         form: {
           name: "Name",
+          nameHelper: "User full name.",
           email: "Email",
+          emailHelper: "Login and notification email.",
           password: "Password",
-          profile: "Profile",
+          passwordHelper: "Minimum 5 characters.",
+          profile: "Access role",
+          profileHelper: "Defines the user's access level.",
           whatsapp: "Default Connection",
+          whatsappHelper: "Default connection for new attendances.",
+        },
+        profileOptions: {
+          admin: "Administrator",
+          user: "Agent",
         },
         buttons: {
           okAdd: "Add",
@@ -220,7 +246,7 @@ const messages = {
       },
       ticketsManager: {
         buttons: {
-          newTicket: "New",
+          newTicket: "New attendance",
         },
       },
       ticketsQueueSelect: {
@@ -228,25 +254,25 @@ const messages = {
       },
       tickets: {
         toasts: {
-          deleted: "The ticket you were on has been deleted.",
+          deleted: "The attendance you were on has been deleted.",
         },
         notification: {
           message: "Message from",
         },
         tabs: {
-          open: { title: "Inbox" },
+          open: { title: "Attendances" },
           closed: { title: "Resolved" },
           search: { title: "Search" },
         },
         search: {
-          placeholder: "Search tickets and messages.",
+          placeholder: "Search attendances and messages.",
         },
         buttons: {
           showAll: "All",
         },
       },
       transferTicketModal: {
-        title: "Transfer Ticket",
+        title: "Transfer attendance",
         fieldLabel: "Type to search for users",
         fieldQueueLabel: "Transfer to queue",
         fieldConnectionLabel: "Transfer to connection",
@@ -262,15 +288,15 @@ const messages = {
         pendingHeader: "Queue",
         assignedHeader: "Working on",
         noTicketsTitle: "Nothing here!",
-        noTicketsMessage: "No tickets found with this status or search term.",
+        noTicketsMessage: "No attendances found with this status or search term.",
         connectionTitle: "Connection that is currently being used.",
         buttons: {
           accept: "Accept",
         },
       },
       newTicketModal: {
-        title: "Create Ticket",
-        fieldLabel: "Type to search for a contact",
+        title: "Create attendance",
+        fieldLabel: "Type to search for a client",
         add: "Add",
         buttons: {
           ok: "Save",
@@ -279,11 +305,11 @@ const messages = {
       },
       mainDrawer: {
         listItems: {
-          dashboard: "Dashboard",
+          dashboard: "Overview",
           connections: "Connections",
-          tickets: "Tickets",
-          contacts: "Contacts",
-          quickAnswers: "Quick Answers",
+          tickets: "Attendances",
+          contacts: "Clients",
+          quickAnswers: "Shortcuts",
           queues: "Queues",
           administration: "Administration",
           users: "Users",
@@ -301,6 +327,10 @@ const messages = {
       },
       queues: {
         title: "Queues",
+        subtitle: "Organize attendances by team or topic.",
+        toasts: {
+          deleted: "Queue deleted successfully.",
+        },
         table: {
           name: "Name",
           color: "Color",
@@ -320,32 +350,39 @@ const messages = {
         inputLabel: "Queues",
       },
       quickAnswers: {
-        title: "Quick Answers",
+        title: "Shortcuts",
+        subtitle: "Standardize quick replies and reduce typing time.",
         table: {
           shortcut: "Shortcut",
-          message: "Quick Reply",
+          message: "Message",
           actions: "Actions",
         },
         buttons: {
-          add: "Add Quick Reply",
+          add: "Add shortcut",
         },
         toasts: {
-          deleted: "Quick Reply deleted successfully.",
+          deleted: "Shortcut deleted successfully.",
         },
-        searchPlaceholder: "Search...",
+        searchPlaceholder: "Search shortcuts...",
         confirmationModal: {
-          deleteTitle: "Are you sure you want to delete this Quick Reply: ",
+          deleteTitle: "Are you sure you want to delete this shortcut: ",
           deleteMessage: "This action cannot be undone.",
         },
       },
       users: {
         title: "Users",
+        subtitle: "Manage access, queues, and default connections.",
+        searchPlaceholder: "Search users...",
         table: {
           name: "Name",
           email: "Email",
-          profile: "Profile",
+          profile: "Access role",
           whatsapp: "Default Connection",
           actions: "Actions",
+        },
+        profiles: {
+          admin: "Administrator",
+          user: "Agent",
         },
         buttons: {
           add: "Add user",
@@ -362,9 +399,15 @@ const messages = {
       settings: {
         success: "Settings saved successfully.",
         title: "Settings",
+        description: "Manage administrative permissions and access details.",
+        apiToken: {
+          label: "API token",
+          helper: "Read-only. Use for secure internal integrations.",
+        },
         settings: {
           userCreation: {
             name: "User creation",
+            description: "Controls whether new users can self-register.",
             options: {
               enabled: "Enabled",
               disabled: "Disabled",

@@ -27,6 +27,21 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		flexWrap: "wrap",
 	},
+	dialogPaper: {
+		borderRadius: 18,
+		padding: theme.spacing(1),
+	},
+	dialogTitle: {
+		fontWeight: 700,
+		fontSize: "1.05rem",
+		color: "#0f172a",
+	},
+	dialogContent: {
+		backgroundColor: "#f8fafc",
+	},
+	dialogActions: {
+		padding: theme.spacing(2),
+	},
 	textField: {
 		marginRight: theme.spacing(1),
 		flex: 1,
@@ -37,9 +52,24 @@ const useStyles = makeStyles(theme => ({
 		justifyContent: "center",
 		alignItems: "center",
 	},
+	sectionTitle: {
+		fontWeight: 700,
+		color: "#0f172a",
+	},
 
 	btnWrapper: {
 		position: "relative",
+	},
+	primaryButton: {
+		borderRadius: 12,
+		textTransform: "none",
+		fontWeight: 600,
+		boxShadow: "none",
+	},
+	secondaryButton: {
+		borderRadius: 12,
+		textTransform: "none",
+		fontWeight: 600,
 	},
 
 	buttonProgress: {
@@ -127,8 +157,14 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 
 	return (
 		<div className={classes.root}>
-			<Dialog open={open} onClose={handleClose} maxWidth="lg" scroll="paper">
-				<DialogTitle id="form-dialog-title">
+			<Dialog
+				open={open}
+				onClose={handleClose}
+				maxWidth="lg"
+				scroll="paper"
+				classes={{ paper: classes.dialogPaper }}
+			>
+				<DialogTitle id="form-dialog-title" className={classes.dialogTitle}>
 					{contactId
 						? `${i18n.t("contactModal.title.edit")}`
 						: `${i18n.t("contactModal.title.add")}`}
@@ -146,8 +182,8 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 				>
 					{({ values, errors, touched, isSubmitting }) => (
 						<Form>
-							<DialogContent dividers>
-								<Typography variant="subtitle1" gutterBottom>
+							<DialogContent dividers className={classes.dialogContent}>
+								<Typography variant="subtitle1" gutterBottom className={classes.sectionTitle}>
 									{i18n.t("contactModal.form.mainInfo")}
 								</Typography>
 								<Field
@@ -156,7 +192,11 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 									name="name"
 									autoFocus
 									error={touched.name && Boolean(errors.name)}
-									helperText={touched.name && errors.name}
+									helperText={
+										touched.name && errors.name
+											? errors.name
+											: i18n.t("contactModal.form.nameHelper")
+									}
 									variant="outlined"
 									margin="dense"
 									className={classes.textField}
@@ -166,7 +206,11 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 									label={i18n.t("contactModal.form.number")}
 									name="number"
 									error={touched.number && Boolean(errors.number)}
-									helperText={touched.number && errors.number}
+									helperText={
+										touched.number && errors.number
+											? errors.number
+											: i18n.t("contactModal.form.numberHelper")
+									}
 									placeholder="5513912344321"
 									variant="outlined"
 									margin="dense"
@@ -177,7 +221,11 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 										label={i18n.t("contactModal.form.email")}
 										name="email"
 										error={touched.email && Boolean(errors.email)}
-										helperText={touched.email && errors.email}
+										helperText={
+											touched.email && errors.email
+												? errors.email
+												: i18n.t("contactModal.form.emailHelper")
+										}
 										placeholder="Email address"
 										fullWidth
 										margin="dense"
@@ -187,6 +235,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 								<Typography
 									style={{ marginBottom: 8, marginTop: 12 }}
 									variant="subtitle1"
+									className={classes.sectionTitle}
 								>
 									{i18n.t("contactModal.form.extraInfo")}
 								</Typography>
@@ -205,6 +254,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 															as={TextField}
 															label={i18n.t("contactModal.form.extraName")}
 															name={`extraInfo[${index}].name`}
+															helperText={i18n.t("contactModal.form.extraNameHelper")}
 															variant="outlined"
 															margin="dense"
 															className={classes.textField}
@@ -213,6 +263,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 															as={TextField}
 															label={i18n.t("contactModal.form.extraValue")}
 															name={`extraInfo[${index}].value`}
+															helperText={i18n.t("contactModal.form.extraValueHelper")}
 															variant="outlined"
 															margin="dense"
 															className={classes.textField}
@@ -239,12 +290,13 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 									)}
 								</FieldArray>
 							</DialogContent>
-							<DialogActions>
+							<DialogActions className={classes.dialogActions}>
 								<Button
 									onClick={handleClose}
 									color="secondary"
 									disabled={isSubmitting}
 									variant="outlined"
+									className={classes.secondaryButton}
 								>
 									{i18n.t("contactModal.buttons.cancel")}
 								</Button>
@@ -253,7 +305,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 									color="primary"
 									disabled={isSubmitting}
 									variant="contained"
-									className={classes.btnWrapper}
+									className={`${classes.btnWrapper} ${classes.primaryButton}`}
 								>
 									{contactId
 										? `${i18n.t("contactModal.buttons.okEdit")}`

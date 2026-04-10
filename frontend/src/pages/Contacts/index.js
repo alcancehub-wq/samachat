@@ -12,6 +12,7 @@ import TableRow from "@material-ui/core/TableRow";
 import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
 import Avatar from "@material-ui/core/Avatar";
+import Typography from "@material-ui/core/Typography";
 import WhatsAppIcon from "@material-ui/icons/WhatsApp";
 import SearchIcon from "@material-ui/icons/Search";
 import TextField from "@material-ui/core/TextField";
@@ -82,9 +83,89 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
+    padding: theme.spacing(1.5, 2),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+    borderRadius: 16,
+    border: "1px solid rgba(15, 23, 42, 0.08)",
+    boxShadow: "0 16px 28px rgba(15, 23, 42, 0.08)",
+    backgroundColor: "#ffffff",
+    backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+  },
+  headerTitle: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: theme.spacing(0.5),
+  },
+  pageSubtitle: {
+    color: "#64748b",
+    fontSize: "0.95rem",
+  },
+  searchField: {
+    minWidth: 280,
+    backgroundColor: "#ffffff",
+  },
+  searchInputRoot: {
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+  },
+  actionButton: {
+    borderRadius: 12,
+    textTransform: "none",
+    fontWeight: 600,
+    boxShadow: "0 12px 20px rgba(37, 99, 235, 0.22)",
+    backgroundImage: "linear-gradient(135deg, #2563eb 0%, #38bdf8 100%)",
+  },
+  table: {
+    borderCollapse: "separate",
+    borderSpacing: "0 8px",
+  },
+  tableHead: {
+    backgroundColor: "transparent",
+  },
+  tableHeadCell: {
+    color: "#64748b",
+    fontWeight: 700,
+    fontSize: "0.78rem",
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
+    borderBottom: "none",
+  },
+  tableRow: {
+    backgroundColor: "#ffffff",
+    boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
+    borderRadius: 12,
+    "& > td": {
+      borderBottom: "none",
+    },
+    "& td:first-child": {
+      borderTopLeftRadius: 12,
+      borderBottomLeftRadius: 12,
+    },
+    "& td:last-child": {
+      borderTopRightRadius: 12,
+      borderBottomRightRadius: 12,
+    },
+    "&:hover": {
+      backgroundColor: "rgba(14, 165, 233, 0.06)",
+    },
+  },
+  tableCell: {
+    paddingTop: theme.spacing(1.25),
+    paddingBottom: theme.spacing(1.25),
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+  },
+  actionsCell: {
+    whiteSpace: "nowrap",
+  },
+  actionIconButton: {
+    backgroundColor: "rgba(15, 23, 42, 0.06)",
+    marginRight: theme.spacing(0.5),
+    borderRadius: 10,
   },
 }));
 
@@ -244,14 +325,21 @@ const Contacts = () => {
           : `${i18n.t("contacts.confirmationModal.importMessage")}`}
       </ConfirmationModal>
       <MainHeader>
-        <Title>{i18n.t("contacts.title")}</Title>
+        <div className={classes.headerTitle}>
+          <Title>Clientes</Title>
+          <Typography className={classes.pageSubtitle}>
+            {i18n.t("contacts.subtitle")}
+          </Typography>
+        </div>
         <MainHeaderButtonsWrapper>
           <TextField
             placeholder={i18n.t("contacts.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={handleSearch}
+            className={classes.searchField}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon style={{ color: "gray" }} />
@@ -262,6 +350,7 @@ const Contacts = () => {
           <Button
             variant="contained"
             color="primary"
+            className={classes.actionButton}
             onClick={(e) => setConfirmOpen(true)}
           >
             {i18n.t("contacts.buttons.import")}
@@ -269,6 +358,7 @@ const Contacts = () => {
           <Button
             variant="contained"
             color="primary"
+            className={classes.actionButton}
             onClick={handleOpenContactModal}
           >
             {i18n.t("contacts.buttons.add")}
@@ -280,18 +370,20 @@ const Contacts = () => {
         variant="outlined"
         onScroll={handleScroll}
       >
-        <Table size="small">
-          <TableHead>
+        <Table size="small" className={classes.table}>
+          <TableHead className={classes.tableHead}>
             <TableRow>
               <TableCell padding="checkbox" />
-              <TableCell>{i18n.t("contacts.table.name")}</TableCell>
-              <TableCell align="center">
+              <TableCell className={classes.tableHeadCell}>
+                {i18n.t("contacts.table.name")}
+              </TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("contacts.table.whatsapp")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("contacts.table.email")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("contacts.table.actions")}
               </TableCell>
             </TableRow>
@@ -299,22 +391,28 @@ const Contacts = () => {
           <TableBody>
             <>
               {contacts.map((contact) => (
-                <TableRow key={contact.id}>
-                  <TableCell style={{ paddingRight: 0 }}>
-                    {<Avatar src={contact.profilePicUrl} />}
+                <TableRow key={contact.id} className={classes.tableRow}>
+                  <TableCell style={{ paddingRight: 0 }} className={classes.tableCell}>
+                    {<Avatar src={contact.profilePicUrl} className={classes.avatar} />}
                   </TableCell>
-                  <TableCell>{contact.name}</TableCell>
-                  <TableCell align="center">{contact.number}</TableCell>
-                  <TableCell align="center">{contact.email}</TableCell>
-                  <TableCell align="center">
+                  <TableCell className={classes.tableCell}>{contact.name}</TableCell>
+                  <TableCell align="center" className={classes.tableCell}>
+                    {contact.number}
+                  </TableCell>
+                  <TableCell align="center" className={classes.tableCell}>
+                    {contact.email}
+                  </TableCell>
+                  <TableCell align="center" className={classes.actionsCell}>
                     <IconButton
                       size="small"
+                      className={classes.actionIconButton}
                       onClick={() => handleSaveTicket(contact.id)}
                     >
                       <WhatsAppIcon />
                     </IconButton>
                     <IconButton
                       size="small"
+                      className={classes.actionIconButton}
                       onClick={() => hadleEditContact(contact.id)}
                     >
                       <EditIcon />
@@ -325,6 +423,7 @@ const Contacts = () => {
                       yes={() => (
                         <IconButton
                           size="small"
+                          className={classes.actionIconButton}
                           onClick={(e) => {
                             setConfirmOpen(true);
                             setDeletingContact(contact);

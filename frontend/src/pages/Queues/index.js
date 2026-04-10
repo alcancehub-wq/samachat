@@ -35,6 +35,16 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
+  headerTitle: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: theme.spacing(0.5),
+  },
+  headerSubtitle: {
+    color: theme.palette.text.secondary,
+    fontSize: "0.9rem",
+  },
   customTableCell: {
     display: "flex",
     alignItems: "center",
@@ -151,7 +161,7 @@ const Queues = () => {
   const handleDeleteQueue = async (queueId) => {
     try {
       await api.delete(`/queue/${queueId}`);
-      toast.success(i18n.t("Queue deleted successfully!"));
+      toast.success(i18n.t("queues.toasts.deleted"));
     } catch (err) {
       toastError(err);
     }
@@ -179,7 +189,12 @@ const Queues = () => {
         queueId={selectedQueue?.id}
       />
       <MainHeader>
-        <Title>{i18n.t("queues.title")}</Title>
+        <div className={classes.headerTitle}>
+          <Title>{i18n.t("queues.title")}</Title>
+          <Typography className={classes.headerSubtitle}>
+            {i18n.t("queues.subtitle")}
+          </Typography>
+        </div>
         <MainHeaderButtonsWrapper>
           <Button
             variant="contained"

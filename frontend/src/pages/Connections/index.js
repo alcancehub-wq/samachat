@@ -44,9 +44,93 @@ import toastError from "../../errors/toastError";
 const useStyles = makeStyles(theme => ({
 	mainPaper: {
 		flex: 1,
-		padding: theme.spacing(1),
+		padding: theme.spacing(1.5, 2),
 		overflowY: "scroll",
 		...theme.scrollbarStyles,
+		borderRadius: 16,
+		border: "1px solid rgba(15, 23, 42, 0.08)",
+		boxShadow: "0 16px 28px rgba(15, 23, 42, 0.08)",
+		backgroundColor: "#ffffff",
+		backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+	},
+	headerTitle: {
+		display: "flex",
+		flexDirection: "column",
+		alignItems: "flex-start",
+		gap: theme.spacing(0.5),
+	},
+	pageSubtitle: {
+		color: "#64748b",
+		fontSize: "0.95rem",
+	},
+	primaryAction: {
+		borderRadius: 12,
+		textTransform: "none",
+		fontWeight: 600,
+		boxShadow: "0 12px 20px rgba(37, 99, 235, 0.22)",
+		backgroundImage: "linear-gradient(135deg, #2563eb 0%, #38bdf8 100%)",
+	},
+	statusPill: {
+		minWidth: 42,
+		height: 32,
+		borderRadius: 999,
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: "rgba(15, 23, 42, 0.06)",
+	},
+	actionGroup: {
+		display: "flex",
+		gap: theme.spacing(1),
+		flexWrap: "wrap",
+		justifyContent: "center",
+	},
+	actionButton: {
+		borderRadius: 10,
+		textTransform: "none",
+		fontWeight: 600,
+		boxShadow: "none",
+		borderColor: "rgba(15, 23, 42, 0.12)",
+	},
+	actionIconButton: {
+		backgroundColor: "rgba(15, 23, 42, 0.06)",
+		marginLeft: theme.spacing(0.5),
+		borderRadius: 10,
+	},
+	table: {
+		borderCollapse: "separate",
+		borderSpacing: "0 8px",
+	},
+	tableHeadCell: {
+		color: "#64748b",
+		fontWeight: 700,
+		fontSize: "0.78rem",
+		textTransform: "uppercase",
+		letterSpacing: 1.1,
+		borderBottom: "none",
+	},
+	tableRow: {
+		backgroundColor: "#ffffff",
+		boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
+		borderRadius: 12,
+		"& > td": {
+			borderBottom: "none",
+		},
+		"& td:first-child": {
+			borderTopLeftRadius: 12,
+			borderBottomLeftRadius: 12,
+		},
+		"& td:last-child": {
+			borderTopRightRadius: 12,
+			borderBottomRightRadius: 12,
+		},
+		"&:hover": {
+			backgroundColor: "rgba(14, 165, 233, 0.06)",
+		},
+	},
+	tableCell: {
+		paddingTop: theme.spacing(1.25),
+		paddingBottom: theme.spacing(1.25),
 	},
 	customTableCell: {
 		display: "flex",
@@ -202,6 +286,7 @@ const Connections = () => {
 						size="small"
 						variant="contained"
 						color="primary"
+						className={classes.actionButton}
 						onClick={() => handleOpenQrModal(whatsApp)}
 					>
 						{i18n.t("connections.buttons.qrcode")}
@@ -213,6 +298,7 @@ const Connections = () => {
 							size="small"
 							variant="outlined"
 							color="primary"
+							className={classes.actionButton}
 							onClick={() => handleStartWhatsAppSession(whatsApp.id)}
 						>
 							{i18n.t("connections.buttons.tryAgain")}
@@ -221,6 +307,7 @@ const Connections = () => {
 							size="small"
 							variant="outlined"
 							color="secondary"
+							className={classes.actionButton}
 							onClick={() => handleRequestNewQrCode(whatsApp.id)}
 						>
 							{i18n.t("connections.buttons.newQr")}
@@ -234,6 +321,7 @@ const Connections = () => {
 						size="small"
 						variant="outlined"
 						color="secondary"
+						className={classes.actionButton}
 						onClick={() => {
 							handleOpenConfirmationModal("disconnect", whatsApp.id);
 						}}
@@ -242,7 +330,13 @@ const Connections = () => {
 					</Button>
 				)}
 				{whatsApp.status === "OPENING" && (
-					<Button size="small" variant="outlined" disabled color="default">
+					<Button
+						size="small"
+						variant="outlined"
+						disabled
+						color="default"
+						className={classes.actionButton}
+					>
 						{i18n.t("connections.buttons.connecting")}
 					</Button>
 				)}
@@ -252,7 +346,7 @@ const Connections = () => {
 
 	const renderStatusToolTips = whatsApp => {
 		return (
-			<div className={classes.customTableCell}>
+			<div className={`${classes.customTableCell} ${classes.statusPill}`}>
 				{whatsApp.status === "DISCONNECTED" && (
 					<CustomToolTip
 						title={i18n.t("connections.toolTips.disconnected.title")}
@@ -262,7 +356,7 @@ const Connections = () => {
 					</CustomToolTip>
 				)}
 				{whatsApp.status === "OPENING" && (
-					<CircularProgress size={24} className={classes.buttonProgress} />
+					<CircularProgress size={20} className={classes.buttonProgress} />
 				)}
 				{whatsApp.status === "qrcode" && (
 					<CustomToolTip
@@ -310,11 +404,17 @@ const Connections = () => {
 				whatsAppId={!qrModalOpen && selectedWhatsApp?.id}
 			/>
 			<MainHeader>
-				<Title>{i18n.t("connections.title")}</Title>
+				<div className={classes.headerTitle}>
+					<Title>{i18n.t("connections.title")}</Title>
+					<Typography className={classes.pageSubtitle}>
+						{i18n.t("connections.subtitle")}
+					</Typography>
+				</div>
 				<MainHeaderButtonsWrapper>
 					<Button
 						variant="contained"
 						color="primary"
+						className={classes.primaryAction}
 						onClick={handleOpenWhatsAppModal}
 					>
 						{i18n.t("connections.buttons.add")}
@@ -322,25 +422,25 @@ const Connections = () => {
 				</MainHeaderButtonsWrapper>
 			</MainHeader>
 			<Paper className={classes.mainPaper} variant="outlined">
-				<Table size="small">
+				<Table size="small" className={classes.table}>
 					<TableHead>
 						<TableRow>
-							<TableCell align="center">
+							<TableCell align="center" className={classes.tableHeadCell}>
 								{i18n.t("connections.table.name")}
 							</TableCell>
-							<TableCell align="center">
+							<TableCell align="center" className={classes.tableHeadCell}>
 								{i18n.t("connections.table.status")}
 							</TableCell>
-							<TableCell align="center">
+							<TableCell align="center" className={classes.tableHeadCell}>
 								{i18n.t("connections.table.session")}
 							</TableCell>
-							<TableCell align="center">
+							<TableCell align="center" className={classes.tableHeadCell}>
 								{i18n.t("connections.table.lastUpdate")}
 							</TableCell>
-							<TableCell align="center">
+							<TableCell align="center" className={classes.tableHeadCell}>
 								{i18n.t("connections.table.default")}
 							</TableCell>
-							<TableCell align="center">
+							<TableCell align="center" className={classes.tableHeadCell}>
 								{i18n.t("connections.table.actions")}
 							</TableCell>
 						</TableRow>
@@ -352,27 +452,32 @@ const Connections = () => {
 							<>
 								{whatsApps?.length > 0 &&
 									whatsApps.map(whatsApp => (
-										<TableRow key={whatsApp.id}>
-											<TableCell align="center">{whatsApp.name}</TableCell>
-											<TableCell align="center">
+										<TableRow key={whatsApp.id} className={classes.tableRow}>
+											<TableCell align="center" className={classes.tableCell}>
+												{whatsApp.name}
+											</TableCell>
+											<TableCell align="center" className={classes.tableCell}>
 												{renderStatusToolTips(whatsApp)}
 											</TableCell>
-											<TableCell align="center">
-												{renderActionButtons(whatsApp)}
+											<TableCell align="center" className={classes.tableCell}>
+												<div className={classes.actionGroup}>
+													{renderActionButtons(whatsApp)}
+												</div>
 											</TableCell>
-											<TableCell align="center">
+											<TableCell align="center" className={classes.tableCell}>
 												{format(parseISO(whatsApp.updatedAt), "dd/MM/yy HH:mm")}
 											</TableCell>
-											<TableCell align="center">
+											<TableCell align="center" className={classes.tableCell}>
 												{whatsApp.isDefault && (
 													<div className={classes.customTableCell}>
 														<CheckCircle style={{ color: green[500] }} />
 													</div>
 												)}
 											</TableCell>
-											<TableCell align="center">
+											<TableCell align="center" className={classes.tableCell}>
 												<IconButton
 													size="small"
+													className={classes.actionIconButton}
 													onClick={() => handleEditWhatsApp(whatsApp)}
 												>
 													<Edit />
@@ -380,6 +485,7 @@ const Connections = () => {
 
 												<IconButton
 													size="small"
+													className={classes.actionIconButton}
 													onClick={e => {
 														handleOpenConfirmationModal("delete", whatsApp.id);
 													}}

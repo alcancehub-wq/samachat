@@ -15,6 +15,7 @@ import {
 	InputLabel,
 	MenuItem,
 	FormControl,
+	FormHelperText,
 	TextField,
 	InputAdornment,
 	IconButton
@@ -165,7 +166,11 @@ const UserModal = ({ open, onClose, userId }) => {
 										autoFocus
 										name="name"
 										error={touched.name && Boolean(errors.name)}
-										helperText={touched.name && errors.name}
+										helperText={
+											touched.name && errors.name
+												? errors.name
+												: i18n.t("userModal.form.nameHelper")
+										}
 										variant="outlined"
 										margin="dense"
 										fullWidth
@@ -177,7 +182,11 @@ const UserModal = ({ open, onClose, userId }) => {
 										margin="dense"
 										label={i18n.t("userModal.form.password")}
 										error={touched.password && Boolean(errors.password)}
-										helperText={touched.password && errors.password}
+										helperText={
+											touched.password && errors.password
+												? errors.password
+												: i18n.t("userModal.form.passwordHelper")
+										}
 										type={showPassword ? 'text' : 'password'}
 										InputProps={{
 										endAdornment: (
@@ -200,7 +209,11 @@ const UserModal = ({ open, onClose, userId }) => {
 										label={i18n.t("userModal.form.email")}
 										name="email"
 										error={touched.email && Boolean(errors.email)}
-										helperText={touched.email && errors.email}
+										helperText={
+											touched.email && errors.email
+												? errors.email
+												: i18n.t("userModal.form.emailHelper")
+										}
 										variant="outlined"
 										margin="dense"
 										fullWidth
@@ -227,9 +240,16 @@ const UserModal = ({ open, onClose, userId }) => {
 														id="profile-selection"
 														required
 													>
-														<MenuItem value="admin">Admin</MenuItem>
-														<MenuItem value="user">User</MenuItem>
+															<MenuItem value="admin">
+																{i18n.t("userModal.profileOptions.admin")}
+															</MenuItem>
+															<MenuItem value="user">
+																{i18n.t("userModal.profileOptions.user")}
+															</MenuItem>
 													</Field>
+														<FormHelperText>
+															{i18n.t("userModal.form.profileHelper")}
+														</FormHelperText>
 												</>
 											)}
 										/>
@@ -262,6 +282,9 @@ const UserModal = ({ open, onClose, userId }) => {
 													<MenuItem key={whatsapp.id} value={whatsapp.id}>{whatsapp.name}</MenuItem>
 												))}
 											</Field>
+													<FormHelperText>
+														{i18n.t("userModal.form.whatsappHelper")}
+													</FormHelperText>
 										</FormControl>
 									)}
 								/>

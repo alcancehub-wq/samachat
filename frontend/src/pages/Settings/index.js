@@ -19,6 +19,12 @@ const useStyles = makeStyles(theme => ({
 		alignItems: "center",
 		padding: theme.spacing(8, 8, 3),
 	},
+	pageHeader: {
+		marginBottom: theme.spacing(2),
+	},
+	pageSubtitle: {
+		color: theme.palette.text.secondary,
+	},
 
 	paper: {
 		padding: theme.spacing(2),
@@ -26,6 +32,11 @@ const useStyles = makeStyles(theme => ({
 		alignItems: "center",
 		marginBottom: 12,
 
+	},
+	settingMeta: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 2,
 	},
 
 	settingOption: {
@@ -95,13 +106,21 @@ const Settings = () => {
 	return (
 		<div className={classes.root}>
 			<Container className={classes.container} maxWidth="sm">
-				<Typography variant="body2" gutterBottom>
-					{i18n.t("settings.title")}
-				</Typography>
-				<Paper className={classes.paper}>
-					<Typography variant="body1">
-						{i18n.t("settings.settings.userCreation.name")}
+				<div className={classes.pageHeader}>
+					<Typography variant="h6">{i18n.t("settings.title")}</Typography>
+					<Typography variant="body2" className={classes.pageSubtitle}>
+						{i18n.t("settings.description")}
 					</Typography>
+				</div>
+				<Paper className={classes.paper}>
+					<div className={classes.settingMeta}>
+						<Typography variant="body1">
+							{i18n.t("settings.settings.userCreation.name")}
+						</Typography>
+						<Typography variant="caption" className={classes.pageSubtitle}>
+							{i18n.t("settings.settings.userCreation.description")}
+						</Typography>
+					</div>
 					<Select
 						margin="dense"
 						variant="outlined"
@@ -127,11 +146,12 @@ const Settings = () => {
 				<Paper className={classes.paper}>
 					<TextField
 						id="api-token-setting"
-						readonly
-						label="Token Api"
+						label={i18n.t("settings.apiToken.label")}
 						margin="dense"
 						variant="outlined"
 						fullWidth
+						InputProps={{ readOnly: true }}
+						helperText={i18n.t("settings.apiToken.helper")}
 						value={settings && settings.length > 0 && getSettingValue("userApiToken")}
 					/>
 				</Paper>

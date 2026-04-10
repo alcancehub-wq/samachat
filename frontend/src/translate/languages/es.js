@@ -35,9 +35,12 @@ const messages = {
         },
       },
       dashboard: {
+        title: "Vista general",
+        subtitle: "Indicadores operativos principales de SamaChat en tiempo real.",
         charts: {
           perDay: {
-            title: "Tickets hoy: ",
+            title: "Atenciones hoy: ",
+            yLabel: "Atenciones",
           },
         },
         messages: {
@@ -45,15 +48,16 @@ const messages = {
             title: "En servicio"
           },
           waiting: {
-            title: "Esperando"
+            title: "Esperando atención"
           },
           closed: {
-            title: "Finalizado"
+            title: "Finalizados"
           }
         }
       },
       connections: {
         title: "Conexiones",
+        subtitle: "Administra conexiones activas de SamaChat.",
         toasts: {
           deleted:
             "¡La conexión de WhatsApp ha sido borrada satisfactoriamente!",
@@ -65,7 +69,7 @@ const messages = {
           disconnectMessage: "Estás seguro? Deberá volver a leer el código QR",
         },
         buttons: {
-          add: "Agrega WhatsApp",
+          add: "Agregar conexión",
           disconnect: "Desconectar",
           tryAgain: "Inténtalo de nuevo",
           qrcode: "QR CODE",
@@ -121,22 +125,23 @@ const messages = {
         message: "Lée el código QR para empezar la sesión.",
       },
       contacts: {
-        title: "Contactos",
+        title: "Clientes",
+        subtitle: "Centraliza clientes y el historial de SamaChat.",
         toasts: {
           deleted: "¡Contacto borrado satisfactoriamente!",
         },
         searchPlaceholder: "Buscar...",
         confirmationModal: {
           deleteTitle: "Borrar",
-          importTitlte: "Importar contactos",
+          importTitlte: "Importar clientes",
           deleteMessage:
             "¿Estás seguro que deseas borrar este contacto? Todos los tickets relacionados se perderán.",
           importMessage:
             "¿Quieres importar todos los contactos desde tu teléfono?",
         },
         buttons: {
-          import: "Importar Contactos",
-          add: "Agregar Contacto",
+          import: "Importar clientes",
+          add: "Agregar cliente",
         },
         table: {
           name: "Nombre",
@@ -147,17 +152,22 @@ const messages = {
       },
       contactModal: {
         title: {
-          add: "Agregar contacto",
-          edit: "Editar contacto",
+          add: "Agregar cliente",
+          edit: "Editar cliente",
         },
         form: {
-          mainInfo: "Detalles del contacto",
+          mainInfo: "Detalles del cliente",
           extraInfo: "Información adicional",
           name: "Nombre",
+          nameHelper: "Nombre completo del cliente.",
           number: "Número de Whatsapp",
+          numberHelper: "Incluya codigo de pais y area.",
           email: "Correo Electrónico",
+          emailHelper: "Opcional. Usado para contacto y avisos.",
           extraName: "Nombre del Campo",
+          extraNameHelper: "Ejemplo: Empresa, Cargo, Ciudad.",
           extraValue: "Valor",
+          extraValueHelper: "Ejemplo: Acme, Gerente, Madrid.",
         },
         buttons: {
           addExtraInfo: "Agregar información",
@@ -169,19 +179,21 @@ const messages = {
       },
       quickAnswersModal: {
         title: {
-          add: "Agregar respuesta rápida",
-          edit: "Editar respuesta rápida",
+          add: "Agregar atajo",
+          edit: "Editar atajo",
         },
         form: {
           shortcut: "Atajo",
-          message: "Respuesta rápida",
+          shortcutHelper: "Ejemplo: /saludo",
+          message: "Mensaje del atajo",
+          messageHelper: "Mensaje enviado cuando se use el atajo.",
         },
         buttons: {
           okAdd: "Agregar",
           okEdit: "Guardar",
           cancel: "Cancelar",
         },
-        success: "Respuesta rápida guardada correctamente.",
+        success: "Atajo guardado correctamente.",
       },
       queueModal: {
         title: {
@@ -190,9 +202,13 @@ const messages = {
         },
         form: {
           name: "Nombre",
+          nameHelper: "Ejemplo: Soporte, Ventas, Finanzas.",
           color: "Color",
+          colorHelper: "Usa un color para identificar la cola.",
           greetingMessage: "Mensaje de saludo",
+          greetingMessageHelper: "Opcional. Se envia al inicio de la atencion.",
         },
+        success: "Fila guardada correctamente.",
         buttons: {
           okAdd: "Añadir",
           okEdit: "Ahorrar",
@@ -206,10 +222,19 @@ const messages = {
         },
         form: {
           name: "Nombre",
+          nameHelper: "Nombre completo del usuario.",
           email: "Correo Electrónico",
+          emailHelper: "Correo de inicio de sesión y avisos.",
           password: "Contraseña",
-          profile: "Perfil",
+          passwordHelper: "Minimo 5 caracteres.",
+          profile: "Perfil de acceso",
+          profileHelper: "Define el nivel de acceso del usuario.",
           whatsapp: "Conexión estándar",
+          whatsappHelper: "Conexión predeterminada para nuevas atenciones.",
+        },
+        profileOptions: {
+          admin: "Administrador",
+          user: "Agente",
         },
         buttons: {
           okAdd: "Agregar",
@@ -223,33 +248,33 @@ const messages = {
       },
       ticketsManager: {
         buttons: {
-          newTicket: "Nuevo",
+          newTicket: "Nueva atención",
         },
       },
       ticketsQueueSelect: {
-        placeholder: "Linhas",
+        placeholder: "Filas",
       },
       tickets: {
         toasts: {
-          deleted: "El ticket en el que estabas ha sido borrado.",
+          deleted: "La atención en la que estabas ha sido borrada.",
         },
         notification: {
           message: "Mensaje de",
         },
         tabs: {
-          open: { title: "Bandeja" },
+          open: { title: "Atenciones" },
           closed: { title: "Resueltos" },
           search: { title: "Buscar" },
         },
         search: {
-          placeholder: "Buscar tickets y mensajes.",
+          placeholder: "Buscar atenciones y mensajes.",
         },
         buttons: {
           showAll: "Todos",
         },
       },
       transferTicketModal: {
-        title: "Transferir Ticket",
+        title: "Transferir atención",
         fieldLabel: "Escriba para buscar usuarios",
         fieldQueueLabel: "Transferir a la cola",
         fieldConnectionLabel: "Transferir to conexión",
@@ -267,14 +292,14 @@ const messages = {
         noTicketsTitle: "¡Nada acá!",
         connectionTitle: "Conexión que se está utilizando actualmente.",
         noTicketsMessage:
-          "No se encontraron tickets con este estado o término de búsqueda",
+          "No se encontraron atenciones con este estado o término de búsqueda",
         buttons: {
           accept: "Acceptar",
         },
       },
       newTicketModal: {
-        title: "Crear Ticket",
-        fieldLabel: "Escribe para buscar un contacto",
+        title: "Crear atención",
+        fieldLabel: "Escribe para buscar un cliente",
         add: "Añadir",
         buttons: {
           ok: "Guardar",
@@ -283,15 +308,15 @@ const messages = {
       },
       mainDrawer: {
         listItems: {
-          dashboard: "Dashboard",
+          dashboard: "Vista general",
           connections: "Conexiones",
-          tickets: "Tickets",
-          contacts: "Contactos",
-          quickAnswers: "Respuestas rápidas",
-          queues: "Linhas",
+          tickets: "Atenciones",
+          contacts: "Clientes",
+          quickAnswers: "Atajos",
+          queues: "Filas",
           administration: "Administración",
           users: "Usuarios",
-          settings: "Configuración",
+          settings: "Ajustes",
         },
         appBar: {
           user: {
@@ -304,7 +329,11 @@ const messages = {
         noTickets: "Sin notificaciones.",
       },
       queues: {
-        title: "Linhas",
+        title: "Filas",
+        subtitle: "Organiza atenciones por equipo o tema.",
+        toasts: {
+          deleted: "Fila eliminada correctamente.",
+        },
         table: {
           name: "Nombre",
           color: "Color",
@@ -321,36 +350,43 @@ const messages = {
         },
       },
       queueSelect: {
-        inputLabel: "Linhas",
+        inputLabel: "Filas",
       },
       quickAnswers: {
-        title: "Respuestas rápidas",
+        title: "Atajos",
+        subtitle: "Estandariza respuestas rapidas y reduce el tiempo de escritura.",
         table: {
           shortcut: "Atajo",
-          message: "Respuesta rápida",
+          message: "Mensaje",
           actions: "Acciones",
         },
         buttons: {
-          add: "Agregar respuesta rápida",
+          add: "Agregar atajo",
         },
         toasts: {
-          deleted: "Respuesta rápida eliminada correctamente",
+          deleted: "Atajo eliminado correctamente",
         },
-        searchPlaceholder: "Buscar ...",
+        searchPlaceholder: "Buscar atajos...",
         confirmationModal: {
           deleteTitle:
-            "¿Está seguro de que desea eliminar esta respuesta rápida?",
+            "¿Está seguro de que desea eliminar este atajo?",
           deleteMessage: "Esta acción no se puede deshacer.",
         },
       },
       users: {
         title: "Usuarios",
+        subtitle: "Administra acceso, colas y conexión predeterminada.",
         table: {
           name: "Nombre",
           email: "Correo Electrónico",
-          profile: "Perfil",
+          profile: "Perfil de acceso",
           whatsapp: "Conexión estándar",
           actions: "Acciones",
+        },
+        searchPlaceholder: "Buscar usuarios...",
+        profiles: {
+          admin: "Administrador",
+          user: "Agente",
         },
         buttons: {
           add: "Agregar usuario",
@@ -367,9 +403,15 @@ const messages = {
       settings: {
         success: "Configuración guardada satisfactoriamente.",
         title: "Configuración",
+        description: "Administra permisos administrativos y datos de acceso.",
+        apiToken: {
+          label: "Token de API",
+          helper: "Solo lectura. Usa este token para integraciones internas seguras.",
+        },
         settings: {
           userCreation: {
             name: "Creación de usuarios",
+            description: "Define si nuevos usuarios pueden registrarse.",
             options: {
               enabled: "Habilitado",
               disabled: "Deshabilitado",

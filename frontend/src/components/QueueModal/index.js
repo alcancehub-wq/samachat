@@ -110,7 +110,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
 			} else {
 				await api.post("/queue", values);
 			}
-			toast.success("Queue saved successfully");
+			toast.success(i18n.t("queueModal.success"));
 			handleClose();
 		} catch (err) {
 			toastError(err);
@@ -145,7 +145,11 @@ const QueueModal = ({ open, onClose, queueId }) => {
 									autoFocus
 									name="name"
 									error={touched.name && Boolean(errors.name)}
-									helperText={touched.name && errors.name}
+									helperText={
+										touched.name && errors.name
+											? errors.name
+											: i18n.t("queueModal.form.nameHelper")
+									}
 									variant="outlined"
 									margin="dense"
 									className={classes.textField}
@@ -160,7 +164,11 @@ const QueueModal = ({ open, onClose, queueId }) => {
 										greetingRef.current.focus();
 									}}
 									error={touched.color && Boolean(errors.color)}
-									helperText={touched.color && errors.color}
+									helperText={
+										touched.color && errors.color
+											? errors.color
+											: i18n.t("queueModal.form.colorHelper")
+									}
 									InputProps={{
 										startAdornment: (
 											<InputAdornment position="start">
@@ -208,6 +216,8 @@ const QueueModal = ({ open, onClose, queueId }) => {
 										}
 										helperText={
 											touched.greetingMessage && errors.greetingMessage
+												? errors.greetingMessage
+												: i18n.t("queueModal.form.greetingMessageHelper")
 										}
 										variant="outlined"
 										margin="dense"
