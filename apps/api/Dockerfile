@@ -7,7 +7,7 @@ COPY tsconfig.base.json ./
 COPY apps ./apps
 COPY packages ./packages
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --prod=false
 RUN pnpm --filter @samachat/db generate
 RUN pnpm --filter @samachat/api build
 
