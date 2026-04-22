@@ -513,6 +513,16 @@ chmod +x updateWhaticket
 ./updateWhaticket
 ```
 
+## Worker (deploy separado)
+
+Para subir o worker isolado, use o Dockerfile:
+
+- backend/Dockerfile.worker
+
+Comando de runtime:
+
+- node dist/worker.js
+
 ## Contributing
 
 This project helps you and you want to help keep it going? Buy me a coffee:
