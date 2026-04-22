@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {
+      "@samachat/config": ["../../packages/config/dist"],
+      "@samachat/config/*": ["../../packages/config/dist/*"],
+      "@samachat/shared": ["../../packages/shared/dist"],
+      "@samachat/shared/*": ["../../packages/shared/dist/*"],
+      "@samachat/logger": ["../../packages/logger/dist"],
+      "@samachat/logger/*": ["../../packages/logger/dist/*"],
+      "@samachat/db": ["../../packages/db/dist"],
+      "@samachat/db/*": ["../../packages/db/dist/*"],
+      "@samachat/messaging": ["../../packages/messaging/dist"],
+      "@samachat/messaging/*": ["../../packages/messaging/dist/*"],
+      "@samachat/storage": ["../../packages/storage/dist"],
+      "@samachat/storage/*": ["../../packages/storage/dist/*"]
+    }
+  }
+}

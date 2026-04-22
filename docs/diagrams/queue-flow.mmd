@@ -1,0 +1,9 @@
+flowchart LR
+  enqueue[enqueue] --> queue[queue]
+  queue --> worker[worker]
+  worker -->|success| metrics[metrics]
+  worker -->|fail| retry[retry]
+  retry --> queue
+  worker -->|exhausted| dlq[DLQ]
+  dlq --> metrics
+  queue --> metrics

@@ -1,0 +1,39 @@
+{
+  "name": "@samachat/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "predev": "pnpm --filter @samachat/config --filter @samachat/logger --filter @samachat/messaging --filter @samachat/storage --filter @samachat/db build",
+    "dev": "dotenv -e .env.local -- ts-node src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "dotenv -e .env.local -- node dist/index.js",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@samachat/config": "workspace:*",
+    "@samachat/db": "workspace:*",
+    "@samachat/logger": "workspace:*",
+    "@samachat/messaging": "workspace:*",
+    "@samachat/storage": "workspace:*",
+    "@opentelemetry/api": "^1.8.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.51.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.51.0",
+    "@opentelemetry/resources": "^1.25.0",
+    "@opentelemetry/sdk-node": "^0.51.0",
+    "@opentelemetry/sdk-trace-base": "^1.25.0",
+    "@opentelemetry/semantic-conventions": "^1.25.0",
+    "@whiskeysockets/baileys": "^6.7.12",
+    "bullmq": "^5.15.0",
+    "ioredis": "5.9.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.17.16",
+    "dotenv": "^16.4.7",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2"
+  }
+}

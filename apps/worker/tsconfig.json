@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "baseUrl": "../..",
+    "paths": {
+      "@samachat/config": ["packages/config/dist"],
+      "@samachat/config/*": ["packages/config/dist/*"],
+      "@samachat/shared": ["packages/shared/dist"],
+      "@samachat/shared/*": ["packages/shared/dist/*"],
+      "@samachat/logger": ["packages/logger/dist"],
+      "@samachat/logger/*": ["packages/logger/dist/*"],
+      "@samachat/db": ["packages/db/dist"],
+      "@samachat/db/*": ["packages/db/dist/*"],
+      "@samachat/messaging": ["packages/messaging/dist"],
+      "@samachat/messaging/*": ["packages/messaging/dist/*"],
+      "@samachat/storage": ["packages/storage/dist"],
+      "@samachat/storage/*": ["packages/storage/dist/*"]
+    },
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/__tests__/**"]
+}

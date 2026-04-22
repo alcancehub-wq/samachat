@@ -1,0 +1,19 @@
+app = "samachat-web"
+primary_region = "iad"
+
+[env]
+  PORT = "3000"
+  NEXT_PUBLIC_API_URL = "https://samachat-api.fly.dev"
+
+[[services]]
+  internal_port = 3000
+  processes = ["app"]
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443

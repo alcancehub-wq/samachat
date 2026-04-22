@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "paths": {
+      "@samachat/config": ["../config/dist"],
+      "@samachat/config/*": ["../config/dist/*"]
+    }
+  }
+}

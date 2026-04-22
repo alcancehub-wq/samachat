@@ -1,0 +1,1 @@
+{"version":3,"file":"webhook.d.ts","sourceRoot":"","sources":["../../../providers/qr/webhook.ts"],"names":[],"mappings":"AAEA,OAAO,KAAK,EACV,uBAAuB,EACvB,sBAAsB,EACtB,2BAA2B,EAC3B,4BAA4B,EAC7B,MAAM,oBAAoB,CAAC;AA+B5B,wBAAgB,uBAAuB,CACrC,OAAO,EAAE,OAAO,EAChB,OAAO,EAAE,uBAAuB,GAC/B,sBAAsB,CAkBxB;AAED,wBAAgB,iBAAiB,CAC/B,KAAK,EAAE,2BAA2B,GACjC,4BAA4B,CAU9B"}

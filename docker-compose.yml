@@ -1,0 +1,12 @@
+services:
+  redis:
+    image: redis:7
+    container_name: samachat-redis
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
