@@ -5,10 +5,10 @@ import useWhatsApps from "../../hooks/useWhatsApps";
 const WhatsAppsContext = createContext();
 
 const WhatsAppsProvider = ({ children }) => {
-	const { loading, whatsApps } = useWhatsApps();
+	const { loading, whatsApps, reload } = useWhatsApps();
 
 	return (
-		<WhatsAppsContext.Provider value={{ whatsApps, loading }}>
+		<WhatsAppsContext.Provider value={{ whatsApps, loading, reload }}>
 			{children}
 		</WhatsAppsContext.Provider>
 	);

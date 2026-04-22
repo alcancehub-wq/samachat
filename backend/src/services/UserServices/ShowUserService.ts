@@ -1,6 +1,7 @@
 import User from "../../models/User";
 import AppError from "../../errors/AppError";
 import Queue from "../../models/Queue";
+import QueuePermission from "../../models/QueuePermission";
 import Whatsapp from "../../models/Whatsapp";
 
 const ShowUserService = async (id: string | number): Promise<User> => {
@@ -14,7 +15,12 @@ const ShowUserService = async (id: string | number): Promise<User> => {
       "whatsappId"
     ],
     include: [
-      { model: Queue, as: "queues", attributes: ["id", "name", "color"] },
+      {
+        model: Queue,
+        as: "queues",
+        attributes: ["id", "name", "color"],
+        include: [QueuePermission]
+      },
       { model: Whatsapp, as: "whatsapp", attributes: ["id", "name"] }
     ],
     order: [[{ model: Queue, as: "queues" }, "name", "asc"]]

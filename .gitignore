@@ -1,6 +1,38 @@
-.docker/data/
-ssl/
+# env
 .env
+.env.*
+!.env.example
+
+# node
+node_modules/
+dist/
+build/
+
+# logs
+logs/
+*.log
+
+# backups
+.backups/
+*.bak
+*.bak*
+*.backup
+
+# scripts temporarios
+test-openai.mjs
+
+# docker locais
+.docker/
+
+# sistema
+.DS_Store
+Thumbs.db
+
+# vscode opcional
+.vscode/
+
+# app-specific
+ssl/
 .wwebjs_auth
 .wwebjs_cache
 .idea

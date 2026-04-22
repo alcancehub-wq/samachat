@@ -17,6 +17,7 @@ import GetContactService from "../services/ContactServices/GetContactService";
 type IndexQuery = {
   searchParam: string;
   pageNumber: string;
+  tagIds: string;
 };
 
 type IndexGetContactQuery = {
@@ -33,14 +34,23 @@ interface ContactData {
   number: string;
   email?: string;
   extraInfo?: ExtraInfo[];
+  tagIds?: number[];
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber } = req.query as IndexQuery;
+  const { searchParam, pageNumber, tagIds: tagIdsStringified } =
+    req.query as IndexQuery;
+
+  let tagIds: number[] = [];
+
+  if (tagIdsStringified) {
+    tagIds = JSON.parse(tagIdsStringified);
+  }
 
   const { contacts, count, hasMore } = await ListContactsService({
     searchParam,
-    pageNumber
+    pageNumber,
+    tagIds
   });
 
   return res.json({ contacts, count, hasMore });
@@ -86,13 +96,15 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   let number = validNumber;
   let email = newContact.email;
   let extraInfo = newContact.extraInfo;
+  let tagIds = newContact.tagIds;
 
   const contact = await CreateContactService({
     name,
     number,
     email,
     extraInfo,
-    profilePicUrl
+    profilePicUrl,
+    tagIds
   });
 
   const io = getIO();

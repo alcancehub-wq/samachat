@@ -16,6 +16,8 @@ import { i18n } from "../../translate/i18n";
 import ContactModal from "../ContactModal";
 import ContactDrawerSkeleton from "../ContactDrawerSkeleton";
 import MarkdownWrapper from "../MarkdownWrapper";
+import TicketTasks from "../TicketTasks";
+import TicketAIPanel from "../TicketAIPanel";
 
 const drawerWidth = 320;
 
@@ -27,16 +29,16 @@ const useStyles = makeStyles(theme => ({
 	drawerPaper: {
 		width: drawerWidth,
 		display: "flex",
-		borderTop: "1px solid rgba(0, 0, 0, 0.12)",
-		borderRight: "1px solid rgba(0, 0, 0, 0.12)",
-		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+		borderTop: `1px solid ${theme.palette.divider}`,
+		borderRight: `1px solid ${theme.palette.divider}`,
+		borderBottom: `1px solid ${theme.palette.divider}`,
 		borderTopRightRadius: 4,
 		borderBottomRightRadius: 4,
 	},
 	header: {
 		display: "flex",
-		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
-		backgroundColor: "#eee",
+		borderBottom: `1px solid ${theme.palette.divider}`,
+		backgroundColor: theme.palette.background.paper,
 		alignItems: "center",
 		padding: theme.spacing(0, 1),
 		minHeight: "73px",
@@ -44,7 +46,7 @@ const useStyles = makeStyles(theme => ({
 	},
 	content: {
 		display: "flex",
-		backgroundColor: "#eee",
+		backgroundColor: theme.palette.background.paper,
 		flexDirection: "column",
 		padding: "8px 0px 8px 8px",
 		height: "100%",
@@ -81,7 +83,14 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const ContactDrawer = ({ open, handleDrawerClose, contact, loading }) => {
+const ContactDrawer = ({
+	open,
+	handleDrawerClose,
+	contact,
+	loading,
+	ticketId,
+	ticket
+}) => {
 	const classes = useStyles();
 
 	const [modalOpen, setModalOpen] = useState(false);
@@ -156,6 +165,8 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, loading }) => {
 							</Paper>
 						))}
 					</Paper>
+					<TicketTasks ticketId={ticketId} contactId={contact?.id} />
+					<TicketAIPanel ticket={ticket} />
 				</div>
 			)}
 		</Drawer>

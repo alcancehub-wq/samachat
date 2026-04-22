@@ -13,9 +13,15 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { name, color, greetingMessage } = req.body;
+  const { name, color, greetingMessage, isActive, sortOrder } = req.body;
 
-  const queue = await CreateQueueService({ name, color, greetingMessage });
+  const queue = await CreateQueueService({
+    name,
+    color,
+    greetingMessage,
+    isActive,
+    sortOrder
+  });
 
   const io = getIO();
   io.emit("queue", {

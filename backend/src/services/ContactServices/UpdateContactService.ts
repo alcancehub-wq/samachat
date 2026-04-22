@@ -1,6 +1,7 @@
 import AppError from "../../errors/AppError";
 import Contact from "../../models/Contact";
 import ContactCustomField from "../../models/ContactCustomField";
+import TriggerWebhooksService from "../WebhookServices/TriggerWebhooksService";
 
 interface ExtraInfo {
   id?: number;
@@ -12,6 +13,7 @@ interface ContactData {
   number?: string;
   name?: string;
   extraInfo?: ExtraInfo[];
+  tagIds?: number[];
 }
 
 interface Request {
@@ -23,12 +25,12 @@ const UpdateContactService = async ({
   contactData,
   contactId
 }: Request): Promise<Contact> => {
-  const { email, name, number, extraInfo } = contactData;
+  const { email, name, number, extraInfo, tagIds } = contactData;
 
   const contact = await Contact.findOne({
     where: { id: contactId },
     attributes: ["id", "name", "number", "email", "profilePicUrl"],
-    include: ["extraInfo"]
+    include: ["extraInfo", "tags"]
   });
 
   if (!contact) {
@@ -59,9 +61,20 @@ const UpdateContactService = async ({
     email
   });
 
+  if (tagIds) {
+    await contact.$set("tags", tagIds);
+  }
+
   await contact.reload({
     attributes: ["id", "name", "number", "email", "profilePicUrl"],
-    include: ["extraInfo"]
+    include: ["extraInfo", "tags"]
+  });
+
+  void TriggerWebhooksService({
+    event: "contact.updated",
+    resource: "contact",
+    resourceId: contact.id,
+    data: contact.get({ plain: true })
   });
 
   return contact;

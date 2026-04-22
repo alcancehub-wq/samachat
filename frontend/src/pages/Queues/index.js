@@ -4,6 +4,7 @@ import openSocket from "../../services/socket-io";
 
 import {
   Button,
+  Chip,
   IconButton,
   makeStyles,
   Paper,
@@ -23,17 +24,24 @@ import Title from "../../components/Title";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
-import { DeleteOutline, Edit } from "@material-ui/icons";
+import { DeleteOutline, Edit, SettingsOutlined } from "@material-ui/icons";
 import QueueModal from "../../components/QueueModal";
 import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import SectorPermissionsModal from "../../components/SectorPermissionsModal";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
+    padding: theme.spacing(1.5, 2),
+    overflowY: "auto",
+    minHeight: 0,
     ...theme.scrollbarStyles,
+    borderRadius: 16,
+    border: "1px solid rgba(15, 23, 42, 0.08)",
+    boxShadow: "0 16px 28px rgba(15, 23, 42, 0.08)",
+    backgroundColor: "#ffffff",
+    backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
   },
   headerTitle: {
     display: "flex",
@@ -50,6 +58,9 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "center",
   },
+  statusChip: {
+    textTransform: "capitalize",
+  }
 }));
 
 const reducer = (state, action) => {
@@ -104,6 +115,7 @@ const Queues = () => {
   const [queueModalOpen, setQueueModalOpen] = useState(false);
   const [selectedQueue, setSelectedQueue] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -158,6 +170,16 @@ const Queues = () => {
     setSelectedQueue(null);
   };
 
+  const handleOpenPermissions = (queue) => {
+    setSelectedQueue(queue);
+    setPermissionsModalOpen(true);
+  };
+
+  const handleClosePermissions = () => {
+    setPermissionsModalOpen(false);
+    setSelectedQueue(null);
+  };
+
   const handleDeleteQueue = async (queueId) => {
     try {
       await api.delete(`/queue/${queueId}`);
@@ -188,6 +210,11 @@ const Queues = () => {
         onClose={handleCloseQueueModal}
         queueId={selectedQueue?.id}
       />
+      <SectorPermissionsModal
+        open={permissionsModalOpen}
+        onClose={handleClosePermissions}
+        queue={selectedQueue}
+      />
       <MainHeader>
         <div className={classes.headerTitle}>
           <Title>{i18n.t("queues.title")}</Title>
@@ -213,7 +240,16 @@ const Queues = () => {
                 {i18n.t("queues.table.name")}
               </TableCell>
               <TableCell align="center">
+                {i18n.t("queues.table.sortOrder")}
+              </TableCell>
+              <TableCell align="center">
                 {i18n.t("queues.table.color")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("queues.table.status")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("queues.table.users")}
               </TableCell>
               <TableCell align="center">
                 {i18n.t("queues.table.greeting")}
@@ -228,6 +264,7 @@ const Queues = () => {
               {queues.map((queue) => (
                 <TableRow key={queue.id}>
                   <TableCell align="center">{queue.name}</TableCell>
+                  <TableCell align="center">{queue.sortOrder ?? 0}</TableCell>
                   <TableCell align="center">
                     <div className={classes.customTableCell}>
                       <span
@@ -239,6 +276,20 @@ const Queues = () => {
                         }}
                       />
                     </div>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Chip
+                      className={classes.statusChip}
+                      color={queue.isActive ? "primary" : "default"}
+                      label={
+                        queue.isActive
+                          ? i18n.t("queues.status.active")
+                          : i18n.t("queues.status.inactive")
+                      }
+                    />
+                  </TableCell>
+                  <TableCell align="center">
+                    {queue.users?.length || 0}
                   </TableCell>
                   <TableCell align="center">
                     <div className={classes.customTableCell}>
@@ -268,10 +319,17 @@ const Queues = () => {
                     >
                       <DeleteOutline />
                     </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleOpenPermissions(queue)}
+                      title={i18n.t("queues.buttons.permissions")}
+                    >
+                      <SettingsOutlined />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={4} />}
+              {loading && <TableRowSkeleton columns={7} />}
             </>
           </TableBody>
         </Table>

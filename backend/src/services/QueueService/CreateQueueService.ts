@@ -1,11 +1,15 @@
 import * as Yup from "yup";
 import AppError from "../../errors/AppError";
 import Queue from "../../models/Queue";
+import QueuePermission from "../../models/QueuePermission";
+import { DEFAULT_SECTOR_PERMISSIONS } from "../../utils/sectorPermissions";
 
 interface QueueData {
   name: string;
   color: string;
   greetingMessage?: string;
+  isActive?: boolean;
+  sortOrder?: number;
 }
 
 const CreateQueueService = async (queueData: QueueData): Promise<Queue> => {
@@ -60,6 +64,11 @@ const CreateQueueService = async (queueData: QueueData): Promise<Queue> => {
   }
 
   const queue = await Queue.create(queueData);
+
+  await QueuePermission.create({
+    queueId: queue.id,
+    permissions: DEFAULT_SECTOR_PERMISSIONS
+  });
 
   return queue;
 };

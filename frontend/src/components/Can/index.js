@@ -1,4 +1,6 @@
+import React, { useContext } from "react";
 import rules from "../../rules";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const check = (role, action, data) => {
 	const permissions = rules[role];
@@ -28,8 +30,16 @@ const check = (role, action, data) => {
 	return false;
 };
 
-const Can = ({ role, perform, data, yes, no }) =>
-	check(role, perform, data) ? yes() : no();
+const Can = ({ role, perform, data, yes, no }) => {
+	const auth = useContext(AuthContext);
+	const permissions = data?.permissions || auth?.user?.permissions;
+
+	if (Array.isArray(permissions) && permissions.includes(perform)) {
+		return yes();
+	}
+
+	return check(role, perform, data) ? yes() : no();
+};
 
 Can.defaultProps = {
 	yes: () => null,

@@ -21,6 +21,7 @@ import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import TagSelect from "../TagSelect";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -99,6 +100,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 		name: "",
 		number: "",
 		email: "",
+		tagIds: [],
 	};
 
 	const [contact, setContact] = useState(initialState);
@@ -122,7 +124,10 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 			try {
 				const { data } = await api.get(`/contacts/${contactId}`);
 				if (isMounted.current) {
-					setContact(data);
+					setContact({
+						...data,
+						tagIds: data?.tags ? data.tags.map(tag => tag.id) : [],
+					});
 				}
 			} catch (err) {
 				toastError(err);
@@ -180,7 +185,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 						}, 400);
 					}}
 				>
-					{({ values, errors, touched, isSubmitting }) => (
+					{({ values, errors, touched, isSubmitting, setFieldValue }) => (
 						<Form>
 							<DialogContent dividers className={classes.dialogContent}>
 								<Typography variant="subtitle1" gutterBottom className={classes.sectionTitle}>
@@ -232,6 +237,18 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 										variant="outlined"
 									/>
 								</div>
+								<Typography
+									style={{ marginBottom: 8, marginTop: 12 }}
+									variant="subtitle1"
+									className={classes.sectionTitle}
+								>
+									{i18n.t("contactModal.form.tags")}
+								</Typography>
+								<TagSelect
+									selectedTagIds={values.tagIds || []}
+									onChange={(ids) => setFieldValue("tagIds", ids)}
+									label={i18n.t("contactModal.form.tagsPlaceholder")}
+								/>
 								<Typography
 									style={{ marginBottom: 8, marginTop: 12 }}
 									variant="subtitle1"

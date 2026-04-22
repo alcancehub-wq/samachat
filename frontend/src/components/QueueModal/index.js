@@ -19,7 +19,12 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import ColorPicker from "../ColorPicker";
-import { IconButton, InputAdornment } from "@material-ui/core";
+import {
+	Checkbox,
+	FormControlLabel,
+	IconButton,
+	InputAdornment
+} from "@material-ui/core";
 import { Colorize } from "@material-ui/icons";
 
 const useStyles = makeStyles(theme => ({
@@ -61,6 +66,8 @@ const QueueSchema = Yup.object().shape({
 		.required("Required"),
 	color: Yup.string().min(3, "Too Short!").max(9, "Too Long!").required(),
 	greetingMessage: Yup.string(),
+	isActive: Yup.boolean(),
+	sortOrder: Yup.number().min(0, "Too Short!").nullable(),
 });
 
 const QueueModal = ({ open, onClose, queueId }) => {
@@ -70,6 +77,8 @@ const QueueModal = ({ open, onClose, queueId }) => {
 		name: "",
 		color: "",
 		greetingMessage: "",
+		isActive: true,
+		sortOrder: 0,
 	};
 
 	const [colorPickerModalOpen, setColorPickerModalOpen] = useState(false);
@@ -94,6 +103,8 @@ const QueueModal = ({ open, onClose, queueId }) => {
 				name: "",
 				color: "",
 				greetingMessage: "",
+				isActive: true,
+				sortOrder: 0,
 			});
 		};
 	}, [queueId, open]);
@@ -104,11 +115,19 @@ const QueueModal = ({ open, onClose, queueId }) => {
 	};
 
 	const handleSaveQueue = async values => {
+		const payload = {
+			...values,
+			sortOrder:
+				values.sortOrder === "" || values.sortOrder === null
+					? 0
+					: Number(values.sortOrder)
+		};
+
 		try {
 			if (queueId) {
-				await api.put(`/queue/${queueId}`, values);
+				await api.put(`/queue/${queueId}`, payload);
 			} else {
-				await api.post("/queue", values);
+				await api.post("/queue", payload);
 			}
 			toast.success(i18n.t("queueModal.success"));
 			handleClose();
@@ -223,6 +242,35 @@ const QueueModal = ({ open, onClose, queueId }) => {
 										margin="dense"
 									/>
 								</div>
+								<TextField
+									label={i18n.t("queueModal.form.sortOrder")}
+									type="number"
+									fullWidth
+									value={values.sortOrder}
+									onChange={event => {
+										const nextValue = event.target.value;
+										values.sortOrder = nextValue;
+										setQueue(() => ({ ...values, sortOrder: nextValue }));
+									}}
+									variant="outlined"
+									margin="dense"
+								/>
+								<FormControlLabel
+									control={
+										<Checkbox
+											color="primary"
+											checked={Boolean(values.isActive)}
+											onChange={event => {
+												values.isActive = event.target.checked;
+												setQueue(() => ({
+													...values,
+													isActive: event.target.checked
+												}));
+										}}
+										/>
+									}
+									label={i18n.t("queueModal.form.isActive")}
+								/>
 							</DialogContent>
 							<DialogActions>
 								<Button

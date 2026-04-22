@@ -13,18 +13,19 @@ import Hidden from "@material-ui/core/Hidden";
 const useStyles = makeStyles((theme) => ({
   chatContainer: {
     flex: 1,
-    // // backgroundColor: "#eee",
-    // padding: theme.spacing(4),
-    height: `calc(100% - 48px)`,
-    overflowY: "hidden",
+    height: "100%",
+    overflow: "hidden",
     backgroundColor: theme.palette.background.default,
   },
 
   chatPapper: {
-    // backgroundColor: "red",
     display: "flex",
     height: "100%",
     backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: 12,
+    margin: theme.spacing(2),
+    overflow: "hidden",
   },
 
   contactsWrapper: {
@@ -46,15 +47,28 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     height: "100%",
     flexDirection: "column",
+    borderLeft: `1px solid ${theme.palette.divider}`,
+    boxSizing: "border-box",
+    minHeight: 0,
+  },
+  conversationWrapper: {
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
+    minHeight: 0,
+    padding: theme.spacing(1.5, 1.5, 0),
+    boxSizing: "border-box",
   },
   welcomeMsg: {
     backgroundColor: theme.palette.background.paper,
     display: "flex",
-    justifyContent: "space-evenly",
+    justifyContent: "center",
     alignItems: "center",
     height: "100%",
     textAlign: "center",
     borderRadius: 0,
+    color: theme.palette.text.secondary,
+    fontWeight: 500,
   },
   ticketsManager: {},
   ticketsManagerClosed: {
@@ -67,6 +81,8 @@ const useStyles = makeStyles((theme) => ({
 const Chat = () => {
   const classes = useStyles();
   const { ticketId } = useParams();
+
+  const showConversationPane = Boolean(ticketId);
 
   return (
     <div className={classes.chatContainer}>
@@ -83,21 +99,39 @@ const Chat = () => {
           >
             <TicketsManager />
           </Grid>
-          <Grid item xs={12} md={8} className={classes.messagessWrapper}>
+          <Grid
+            item
+            xs={12}
+            md={8}
+            className={classes.messagessWrapper}
+            style={{ display: showConversationPane ? "flex" : "none" }}
+          >
             {/* <Grid item xs={8} className={classes.messagessWrapper}> */}
             {ticketId ? (
-              <>
+              <div className={classes.conversationWrapper}>
                 <Ticket />
-              </>
+              </div>
             ) : (
               <Hidden only={["sm", "xs"]}>
-                <Paper className={classes.welcomeMsg}>
-                  {/* <Paper square variant="outlined" className={classes.welcomeMsg}> */}
-                  <span>{i18n.t("chat.noTicketMessage")}</span>
-                </Paper>
+                <div className={classes.conversationWrapper}>
+                  <Paper className={classes.welcomeMsg}>
+                    <span>{i18n.t("chat.noTicketMessage")}</span>
+                  </Paper>
+                </div>
               </Hidden>
             )}
           </Grid>
+          {!showConversationPane && (
+            <Grid item xs={12} className={classes.messagessWrapper}>
+              <Hidden only={["sm", "xs"]}>
+                <div className={classes.conversationWrapper}>
+                  <Paper className={classes.welcomeMsg}>
+                    <span>{i18n.t("chat.noTicketMessage")}</span>
+                  </Paper>
+                </div>
+              </Hidden>
+            </Grid>
+          )}
         </Grid>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useReducer, useContext } from "react";
 import openSocket from "../../services/socket-io";
 import { toast } from "react-toastify";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 
 import { makeStyles } from "@material-ui/core/styles";
 import Table from "@material-ui/core/Table";
@@ -35,6 +35,7 @@ import MainContainer from "../../components/MainContainer";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../../components/Can";
+import TagSelect from "../../components/TagSelect";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
@@ -172,6 +173,7 @@ const useStyles = makeStyles((theme) => ({
 const Contacts = () => {
   const classes = useStyles();
   const history = useHistory();
+  const location = useLocation();
 
   const { user } = useContext(AuthContext);
 
@@ -184,11 +186,20 @@ const Contacts = () => {
   const [deletingContact, setDeletingContact] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [selectedTagIds, setSelectedTagIds] = useState([]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const search = params.get("search");
+    if (search) {
+      setSearchParam(search.toLowerCase());
+    }
+  }, [location.search]);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
     setPageNumber(1);
-  }, [searchParam]);
+  }, [searchParam, selectedTagIds]);
 
   useEffect(() => {
     setLoading(true);
@@ -196,7 +207,11 @@ const Contacts = () => {
       const fetchContacts = async () => {
         try {
           const { data } = await api.get("/contacts/", {
-            params: { searchParam, pageNumber },
+            params: {
+              searchParam,
+              pageNumber,
+              tagIds: JSON.stringify(selectedTagIds),
+            },
           });
           dispatch({ type: "LOAD_CONTACTS", payload: data.contacts });
           setHasMore(data.hasMore);
@@ -346,6 +361,12 @@ const Contacts = () => {
                 </InputAdornment>
               ),
             }}
+          />
+          <TagSelect
+            selectedTagIds={selectedTagIds}
+            onChange={setSelectedTagIds}
+            label={i18n.t("contacts.tagsFilter")}
+            style={{ minWidth: 200 }}
           />
           <Button
             variant="contained"

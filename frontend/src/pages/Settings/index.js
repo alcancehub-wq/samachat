@@ -17,7 +17,7 @@ const useStyles = makeStyles(theme => ({
 	root: {
 		display: "flex",
 		alignItems: "center",
-		padding: theme.spacing(8, 8, 3),
+		padding: theme.spacing(4),
 	},
 	pageHeader: {
 		marginBottom: theme.spacing(2),
@@ -31,7 +31,11 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		alignItems: "center",
 		marginBottom: 12,
-
+		borderRadius: 12,
+		border: "1px solid rgba(15, 23, 42, 0.08)",
+		boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
+		backgroundColor: "#ffffff",
+		backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
 	},
 	settingMeta: {
 		display: "flex",

@@ -31,6 +31,7 @@ import whatsBackground from "../../assets/wa-background.png";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import Audio from "../Audio";
+import { getBackendUrl } from "../../config";
 
 const useStyles = makeStyles((theme) => ({
   messagesListWrapper: {
@@ -39,6 +40,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,
+    paddingTop: 8,
   },
 
   messagesList: {
@@ -46,7 +48,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,
-    padding: "20px 20px 20px 20px",
+    padding: "12px 20px 20px 20px",
     overflowY: "scroll",
     [theme.breakpoints.down("sm")]: {
       paddingBottom: "90px",
@@ -314,6 +316,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [reloadCount, setReloadCount] = useState(0);
   const lastMessageRef = useRef();
 
   const [selectedMessage, setSelectedMessage] = useState({});
@@ -356,7 +359,20 @@ const MessagesList = ({ ticketId, isGroup }) => {
     return () => {
       clearTimeout(delayDebounceFn);
     };
-  }, [pageNumber, ticketId]);
+  }, [pageNumber, reloadCount, ticketId]);
+
+  useEffect(() => {
+    const handleRefreshMessages = () => {
+      dispatch({ type: "RESET" });
+      setPageNumber(1);
+      setReloadCount(prevCount => prevCount + 1);
+    };
+
+    window.addEventListener("refreshMessages", handleRefreshMessages);
+    return () => {
+      window.removeEventListener("refreshMessages", handleRefreshMessages);
+    };
+  }, []);
 
   useEffect(() => {
     const socket = openSocket();
@@ -416,6 +432,28 @@ const MessagesList = ({ ticketId, isGroup }) => {
   };
 
   const checkMessageMedia = (message) => {
+    const normalizeMediaUrl = (url) => {
+      if (!url) return url;
+
+      const backendUrl = getBackendUrl();
+      const normalizedBackend = backendUrl?.endsWith("/")
+        ? backendUrl.slice(0, -1)
+        : backendUrl;
+      const needsReplace =
+        url.startsWith("http://backend") || url.startsWith("https://backend");
+      let resolved = needsReplace && normalizedBackend
+        ? url.replace(/^https?:\/\/backend/, normalizedBackend)
+        : url;
+
+      if (!resolved.startsWith("http") && normalizedBackend) {
+        resolved = `${normalizedBackend}${resolved.startsWith("/") ? "" : "/"}${resolved}`;
+      }
+
+      return resolved.replace(/:(\d+):\1\b/, ":$1");
+    };
+
+    const mediaUrl = normalizeMediaUrl(message.mediaUrl);
+
     if (message.mediaType === "location" && message.body.split('|').length >= 2) {
       let locationParts = message.body.split('|')
       let imageLocation = locationParts[0]
@@ -465,15 +503,15 @@ const MessagesList = ({ ticketId, isGroup }) => {
         )
       } else return (<></>)
     }*/
-    else if ( /^.*\.(jpe?g|png|gif)?$/i.exec(message.mediaUrl) && message.mediaType === "image") {
-      return <ModalImageCors imageUrl={message.mediaUrl} />;
+    else if ( /^.*\.(jpe?g|png|gif)?$/i.exec(mediaUrl) && message.mediaType === "image") {
+      return <ModalImageCors imageUrl={mediaUrl} />;
     } else if (message.mediaType === "audio") {
-      return <Audio url={message.mediaUrl} />
+      return <Audio url={mediaUrl} />
     } else if (message.mediaType === "video") {
       return (
         <video
           className={classes.messageMedia}
-          src={message.mediaUrl}
+          src={mediaUrl}
           controls
         />
       );
@@ -486,7 +524,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
               color="primary"
               variant="outlined"
               target="_blank"
-              href={message.mediaUrl}
+              href={mediaUrl}
             >
               Download
             </Button>

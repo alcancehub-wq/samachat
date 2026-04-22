@@ -114,3 +114,16 @@ export const remove = async (
 
   return res.status(200).json({ message: "Whatsapp deleted." });
 };
+
+export const restart = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { whatsappId } = req.params;
+  const whatsapp = await ShowWhatsAppService(whatsappId);
+
+  whatsappProvider.removeSession(whatsapp.id);
+  StartWhatsAppSession(whatsapp);
+
+  return res.status(200).json({ message: "Restarting session." });
+};

@@ -1,4 +1,6 @@
 import qrCode from "qrcode-terminal";
+import fs from "fs";
+import path from "path";
 import {
   Client,
   LocalAuth,
@@ -35,6 +37,84 @@ interface Session extends Client {
 }
 
 const sessions: Session[] = [];
+const reconnectTimers: Record<number, ReturnType<typeof setTimeout> | null> = {};
+const reconnectAttempts: Record<number, number> = {};
+const connectingTimers: Record<number, ReturnType<typeof setTimeout> | null> = {};
+const MAX_RECONNECT_ATTEMPTS = 5;
+const BASE_RECONNECT_DELAY_MS = 5000;
+const CONNECTING_TIMEOUT_MS = 60000;
+
+const clearReconnectTimers = (whatsappId: number): void => {
+  if (reconnectTimers[whatsappId]) {
+    clearTimeout(reconnectTimers[whatsappId] as ReturnType<typeof setTimeout>);
+    reconnectTimers[whatsappId] = null;
+  }
+  if (connectingTimers[whatsappId]) {
+    clearTimeout(connectingTimers[whatsappId] as ReturnType<typeof setTimeout>);
+    connectingTimers[whatsappId] = null;
+  }
+};
+
+const cleanupSessionLockFiles = (whatsappId: number): void => {
+  const sessionDir = path.join(
+    process.cwd(),
+    ".wwebjs_auth",
+    `session-bd_${whatsappId}`
+  );
+  const lockFiles = ["SingletonLock", "SingletonSocket", "SingletonCookie"];
+
+  if (!fs.existsSync(sessionDir)) return;
+
+  lockFiles.forEach(lockFile => {
+    const lockPath = path.join(sessionDir, lockFile);
+    if (!fs.existsSync(lockPath)) return;
+
+    try {
+      fs.unlinkSync(lockPath);
+      logger.warn({ lockPath, whatsappId }, "Removed stale Chromium lock file");
+    } catch (err) {
+      logger.warn({ err, lockPath, whatsappId }, "Failed to remove lock file");
+    }
+  });
+};
+
+const scheduleReconnect = async (
+  whatsapp: Whatsapp,
+  reason: string
+): Promise<void> => {
+  const attempt = (reconnectAttempts[whatsapp.id] || 0) + 1;
+  reconnectAttempts[whatsapp.id] = attempt;
+
+  if (attempt > MAX_RECONNECT_ATTEMPTS) {
+    logger.warn({
+      info: "Reconnect attempts exceeded",
+      whatsappId: whatsapp.id,
+      reason,
+      attempt
+    });
+    return;
+  }
+
+  const delayMs = BASE_RECONNECT_DELAY_MS * attempt;
+  logger.warn({
+    info: "Scheduling reconnect",
+    whatsappId: whatsapp.id,
+    reason,
+    attempt,
+    delayMs
+  });
+
+  clearReconnectTimers(whatsapp.id);
+  reconnectTimers[whatsapp.id] = setTimeout(async () => {
+    try {
+      removeSession(whatsapp.id);
+      await whatsapp.update({ status: "OPENING" });
+      await init(whatsapp);
+    } catch (err) {
+      logger.error(err, "Error scheduling reconnect");
+    }
+  }, delayMs);
+};
 
 const getWbot = (whatsappId: number): Session => {
   const sessionIndex = sessions.findIndex(s => s.id === whatsappId);
@@ -222,24 +302,29 @@ const getMessageData = async (
   let msgContact: WbotContact;
   let groupContact: ContactPayload | undefined;
 
-  if (msg.fromMe) {
-    msgContact = await wbot.getContactById(msg.to);
-  } else {
-    msgContact = await msg.getContact();
-  }
-
   const chat = await msg.getChat();
 
   if (chat.isGroup) {
-    let msgGroupContact;
+    msgContact = await msg.getContact();
 
-    if (msg.fromMe) {
-      msgGroupContact = await wbot.getContactById(msg.to);
-    } else {
-      msgGroupContact = await wbot.getContactById(msg.from);
+    try {
+      const groupChatId = chat.id?._serialized || msg.to;
+      const groupWbotContact = await wbot.getContactById(groupChatId);
+      groupContact = await convertToContactPayload(groupWbotContact);
+    } catch (err) {
+      logger.warn(err, "Unable to resolve group contact");
     }
-
-    groupContact = await convertToContactPayload(msgGroupContact);
+  } else {
+    if (msg.fromMe) {
+      try {
+        msgContact = await wbot.getContactById(msg.to);
+      } catch (err) {
+        logger.warn(err, "Unable to resolve contact by id, falling back to message contact");
+        msgContact = await msg.getContact();
+      }
+    } else {
+      msgContact = await msg.getContact();
+    }
   }
 
   const unreadMessages = msg.fromMe ? 0 : chat.unreadCount;
@@ -270,9 +355,16 @@ const syncUnreadMessages = async (wbot: Session) => {
     /* eslint-disable no-await-in-loop */
     for (const chat of chats) {
       if (chat.unreadCount > 0) {
-        const unreadMessages = await chat.fetchMessages({
-          limit: chat.unreadCount
-        });
+        let unreadMessages: WbotMessage[] = [];
+
+        try {
+          unreadMessages = await chat.fetchMessages({
+            limit: chat.unreadCount
+          });
+        } catch (err) {
+          logger.warn(err, "Error fetching unread messages");
+          continue;
+        }
 
         for (const msg of unreadMessages) {
           if (shouldHandleMessage(msg)) {
@@ -328,12 +420,24 @@ const sendMessage = async (
       )
     : "";
 
-  const sentMessage = await wbot.sendMessage(to, body, {
-    quotedMessageId: quotedMsgSerializedId,
-    linkPreview: options?.linkPreview
-  });
+  try {
+    const sentMessage = await wbot.sendMessage(to, body, {
+      quotedMessageId: quotedMsgSerializedId,
+      linkPreview: options?.linkPreview
+    });
 
-  return convertToProviderMessage(sentMessage);
+    return convertToProviderMessage(sentMessage);
+  } catch (err) {
+    logger.error(
+      {
+        err,
+        sessionId,
+        to
+      },
+      "wwebjs sendMessage failed"
+    );
+    throw err;
+  }
 };
 
 const sendMedia = async (
@@ -443,12 +547,16 @@ const deleteMessage = async (
 const init = async (whatsapp: Whatsapp): Promise<void> => {
   try {
     removeSession(whatsapp.id);
+    cleanupSessionLockFiles(whatsapp.id);
 
     const io = getIO();
     const sessionName = whatsapp.name;
     const sessionCfg = whatsapp?.session ? JSON.parse(whatsapp.session) : {};
 
     const args: string = process.env.CHROME_ARGS || "";
+    const protocolTimeout = Number(
+      process.env.PUPPETEER_PROTOCOL_TIMEOUT || "120000"
+    );
 
     const wbot: Session = new Client({
       session: sessionCfg,
@@ -457,6 +565,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
         // headless: false, // TODO make sure chromium closes on session disconnection / delete
         executablePath: process.env.CHROME_BIN || undefined,
         browserWSEndpoint: process.env.CHROME_WS || undefined,
+        protocolTimeout,
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
@@ -509,10 +618,15 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
         action: "update",
         session: whatsapp
       });
+
+      await scheduleReconnect(whatsapp, "auth_failure");
     });
 
     wbot.on("ready", async () => {
       logger.info(`Session: ${sessionName} READY`);
+
+      clearReconnectTimers(whatsapp.id);
+      reconnectAttempts[whatsapp.id] = 0;
 
       try {
         await whatsapp.update({
@@ -533,7 +647,14 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
         }
 
         wbot.sendPresenceAvailable();
-        await syncUnreadMessages(wbot);
+        if (process.env.WWEBJS_SYNC_UNREAD === "true") {
+          await syncUnreadMessages(wbot);
+        } else {
+          logger.info(
+            { whatsappId: whatsapp.id },
+            "Skipping unread sync on READY"
+          );
+        }
       } catch (err) {
         logger.error(err, "Error on whatsapp ready event");
       }
@@ -548,6 +669,14 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
           action: "update",
           session: whatsapp
         });
+
+        if (
+          ["connecting", "CONNECTING", "disconnected", "DISCONNECTED", "browser_close"].includes(
+            newState
+          )
+        ) {
+          await scheduleReconnect(whatsapp, `change_state:${newState}`);
+        }
       } catch (err) {
         logger.error(err, "Error on whatsapp change state event");
       }
@@ -567,13 +696,29 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
           `Session ${sessionName} disconnected. Restarting in 2 seconds...`
         );
 
-        await new Promise(r => setTimeout(r, 2000));
-
-        init(whatsapp);
+        await scheduleReconnect(whatsapp, `disconnected:${reason}`);
       } catch (err) {
         logger.error(err, "Error on whatsapp disconnected event");
       }
     });
+
+    clearReconnectTimers(whatsapp.id);
+    connectingTimers[whatsapp.id] = setTimeout(async () => {
+      const currentWhatsapp = await Whatsapp.findByPk(whatsapp.id);
+      const currentStatus = currentWhatsapp?.status;
+      if (
+        currentStatus &&
+        ["OPENING", "connecting", "CONNECTING"].includes(currentStatus)
+      ) {
+        logger.warn({
+          info: "Connecting timeout reached",
+          whatsappId: whatsapp.id,
+          status: currentStatus,
+          timeoutMs: CONNECTING_TIMEOUT_MS
+        });
+        await scheduleReconnect(whatsapp, "connecting_timeout");
+      }
+    }, CONNECTING_TIMEOUT_MS);
 
     wbot.on("message_create", async msg => {
       if (!shouldHandleMessage(msg)) return;
@@ -618,6 +763,17 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     await wbot.initialize();
   } catch (err) {
     logger.error(err, "Error on whatsapp session");
+    try {
+      await whatsapp.update({ status: "OPENING" });
+      const io = getIO();
+      io.emit("whatsappSession", {
+        action: "update",
+        session: whatsapp
+      });
+      await scheduleReconnect(whatsapp, "init_error");
+    } catch (innerErr) {
+      logger.error(innerErr, "Error handling whatsapp init failure");
+    }
   }
 };
 

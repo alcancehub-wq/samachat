@@ -6,10 +6,9 @@ import Container from "@material-ui/core/Container";
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
     flex: 1,
-    // padding: theme.spacing(2),
-    // height: `calc(100% - 48px)`,
     padding: 0,
     height: "100%",
+    minHeight: 0,
   },
 
   contentWrapper: {
@@ -17,6 +16,8 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "hidden",
     display: "flex",
     flexDirection: "column",
+    minHeight: 0,
+    backgroundColor: theme.palette.background.default,
   },
 }));
 

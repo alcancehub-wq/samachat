@@ -1,16 +1,36 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
 import Select from "@material-ui/core/Select";
 import { Checkbox, ListItemText } from "@material-ui/core";
 import { i18n } from "../../translate/i18n";
+import api from "../../services/api";
+import toastError from "../../errors/toastError";
 
 const TicketsQueueSelect = ({
 	userQueues,
 	selectedQueueIds = [],
 	onChange,
 }) => {
+	const [queues, setQueues] = useState(userQueues || []);
+
+	useEffect(() => {
+		if (userQueues?.length) {
+			setQueues(userQueues);
+			return;
+		}
+
+		(async () => {
+			try {
+				const { data } = await api.get("/queue");
+				setQueues(data);
+			} catch (err) {
+				toastError(err);
+			}
+		})();
+	}, [userQueues]);
+
 	const handleChange = e => {
 		onChange(e.target.value);
 	};
@@ -37,8 +57,8 @@ const TicketsQueueSelect = ({
 					}}
 					renderValue={() => i18n.t("ticketsQueueSelect.placeholder")}
 				>
-					{userQueues?.length > 0 &&
-						userQueues.map(queue => (
+					{queues?.length > 0 &&
+						queues.map(queue => (
 							<MenuItem dense key={queue.id} value={queue.id}>
 								<Checkbox
 									style={{

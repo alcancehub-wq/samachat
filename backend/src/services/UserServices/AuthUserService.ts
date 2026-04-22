@@ -6,6 +6,7 @@ import {
 } from "../../helpers/CreateTokens";
 import { SerializeUser } from "../../helpers/SerializeUser";
 import Queue from "../../models/Queue";
+import QueuePermission from "../../models/QueuePermission";
 
 interface SerializedUser {
   id: number;
@@ -32,7 +33,13 @@ const AuthUserService = async ({
 }: Request): Promise<Response> => {
   const user = await User.findOne({
     where: { email },
-    include: ["queues"]
+    include: [
+      {
+        model: Queue,
+        as: "queues",
+        include: [QueuePermission]
+      }
+    ]
   });
 
   if (!user) {

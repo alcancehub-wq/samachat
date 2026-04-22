@@ -27,14 +27,14 @@ const useStyles = makeStyles(theme => ({
 		flex: 1,
 		overflowY: "scroll",
 		...theme.scrollbarStyles,
-		borderTop: "2px solid rgba(0, 0, 0, 0.12)",
+		borderTop: `1px solid ${theme.palette.divider}`,
 	},
 
 	ticketsListHeader: {
-		color: "rgb(67, 83, 105)",
+		color: theme.palette.text.primary,
 		zIndex: 2,
-		backgroundColor: "white",
-		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+		backgroundColor: theme.palette.background.paper,
+		borderBottom: `1px solid ${theme.palette.divider}`,
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "space-between",
@@ -153,7 +153,7 @@ const reducer = (state, action) => {
 };
 
 	const TicketsList = (props) => {
-		const { status, searchParam, showAll, selectedQueueIds, updateCount, style } =
+		const { status, searchParam, showAll, selectedQueueIds, selectedTagIds, updateCount, style } =
 			props;
 	const classes = useStyles();
 	const [pageNumber, setPageNumber] = useState(1);
@@ -163,7 +163,7 @@ const reducer = (state, action) => {
 	useEffect(() => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
-	}, [status, searchParam, dispatch, showAll, selectedQueueIds]);
+	}, [status, searchParam, dispatch, showAll, selectedQueueIds, selectedTagIds]);
 
 	const { tickets, hasMore, loading } = useTickets({
 		pageNumber,
@@ -171,6 +171,7 @@ const reducer = (state, action) => {
 		status,
 		showAll,
 		queueIds: JSON.stringify(selectedQueueIds),
+		tagIds: JSON.stringify(selectedTagIds || []),
 	});
 
 	useEffect(() => {
@@ -184,9 +185,16 @@ const reducer = (state, action) => {
 	useEffect(() => {
 		const socket = openSocket();
 
+		const hasTagMatch = ticket => {
+			if (!selectedTagIds || selectedTagIds.length === 0) return true;
+			if (!ticket.tags || ticket.tags.length === 0) return false;
+			return ticket.tags.some(tag => selectedTagIds.indexOf(tag.id) > -1);
+		};
+
 		const shouldUpdateTicket = ticket => !searchParam &&
 			(!ticket.userId || ticket.userId === user?.id || showAll) &&
-			(!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1);
+			(!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1) &&
+			hasTagMatch(ticket);
 
 		const notBelongsToUserQueues = ticket =>
 			ticket.queueId && selectedQueueIds.indexOf(ticket.queueId) === -1;
@@ -244,7 +252,7 @@ const reducer = (state, action) => {
 		return () => {
 			socket.disconnect();
 		};
-	}, [status, searchParam, showAll, user, selectedQueueIds]);
+	}, [status, searchParam, showAll, user, selectedQueueIds, selectedTagIds]);
 
 	useEffect(() => {
     if (typeof updateCount === "function") {

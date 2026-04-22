@@ -13,6 +13,8 @@ import Typography from "@material-ui/core/Typography";
 import Avatar from "@material-ui/core/Avatar";
 import Divider from "@material-ui/core/Divider";
 import Badge from "@material-ui/core/Badge";
+import IconButton from "@material-ui/core/IconButton";
+import LocalOfferIcon from "@material-ui/icons/LocalOffer";
 
 import { i18n } from "../../translate/i18n";
 
@@ -22,6 +24,7 @@ import MarkdownWrapper from "../MarkdownWrapper";
 import { Tooltip } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
+import TicketTagsModal from "../TicketTagsModal";
 
 const useStyles = makeStyles(theme => ({
 	ticket: {
@@ -105,14 +108,32 @@ const useStyles = makeStyles(theme => ({
 		marginRight: 5,
 		right: 5,
 		bottom: 5,
-		background: "#2576D2",
+		background: "#3b82f6",
 		color: "#ffffff",
-		border: "1px solid #CCC",
+		border: "1px solid rgba(15, 23, 42, 0.1)",
 		padding: 1,
 		paddingLeft: 5,
 		paddingRight: 5,
 		borderRadius: 10,
 		fontSize: "0.9em"
+	},
+	tagList: {
+		display: "flex",
+		flexWrap: "wrap",
+		gap: 4,
+		marginTop: 4,
+	},
+	tagChip: {
+		background: "#f1f5f9",
+		color: "#0f172a",
+		borderRadius: 10,
+		padding: "2px 6px",
+		fontSize: "0.7rem",
+		whiteSpace: "nowrap",
+	},
+	tagButton: {
+		padding: 6,
+		marginLeft: 6,
 	},
 }));
 
@@ -123,6 +144,7 @@ const TicketListItem = ({ ticket }) => {
 	const { ticketId } = useParams();
 	const isMounted = useRef(true);
 	const { user } = useContext(AuthContext);
+	const [tagsModalOpen, setTagsModalOpen] = useState(false);
 
 	useEffect(() => {
 		return () => {
@@ -153,6 +175,12 @@ const TicketListItem = ({ ticket }) => {
 
 	return (
 		<React.Fragment key={ticket.id}>
+			<TicketTagsModal
+				open={tagsModalOpen}
+				onClose={() => setTagsModalOpen(false)}
+				ticketId={ticket.id}
+				initialTagIds={ticket.tags ? ticket.tags.map(tag => tag.id) : []}
+			/>
 			<ListItem
 				dense
 				button
@@ -214,6 +242,17 @@ const TicketListItem = ({ ticket }) => {
 							{ticket.whatsappId && (
 								<div className={classes.userTag} title={i18n.t("ticketsList.connectionTitle")}>{ticket.whatsapp?.name}</div>
 							)}
+							<IconButton
+								size="small"
+								className={classes.tagButton}
+								onClick={e => {
+									e.stopPropagation();
+									setTagsModalOpen(true);
+								}}
+								title={i18n.t("ticketTagsModal.title")}
+							>
+								<LocalOfferIcon fontSize="small" />
+							</IconButton>
 						</span>
 					}
 					secondary={
@@ -231,6 +270,20 @@ const TicketListItem = ({ ticket }) => {
 									<br />
 								)}
 							</Typography>
+							{ticket.tags && ticket.tags.length > 0 && (
+								<span className={classes.tagList}>
+									{ticket.tags.slice(0, 2).map(tag => (
+										<span key={tag.id} className={classes.tagChip}>
+											{tag.name}
+										</span>
+									))}
+									{ticket.tags.length > 2 && (
+										<span className={classes.tagChip}>
+											+{ticket.tags.length - 2}
+										</span>
+									)}
+								</span>
+							)}
 
 							<Badge
 								className={classes.newMessagesCount}

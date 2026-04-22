@@ -22,7 +22,8 @@ const drawerWidth = 320;
 const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
-    height: "100%",
+    flex: 1,
+    minHeight: 0,
     position: "relative",
     overflow: "hidden",
   },
@@ -48,10 +49,11 @@ const useStyles = makeStyles((theme) => ({
 
   mainWrapper: {
     flex: 1,
-    height: "100%",
+    minHeight: 0,
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
+    boxSizing: "border-box",
     borderTopLeftRadius: 0,
     borderBottomLeftRadius: 0,
     borderLeft: "0",
@@ -70,6 +72,10 @@ const useStyles = makeStyles((theme) => ({
       duration: theme.transitions.duration.enteringScreen,
     }),
     marginRight: 0,
+  },
+  headerWrapper: {
+    padding: theme.spacing(1.5, 1.5, 0),
+    boxSizing: "border-box",
   },
 }));
 
@@ -152,18 +158,20 @@ const Ticket = () => {
           [classes.mainWrapperShift]: drawerOpen,
         })}
       >
-        <TicketHeader loading={loading}>
-          <div className={classes.ticketInfo}>
-            <TicketInfo
-              contact={contact}
-              ticket={ticket}
-              onClick={handleDrawerOpen}
-            />
-          </div>
-          <div className={classes.ticketActionButtons}>
-            <TicketActionButtons ticket={ticket} />
-          </div>
-        </TicketHeader>
+        <div className={classes.headerWrapper}>
+          <TicketHeader loading={loading}>
+            <div className={classes.ticketInfo}>
+              <TicketInfo
+                contact={contact}
+                ticket={ticket}
+                onClick={handleDrawerOpen}
+              />
+            </div>
+            <div className={classes.ticketActionButtons}>
+              <TicketActionButtons ticket={ticket} />
+            </div>
+          </TicketHeader>
+        </div>
         <ReplyMessageProvider>
           <MessagesList
             ticketId={ticketId}
@@ -177,6 +185,8 @@ const Ticket = () => {
         handleDrawerClose={handleDrawerClose}
         contact={contact}
         loading={loading}
+        ticketId={ticketId}
+        ticket={ticket}
       />
     </div>
   );

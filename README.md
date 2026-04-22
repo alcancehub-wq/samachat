@@ -45,7 +45,7 @@ Create Mysql Database using docker:
 _Note_: change MYSQL_DATABASE, MYSQL_PASSWORD, MYSQL_USER and MYSQL_ROOT_PASSWORD.
 
 ```bash
-docker run --name whaticketdb -e MYSQL_ROOT_PASSWORD=strongpassword -e MYSQL_DATABASE=whaticket -e MYSQL_USER=whaticket -e MYSQL_PASSWORD=whaticket --restart always -p 3306:3306 -d mariadb:latest --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+docker run --name whaticketdb -e MYSQL_ROOT_PASSWORD=CHANGE_ME -e MYSQL_DATABASE=whaticket -e MYSQL_USER=whaticket -e MYSQL_PASSWORD=CHANGE_ME --restart always -p 3306:3306 -d mariadb:latest --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
 # Or run using `docker-compose` as below
 # Before copy .env.example to .env first and set the variables in the file.
@@ -90,8 +90,8 @@ DB_USER=
 DB_PASS=
 DB_NAME=
 
-JWT_SECRET=3123123213123
-JWT_REFRESH_SECRET=75756756756
+JWT_SECRET=CHANGE_ME
+JWT_REFRESH_SECRET=CHANGE_ME
 ```
 
 Install backend dependencies, build app, run migrations and seeds:
@@ -179,7 +179,7 @@ Create Mysql Database using docker:
 _Note_: change MYSQL_DATABASE, MYSQL_PASSWORD, MYSQL_USER and MYSQL_ROOT_PASSWORD.
 
 ```bash
-docker run --name whaticketdb -e MYSQL_ROOT_PASSWORD=strongpassword -e MYSQL_DATABASE=whaticket -e MYSQL_USER=whaticket -e MYSQL_PASSWORD=whaticket --restart always -p 3306:3306 -d mariadb:latest --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+docker run --name whaticketdb -e MYSQL_ROOT_PASSWORD=CHANGE_ME -e MYSQL_DATABASE=whaticket -e MYSQL_USER=whaticket -e MYSQL_PASSWORD=CHANGE_ME --restart always -p 3306:3306 -d mariadb:latest --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
 # Or run using `docker-compose` as below
 # Before copy .env.example to .env first and set the variables in the file.
@@ -217,8 +217,8 @@ DB_USER=
 DB_PASS=
 DB_NAME=
 
-JWT_SECRET=3123123213123
-JWT_REFRESH_SECRET=75756756756
+JWT_SECRET=CHANGE_ME
+JWT_REFRESH_SECRET=CHANGE_ME
 ```
 
 Install puppeteer dependencies:
@@ -406,7 +406,7 @@ Now it will be necessary to configure the .env using its information, the variab
 # MYSQL
 MYSQL_ENGINE=                           # default: mariadb
 MYSQL_VERSION=                          # default: 10.6
-MYSQL_ROOT_PASSWORD=strongpassword      # change it please
+MYSQL_ROOT_PASSWORD=CHANGE_ME           # change it please
 MYSQL_DATABASE=whaticket
 MYSQL_PORT=3306                         # default: 3306; Use this port to expose mysql server
 TZ=America/Fortaleza                    # default: America/Fortaleza; Timezone for mysql
@@ -416,8 +416,8 @@ BACKEND_PORT=                           # default: 8080; but access by host not 
 BACKEND_SERVER_NAME=api.mydomain.com
 BACKEND_URL=https://api.mydomain.com
 PROXY_PORT=443
-JWT_SECRET=3123123213123                # change it please
-JWT_REFRESH_SECRET=75756756756          # change it please
+JWT_SECRET=CHANGE_ME                    # change it please
+JWT_REFRESH_SECRET=CHANGE_ME            # change it please
 
 # FRONTEND
 FRONTEND_PORT=80                        # default: 3000; Use port 80 to expose in production
@@ -472,7 +472,7 @@ certbot certonly --cert-name frontend --webroot --webroot-path ./ssl/www/ -d mya
 ## Access Data
 
 User: admin@whaticket.com
-Password: admin
+Password: CHANGE_ME
 
 ## Upgrading
 

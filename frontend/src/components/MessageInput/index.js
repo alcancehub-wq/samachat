@@ -36,20 +36,10 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
 
-let Mp3Recorder = null;
-
-const initRecorder = async () => {
-  if (!Mp3Recorder) {
-    try {
-      const MicRecorder = (await import("mic-recorder-to-mp3")).default;
-      Mp3Recorder = new MicRecorder({ bitRate: 128 });
-    } catch (error) {
-      console.error("Failed to initialize recorder:", error);
-      return null;
-    }
-  }
-  return Mp3Recorder;
-};
+let mediaRecorder = null;
+let audioChunks = [];
+let audioMimeType = "audio/ogg";
+let isStopping = false;
 
 const useStyles = makeStyles(theme => ({
   mainWrapper: {
@@ -280,21 +270,25 @@ const MessageInput = ({ ticketStatus }) => {
     setLoading(true);
     e.preventDefault();
 
-    const formData = new FormData();
-    formData.append("fromMe", true);
-    medias.forEach(media => {
-      formData.append("medias", media);
-      formData.append("body", media.name);
-    });
-
     try {
-      await api.post(`/messages/${ticketId}`, formData);
+      await uploadMediaFiles(medias);
     } catch (err) {
       toastError(err);
     }
 
     setLoading(false);
     setMedias([]);
+  };
+
+  const uploadMediaFiles = async files => {
+    const formData = new FormData();
+    formData.append("fromMe", true);
+    files.forEach(media => {
+      formData.append("medias", media);
+      formData.append("body", media.name);
+    });
+
+    await api.post(`/messages/${ticketId}`, formData);
   };
 
   const handleSendMessage = async () => {
@@ -312,6 +306,8 @@ const MessageInput = ({ ticketStatus }) => {
     };
     try {
       await api.post(`/messages/${ticketId}`, message);
+      console.log("Mensagem enviada com sucesso");
+      window.dispatchEvent(new Event("refreshMessages"));
     } catch (err) {
       toastError(err);
     }
@@ -323,19 +319,56 @@ const MessageInput = ({ ticketStatus }) => {
   };
 
   const handleStartRecording = async () => {
-    setLoading(true);
     try {
-      const recorder = await initRecorder();
-      if (!recorder) {
-        throw new Error("Recorder not available");
-      }
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      await recorder.start();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/ogg;codecs=opus";
+      mediaRecorder = new MediaRecorder(stream, { mimeType });
+      audioChunks = [];
+      audioMimeType = mimeType.includes("ogg") ? "audio/ogg" : "audio/webm";
+
+      mediaRecorder.ondataavailable = event => {
+        console.log("chunk", event.data.size);
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        try {
+          if (!audioChunks || audioChunks.length === 0) {
+            console.error("Sem chunks — abortando envio");
+            isStopping = false;
+            setRecording(false);
+            return;
+          }
+
+          const audioBlob = new Blob(audioChunks, { type: audioMimeType });
+          const extension = audioMimeType.endsWith("ogg") ? "ogg" : "webm";
+          const file = new File(
+            [audioBlob],
+            `recorded_${Date.now()}.${extension}`,
+            { type: audioMimeType }
+          );
+
+          await uploadMediaFiles([file]);
+
+          window.dispatchEvent(new Event("refreshMessages"));
+          isStopping = false;
+          setRecording(false);
+        } catch (err) {
+          console.error("Erro ao enviar áudio:", err);
+          isStopping = false;
+          setRecording(false);
+        }
+      };
+
+      mediaRecorder.start(1000);
       setRecording(true);
-      setLoading(false);
     } catch (err) {
-      toastError(err);
-      setLoading(false);
+      console.error("Erro ao iniciar gravação:", err);
     }
   };
 
@@ -359,45 +392,20 @@ const MessageInput = ({ ticketStatus }) => {
     }
   };
 
-  const handleUploadAudio = async () => {
-    setLoading(true);
-    try {
-      const recorder = await initRecorder();
-      if (!recorder) {
-        throw new Error("Recorder not available");
-      }
-      const [, blob] = await recorder.stop().getMp3();
-      if (blob.size < 10000) {
-        setLoading(false);
-        setRecording(false);
-        return;
-      }
-
-      const formData = new FormData();
-      const filename = `${new Date().getTime()}.mp3`;
-      formData.append("medias", blob, filename);
-      formData.append("body", filename);
-      formData.append("fromMe", true);
-
-      await api.post(`/messages/${ticketId}`, formData);
-    } catch (err) {
-      toastError(err);
-    }
-
-    setRecording(false);
-    setLoading(false);
+  const handleUploadAudio = () => {
+    if (!mediaRecorder || isStopping) return;
+    if (mediaRecorder.state !== "recording") return;
+    isStopping = true;
+    mediaRecorder.requestData();
+    mediaRecorder.stop();
   };
 
-  const handleCancelAudio = async () => {
-    try {
-      const recorder = await initRecorder();
-      if (recorder) {
-        await recorder.stop().getMp3();
-      }
-      setRecording(false);
-    } catch (err) {
-      toastError(err);
+  const handleCancelAudio = () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
     }
+    audioChunks = [];
+    setRecording(false);
   };
 
   const handleOpenMenuClick = event => {

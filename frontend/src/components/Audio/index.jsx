@@ -1,14 +1,26 @@
 import { Button } from "@material-ui/core";
-import React, { useRef } from "react";
-import { useEffect } from "react";
-import { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { getBackendUrl } from "../../config";
 
 const LS_NAME = 'audioMessageRate';
 
-export default function({url}) {
+export default function({ url }) {
     const audioRef = useRef(null);
     const [audioRate, setAudioRate] = useState( parseFloat(localStorage.getItem(LS_NAME) || "1") );
     const [showButtonRate, setShowButtonRate] = useState(false);
+    const backendUrl = getBackendUrl();
+    const normalizedBackend = backendUrl?.endsWith("/")
+        ? backendUrl.slice(0, -1)
+        : backendUrl;
+    const isAbsolute = url?.startsWith("http");
+    const needsReplace = url?.startsWith("http://backend") || url?.startsWith("https://backend");
+    const audioUrl = needsReplace && normalizedBackend
+        ? url.replace(/^https?:\/\/backend/, normalizedBackend)
+        : isAbsolute
+        ? url
+        : normalizedBackend
+        ? `${normalizedBackend}${url?.startsWith("/") ? "" : "/"}${url}`
+        : url;
 
     useEffect(() => {
         audioRef.current.playbackRate = audioRate;
@@ -26,6 +38,12 @@ export default function({url}) {
             setShowButtonRate(false);
         };
     }, []);
+
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.load();
+        }
+    }, [audioUrl]);
 
     const toogleRate = () => {
         let newRate = null;
@@ -53,8 +71,11 @@ export default function({url}) {
 
     return (
         <>
-            <audio ref={audioRef} controls>
-                <source src={url} type="audio/ogg"></source>
+            <audio ref={audioRef} controls preload="metadata">
+                <source src={audioUrl} type="audio/ogg; codecs=opus"></source>
+                <source src={audioUrl} type="audio/ogg"></source>
+                <source src={audioUrl} type="audio/mpeg"></source>
+                Seu navegador não suporta áudio
             </audio>
             {showButtonRate && <Button style={{marginLeft: "5px", marginTop: "-45px"}} onClick={toogleRate}>{audioRate}x</Button>}
         </>

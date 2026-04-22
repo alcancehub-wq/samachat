@@ -179,11 +179,12 @@ const CustomToolTip = ({ title, content, children }) => {
 const Connections = () => {
 	const classes = useStyles();
 
-	const { whatsApps, loading } = useContext(WhatsAppsContext);
+	const { whatsApps, loading, reload } = useContext(WhatsAppsContext);
 	const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
 	const [qrModalOpen, setQrModalOpen] = useState(false);
 	const [selectedWhatsApp, setSelectedWhatsApp] = useState(null);
 	const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+	const [restartingIds, setRestartingIds] = useState({});
 	const confirmationModalInitialState = {
 		action: "",
 		title: "",
@@ -200,6 +201,25 @@ const Connections = () => {
 			await api.post(`/whatsappsession/${whatsAppId}`);
 		} catch (err) {
 			toastError(err);
+		}
+	};
+
+	const handleRestartWhatsAppSession = async whatsAppId => {
+		try {
+			setRestartingIds(prev => ({ ...prev, [whatsAppId]: true }));
+			await api.post(`/whatsapp/${whatsAppId}/restart`);
+			if (reload) {
+				reload();
+			}
+			toast.success(i18n.t("connections.toasts.restarted"));
+		} catch (err) {
+			toastError(err);
+		} finally {
+			setRestartingIds(prev => {
+				const next = { ...prev };
+				delete next[whatsAppId];
+				return next;
+			});
 		}
 	};
 
@@ -279,8 +299,27 @@ const Connections = () => {
 	};
 
 	const renderActionButtons = whatsApp => {
+		const isRestarting = Boolean(restartingIds[whatsApp.id]);
+
 		return (
 			<>
+				<Button
+					size="small"
+					variant="outlined"
+					color="primary"
+					className={classes.actionButton}
+					disabled={isRestarting}
+					startIcon={
+						isRestarting ? <CircularProgress size={14} /> : undefined
+					}
+					onClick={() => handleRestartWhatsAppSession(whatsApp.id)}
+				>
+					{i18n.t(
+						isRestarting
+							? "connections.buttons.reconnecting"
+							: "connections.buttons.reconnect"
+					)}
+				</Button>
 				{whatsApp.status === "qrcode" && (
 					<Button
 						size="small"

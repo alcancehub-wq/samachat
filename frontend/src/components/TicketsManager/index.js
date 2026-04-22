@@ -18,6 +18,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import { Button } from "@material-ui/core";
+import TagSelect from "../TagSelect";
 
 const useStyles = makeStyles((theme) => ({
   ticketsWrapper: {
@@ -28,12 +29,13 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
     borderTopRightRadius: 0,
     borderBottomRightRadius: 0,
-    backgroundColor: theme.palette.background.default,
+    backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,
   },
   tabsHeader: {
     flex: "none",
     backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.divider}`,
   },
   settingsIcon: {
     alignSelf: "center",
@@ -49,14 +51,17 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "space-between",
     alignItems: "center",
     background: theme.palette.background.paper,
-    padding: theme.spacing(1),
+    padding: theme.spacing(1.5),
+    gap: theme.spacing(1),
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    flexWrap: "wrap",
   },
   serachInputWrapper: {
     flex: 1,
     background: theme.palette.background.default,
     display: "flex",
-    borderRadius: 40,
-    padding: 4,
+    borderRadius: 10,
+    padding: theme.spacing(0.5, 1),
     marginRight: theme.spacing(1),
   },
   searchIcon: {
@@ -68,8 +73,8 @@ const useStyles = makeStyles((theme) => ({
   searchInput: {
     flex: 1,
     border: "none",
-    borderRadius: 30,
-    color: theme.palette.text.primary, 
+    borderRadius: 10,
+    color: theme.palette.text.primary,
     backgroundColor: theme.palette.background.default,
   },
   badge: {
@@ -80,6 +85,9 @@ const useStyles = makeStyles((theme) => ({
   },
   hide: {
     display: "none !important",
+  },
+  newTicketButton: {
+    whiteSpace: "nowrap",
   },
 }));
 
@@ -96,6 +104,7 @@ const TicketsManager = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
+  const [selectedTagIds, setSelectedTagIds] = useState([]);
 
   useEffect(() => {
     if (user.profile.toUpperCase() === "ADMIN") {
@@ -195,6 +204,7 @@ const TicketsManager = () => {
             <Button
               variant="outlined"
               color="primary"
+              className={classes.newTicketButton}
               onClick={() => setNewTicketModalOpen(true)}
             >
               {i18n.t("ticketsManager.buttons.newTicket")}
@@ -222,6 +232,12 @@ const TicketsManager = () => {
             />
           </>
         )}
+        <TagSelect
+          selectedTagIds={selectedTagIds}
+          onChange={setSelectedTagIds}
+          label={i18n.t("ticketsManager.tagsFilter")}
+          style={{ minWidth: 180, marginLeft: 6 }}
+        />
         <TicketsQueueSelect
           style={{ marginLeft: 6 }}
           selectedQueueIds={selectedQueueIds}
@@ -269,12 +285,14 @@ const TicketsManager = () => {
             selectedQueueIds={selectedQueueIds}
             updateCount={(val) => setOpenCount(val)}
             style={applyPanelStyle("open")}
+            selectedTagIds={selectedTagIds}
           />
           <TicketsList
             status="pending"
             selectedQueueIds={selectedQueueIds}
             updateCount={(val) => setPendingCount(val)}
             style={applyPanelStyle("pending")}
+            selectedTagIds={selectedTagIds}
           />
         </Paper>
       </TabPanel>
@@ -283,6 +301,7 @@ const TicketsManager = () => {
           status="closed"
           showAll={true}
           selectedQueueIds={selectedQueueIds}
+          selectedTagIds={selectedTagIds}
         />
       </TabPanel>
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
@@ -290,6 +309,7 @@ const TicketsManager = () => {
           searchParam={searchParam}
           showAll={true}
           selectedQueueIds={selectedQueueIds}
+          selectedTagIds={selectedTagIds}
         />
       </TabPanel>
     </Paper>
