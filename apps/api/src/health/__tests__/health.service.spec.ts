@@ -110,6 +110,7 @@ describe('HealthService', () => {
   it('reports heartbeat missing when no payload', async () => {
     (getConfig as jest.Mock).mockReturnValue({ redisUrl: 'redis://test' });
     (createQueueClients as jest.Mock).mockReturnValue([]);
+    process.env.WORKER_HEARTBEAT_REQUIRED = 'true';
 
     const service = new HealthService();
     const redis = redisInstances[0];
@@ -128,6 +129,7 @@ describe('HealthService', () => {
     (getConfig as jest.Mock).mockReturnValue({ redisUrl: 'redis://test' });
     (createQueueClients as jest.Mock).mockReturnValue([]);
 
+    process.env.WORKER_HEARTBEAT_REQUIRED = 'true';
     process.env.WORKER_HEARTBEAT_TTL_SECONDS = '60';
     const service = new HealthService();
     const redis = redisInstances[0];
@@ -139,6 +141,19 @@ describe('HealthService', () => {
     );
 
     await expect(service.checkWorkerHeartbeat()).resolves.toEqual({ ok: true });
+  });
+
+  it('skips heartbeat check when not required', async () => {
+    (getConfig as jest.Mock).mockReturnValue({ redisUrl: 'redis://test' });
+    (createQueueClients as jest.Mock).mockReturnValue([]);
+
+    process.env.WORKER_HEARTBEAT_REQUIRED = 'false';
+    const service = new HealthService();
+
+    await expect(service.checkWorkerHeartbeat()).resolves.toEqual({
+      ok: true,
+      detail: 'Worker heartbeat check skipped',
+    });
   });
 
   it('marks readiness not-ready when checks fail', async () => {

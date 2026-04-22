@@ -16,6 +16,7 @@ interface CheckResult {
 export class HealthService {
   private readonly redis?: IORedis;
   private readonly queues: Queue[] = [];
+  private readonly workerHeartbeatRequired: boolean;
   private readonly heartbeatKey: string;
   private readonly heartbeatTtlMs: number;
 
@@ -32,6 +33,10 @@ export class HealthService {
       this.queues = createQueueClients(this.redis);
     }
 
+    const requiredEnv = process.env.WORKER_HEARTBEAT_REQUIRED;
+    this.workerHeartbeatRequired =
+      requiredEnv === 'true' ||
+      (requiredEnv !== 'false' && Boolean(process.env.WORKER_ID));
     const workerId = process.env.WORKER_ID || 'default';
     this.heartbeatKey = `samachat:worker:heartbeat:${workerId}`;
     const ttlSeconds = Number(process.env.WORKER_HEARTBEAT_TTL_SECONDS || 30);
@@ -65,6 +70,9 @@ export class HealthService {
   }
 
   async checkWorkerHeartbeat(): Promise<CheckResult> {
+    if (!this.workerHeartbeatRequired) {
+      return { ok: true, detail: 'Worker heartbeat check skipped' };
+    }
     if (!this.redis) {
       return { ok: false, detail: 'REDIS_URL not set' };
     }
