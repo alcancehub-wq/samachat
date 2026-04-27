@@ -38,6 +38,13 @@ app.use(Sentry.Handlers.requestHandler());
 app.get("/health", (_req: Request, res: Response) => {
   return res.status(200).json({ status: "ok" });
 });
+app.get("/version", (_req: Request, res: Response) => {
+  return res.status(200).json({
+    commit: process.env.GIT_SHA || process.env.COMMIT_SHA || "unknown",
+    buildTime: process.env.BUILD_TIME || "unknown",
+    nodeEnv: process.env.NODE_ENV || "unknown"
+  });
+});
 app.get("/public/*", (req: Request, res: Response, next: NextFunction) => {
   const relativePath = req.params[0];
   const resolvedPath = path.join(uploadConfig.directory, relativePath);
