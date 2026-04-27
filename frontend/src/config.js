@@ -8,7 +8,7 @@ function getConfig(name, defaultValue = null) {
 }
 
 export function getBackendUrl() {
-  return getConfig("VITE_BACKEND_URL");
+  return import.meta.env.VITE_BACKEND_URL || "https://app.samachat.com.br";
 }
 
 export function getHoursCloseTicketsAuto() {
