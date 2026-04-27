@@ -16,9 +16,21 @@ async function bootstrap() {
   const missingEnv = requiredEnv.filter((key) => !process.env[key]);
 
   process.env.SAMACHAT_SERVICE = process.env.SAMACHAT_SERVICE || 'api';
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create(AppModule);
   const appConfig = getConfig();
   const logger = getLogger({ service: 'api' });
+
+  const allowedOrigins = [
+    'https://samachat.com.br',
+    'https://app.samachat.com.br',
+  ];
+
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ['OPTIONS', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 
   if (missingEnv.length > 0) {
     logger.error({ missingEnv }, 'Missing required env vars');
