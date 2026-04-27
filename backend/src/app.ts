@@ -19,10 +19,17 @@ Sentry.init({ dsn: process.env.SENTRY_DSN });
 
 const app = express();
 
+const allowedOrigins = [
+  "https://samachat.com.br",
+  "https://app.samachat.com.br"
+];
+
 app.use(
   cors({
     credentials: true,
-    origin: process.env.FRONTEND_URL
+    origin: allowedOrigins,
+    methods: ["OPTIONS", "GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
 app.use(cookieParser());

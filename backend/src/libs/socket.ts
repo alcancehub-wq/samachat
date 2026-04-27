@@ -7,10 +7,18 @@ import authConfig from "../config/auth";
 
 let io: SocketIO;
 
+const allowedOrigins = [
+  "https://samachat.com.br",
+  "https://app.samachat.com.br"
+];
+
 export const initIO = (httpServer: Server): SocketIO => {
   io = new SocketIO(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL
+      origin: allowedOrigins,
+      credentials: true,
+      methods: ["OPTIONS", "GET", "POST", "PUT", "PATCH", "DELETE"],
+      allowedHeaders: ["Content-Type", "Authorization"]
     }
   });
 
