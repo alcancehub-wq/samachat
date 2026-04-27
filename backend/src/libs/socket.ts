@@ -7,10 +7,27 @@ import authConfig from "../config/auth";
 
 let io: SocketIO;
 
-const allowedOrigins = [
+const baseOrigins = [
   "https://samachat.com.br",
   "https://app.samachat.com.br"
 ];
+const devOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3001"
+];
+const envOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map(origin => origin.trim())
+  .filter(Boolean);
+const allowedOrigins = Array.from(
+  new Set([
+    ...baseOrigins,
+    ...envOrigins,
+    ...(process.env.NODE_ENV === "production" ? [] : devOrigins)
+  ])
+);
 
 export const initIO = (httpServer: Server): SocketIO => {
   io = new SocketIO(httpServer, {
