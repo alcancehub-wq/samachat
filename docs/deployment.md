@@ -5,8 +5,10 @@
 - Build all packages and apps with `pnpm build`.
 
 ## Docker Compose (Production)
-- Use the production compose file at the repo root.
-- Example: `docker compose -f docker-compose.prod.yml up -d`.
+- For the Express backend + React frontend stack (samachat.com.br + app.samachat.com.br),
+	use: `docker compose -f docker-compose.prod.yaml up -d`.
+- The file `docker-compose.prod.yml` starts the Nest API + Next web stack and
+	does not expose `POST /auth/login`.
 - Ensure all required environment variables are set before starting the stack.
 
 ## Environment Variables
