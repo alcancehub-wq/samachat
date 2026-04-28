@@ -35,11 +35,17 @@ const server = app.listen(port, () => {
   logger.info(`Server started on port: ${port}`);
 });
 
-initIO(server);
-initRedis();
-StartAllWhatsAppsSessions();
-startScheduleWorker();
-startCampaignWorker();
+const runWorkers = process.env.RUN_WORKERS !== "false";
+if (runWorkers) {
+  initIO(server);
+  initRedis();
+  StartAllWhatsAppsSessions();
+  startScheduleWorker();
+  startCampaignWorker();
+} else {
+  logger.warn("Workers disabled until migrations complete");
+}
+
 gracefulShutdown(server);
 
 process.on("uncaughtException", err => {

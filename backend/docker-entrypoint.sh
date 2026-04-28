@@ -8,10 +8,14 @@ echo "Migration status (before)"
 npx sequelize db:migrate:status
 
 echo "Running migrations"
-npx sequelize db:migrate
-
-echo "Migration status (after)"
-npx sequelize db:migrate:status
+if npx sequelize db:migrate; then
+	echo "Migration status (after)"
+	npx sequelize db:migrate:status
+	export RUN_WORKERS=true
+else
+	echo "Migration failed; workers disabled"
+	export RUN_WORKERS=false
+fi
 
 echo "Starting backend"
 exec node dist/server.js
