@@ -29,8 +29,10 @@ logger.info(
   "Runtime environment"
 );
 
-const server = app.listen(process.env.PORT, () => {
-  logger.info(`Server started on port: ${process.env.PORT}`);
+const port = Number(process.env.PORT) || 3000;
+
+const server = app.listen(port, () => {
+  logger.info(`Server started on port: ${port}`);
 });
 
 initIO(server);
