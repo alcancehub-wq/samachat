@@ -23,7 +23,8 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
 
 WORKDIR /usr/src/app
 COPY package*.json ./
-RUN npm install
+ENV SKIP_POSTINSTALL=1
+RUN npm install --ignore-scripts
 
 COPY . .
 RUN npm run build
