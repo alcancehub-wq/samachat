@@ -20,11 +20,11 @@ module.exports = {
         onDelete: "CASCADE"
       },
       type: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(191),
         allowNull: false
       },
       keyId: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(191),
         allowNull: false
       },
       value: {
