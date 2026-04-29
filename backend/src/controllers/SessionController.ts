@@ -4,21 +4,34 @@ import AppError from "../errors/AppError";
 import AuthUserService from "../services/UserServices/AuthUserService";
 import { SendRefreshToken } from "../helpers/SendRefreshToken";
 import { RefreshTokenService } from "../services/AuthServices/RefreshTokenService";
+import { logger } from "../utils/logger";
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { email, password } = req.body;
 
-  const { token, serializedUser, refreshToken } = await AuthUserService({
-    email,
-    password
-  });
+  try {
+    logger.info({ email }, "Auth login request received");
 
-  SendRefreshToken(res, refreshToken);
+    const { token, serializedUser, refreshToken } = await AuthUserService({
+      email,
+      password
+    });
 
-  return res.status(200).json({
-    token,
-    user: serializedUser
-  });
+    SendRefreshToken(res, refreshToken);
+
+    return res.status(200).json({
+      token,
+      user: serializedUser
+    });
+  } catch (error) {
+    logger.error({ err: error }, "Auth login failed");
+
+    if (error instanceof Error) {
+      logger.error({ stack: error.stack }, "Auth login stack");
+    }
+
+    throw error;
+  }
 };
 
 export const update = async (
