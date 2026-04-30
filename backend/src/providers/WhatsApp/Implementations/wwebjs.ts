@@ -239,9 +239,35 @@ const convertToContactPayload = async (
 ): Promise<ContactPayload> => {
   const profilePicUrl = await msgContact.getProfilePicUrl();
 
+  const extractPhoneNumber = (contact: WbotContact): string | null => {
+    const direct = contact?.id?.user;
+    if (direct && direct.length >= 10 && direct.startsWith("55")) {
+      return direct;
+    }
+
+    const serialized = contact?.id?._serialized;
+    if (serialized) {
+      const raw = serialized.split("@")[0];
+      if (raw && raw.length >= 10) {
+        return raw;
+      }
+    }
+
+    return null;
+  };
+
+  const number = extractPhoneNumber(msgContact);
+  if (!number) {
+    logger.warn(
+      { contactId: msgContact?.id?._serialized },
+      "Invalid contact number from WhatsApp payload"
+    );
+    throw new Error("Invalid contact number from WhatsApp payload");
+  }
+
   return {
     name: msgContact.name || msgContact.pushname || msgContact.id.user,
-    number: msgContact.id.user,
+    number,
     profilePicUrl,
     isGroup: msgContact.isGroup
   };
