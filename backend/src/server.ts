@@ -36,16 +36,19 @@ const server = app.listen(port, () => {
   logger.info(`Server started on port: ${port}`);
 });
 
+const safeKillChrome = () => {
+  try {
+    execSync("pkill -9 -f chrome", { stdio: "ignore" });
+  } catch {}
+  try {
+    execSync("pkill -9 -f chromium", { stdio: "ignore" });
+  } catch {}
+};
+
 const runWorkers = process.env.RUN_WORKERS !== "false";
 if (runWorkers) {
-  try {
-    logger.warn("Cleaning previous Chrome processes");
-    execSync("pkill -9 -f chrome || true; pkill -9 -f chromium || true", {
-      stdio: "ignore"
-    });
-  } catch (err) {
-    logger.warn({ err }, "Failed to clean Chrome processes");
-  }
+  logger.warn("Cleaning previous Chrome processes");
+  safeKillChrome();
   initIO(server);
   initRedis();
   StartAllWhatsAppsSessions();

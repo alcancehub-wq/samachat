@@ -63,10 +63,12 @@ const delay = (ms: number): Promise<void> =>
 const killChromeProcesses = (): void => {
   try {
     logger.warn("Killing Chrome processes");
-    require("child_process").execSync(
-      "pkill -9 -f chrome || true; pkill -9 -f chromium || true",
-      { stdio: "ignore" }
-    );
+    require("child_process").execSync("pkill -9 -f chrome", {
+      stdio: "ignore"
+    });
+    require("child_process").execSync("pkill -9 -f chromium", {
+      stdio: "ignore"
+    });
   } catch (err) {
     logger.warn({ err }, "Failed to kill Chrome processes");
   }
