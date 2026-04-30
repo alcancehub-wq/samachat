@@ -60,20 +60,6 @@ const clearReconnectTimers = (whatsappId: number): void => {
 const delay = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
 
-const killChromeProcesses = (): void => {
-  try {
-    logger.warn("Killing Chrome processes");
-    require("child_process").execSync("pkill -9 -f chrome", {
-      stdio: "ignore"
-    });
-    require("child_process").execSync("pkill -9 -f chromium", {
-      stdio: "ignore"
-    });
-  } catch (err) {
-    logger.warn({ err }, "Failed to kill Chrome processes");
-  }
-};
-
 const isProfileLockError = (err: unknown): boolean => {
   if (err instanceof Error) {
     return /profile appears to be in use/i.test(err.message);
@@ -820,7 +806,6 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
           { whatsappId: whatsapp.id, attempt },
           "Retrying WhatsApp session"
         );
-        killChromeProcesses();
         cleanupSessionLockFiles(whatsapp.id);
         await delay(2000 * attempt);
         await init(whatsapp);

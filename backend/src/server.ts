@@ -38,10 +38,16 @@ const server = app.listen(port, () => {
 
 const safeKillChrome = () => {
   try {
-    execSync("pkill -9 -f chrome", { stdio: "ignore" });
+    execSync("pkill -9 -x chrome", { stdio: "ignore" });
   } catch {}
   try {
-    execSync("pkill -9 -f chromium", { stdio: "ignore" });
+    execSync("pkill -9 -x chromium", { stdio: "ignore" });
+  } catch {}
+  try {
+    execSync("pkill -9 -x google-chrome", { stdio: "ignore" });
+  } catch {}
+  try {
+    execSync("pkill -9 -x google-chrome-stable", { stdio: "ignore" });
   } catch {}
 };
 
