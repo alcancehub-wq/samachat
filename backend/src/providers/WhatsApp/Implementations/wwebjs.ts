@@ -76,39 +76,62 @@ const cleanupSessionLockFiles = (whatsappId: number): void => {
     ".wwebjs_auth",
     `session-bd_${whatsappId}`
   );
-  const lockFiles = ["SingletonLock", "SingletonSocket", "SingletonCookie"];
-
   if (!fs.existsSync(sessionDir)) return;
 
   logger.info({ sessionDir, whatsappId }, "Cleaning session locks");
 
-  const entries = new Set<string>();
+  let entries: string[] = [];
   try {
-    fs.readdirSync(sessionDir).forEach(entry => entries.add(entry));
+    entries = fs.readdirSync(sessionDir);
   } catch (err) {
-    logger.warn({ err, sessionDir, whatsappId }, "Failed to read session directory");
+    logger.warn(
+      { err, sessionDir, whatsappId },
+      "Failed to read session directory"
+    );
+    return;
   }
-
-  lockFiles.forEach(lockFile => entries.add(lockFile));
 
   entries.forEach(entry => {
     if (!entry.startsWith("Singleton")) return;
 
     const lockPath = path.join(sessionDir, entry);
-    if (!fs.existsSync(lockPath)) return;
 
     try {
-      const stats = fs.statSync(lockPath);
+      const stats = fs.lstatSync(lockPath);
       if (stats.isDirectory()) {
         fs.rmSync(lockPath, { recursive: true, force: true });
       } else {
         fs.unlinkSync(lockPath);
       }
-      logger.warn({ lockPath, whatsappId }, "Removed stale Chromium lock");
+      logger.warn({ lockPath, whatsappId }, "Removed Chromium lock entry");
     } catch (err) {
-      logger.warn({ err, lockPath, whatsappId }, "Failed to remove Chromium lock");
+      logger.warn({ err, lockPath, whatsappId }, "Failed to remove Chromium lock entry");
     }
   });
+
+  const devtoolsPath = path.join(sessionDir, "DevToolsActivePort");
+  try {
+    if (fs.existsSync(devtoolsPath)) {
+      fs.unlinkSync(devtoolsPath);
+      logger.warn({ devtoolsPath, whatsappId }, "Removed DevToolsActivePort");
+    }
+  } catch (err) {
+    logger.warn({ err, devtoolsPath, whatsappId }, "Failed to remove DevToolsActivePort");
+  }
+
+  try {
+    const remaining = fs
+      .readdirSync(sessionDir)
+      .filter(entry => entry.startsWith("Singleton"));
+    if (remaining.length > 0) {
+      logger.warn(
+        { remaining, sessionDir, whatsappId },
+        "Chromium lock entries still present"
+      );
+    }
+  } catch (err) {
+    logger.warn({ err, sessionDir, whatsappId }, "Failed to recheck session directory");
+  }
 };
 
 const scheduleReconnect = async (
