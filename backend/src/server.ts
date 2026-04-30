@@ -1,6 +1,7 @@
 import gracefulShutdown from "http-graceful-shutdown";
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 import app from "./app";
 import { initIO } from "./libs/socket";
 import { logger } from "./utils/logger";
@@ -37,6 +38,14 @@ const server = app.listen(port, () => {
 
 const runWorkers = process.env.RUN_WORKERS !== "false";
 if (runWorkers) {
+  try {
+    logger.warn("Cleaning previous Chrome processes");
+    execSync("pkill -9 -f chrome || true; pkill -9 -f chromium || true", {
+      stdio: "ignore"
+    });
+  } catch (err) {
+    logger.warn({ err }, "Failed to clean Chrome processes");
+  }
   initIO(server);
   initRedis();
   StartAllWhatsAppsSessions();

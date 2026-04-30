@@ -40,6 +40,8 @@ const sessions: Session[] = [];
 const reconnectTimers: Record<number, ReturnType<typeof setTimeout> | null> = {};
 const reconnectAttempts: Record<number, number> = {};
 const connectingTimers: Record<number, ReturnType<typeof setTimeout> | null> = {};
+const profileLockRetries: Record<number, number> = {};
+const MAX_PROFILE_LOCK_RETRIES = 3;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY_MS = 5000;
 const CONNECTING_TIMEOUT_MS = 60000;
@@ -55,6 +57,31 @@ const clearReconnectTimers = (whatsappId: number): void => {
   }
 };
 
+const delay = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+const killChromeProcesses = (): void => {
+  try {
+    logger.warn("Killing Chrome processes");
+    require("child_process").execSync(
+      "pkill -9 -f chrome || true; pkill -9 -f chromium || true",
+      { stdio: "ignore" }
+    );
+  } catch (err) {
+    logger.warn({ err }, "Failed to kill Chrome processes");
+  }
+};
+
+const isProfileLockError = (err: unknown): boolean => {
+  if (err instanceof Error) {
+    return /profile appears to be in use/i.test(err.message);
+  }
+  if (typeof err === "string") {
+    return /profile appears to be in use/i.test(err);
+  }
+  return false;
+};
+
 const cleanupSessionLockFiles = (whatsappId: number): void => {
   const sessionDir = path.join(
     process.cwd(),
@@ -65,15 +92,33 @@ const cleanupSessionLockFiles = (whatsappId: number): void => {
 
   if (!fs.existsSync(sessionDir)) return;
 
-  lockFiles.forEach(lockFile => {
-    const lockPath = path.join(sessionDir, lockFile);
+  logger.info({ sessionDir, whatsappId }, "Cleaning session locks");
+
+  const entries = new Set<string>();
+  try {
+    fs.readdirSync(sessionDir).forEach(entry => entries.add(entry));
+  } catch (err) {
+    logger.warn({ err, sessionDir, whatsappId }, "Failed to read session directory");
+  }
+
+  lockFiles.forEach(lockFile => entries.add(lockFile));
+
+  entries.forEach(entry => {
+    if (!entry.startsWith("Singleton")) return;
+
+    const lockPath = path.join(sessionDir, entry);
     if (!fs.existsSync(lockPath)) return;
 
     try {
-      fs.unlinkSync(lockPath);
-      logger.warn({ lockPath, whatsappId }, "Removed stale Chromium lock file");
+      const stats = fs.statSync(lockPath);
+      if (stats.isDirectory()) {
+        fs.rmSync(lockPath, { recursive: true, force: true });
+      } else {
+        fs.unlinkSync(lockPath);
+      }
+      logger.warn({ lockPath, whatsappId }, "Removed stale Chromium lock");
     } catch (err) {
-      logger.warn({ err, lockPath, whatsappId }, "Failed to remove lock file");
+      logger.warn({ err, lockPath, whatsappId }, "Failed to remove Chromium lock");
     }
   });
 };
@@ -762,6 +807,25 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
 
     await wbot.initialize();
   } catch (err) {
+    if (isProfileLockError(err)) {
+      const attempt = (profileLockRetries[whatsapp.id] || 0) + 1;
+      profileLockRetries[whatsapp.id] = attempt;
+
+      logger.warn({ whatsappId: whatsapp.id }, "Detected Chrome profile lock");
+
+      if (attempt <= MAX_PROFILE_LOCK_RETRIES) {
+        logger.warn(
+          { whatsappId: whatsapp.id, attempt },
+          "Retrying WhatsApp session"
+        );
+        killChromeProcesses();
+        cleanupSessionLockFiles(whatsapp.id);
+        await delay(2000 * attempt);
+        await init(whatsapp);
+        return;
+      }
+    }
+
     logger.error(err, "Error on whatsapp session");
     try {
       await whatsapp.update({ status: "OPENING" });
