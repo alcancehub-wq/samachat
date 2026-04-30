@@ -44,7 +44,12 @@ const profileLockRetries: Record<number, number> = {};
 const MAX_PROFILE_LOCK_RETRIES = 3;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY_MS = 5000;
-const CONNECTING_TIMEOUT_MS = 60000;
+const CONNECTING_TIMEOUT_MS = Number(
+  process.env.WWEBJS_CONNECTING_TIMEOUT_MS || "120000"
+);
+const AUTHENTICATED_TIMEOUT_MS = Number(
+  process.env.WWEBJS_AUTHENTICATED_TIMEOUT_MS || "180000"
+);
 
 const clearReconnectTimers = (whatsappId: number): void => {
   if (reconnectTimers[whatsappId]) {
@@ -55,6 +60,36 @@ const clearReconnectTimers = (whatsappId: number): void => {
     clearTimeout(connectingTimers[whatsappId] as ReturnType<typeof setTimeout>);
     connectingTimers[whatsappId] = null;
   }
+};
+
+const scheduleConnectingTimeout = (
+  whatsapp: Whatsapp,
+  phase: "initialize" | "authenticated",
+  timeoutMs: number
+): void => {
+  if (connectingTimers[whatsapp.id]) {
+    clearTimeout(connectingTimers[whatsapp.id] as ReturnType<typeof setTimeout>);
+    connectingTimers[whatsapp.id] = null;
+  }
+
+  connectingTimers[whatsapp.id] = setTimeout(async () => {
+    const currentWhatsapp = await Whatsapp.findByPk(whatsapp.id);
+    const currentStatus = currentWhatsapp?.status;
+
+    if (
+      currentStatus &&
+      ["OPENING", "connecting", "CONNECTING"].includes(currentStatus)
+    ) {
+      logger.warn({
+        info: "Connecting timeout reached",
+        whatsappId: whatsapp.id,
+        status: currentStatus,
+        timeoutMs,
+        phase
+      });
+      await scheduleReconnect(whatsapp, `connecting_timeout:${phase}`);
+    }
+  }, timeoutMs);
 };
 
 const delay = (ms: number): Promise<void> =>
@@ -680,6 +715,11 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
 
     wbot.on("authenticated", async () => {
       logger.info(`Session: ${sessionName} AUTHENTICATED`);
+      scheduleConnectingTimeout(
+        whatsapp,
+        "authenticated",
+        AUTHENTICATED_TIMEOUT_MS
+      );
     });
 
     wbot.on("auth_failure", async msg => {
@@ -785,22 +825,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     });
 
     clearReconnectTimers(whatsapp.id);
-    connectingTimers[whatsapp.id] = setTimeout(async () => {
-      const currentWhatsapp = await Whatsapp.findByPk(whatsapp.id);
-      const currentStatus = currentWhatsapp?.status;
-      if (
-        currentStatus &&
-        ["OPENING", "connecting", "CONNECTING"].includes(currentStatus)
-      ) {
-        logger.warn({
-          info: "Connecting timeout reached",
-          whatsappId: whatsapp.id,
-          status: currentStatus,
-          timeoutMs: CONNECTING_TIMEOUT_MS
-        });
-        await scheduleReconnect(whatsapp, "connecting_timeout");
-      }
-    }, CONNECTING_TIMEOUT_MS);
+    scheduleConnectingTimeout(whatsapp, "initialize", CONNECTING_TIMEOUT_MS);
 
     wbot.on("message_create", async msg => {
       if (!shouldHandleMessage(msg)) return;
