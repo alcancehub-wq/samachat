@@ -167,7 +167,8 @@ export default function DialogVariablesPage() {
         const message = result.reason instanceof Error ? result.reason.message : String(result.reason);
         const usage = parseUsage(message);
         if (usage) {
-          const item = itemsById.get(selectedIds[index]);
+          const itemId = selectedIds[index];
+          const item = itemId ? itemsById.get(itemId) : undefined;
           if (item) {
             setDeleteWarning({ item, usage });
             return;

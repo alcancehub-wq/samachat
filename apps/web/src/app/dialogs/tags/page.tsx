@@ -162,6 +162,10 @@ export default function DialogTagsPage() {
     }
     const next = [...tags];
     const [moved] = next.splice(dragIndex, 1);
+    if (!moved) {
+      setDragIndex(null);
+      return;
+    }
     next.splice(index, 0, moved);
     const reordered = next.map((item, idx) => ({ ...item, sort_order: idx + 1 }));
     setTags(reordered);
@@ -219,7 +223,8 @@ export default function DialogTagsPage() {
         }
         const usage = parseUsage(message);
         if (usage) {
-          const item = itemsById.get(selectedIds[index]);
+          const itemId = selectedIds[index];
+          const item = itemId ? itemsById.get(itemId) : undefined;
           if (item) {
             setDeleteWarning({ item, usage });
             return;

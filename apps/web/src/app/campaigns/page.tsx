@@ -61,7 +61,6 @@ export default function CampaignsPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
-  const [dialogId, setDialogId] = useState('');
   const [selectedDialog, setSelectedDialog] = useState<DialogItem | null>(null);
   const [dialogs, setDialogs] = useState<DialogItem[]>([]);
   const [dialogsLoading, setDialogsLoading] = useState(false);
@@ -310,7 +309,6 @@ export default function CampaignsPage() {
       setCampaigns((prev) => [created, ...prev]);
       setName('');
       setMessage('');
-      setDialogId('');
       setSelectedDialog(null);
       setTagIds('');
       setConversationIds('');
@@ -460,7 +458,6 @@ export default function CampaignsPage() {
                     size="sm"
                     onClick={() => {
                       setSelectedDialog(null);
-                      setDialogId('');
                       setMessage('');
                     }}
                   >
@@ -785,7 +782,6 @@ export default function CampaignsPage() {
                       className="w-full rounded-2xl border border-border/60 bg-background/70 px-4 py-3 text-left text-sm hover:bg-muted/40"
                       onClick={() => {
                         setSelectedDialog(dialog);
-                        setDialogId(dialog.id);
                         if (dialog.type === 'message') {
                           setMessage(dialog.message_text || '');
                         }

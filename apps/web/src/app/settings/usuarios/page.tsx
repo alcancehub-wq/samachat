@@ -86,8 +86,9 @@ export default function UsersSettingsPage() {
       setProfiles(profileData);
       setMembers(userData);
 
-      if (profileData.length > 0) {
-        setUserProfileIds((prev) => (prev.length > 0 ? prev : [profileData[0].id]));
+      const firstProfile = profileData[0];
+      if (firstProfile) {
+        setUserProfileIds((prev) => (prev.length > 0 ? prev : [firstProfile.id]));
       }
       setStatus(null);
     } catch (err) {
@@ -131,7 +132,8 @@ export default function UsersSettingsPage() {
       setUserName('');
       setUserEmail('');
       setUserPassword('');
-      setUserProfileIds((prev) => (profiles.length > 0 ? [profiles[0].id] : prev));
+      const firstProfile = profiles[0];
+      setUserProfileIds((prev) => (firstProfile ? [firstProfile.id] : prev));
       setCustomPermissions(false);
       setUserPermissions([]);
       await loadData();
@@ -245,7 +247,6 @@ export default function UsersSettingsPage() {
   const canCreateUsers = hasPermission(permissions, 'users:create');
   const canEditUsers = hasPermission(permissions, 'users:edit');
   const canDeleteUsers = hasPermission(permissions, 'users:delete');
-  const canManageProfiles = hasPermission(permissions, 'users:manage_profiles');
 
   return (
     <PageShell title="Configuracoes" subtitle="Usuarios">

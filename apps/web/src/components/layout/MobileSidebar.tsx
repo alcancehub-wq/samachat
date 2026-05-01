@@ -55,7 +55,8 @@ export function MobileSidebar() {
         <nav className="mt-8 space-y-2">
           {visibleItems.map((item) => {
             const Icon = item.icon;
-            const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+            const children = item.children ?? [];
+            const hasChildren = children.length > 0;
             const isActive = (href: string) => {
               if (href.includes('?')) {
                 const [path, query] = href.split('?');
@@ -68,7 +69,7 @@ export function MobileSidebar() {
               return pathname === href;
             };
 
-            const childActive = hasChildren ? item.children.some((child) => isActive(child.href)) : false;
+            const childActive = hasChildren ? children.some((child) => isActive(child.href)) : false;
             const active = isActive(item.href) || childActive;
 
             return (
@@ -88,7 +89,7 @@ export function MobileSidebar() {
                 </Link>
                 {hasChildren && (
                   <div className="space-y-1 pl-8">
-                    {item.children.map((child) => (
+                    {children.map((child) => (
                       <Link
                         key={child.label}
                         href={child.href}

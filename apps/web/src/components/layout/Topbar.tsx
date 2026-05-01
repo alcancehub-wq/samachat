@@ -1,18 +1,12 @@
 'use client';
 
 import { Bell, Menu, PanelLeft, Search } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { useUiStore } from '@/store/ui';
-import { apiFetch } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
-
-interface WorkspaceItem {
-  id: string;
-  name: string;
-}
 
 interface TopbarProps {
   title: string;
@@ -21,25 +15,7 @@ interface TopbarProps {
 
 export function Topbar({ title, subtitle }: TopbarProps) {
   const { toggleSidebar, toggleSidebarCollapsed } = useUiStore();
-  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
-  const [activeWorkspace, setActiveWorkspace] = useState<string>('');
   const [userLabel, setUserLabel] = useState<string>('Visitante');
-
-  const loadWorkspaces = useCallback(async () => {
-    try {
-      const data = await apiFetch<WorkspaceItem[]>('/workspaces');
-      setWorkspaces(data);
-      if (data.length > 0) {
-        setActiveWorkspace((prev) => prev || data[0].id);
-      }
-    } catch {
-      setWorkspaces([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadWorkspaces();
-  }, [loadWorkspaces]);
 
   useEffect(() => {
     let active = true;

@@ -43,7 +43,8 @@ export function SidebarNav() {
       <nav className="space-y-2">
         {visibleItems.map((item) => {
           const Icon = item.icon;
-          const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+          const children = item.children ?? [];
+          const hasChildren = children.length > 0;
           const isActive = (href: string) => {
             if (href.includes('?')) {
               const [path, query] = href.split('?');
@@ -56,7 +57,7 @@ export function SidebarNav() {
             return pathname === href;
           };
 
-          const childActive = hasChildren ? item.children.some((child) => isActive(child.href)) : false;
+          const childActive = hasChildren ? children.some((child) => isActive(child.href)) : false;
           const active = isActive(item.href) || childActive;
 
           return (
@@ -84,7 +85,7 @@ export function SidebarNav() {
               </Link>
               {hasChildren && (
                 <div className={cn('space-y-1 pl-8', sidebarCollapsed ? 'md:hidden lg:block' : '')}>
-                  {item.children.map((child) => (
+                  {children.map((child) => (
                     <Link
                       key={child.label}
                       href={child.href}

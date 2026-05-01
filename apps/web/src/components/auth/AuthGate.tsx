@@ -150,7 +150,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-destructive">{error}</p>
-            <Button onClick={checkStatus}>Tentar novamente</Button>
+            <Button onClick={() => void checkStatus()}>Tentar novamente</Button>
           </CardContent>
         </Card>
       </div>

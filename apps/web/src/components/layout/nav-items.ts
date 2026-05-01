@@ -1,5 +1,6 @@
 import {
   Activity,
+  type LucideIcon,
   FileText,
   LayoutDashboard,
   MessageSquare,
@@ -9,7 +10,20 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export const navItems = [
+export interface NavChildItem {
+  label: string;
+  href: string;
+}
+
+export interface NavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  permissions?: string[];
+  children?: NavChildItem[];
+}
+
+export const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Conversas', href: '/inbox', icon: MessageSquare },
   { label: 'Conexoes', href: '/connections', icon: QrCode, permissions: ['connections:view'] },

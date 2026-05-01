@@ -23,9 +23,10 @@ export default function WorkspaceSettingsPage() {
     try {
       const data = await apiFetch<WorkspaceItem[]>('/workspaces');
       setWorkspaces(data);
-      if (data.length > 0) {
-        setActiveId((prev) => prev || data[0].id);
-        setName(data[0].name);
+      const firstWorkspace = data[0];
+      if (firstWorkspace) {
+        setActiveId((prev) => prev || firstWorkspace.id);
+        setName(firstWorkspace.name);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Falha ao carregar workspaces';
