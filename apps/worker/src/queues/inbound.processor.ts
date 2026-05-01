@@ -91,7 +91,7 @@ export function startInboundProcessor(connection: IORedis, queues: WorkerQueues)
                     tenantId: event.tenantId,
                     trace,
                   },
-                  { jobId: `${event.eventId}-${providerName}` },
+                  { jobId: `${event.eventId}:${providerName}` },
                 );
                 enqueueSpan.setAttribute('queue.name', 'outbound-messages');
               } finally {

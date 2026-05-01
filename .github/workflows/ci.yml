@@ -31,7 +31,7 @@ jobs:
         run: pnpm -r typecheck
 
       - name: Test
-        run: pnpm test
+        run: pnpm -r --if-present test
 
       - name: Build
-        run: pnpm build
+        run: pnpm -r --if-present build
