@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useHistory } from "react-router-dom";
 import openSocket from "../../services/socket-io";
 
@@ -8,61 +8,105 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 
+const getStoredToken = () => {
+	const token = localStorage.getItem("token");
+	return token ? JSON.parse(token) : null;
+};
+
 const useAuth = () => {
 	const history = useHistory();
 	const [isAuth, setIsAuth] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [user, setUser] = useState({});
+	const refreshTokenRequestRef = useRef(null);
 
-	api.interceptors.request.use(
-		config => {
-			const token = localStorage.getItem("token");
-			if (token) {
-				config.headers["Authorization"] = `Bearer ${JSON.parse(token)}`;
-				setIsAuth(true);
-			}
-			return config;
-		},
-		error => {
-			Promise.reject(error);
-		}
-	);
+	const clearAuthState = () => {
+		localStorage.removeItem("token");
+		api.defaults.headers.Authorization = undefined;
+		setIsAuth(false);
+		setUser({});
+	};
 
-	api.interceptors.response.use(
-		response => {
-			return response;
-		},
-		async error => {
-			const originalRequest = error.config;
-			if (error?.response?.status === 403 && !originalRequest._retry) {
-				originalRequest._retry = true;
-
-				const { data } = await api.post("/auth/refresh_token");
-				if (data) {
+	const refreshAuthToken = async () => {
+		if (!refreshTokenRequestRef.current) {
+			refreshTokenRequestRef.current = api
+				.post("/auth/refresh_token", undefined, { _skipAuthRefresh: true })
+				.then(({ data }) => {
 					localStorage.setItem("token", JSON.stringify(data.token));
-					api.defaults.headers.Authorization = `Bearer ${data.token}`;
-				}
-				return api(originalRequest);
-			}
-			if (error?.response?.status === 401) {
-				localStorage.removeItem("token");
-				api.defaults.headers.Authorization = undefined;
-				setIsAuth(false);
-			}
-			return Promise.reject(error);
-		}
-	);
-
-	useEffect(() => {
-		const token = localStorage.getItem("token");
-		(async () => {
-			if (token) {
-				try {
-					const { data } = await api.post("/auth/refresh_token");
 					api.defaults.headers.Authorization = `Bearer ${data.token}`;
 					setIsAuth(true);
 					setUser(data.user);
+					return data;
+				})
+				.finally(() => {
+					refreshTokenRequestRef.current = null;
+				});
+		}
+
+		return refreshTokenRequestRef.current;
+	};
+
+	useEffect(() => {
+		const requestInterceptor = api.interceptors.request.use(
+			config => {
+				const token = getStoredToken();
+				if (token) {
+					config.headers["Authorization"] = `Bearer ${token}`;
+				}
+				return config;
+			},
+			error => Promise.reject(error)
+		);
+
+		const responseInterceptor = api.interceptors.response.use(
+			response => response,
+			async error => {
+				const originalRequest = error.config || {};
+
+				if (originalRequest._skipAuthRefresh) {
+					if (
+						error?.response?.status === 401 ||
+						error?.response?.status === 403
+					) {
+						clearAuthState();
+					}
+					return Promise.reject(error);
+				}
+
+				if (error?.response?.status === 403 && !originalRequest._retry) {
+					originalRequest._retry = true;
+
+					try {
+						await refreshAuthToken();
+						return api(originalRequest);
+					} catch (refreshError) {
+						clearAuthState();
+						return Promise.reject(refreshError);
+					}
+				}
+
+				if (error?.response?.status === 401) {
+					clearAuthState();
+				}
+
+				return Promise.reject(error);
+			}
+		);
+
+		return () => {
+			api.interceptors.request.eject(requestInterceptor);
+			api.interceptors.response.eject(responseInterceptor);
+		};
+	}, []);
+
+	useEffect(() => {
+		const token = getStoredToken();
+		(async () => {
+			if (token) {
+				try {
+					await refreshAuthToken();
 				} catch (err) {
+					clearAuthState();
 					toastError(err);
 				}
 			}
@@ -107,10 +151,7 @@ const useAuth = () => {
 
 		try {
 			await api.delete("/auth/logout");
-			setIsAuth(false);
-			setUser({});
-			localStorage.removeItem("token");
-			api.defaults.headers.Authorization = undefined;
+			clearAuthState();
 			setLoading(false);
 			history.push("/login");
 		} catch (err) {

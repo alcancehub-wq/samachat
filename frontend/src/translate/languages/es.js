@@ -1038,6 +1038,14 @@ const messages = {
         placeholderClosed:
           "Vuelva a abrir o acepte este ticket para enviar un mensaje.",
         signMessage: "Firmar",
+        audioPermissionDenied:
+          "El micrófono está bloqueado en este navegador. Permita el acceso al micrófono para grabar audio.",
+        audioUnsupported:
+          "Este navegador no admite grabación de audio en SamaChat.",
+        audioStartError:
+          "No fue posible iniciar la grabación de audio ahora.",
+        audioSendError:
+          "No fue posible enviar el audio grabado.",
       },
       contactDrawer: {
         header: "Detalles del contacto",

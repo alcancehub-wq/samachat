@@ -37,6 +37,9 @@ interface Session extends Client {
 }
 
 const sessions: Session[] = [];
+const readySessions = new Set<number>();
+const initializingSessions = new Map<number, Promise<void>>();
+const destroyingSessions = new Map<number, Promise<void>>();
 const reconnectTimers: Record<number, ReturnType<typeof setTimeout> | null> = {};
 const reconnectAttempts: Record<number, number> = {};
 const connectingTimers: Record<number, ReturnType<typeof setTimeout> | null> = {};
@@ -44,11 +47,12 @@ const profileLockRetries: Record<number, number> = {};
 const MAX_PROFILE_LOCK_RETRIES = 3;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY_MS = 5000;
+const SESSION_DESTROY_GRACE_MS = 1000;
 const CONNECTING_TIMEOUT_MS = Number(
-  process.env.WWEBJS_CONNECTING_TIMEOUT_MS || "120000"
+  process.env.WWEBJS_CONNECTING_TIMEOUT_MS || "300000"
 );
 const AUTHENTICATED_TIMEOUT_MS = Number(
-  process.env.WWEBJS_AUTHENTICATED_TIMEOUT_MS || "180000"
+  process.env.WWEBJS_AUTHENTICATED_TIMEOUT_MS || "360000"
 );
 
 const clearReconnectTimers = (whatsappId: number): void => {
@@ -198,7 +202,7 @@ const scheduleReconnect = async (
   clearReconnectTimers(whatsapp.id);
   reconnectTimers[whatsapp.id] = setTimeout(async () => {
     try {
-      removeSession(whatsapp.id);
+      await removeSession(whatsapp.id);
       await whatsapp.update({ status: "OPENING" });
       await init(whatsapp);
     } catch (err) {
@@ -214,6 +218,14 @@ const getWbot = (whatsappId: number): Session => {
     throw new AppError("ERR_WAPP_NOT_INITIALIZED");
   }
   return sessions[sessionIndex];
+};
+
+const hasSession = (sessionId: number): boolean => {
+  return sessions.some(session => session.id === sessionId);
+};
+
+const isSessionReady = (sessionId: number): boolean => {
+  return readySessions.has(sessionId);
 };
 
 const mapMessageType = (wbotType: any): MessageType => {
@@ -274,25 +286,52 @@ const convertToContactPayload = async (
 ): Promise<ContactPayload> => {
   const profilePicUrl = await msgContact.getProfilePicUrl();
 
-  const extractPhoneNumber = (contact: WbotContact): string | null => {
+  const looksLikePhoneNumber = (value?: string | null): value is string => {
+    if (!value) {
+      return false;
+    }
+
+    return /^55\d{8,13}$/.test(value);
+  };
+
+  const normalizeLid = (value?: string | null): string | undefined => {
+    if (!value) {
+      return undefined;
+    }
+
+    return value.includes("@") ? value : `${value}@lid`;
+  };
+
+  const extractContactIdentifiers = (
+    contact: WbotContact
+  ): { number: string; lid?: string } => {
     const direct = contact?.id?.user;
-    if (direct && direct.length >= 10 && direct.startsWith("55")) {
-      return direct;
+    if (looksLikePhoneNumber(direct)) {
+      return { number: direct };
     }
 
     const serialized = contact?.id?._serialized;
     if (serialized) {
       const raw = serialized.split("@")[0];
-      if (raw && raw.length >= 10) {
-        return raw;
+      if (looksLikePhoneNumber(raw)) {
+        return { number: raw };
+      }
+
+      const lid = normalizeLid(serialized);
+      if (lid) {
+        return { number: "", lid };
       }
     }
 
-    return null;
+    if (direct) {
+      return { number: "", lid: normalizeLid(direct) };
+    }
+
+    return { number: "" };
   };
 
-  const number = extractPhoneNumber(msgContact);
-  if (!number) {
+  const { number, lid } = extractContactIdentifiers(msgContact);
+  if (!number && !lid) {
     logger.warn(
       { contactId: msgContact?.id?._serialized },
       "Invalid contact number from WhatsApp payload"
@@ -303,6 +342,7 @@ const convertToContactPayload = async (
   return {
     name: msgContact.name || msgContact.pushname || msgContact.id.user,
     number,
+    lid,
     profilePicUrl,
     isGroup: msgContact.isGroup
   };
@@ -509,16 +549,40 @@ const syncUnreadMessages = async (wbot: Session) => {
   }
 };
 
-const removeSession = (whatsappId: number): void => {
-  try {
-    const sessionIndex = sessions.findIndex(s => s.id === whatsappId);
-    if (sessionIndex !== -1) {
-      sessions[sessionIndex].destroy();
-      sessions.splice(sessionIndex, 1);
-    }
-  } catch (err) {
-    logger.error(err);
+const removeSession = async (whatsappId: number): Promise<void> => {
+  clearReconnectTimers(whatsappId);
+  readySessions.delete(whatsappId);
+
+  const existingDestroy = destroyingSessions.get(whatsappId);
+  if (existingDestroy) {
+    await existingDestroy;
+    return;
   }
+
+  const sessionIndex = sessions.findIndex(s => s.id === whatsappId);
+  if (sessionIndex === -1) {
+    return;
+  }
+
+  const session = sessions[sessionIndex];
+  sessions.splice(sessionIndex, 1);
+
+  let destroyPromise: Promise<void> | undefined;
+  destroyPromise = (async () => {
+    try {
+      await session.destroy();
+    } catch (err) {
+      logger.error({ err, whatsappId }, "Error destroying whatsapp session");
+    } finally {
+      await delay(SESSION_DESTROY_GRACE_MS);
+      if (destroyPromise && destroyingSessions.get(whatsappId) === destroyPromise) {
+        destroyingSessions.delete(whatsappId);
+      }
+    }
+  })();
+
+  destroyingSessions.set(whatsappId, destroyPromise);
+  await destroyPromise;
 };
 
 const sendMessage = async (
@@ -597,7 +661,11 @@ const checkNumber = async (
   const wbot = getWbot(sessionId);
   const validNumber = await wbot.getNumberId(`${number}@c.us`);
 
-  return validNumber?.user || "";
+  if (!validNumber?.user) {
+    return "";
+  }
+
+  return /^55\d{8,13}$/.test(validNumber.user) ? validNumber.user : "";
 };
 
 const getProfilePicUrl = async (
@@ -661,9 +729,9 @@ const deleteMessage = async (
   await message.delete(true);
 };
 
-const init = async (whatsapp: Whatsapp): Promise<void> => {
+const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
   try {
-    removeSession(whatsapp.id);
+    await removeSession(whatsapp.id);
     cleanupSessionLockFiles(whatsapp.id);
 
     const io = getIO();
@@ -672,12 +740,28 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
 
     const args: string = process.env.CHROME_ARGS || "";
     const protocolTimeout = Number(
-      process.env.PUPPETEER_PROTOCOL_TIMEOUT || "120000"
+      process.env.PUPPETEER_PROTOCOL_TIMEOUT || "300000"
     );
+    const authTimeoutMs = Number(
+      process.env.WWEBJS_AUTH_TIMEOUT_MS || "300000"
+    );
+    const takeoverTimeoutMs = Number(
+      process.env.WWEBJS_TAKEOVER_TIMEOUT_MS || "0"
+    );
+    const userAgent =
+      process.env.WWEBJS_USER_AGENT ||
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.7727.101 Safari/537.36";
 
     const wbot: Session = new Client({
       session: sessionCfg,
       authStrategy: new LocalAuth({ clientId: `bd_${whatsapp.id}` }),
+      authTimeoutMs,
+      takeoverOnConflict: true,
+      takeoverTimeoutMs,
+      userAgent,
+      webVersionCache: {
+        type: "none"
+      },
       puppeteer: {
         // headless: false, // TODO make sure chromium closes on session disconnection / delete
         executablePath: process.env.CHROME_BIN || undefined,
@@ -700,6 +784,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
       logger.info("Session:", sessionName);
       qrCode.generate(qr, { small: true });
       await whatsapp.update({ qrcode: qr, status: "qrcode", retries: 0 });
+      readySessions.delete(whatsapp.id);
 
       const sessionIndex = sessions.findIndex(s => s.id === whatsapp.id);
       if (sessionIndex === -1) {
@@ -726,6 +811,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
       console.error(
         `Session: ${sessionName} AUTHENTICATION FAILURE! Reason: ${msg}`
       );
+      readySessions.delete(whatsapp.id);
 
       if (whatsapp.retries > 1) {
         await whatsapp.update({ session: "", retries: 0 });
@@ -749,6 +835,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
 
       clearReconnectTimers(whatsapp.id);
       reconnectAttempts[whatsapp.id] = 0;
+      readySessions.add(whatsapp.id);
 
       try {
         await whatsapp.update({
@@ -784,6 +871,9 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
 
     wbot.on("change_state", async newState => {
       logger.info(`Monitor session: ${sessionName}, ${newState}`);
+      if (newState !== "CONNECTED") {
+        readySessions.delete(whatsapp.id);
+      }
       try {
         await whatsapp.update({ status: newState });
 
@@ -806,6 +896,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
 
     wbot.on("disconnected", async reason => {
       logger.info(`Disconnected session: ${sessionName}, reason: ${reason}`);
+      readySessions.delete(whatsapp.id);
       try {
         await whatsapp.update({ status: "OPENING", session: "" });
 
@@ -880,30 +971,64 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
           { whatsappId: whatsapp.id, attempt },
           "Retrying WhatsApp session"
         );
+        await removeSession(whatsapp.id);
         cleanupSessionLockFiles(whatsapp.id);
         await delay(2000 * attempt);
-        await init(whatsapp);
+        await initInternal(whatsapp);
         return;
       }
     }
 
     logger.error(err, "Error on whatsapp session");
     try {
-      await whatsapp.update({ status: "OPENING" });
+      const hasQrCode = Boolean(whatsapp.qrcode);
+
+      await whatsapp.update({ status: hasQrCode ? "qrcode" : "OPENING" });
+
       const io = getIO();
       io.emit("whatsappSession", {
         action: "update",
         session: whatsapp
       });
-      await scheduleReconnect(whatsapp, "init_error");
+
+      if (!hasQrCode) {
+        await scheduleReconnect(whatsapp, "init_error");
+      }
     } catch (innerErr) {
       logger.error(innerErr, "Error handling whatsapp init failure");
     }
   }
 };
 
+const init = async (whatsapp: Whatsapp): Promise<void> => {
+  const existingInit = initializingSessions.get(whatsapp.id);
+  if (existingInit) {
+    logger.warn(
+      { whatsappId: whatsapp.id },
+      "WhatsApp session init already in progress"
+    );
+    return existingInit;
+  }
+
+  let initPromise: Promise<void> | undefined;
+  initPromise = (async () => {
+    try {
+      await initInternal(whatsapp);
+    } finally {
+      if (initPromise && initializingSessions.get(whatsapp.id) === initPromise) {
+        initializingSessions.delete(whatsapp.id);
+      }
+    }
+  })();
+
+  initializingSessions.set(whatsapp.id, initPromise);
+  return initPromise;
+};
+
 export const WhatsappWebJsProvider: WhatsappProvider = {
   init,
+  hasSession,
+  isSessionReady,
   removeSession,
   logout,
   sendMessage,

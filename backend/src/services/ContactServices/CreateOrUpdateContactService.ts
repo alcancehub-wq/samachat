@@ -10,13 +10,29 @@ interface ExtraInfo {
 
 interface Request {
   name: string;
-  number: string;
+  number?: string;
   lid?: string;
   isGroup: boolean;
   email?: string;
   profilePicUrl?: string;
   extraInfo?: ExtraInfo[];
 }
+
+const looksLikePhoneNumber = (value?: string | null): value is string => {
+  if (!value) {
+    return false;
+  }
+
+  return /^55\d{8,13}$/.test(value);
+};
+
+const normalizeLid = (value?: string | null): string | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  return value.includes("@") ? value : `${value}@lid`;
+};
 
 const emitContact = (action: "update" | "create", contact: Contact) => {
   const io = getIO();
@@ -33,34 +49,54 @@ const CreateOrUpdateContactService = async ({
   email = "",
   extraInfo = []
 }: Request): Promise<Contact> => {
-  const number = isGroup ? rawNumber : rawNumber.replace(/[^0-9]/g, "");
-  if (!number && !lid) throw new Error("Either number or lid must be provided");
+  const sanitizedRawNumber = rawNumber || "";
+  const normalizedLid = normalizeLid(lid);
+  const bareLid = normalizedLid?.replace(/@lid$/i, "");
+  const digitsOnlyNumber = isGroup
+    ? sanitizedRawNumber
+    : sanitizedRawNumber.replace(/[^0-9]/g, "");
+  const number = isGroup
+    ? digitsOnlyNumber
+    : looksLikePhoneNumber(digitsOnlyNumber)
+    ? digitsOnlyNumber
+    : "";
 
-  const [contactByNumber, contactByLid] = await Promise.all([
+  if (!number && !normalizedLid) {
+    throw new Error("Either number or lid must be provided");
+  }
+
+  const [contactByNumber, contactByLid, legacyContactByLid, legacyContactByBareLid] = await Promise.all([
     number ? Contact.findOne({ where: { number } }) : null,
-    lid ? Contact.findOne({ where: { lid } }) : null
+    normalizedLid ? Contact.findOne({ where: { lid: normalizedLid } }) : null,
+    bareLid ? Contact.findOne({ where: { number: bareLid } }) : null,
+    bareLid ? Contact.findOne({ where: { lid: bareLid } }) : null
   ]);
 
+  const resolvedContactByLid =
+    contactByLid || legacyContactByBareLid || legacyContactByLid;
+
   const shouldMerge =
-    contactByNumber && contactByLid && contactByNumber.id !== contactByLid.id;
+    contactByNumber &&
+    resolvedContactByLid &&
+    contactByNumber.id !== resolvedContactByLid.id;
 
   if (shouldMerge) {
     await Ticket.update(
       { contactId: contactByNumber.id },
-      { where: { contactId: contactByLid.id } }
+      { where: { contactId: resolvedContactByLid.id } }
     );
 
-    await contactByLid.destroy();
+    await resolvedContactByLid.destroy();
 
     await contactByNumber.update({
-      lid: contactByLid.lid,
+      lid: resolvedContactByLid.lid || normalizedLid,
       profilePicUrl
     });
 
     logger.info({
       info: "Merged contacts by number and lid",
       primaryContactId: contactByNumber.id,
-      mergedContactId: contactByLid.id
+      mergedContactId: resolvedContactByLid.id
     });
 
     emitContact("update", contactByNumber);
@@ -70,7 +106,7 @@ const CreateOrUpdateContactService = async ({
 
   if (contactByNumber) {
     await contactByNumber.update({
-      lid: lid || contactByNumber.lid,
+      lid: normalizedLid || contactByNumber.lid,
       profilePicUrl
     });
 
@@ -79,20 +115,26 @@ const CreateOrUpdateContactService = async ({
     return contactByNumber;
   }
 
-  if (contactByLid) {
-    await contactByLid.update({
-      number: number || contactByLid.number,
+  if (resolvedContactByLid) {
+    await resolvedContactByLid.update({
+      lid: normalizedLid || resolvedContactByLid.lid,
+      number:
+        number ||
+        (resolvedContactByLid.number === normalizedLid ||
+        resolvedContactByLid.number === bareLid
+          ? null
+          : resolvedContactByLid.number),
       profilePicUrl
     });
 
-    emitContact("update", contactByLid);
-    return contactByLid;
+    emitContact("update", resolvedContactByLid);
+    return resolvedContactByLid;
   }
 
   const created = await Contact.create({
     name,
     number,
-    lid,
+    lid: normalizedLid,
     profilePicUrl,
     email,
     isGroup,

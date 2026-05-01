@@ -19,8 +19,28 @@ Sentry.init({ dsn: process.env.SENTRY_DSN });
 
 const app = express();
 
+const normalizeOrigin = (origin: string) => {
+  try {
+    return new URL(origin).origin;
+  } catch (_err) {
+    return origin.replace(/\/+$/, "");
+  }
+};
+
+const corsOrigins = Array.from(
+  new Set(
+    [
+      "https://samachat.com.br",
+      "https://app.samachat.com.br",
+      process.env.FRONTEND_URL
+    ]
+      .filter((origin): origin is string => Boolean(origin))
+      .map(origin => normalizeOrigin(origin.trim()))
+  )
+);
+
 const corsOptions = {
-  origin: ["https://samachat.com.br", "https://app.samachat.com.br"],
+  origin: corsOrigins,
   credentials: true,
   methods: ["OPTIONS", "GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"]

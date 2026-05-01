@@ -1,8 +1,9 @@
-import { useState, useEffect, useReducer, useCallback } from "react";
+import { useState, useEffect, useReducer, useCallback, useContext } from "react";
 import openSocket from "../../services/socket-io";
 import toastError from "../../errors/toastError";
 
 import api from "../../services/api";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const reducer = (state, action) => {
 	if (action.type === "LOAD_WHATSAPPS") {
@@ -56,8 +57,15 @@ const reducer = (state, action) => {
 const useWhatsApps = () => {
 	const [whatsApps, dispatch] = useReducer(reducer, []);
 	const [loading, setLoading] = useState(true);
+	const { isAuth, loading: authLoading } = useContext(AuthContext);
 
 	const loadWhatsApps = useCallback(async () => {
+		if (authLoading || !isAuth) {
+			dispatch({ type: "RESET" });
+			setLoading(false);
+			return;
+		}
+
 		setLoading(true);
 		try {
 			const { data } = await api.get("/whatsapp/");
@@ -67,13 +75,17 @@ const useWhatsApps = () => {
 			setLoading(false);
 			toastError(err);
 		}
-	}, []);
+	}, [authLoading, isAuth]);
 
 	useEffect(() => {
 		loadWhatsApps();
 	}, [loadWhatsApps]);
 
 	useEffect(() => {
+		if (authLoading || !isAuth) {
+			return undefined;
+		}
+
 		const socket = openSocket();
 
 		socket.on("whatsapp", data => {
@@ -97,7 +109,7 @@ const useWhatsApps = () => {
 		return () => {
 			socket.disconnect();
 		};
-	}, []);
+	}, [authLoading, isAuth]);
 
 	return { whatsApps, loading, reload: loadWhatsApps };
 };

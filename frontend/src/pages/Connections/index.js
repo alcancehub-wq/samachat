@@ -300,6 +300,7 @@ const Connections = () => {
 
 	const renderActionButtons = whatsApp => {
 		const isRestarting = Boolean(restartingIds[whatsApp.id]);
+		const hasQrCode = Boolean(whatsApp.qrcode);
 
 		return (
 			<>
@@ -320,7 +321,7 @@ const Connections = () => {
 							: "connections.buttons.reconnect"
 					)}
 				</Button>
-				{whatsApp.status === "qrcode" && (
+				{hasQrCode && (
 					<Button
 						size="small"
 						variant="contained"
@@ -368,7 +369,7 @@ const Connections = () => {
 						{i18n.t("connections.buttons.disconnect")}
 					</Button>
 				)}
-				{whatsApp.status === "OPENING" && (
+				{whatsApp.status === "OPENING" && !hasQrCode && (
 					<Button
 						size="small"
 						variant="outlined"
@@ -384,6 +385,8 @@ const Connections = () => {
 	};
 
 	const renderStatusToolTips = whatsApp => {
+		const hasQrCode = Boolean(whatsApp.qrcode);
+
 		return (
 			<div className={`${classes.customTableCell} ${classes.statusPill}`}>
 				{whatsApp.status === "DISCONNECTED" && (
@@ -394,10 +397,10 @@ const Connections = () => {
 						<SignalCellularConnectedNoInternet0Bar color="secondary" />
 					</CustomToolTip>
 				)}
-				{whatsApp.status === "OPENING" && (
+				{whatsApp.status === "OPENING" && !hasQrCode && (
 					<CircularProgress size={20} className={classes.buttonProgress} />
 				)}
-				{whatsApp.status === "qrcode" && (
+				{(whatsApp.status === "qrcode" || hasQrCode) && (
 					<CustomToolTip
 						title={i18n.t("connections.toolTips.qrcode.title")}
 						content={i18n.t("connections.toolTips.qrcode.content")}

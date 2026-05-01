@@ -1,6 +1,7 @@
+import { spawn } from "child_process";
 import { join } from "path";
 import { promisify } from "util";
-import { writeFile } from "fs";
+import { unlink, writeFile } from "fs";
 import * as Sentry from "@sentry/node";
 
 import { getIO } from "../libs/socket";
@@ -23,6 +24,58 @@ import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
 
 const writeFileAsync = promisify(writeFile);
+const unlinkAsync = promisify(unlink);
+
+const publicFolder = join(__dirname, "..", "..", "public");
+
+const runFfmpeg = (inputPath: string, outputPath: string): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const ffmpeg = spawn(
+      "ffmpeg",
+      ["-y", "-i", inputPath, "-vn", "-acodec", "libmp3lame", outputPath],
+      { stdio: "ignore" }
+    );
+
+    ffmpeg.once("error", reject);
+    ffmpeg.once("close", code => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+
+      reject(new Error(`ffmpeg exited with code ${code}`));
+    });
+  });
+
+const maybeTranscodeAudioToMp3 = async (
+  filename: string,
+  mediaPayload: MediaPayload
+): Promise<string> => {
+  const normalizedMimeType = mediaPayload.mimetype.toLowerCase();
+  if (
+    !normalizedMimeType.startsWith("audio/") ||
+    normalizedMimeType.includes("mpeg") ||
+    filename.toLowerCase().endsWith(".mp3")
+  ) {
+    return filename;
+  }
+
+  const inputPath = join(publicFolder, filename);
+  const outputFilename = filename.replace(/\.[^.]+$/, ".mp3");
+  const outputPath = join(publicFolder, outputFilename);
+
+  try {
+    await runFfmpeg(inputPath, outputPath);
+    await unlinkAsync(inputPath).catch(() => undefined);
+    return outputFilename;
+  } catch (err) {
+    logger.warn(
+      { err, filename, mimetype: mediaPayload.mimetype },
+      "Failed to transcode inbound audio to mp3"
+    );
+    return filename;
+  }
+};
 
 export interface ContactPayload {
   name: string;
@@ -97,7 +150,7 @@ const saveMediaFile = async (mediaPayload: MediaPayload): Promise<string> => {
 
   try {
     await writeFileAsync(
-      join(__dirname, "..", "..", "public", filename),
+      join(publicFolder, filename),
       mediaPayload.data,
       "base64"
     );
@@ -106,7 +159,7 @@ const saveMediaFile = async (mediaPayload: MediaPayload): Promise<string> => {
     logger.error(err);
   }
 
-  return filename;
+  return maybeTranscodeAudioToMp3(filename, mediaPayload);
 };
 
 const processVcardMessage = async (

@@ -76,6 +76,14 @@ interface Session extends WASocket {
 const sessions = new Map<number, Session>();
 const stores = new Map<number, Store>();
 
+const hasSession = (sessionId: number): boolean => {
+  return sessions.has(sessionId);
+};
+
+const isSessionReady = (sessionId: number): boolean => {
+  return hasSession(sessionId);
+};
+
 const msgRetryCounterLRU = new LRUCache<string, number>({
   max: 5000,
   ttl: 600 * 1000,
@@ -1521,6 +1529,8 @@ const fetchChatMessages = async (
 
 export const WhaileysProvider: WhatsappProvider = {
   init,
+  hasSession,
+  isSessionReady,
   removeSession,
   logout,
   sendMessage,

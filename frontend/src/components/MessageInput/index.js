@@ -27,6 +27,7 @@ import {
   Switch,
 } from "@material-ui/core";
 import ClickAwayListener from "@material-ui/core/ClickAwayListener";
+import { toast } from "react-toastify";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -37,9 +38,28 @@ import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
 
 let mediaRecorder = null;
+let mediaStream = null;
 let audioChunks = [];
 let audioMimeType = "audio/ogg";
 let isStopping = false;
+
+const audioToastIds = {
+  permissionDenied: "messageInput-audio-permission-denied",
+  unsupported: "messageInput-audio-unsupported",
+  startError: "messageInput-audio-start-error",
+  sendError: "messageInput-audio-send-error",
+};
+
+const showAudioToast = (message, toastId) => {
+  toast.error(message, { toastId });
+};
+
+const stopMediaStream = () => {
+  if (!mediaStream) return;
+
+  mediaStream.getTracks().forEach(track => track.stop());
+  mediaStream = null;
+};
 
 const useStyles = makeStyles(theme => ({
   mainWrapper: {
@@ -236,6 +256,14 @@ const MessageInput = ({ ticketStatus }) => {
     };
   }, [ticketId, setReplyingMessage]);
 
+  const resetRecordingState = () => {
+    isStopping = false;
+    audioChunks = [];
+    setLoading(false);
+    setRecording(false);
+    stopMediaStream();
+  };
+
   const handleChangeInput = e => {
     setInputMessage(e.target.value);
     handleLoadQuickAnswer(e.target.value);
@@ -320,7 +348,28 @@ const MessageInput = ({ ticketStatus }) => {
 
   const handleStartRecording = async () => {
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        showAudioToast(
+          i18n.t("messagesInput.audioUnsupported"),
+          audioToastIds.unsupported
+        );
+        return;
+      }
+
+      const permissionStatus = await navigator.permissions
+        ?.query?.({ name: "microphone" })
+        .catch(() => null);
+
+      if (permissionStatus?.state === "denied") {
+        showAudioToast(
+          i18n.t("messagesInput.audioPermissionDenied"),
+          audioToastIds.permissionDenied
+        );
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStream = stream;
 
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
@@ -340,8 +389,6 @@ const MessageInput = ({ ticketStatus }) => {
         try {
           if (!audioChunks || audioChunks.length === 0) {
             console.error("Sem chunks — abortando envio");
-            isStopping = false;
-            setRecording(false);
             return;
           }
 
@@ -353,15 +400,18 @@ const MessageInput = ({ ticketStatus }) => {
             { type: audioMimeType }
           );
 
+          setLoading(true);
           await uploadMediaFiles([file]);
 
           window.dispatchEvent(new Event("refreshMessages"));
-          isStopping = false;
-          setRecording(false);
         } catch (err) {
           console.error("Erro ao enviar áudio:", err);
-          isStopping = false;
-          setRecording(false);
+          showAudioToast(
+            i18n.t("messagesInput.audioSendError"),
+            audioToastIds.sendError
+          );
+        } finally {
+          resetRecordingState();
         }
       };
 
@@ -369,6 +419,24 @@ const MessageInput = ({ ticketStatus }) => {
       setRecording(true);
     } catch (err) {
       console.error("Erro ao iniciar gravação:", err);
+      setLoading(false);
+      stopMediaStream();
+
+      if (
+        err?.name === "NotAllowedError" ||
+        err?.name === "PermissionDeniedError"
+      ) {
+        showAudioToast(
+          i18n.t("messagesInput.audioPermissionDenied"),
+          audioToastIds.permissionDenied
+        );
+        return;
+      }
+
+      showAudioToast(
+        i18n.t("messagesInput.audioStartError"),
+        audioToastIds.startError
+      );
     }
   };
 
@@ -396,6 +464,7 @@ const MessageInput = ({ ticketStatus }) => {
     if (!mediaRecorder || isStopping) return;
     if (mediaRecorder.state !== "recording") return;
     isStopping = true;
+    setLoading(true);
     mediaRecorder.requestData();
     mediaRecorder.stop();
   };
@@ -403,8 +472,13 @@ const MessageInput = ({ ticketStatus }) => {
   const handleCancelAudio = () => {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
+    } else {
+      stopMediaStream();
     }
+
+    isStopping = false;
     audioChunks = [];
+    setLoading(false);
     setRecording(false);
   };
 

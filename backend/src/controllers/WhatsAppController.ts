@@ -104,7 +104,7 @@ export const remove = async (
   const { whatsappId } = req.params;
 
   await DeleteWhatsAppService(whatsappId);
-  whatsappProvider.removeSession(+whatsappId);
+  await whatsappProvider.removeSession(+whatsappId);
 
   const io = getIO();
   io.emit("whatsapp", {
@@ -122,8 +122,8 @@ export const restart = async (
   const { whatsappId } = req.params;
   const whatsapp = await ShowWhatsAppService(whatsappId);
 
-  whatsappProvider.removeSession(whatsapp.id);
-  StartWhatsAppSession(whatsapp);
+  await whatsappProvider.removeSession(whatsapp.id);
+  void StartWhatsAppSession(whatsapp);
 
   return res.status(200).json({ message: "Restarting session." });
 };

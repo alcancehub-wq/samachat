@@ -11,7 +11,9 @@ import { WhaileysProvider } from "./Implementations/whaileys";
 
 export interface WhatsappProvider {
   init(whatsapp: Whatsapp): Promise<void>;
-  removeSession(whatsappId: number): void;
+  hasSession(sessionId: number): boolean;
+  isSessionReady(sessionId: number): boolean;
+  removeSession(whatsappId: number): Promise<void>;
   logout(sessionId: number): Promise<void>;
   sendMessage(
     sessionId: number,

@@ -33,6 +33,9 @@ services:
       - ./backend/.wwebjs_auth/:/usr/src/app/.wwebjs_auth/
     networks:
       - whaticket
+    depends_on:
+      - mysql
+      - redis
 
   frontend:
     ports:
@@ -67,6 +70,12 @@ services:
       - TZ=${TZ}
     ports:
       - ${MYSQL_PORT:-3306}:3306
+    restart: always
+    networks:
+      - whaticket
+
+  redis:
+    image: redis:7
     restart: always
     networks:
       - whaticket

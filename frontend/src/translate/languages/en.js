@@ -1034,6 +1034,14 @@ const messages = {
         placeholderOpen: "Type a message or press ''/'' to use the registered quick responses",
         placeholderClosed: "Reopen or accept this ticket to send a message.",
         signMessage: "Sign",
+        audioPermissionDenied:
+          "The microphone is blocked in this browser. Allow microphone access to record audio.",
+        audioUnsupported:
+          "This browser does not support audio recording in SamaChat.",
+        audioStartError:
+          "Could not start audio recording right now.",
+        audioSendError:
+          "Could not send the recorded audio.",
       },
       contactDrawer: {
         header: "Contact details",
