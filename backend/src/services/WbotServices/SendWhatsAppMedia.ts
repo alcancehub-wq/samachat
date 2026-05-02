@@ -210,33 +210,27 @@ const SendWhatsAppMedia = async ({
     const storedNumber = ticket.contact.number || "";
     const storedLid = normalizeLid(ticket.contact.lid || "");
 
-    let normalizedNumber = await safeCheckNumber(whatsapp.id, storedNumber);
-    if (!normalizedNumber) {
-      console.warn("SendWhatsAppMedia number not validated on first try", {
-        ticketId: ticket.id,
-        whatsappId: whatsapp.id,
-        number: storedNumber,
-        lid: storedLid
-      });
-      triggerWhatsappSessionStart(whatsapp);
-      await ensureWhatsappReady(ticket, whatsapp);
-      normalizedNumber = await safeCheckNumber(whatsapp.id, storedNumber);
-    }
+    let normalizedNumber = "";
+    const resolveNormalizedChatId = async (): Promise<string | null> => {
+      if (ticket.isGroup || !storedNumber) {
+        return null;
+      }
 
-    const chatIdentifier = normalizedNumber || storedLid || storedNumber;
+      if (!normalizedNumber) {
+        normalizedNumber = await safeCheckNumber(whatsapp.id, storedNumber);
+      }
+
+      return normalizedNumber ? `${normalizedNumber}@c.us` : null;
+    };
+
+    const chatIdentifier = storedLid || storedNumber;
 
     if (!chatIdentifier) {
       throw new AppError("ERR_WAPP_INVALID_CONTACT");
     }
 
-    if (normalizedNumber && normalizedNumber !== storedNumber) {
-      await ticket.contact.update({ number: normalizedNumber });
-    }
-
-    const chatId = ticket.isGroup
+    let chatId = ticket.isGroup
       ? `${chatIdentifier}@g.us`
-      : normalizedNumber
-      ? `${normalizedNumber}@c.us`
       : storedLid ||
         (chatIdentifier.includes("@") ? chatIdentifier : `${chatIdentifier}@c.us`);
 
@@ -268,14 +262,12 @@ const SendWhatsAppMedia = async ({
         !/^.*\.(jpe?g|png|gif)?$/i.exec(mediaInput.filename)
     };
 
+    const sendWithChatId = async (targetChatId: string): Promise<ProviderMessage> =>
+      whatsappProvider.sendMedia(whatsapp.id, targetChatId, mediaInput, mediaOptions);
+
     let sentMessage: ProviderMessage;
     try {
-      sentMessage = await whatsappProvider.sendMedia(
-        whatsapp.id,
-        chatId,
-        mediaInput,
-        mediaOptions
-      );
+      sentMessage = await sendWithChatId(chatId);
     } catch (err) {
       if (isNoLidError(err)) {
         if (storedLid && chatId !== storedLid) {
@@ -285,20 +277,22 @@ const SendWhatsAppMedia = async ({
             number: storedNumber,
             lid: storedLid
           });
-          sentMessage = await whatsappProvider.sendMedia(
-            whatsapp.id,
-            storedLid,
-            mediaInput,
-            mediaOptions
-          );
+          chatId = storedLid;
+          sentMessage = await sendWithChatId(chatId);
         } else {
-          console.warn("SendWhatsAppMedia blocked by No LID for user", {
-            ticketId: ticket.id,
-            whatsappId: ticket.whatsappId,
-            number: storedNumber,
-            lid: storedLid
-          });
-          throw new AppError("ERR_WAPP_INVALID_CONTACT");
+          const normalizedChatId = await resolveNormalizedChatId();
+          if (normalizedChatId && normalizedChatId !== chatId) {
+            chatId = normalizedChatId;
+            sentMessage = await sendWithChatId(chatId);
+          } else {
+            console.warn("SendWhatsAppMedia blocked by No LID for user", {
+              ticketId: ticket.id,
+              whatsappId: ticket.whatsappId,
+              number: storedNumber,
+              lid: storedLid
+            });
+            throw new AppError("ERR_WAPP_INVALID_CONTACT");
+          }
         }
       }
       if (err instanceof AppError && err.message === "ERR_WAPP_NOT_INITIALIZED") {
@@ -310,13 +304,27 @@ const SendWhatsAppMedia = async ({
         await ensureWhatsappSession(ticket, true);
         await ensureWhatsappReady(ticket, whatsapp);
         await sleep(2000);
-        sentMessage = await whatsappProvider.sendMedia(
-          whatsapp.id,
-          chatId,
-          mediaInput,
-          mediaOptions
-        );
+        sentMessage = await sendWithChatId(chatId);
       } else if (!(err instanceof AppError)) {
+        const normalizedChatId = await resolveNormalizedChatId();
+        if (normalizedChatId && normalizedChatId !== chatId) {
+          try {
+            chatId = normalizedChatId;
+            sentMessage = await sendWithChatId(chatId);
+            await ticket.update({ lastMessage: body || media.filename });
+            if (normalizedNumber && normalizedNumber !== storedNumber) {
+              await ticket.contact.update({ number: normalizedNumber });
+            }
+            fs.unlinkSync(media.path);
+            if (convertedPath) {
+              fs.unlinkSync(convertedPath);
+            }
+            return sentMessage;
+          } catch (normalizedErr) {
+            err = normalizedErr;
+          }
+        }
+
         console.warn("SendWhatsAppMedia failed, restarting session", {
           ticketId: ticket.id,
           whatsappId: whatsapp.id,
@@ -326,18 +334,16 @@ const SendWhatsAppMedia = async ({
         await ensureWhatsappSession(ticket, true);
         await ensureWhatsappReady(ticket, whatsapp);
         await sleep(2000);
-        sentMessage = await whatsappProvider.sendMedia(
-          whatsapp.id,
-          chatId,
-          mediaInput,
-          mediaOptions
-        );
+        sentMessage = await sendWithChatId(chatId);
       } else {
         throw err;
       }
     }
 
     await ticket.update({ lastMessage: body || media.filename });
+    if (normalizedNumber && normalizedNumber !== storedNumber) {
+      await ticket.contact.update({ number: normalizedNumber });
+    }
 
     fs.unlinkSync(media.path);
     if (convertedPath) {
