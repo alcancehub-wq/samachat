@@ -29,10 +29,30 @@ import TicketTagsModal from "../TicketTagsModal";
 const useStyles = makeStyles(theme => ({
 	ticket: {
 		position: "relative",
+		margin: theme.spacing(0.85, 1.25),
+		padding: theme.spacing(1.35, 1.5, 1.15, 2),
+		borderRadius: theme.shape.borderRadius + 2,
+		border: `1px solid ${theme.palette.divider}`,
+		backgroundColor: theme.palette.background.paper,
+		boxShadow: "0 10px 22px rgba(15, 23, 42, 0.05)",
+		alignItems: "flex-start",
+		transition: "transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease",
+		"&:hover": {
+			transform: "translateY(-1px)",
+			boxShadow: "0 16px 30px rgba(15, 23, 42, 0.08)",
+			borderColor: "rgba(229, 57, 53, 0.14)",
+			backgroundColor: "rgba(255, 255, 255, 0.98)",
+		},
+		"&.Mui-selected": {
+			backgroundColor: "rgba(229, 57, 53, 0.08)",
+			borderColor: "rgba(229, 57, 53, 0.18)",
+			boxShadow: "0 18px 34px rgba(198, 40, 40, 0.10)",
+		},
 	},
 
 	pendingTicket: {
 		cursor: "unset",
+		opacity: 0.98,
 	},
 
 	noTicketsDiv: {
@@ -61,46 +81,59 @@ const useStyles = makeStyles(theme => ({
 	contactNameWrapper: {
 		display: "flex",
 		justifyContent: "space-between",
+		alignItems: "flex-start",
+		gap: theme.spacing(1),
 	},
 
 	lastMessageTime: {
 		justifySelf: "flex-end",
+		fontSize: "0.74rem",
+		fontWeight: 600,
+		whiteSpace: "nowrap",
 	},
 
 	closedBadge: {
 		alignSelf: "center",
 		justifySelf: "flex-end",
-		marginRight: 32,
+		marginRight: 8,
 		marginLeft: "auto",
 	},
 
 	contactLastMessage: {
-		paddingRight: 20,
+		paddingRight: 16,
+		fontSize: "0.83rem",
+		lineHeight: 1.45,
 	},
 
 	newMessagesCount: {
 		alignSelf: "center",
-		marginRight: 8,
+		marginRight: 2,
 		marginLeft: "auto",
 	},
 
 	badgeStyle: {
 		color: "white",
 		backgroundColor: green[500],
+		fontWeight: 700,
+		boxShadow: "0 6px 12px rgba(46, 125, 50, 0.22)",
 	},
 
 	acceptButton: {
 		position: "absolute",
-		left: "50%",
+		right: 16,
+		bottom: 14,
+		left: "auto",
 	},
 
 	ticketQueueColor: {
 		flex: "none",
-		width: "8px",
+		width: "6px",
 		height: "100%",
 		position: "absolute",
 		top: "0%",
 		left: "0%",
+		borderTopLeftRadius: theme.shape.borderRadius + 2,
+		borderBottomLeftRadius: theme.shape.borderRadius + 2,
 	},
 
 	userTag: {
@@ -108,32 +141,58 @@ const useStyles = makeStyles(theme => ({
 		marginRight: 5,
 		right: 5,
 		bottom: 5,
-		background: "#3b82f6",
+		background: theme.palette.background.default,
+		color: theme.palette.text.primary,
+		border: `1px solid ${theme.palette.divider}`,
+		boxShadow: "0 1px 2px rgba(15, 23, 42, 0.05)",
+		padding: "3px 8px",
+		borderRadius: 999,
+		fontSize: "0.7rem",
+		fontWeight: 600,
+	},
+	contactAvatar: {
+		width: 46,
+		height: 46,
+		border: `1px solid ${theme.palette.divider}`,
+		boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
+	},
+	contactName: {
+		fontWeight: 700,
+		fontSize: "0.95rem",
+		lineHeight: 1.2,
+	},
+	closedStatus: {
+		padding: "4px 8px",
+		borderRadius: 999,
+		fontSize: "0.68rem",
+		fontWeight: 700,
+		textTransform: "uppercase",
+		letterSpacing: "0.04em",
 		color: "#ffffff",
-		border: "1px solid rgba(15, 23, 42, 0.1)",
-		padding: 1,
-		paddingLeft: 5,
-		paddingRight: 5,
-		borderRadius: 10,
-		fontSize: "0.9em"
+		backgroundColor: theme.palette.text.secondary,
 	},
 	tagList: {
 		display: "flex",
 		flexWrap: "wrap",
-		gap: 4,
-		marginTop: 4,
+		gap: 6,
+		marginTop: 6,
+		alignItems: "center",
 	},
 	tagChip: {
-		background: "#f1f5f9",
-		color: "#0f172a",
-		borderRadius: 10,
-		padding: "2px 6px",
+		background: "rgba(229, 57, 53, 0.08)",
+		color: theme.palette.text.primary,
+		borderRadius: 999,
+		padding: "4px 8px",
 		fontSize: "0.7rem",
 		whiteSpace: "nowrap",
+		fontWeight: 600,
+		border: "1px solid rgba(229, 57, 53, 0.10)",
 	},
 	tagButton: {
 		padding: 6,
 		marginLeft: 6,
+		backgroundColor: theme.palette.background.default,
+		border: `1px solid ${theme.palette.divider}`,
 	},
 }));
 
@@ -204,7 +263,7 @@ const TicketListItem = ({ ticket }) => {
 					></span>
 				</Tooltip>
 				<ListItemAvatar>
-					<Avatar src={ticket?.contact?.profilePicUrl} />
+					<Avatar src={ticket?.contact?.profilePicUrl} className={classes.contactAvatar} />
 				</ListItemAvatar>
 				<ListItemText
 					disableTypography
@@ -215,6 +274,7 @@ const TicketListItem = ({ ticket }) => {
 								component="span"
 								variant="body2"
 								color="textPrimary"
+								className={classes.contactName}
 							>
 								{ticket.contact.name}
 							</Typography>
@@ -223,6 +283,7 @@ const TicketListItem = ({ ticket }) => {
 									className={classes.closedBadge}
 									badgeContent={"closed"}
 									color="primary"
+									classes={{ badge: classes.closedStatus }}
 								/>
 							)}
 							{ticket.lastMessage && (
@@ -308,7 +369,7 @@ const TicketListItem = ({ ticket }) => {
 					</ButtonWithSpinner>
 				)}
 			</ListItem>
-			<Divider variant="inset" component="li" />
+			<Divider variant="inset" component="li" style={{ marginLeft: 32, marginRight: 24, opacity: 0.45 }} />
 		</React.Fragment>
 	);
 };

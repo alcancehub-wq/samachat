@@ -31,11 +31,20 @@ const useStyles = makeStyles((theme) => ({
     borderBottomRightRadius: 0,
     backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,
+    backgroundImage: "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(250,251,252,0.96) 100%)",
   },
   tabsHeader: {
     flex: "none",
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
+    padding: theme.spacing(1.25, 1.25, 0.5),
+    "& .MuiTabs-flexContainer": {
+      gap: theme.spacing(0.75),
+    },
+    "& .MuiTabs-indicator": {
+      height: 4,
+      borderRadius: 999,
+    },
   },
   settingsIcon: {
     alignSelf: "center",
@@ -43,8 +52,10 @@ const useStyles = makeStyles((theme) => ({
     padding: 8,
   },
   tab: {
-    minWidth: 120,
-    width: 120,
+    minWidth: 112,
+    width: 112,
+    minHeight: 46,
+    borderRadius: theme.shape.borderRadius,
   },
   ticketOptionsBox: {
     display: "flex",
@@ -52,7 +63,7 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     background: theme.palette.background.paper,
     padding: theme.spacing(1.5),
-    gap: theme.spacing(1),
+    gap: theme.spacing(1.25),
     borderBottom: `1px solid ${theme.palette.divider}`,
     flexWrap: "wrap",
   },
@@ -60,12 +71,14 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     background: theme.palette.background.default,
     display: "flex",
-    borderRadius: 10,
-    padding: theme.spacing(0.5, 1),
+    borderRadius: theme.shape.borderRadius,
+    padding: theme.spacing(0.85, 1.25),
     marginRight: theme.spacing(1),
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: "inset 0 1px 2px rgba(15, 23, 42, 0.03)",
   },
   searchIcon: {
-    color: "grey",
+    color: theme.palette.text.secondary,
     marginLeft: 6,
     marginRight: 6,
     alignSelf: "center",
@@ -73,12 +86,12 @@ const useStyles = makeStyles((theme) => ({
   searchInput: {
     flex: 1,
     border: "none",
-    borderRadius: 10,
+    borderRadius: theme.shape.borderRadius,
     color: theme.palette.text.primary,
     backgroundColor: theme.palette.background.default,
   },
   badge: {
-    right: "-10px",
+    right: "-8px",
   },
   show: {
     display: "block",
@@ -88,6 +101,16 @@ const useStyles = makeStyles((theme) => ({
   },
   newTicketButton: {
     whiteSpace: "nowrap",
+    paddingLeft: theme.spacing(2),
+    paddingRight: theme.spacing(2),
+    boxShadow: "0 10px 24px rgba(198, 40, 40, 0.16)",
+  },
+  showAllControl: {
+    marginLeft: 0,
+    padding: theme.spacing(0.35, 1),
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default,
   },
 }));
 
@@ -214,6 +237,7 @@ const TicketsManager = () => {
               perform="tickets-manager:showall"
               yes={() => (
                 <FormControlLabel
+                  className={classes.showAllControl}
                   label={i18n.t("tickets.buttons.showAll")}
                   labelPlacement="start"
                   control={
