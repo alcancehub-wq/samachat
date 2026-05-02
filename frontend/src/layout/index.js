@@ -51,7 +51,7 @@ const useStyles = makeStyles((theme) => ({
     zIndex: theme.zIndex.drawer + 1,
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
-    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
+    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)",
   },
   menuButton: {
     color: theme.palette.text.primary,
@@ -70,24 +70,40 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(1.5),
     minWidth: 0,
     flex: "1 1 auto",
+    position: "relative",
   },
   brandAccent: {
-    width: 10,
-    height: 32,
+    width: 12,
+    height: 40,
     borderRadius: 999,
     background: "linear-gradient(180deg, #E53935 0%, #C62828 100%)",
-    boxShadow: "0 8px 18px rgba(198, 40, 40, 0.22)",
+    boxShadow: "0 12px 22px rgba(198, 40, 40, 0.24)",
     [theme.breakpoints.down("sm")]: {
       display: "none",
     },
   },
+  brandTextBlock: {
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+  },
   title: {
     color: theme.palette.text.primary,
     fontWeight: 700,
-    letterSpacing: -0.2,
+    fontSize: "1.55rem",
+    lineHeight: 1.05,
+    letterSpacing: -0.4,
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
+  },
+  brandSubtitle: {
+    color: theme.palette.text.secondary,
+    fontSize: "0.78rem",
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    marginTop: theme.spacing(0.25),
   },
   topActions: {
     display: "flex",
@@ -103,8 +119,8 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flex: 1,
     minHeight: 0,
-    gap: theme.spacing(1.5),
-    padding: theme.spacing(1.5),
+    gap: theme.spacing(2),
+    padding: theme.spacing(2),
     boxSizing: "border-box",
     [theme.breakpoints.down("sm")]: {
       gap: 0,
@@ -122,7 +138,7 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.background.paper,
     borderRight: `1px solid ${theme.palette.divider}`,
     borderRadius: theme.shape.borderRadius + 4,
-    boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+    boxShadow: "0 18px 36px rgba(15, 23, 42, 0.08)",
     overflowY: "auto",
     scrollbarWidth: "none",
     "-ms-overflow-style": "none",
@@ -144,7 +160,7 @@ const useStyles = makeStyles((theme) => ({
     width: 84,
   },
   drawerList: {
-    padding: theme.spacing(1.5, 0),
+    padding: theme.spacing(2, 0),
   },
   content: {
     flex: 1,
@@ -154,6 +170,7 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
     backgroundColor: theme.palette.background.default,
     borderRadius: theme.shape.borderRadius + 4,
+    backgroundImage: "radial-gradient(circle at top right, rgba(229, 57, 53, 0.05), transparent 22%)",
     [theme.breakpoints.down("sm")]: {
       borderRadius: 0,
     },
@@ -185,7 +202,7 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.text.secondary,
   },
   searchField: {
-    width: 340,
+    width: 380,
     [theme.breakpoints.down("sm")]: {
       width: 170,
     },
@@ -194,6 +211,7 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.shape.borderRadius,
     backgroundColor: theme.palette.background.default,
     boxShadow: "inset 0 1px 2px rgba(15, 23, 42, 0.03)",
+    border: `1px solid ${theme.palette.divider}`,
   },
   searchAdornment: {
     color: theme.palette.text.secondary,
@@ -276,9 +294,14 @@ const LoggedInLayout = ({ children }) => {
 
           <div className={classes.brandBlock}>
             <div className={classes.brandAccent} />
-            <Typography component="h1" variant="h6" className={classes.title}>
-              SamaChat
-            </Typography>
+            <div className={classes.brandTextBlock}>
+              <Typography component="h1" variant="h6" className={classes.title}>
+                SamaChat
+              </Typography>
+              <Typography component="span" className={classes.brandSubtitle}>
+                Workspace CRM
+              </Typography>
+            </div>
           </div>
 
           <TextField
