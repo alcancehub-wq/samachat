@@ -40,38 +40,66 @@ import rules from "../rules";
 
 const useStyles = makeStyles((theme) => ({
   menuHeader: {
-    padding: theme.spacing(2, 2, 1.5),
+    padding: theme.spacing(1, 2, 2),
   },
   menuTitle: {
     fontWeight: 700,
-    fontSize: "1.05rem",
-    letterSpacing: 0.2,
+    fontSize: "0.98rem",
+    letterSpacing: -0.1,
+    color: theme.palette.text.primary,
   },
   searchField: {
     marginTop: theme.spacing(1.25),
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: theme.palette.background.default,
+    },
   },
   groupHeader: {
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
-    paddingTop: theme.spacing(0.5),
-    paddingBottom: theme.spacing(0.5),
+    margin: theme.spacing(0.5, 1.5),
+    paddingLeft: theme.spacing(1.25),
+    paddingRight: theme.spacing(1.25),
+    paddingTop: theme.spacing(0.75),
+    paddingBottom: theme.spacing(0.75),
+    borderRadius: theme.shape.borderRadius,
+    backgroundColor: "transparent",
+    "&:hover": {
+      backgroundColor: "rgba(15, 23, 42, 0.04)",
+    },
   },
   groupTitle: {
     fontWeight: 700,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
+    letterSpacing: 0.8,
     fontSize: "0.7rem",
     color: theme.palette.text.secondary,
   },
   groupDivider: {
-    margin: theme.spacing(1, 0),
+    margin: theme.spacing(1.25, 1.75),
   },
   listItemRoot: {
-    paddingTop: theme.spacing(0.6),
-    paddingBottom: theme.spacing(0.6),
+    borderRadius: theme.shape.borderRadius,
+    minHeight: 42,
+    paddingTop: theme.spacing(1),
+    paddingBottom: theme.spacing(1),
+    paddingRight: theme.spacing(1.5),
+    transition: "background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease",
+    color: theme.palette.text.primary,
+    "&:hover": {
+      backgroundColor: "rgba(229, 57, 53, 0.08)",
+    },
+    "& .MuiListItemIcon-root": {
+      color: theme.palette.text.secondary,
+      minWidth: 38,
+    },
+    "& .MuiListItemText-primary": {
+      fontSize: "0.92rem",
+      fontWeight: 500,
+      color: theme.palette.text.primary,
+    },
   },
   nestedItem: {
-    paddingLeft: theme.spacing(3.5),
+    margin: theme.spacing(0.35, 1.5),
+    paddingLeft: theme.spacing(1.5),
   },
   nestedItemSecondary: {
     paddingLeft: theme.spacing(5),
@@ -80,11 +108,16 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+    gap: theme.spacing(0.5),
   },
   collapsedItem: {
     justifyContent: "center",
     paddingLeft: 0,
     paddingRight: 0,
+    margin: theme.spacing(0.25, 0),
+    width: 52,
+    height: 52,
+    borderRadius: theme.shape.borderRadius,
   },
   collapsedIcon: {
     minWidth: 0,
@@ -92,6 +125,13 @@ const useStyles = makeStyles((theme) => ({
   },
   collapsedText: {
     display: "none",
+  },
+  menuItemIcon: {
+    minWidth: 38,
+    color: theme.palette.text.secondary,
+  },
+  menuItemText: {
+    margin: 0,
   },
 }));
 
@@ -379,8 +419,8 @@ const MainListItems = (props) => {
         icon={menuConfig[key].icon}
         className={className}
         denseClassName={classes.listItemRoot}
-        iconClassName={!isDrawerOpen ? classes.collapsedIcon : undefined}
-        textClassName={!isDrawerOpen ? classes.collapsedText : undefined}
+        iconClassName={clsx(classes.menuItemIcon, !isDrawerOpen && classes.collapsedIcon)}
+        textClassName={clsx(classes.menuItemText, !isDrawerOpen && classes.collapsedText)}
       />
     );
   };
