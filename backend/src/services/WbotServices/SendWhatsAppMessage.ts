@@ -156,30 +156,26 @@ const SendWhatsAppMessage = async ({
   const storedNumber = ticket.contact.number || "";
   const storedLid = normalizeLid(ticket.contact.lid || "");
 
-  let normalizedNumber = await safeCheckNumber(whatsapp.id, storedNumber);
-  if (!normalizedNumber) {
-    logger.warn("SendWhatsAppMessage number not validated on first try", {
-      ticketId: ticket.id,
-      whatsappId: whatsapp.id,
-      number: storedNumber,
-      lid: storedLid
-    });
-    triggerWhatsappSessionStart(whatsapp);
-    await ensureWhatsappReady(ticket, whatsapp);
-    normalizedNumber = await safeCheckNumber(whatsapp.id, storedNumber);
-  }
+  let normalizedNumber = "";
+  const resolveNormalizedChatId = async (): Promise<string | null> => {
+    if (ticket.isGroup || !storedNumber) {
+      return null;
+    }
 
-  const chatIdentifier = normalizedNumber || storedLid || storedNumber;
+    if (!normalizedNumber) {
+      normalizedNumber = await safeCheckNumber(whatsapp.id, storedNumber);
+    }
+
+    return normalizedNumber ? `${normalizedNumber}@c.us` : null;
+  };
+
+  const chatIdentifier = storedLid || storedNumber;
 
   if (!chatIdentifier) {
     throw new AppError("ERR_WAPP_INVALID_CONTACT");
   }
 
-  if (normalizedNumber && normalizedNumber !== storedNumber) {
-    await ticket.contact.update({ number: normalizedNumber });
-  }
-
-  if (!normalizedNumber && chatIdentifier !== storedNumber) {
+  if (chatIdentifier !== storedNumber) {
     logger.warn("SendWhatsAppMessage using non-phone chat identifier fallback", {
       ticketId: ticket.id,
       whatsappId: whatsapp.id,
@@ -189,28 +185,24 @@ const SendWhatsAppMessage = async ({
     });
   }
 
-  const chatId = ticket.isGroup
+  let chatId = ticket.isGroup
     ? `${chatIdentifier}@g.us`
-    : normalizedNumber
-    ? `${normalizedNumber}@c.us`
     : storedLid ||
       (chatIdentifier.includes("@") ? chatIdentifier : `${chatIdentifier}@c.us`);
   const payload = formatBody(body, ticket.contact);
+
+  const sendWithChatId = async (targetChatId: string): Promise<ProviderMessage> =>
+    whatsappProvider.sendMessage(ticket.whatsappId as number, targetChatId, payload, {
+      quotedMessageId: quotedMsg?.id,
+      quotedMessageFromMe: quotedMsg?.fromMe,
+      linkPreview: false
+    });
 
   try {
     let sentMessage: ProviderMessage;
 
     try {
-      sentMessage = await whatsappProvider.sendMessage(
-        ticket.whatsappId as number,
-        chatId,
-        payload,
-        {
-          quotedMessageId: quotedMsg?.id,
-          quotedMessageFromMe: quotedMsg?.fromMe,
-          linkPreview: false
-        }
-      );
+      sentMessage = await sendWithChatId(chatId);
     } catch (err) {
       if (err instanceof AppError && err.message === "ERR_WAPP_NOT_INITIALIZED") {
         logger.warn("SendWhatsAppMessage session not initialized", {
@@ -220,16 +212,7 @@ const SendWhatsAppMessage = async ({
         await ensureWhatsappSession(ticket, true);
         await ensureWhatsappReady(ticket, whatsapp);
         await sleep(2000);
-        sentMessage = await whatsappProvider.sendMessage(
-          ticket.whatsappId as number,
-          chatId,
-          payload,
-          {
-            quotedMessageId: quotedMsg?.id,
-            quotedMessageFromMe: quotedMsg?.fromMe,
-            linkPreview: false
-          }
-        );
+        sentMessage = await sendWithChatId(chatId);
       } else if (isNoLidError(err)) {
         if (storedLid && chatId !== storedLid) {
           logger.warn("SendWhatsAppMessage retrying with LID chat id", {
@@ -238,44 +221,51 @@ const SendWhatsAppMessage = async ({
             number: ticket.contact.number,
             lid: storedLid
           });
-          sentMessage = await whatsappProvider.sendMessage(
-            ticket.whatsappId as number,
-            storedLid,
-            payload,
-            {
-              quotedMessageId: quotedMsg?.id,
-              quotedMessageFromMe: quotedMsg?.fromMe,
-              linkPreview: false
-            }
-          );
+          chatId = storedLid;
+          sentMessage = await sendWithChatId(chatId);
         } else {
-          logger.warn("SendWhatsAppMessage blocked by No LID for user", {
-            ticketId: ticket.id,
-            whatsappId: ticket.whatsappId,
-            number: ticket.contact.number,
-            lid: storedLid
-          });
-          throw new AppError("ERR_WAPP_INVALID_CONTACT");
+          const normalizedChatId = await resolveNormalizedChatId();
+          if (normalizedChatId && normalizedChatId !== chatId) {
+            chatId = normalizedChatId;
+            sentMessage = await sendWithChatId(chatId);
+          } else {
+            logger.warn("SendWhatsAppMessage blocked by No LID for user", {
+              ticketId: ticket.id,
+              whatsappId: ticket.whatsappId,
+              number: ticket.contact.number,
+              lid: storedLid
+            });
+            throw new AppError("ERR_WAPP_INVALID_CONTACT");
+          }
         }
       } else {
+        const normalizedChatId = await resolveNormalizedChatId();
+        if (normalizedChatId && normalizedChatId !== chatId) {
+          try {
+            chatId = normalizedChatId;
+            sentMessage = await sendWithChatId(chatId);
+            await ticket.update({ lastMessage: body });
+            if (normalizedNumber && normalizedNumber !== storedNumber) {
+              await ticket.contact.update({ number: normalizedNumber });
+            }
+            return sentMessage;
+          } catch (normalizedErr) {
+            err = normalizedErr;
+          }
+        }
+
         logger.warn(err, "SendWhatsAppMessage failed, restarting session");
         triggerWhatsappSessionStart(whatsapp);
         await ensureWhatsappReady(ticket, whatsapp);
         await sleep(2000);
-        sentMessage = await whatsappProvider.sendMessage(
-          ticket.whatsappId as number,
-          chatId,
-          payload,
-          {
-            quotedMessageId: quotedMsg?.id,
-            quotedMessageFromMe: quotedMsg?.fromMe,
-            linkPreview: false
-          }
-        );
+        sentMessage = await sendWithChatId(chatId);
       }
     }
 
     await ticket.update({ lastMessage: body });
+    if (normalizedNumber && normalizedNumber !== storedNumber) {
+      await ticket.contact.update({ number: normalizedNumber });
+    }
     return sentMessage;
   } catch (err) {
     if (err instanceof AppError && err.message === "ERR_WAPP_INVALID_CONTACT") {
