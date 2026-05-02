@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
+import clsx from "clsx";
 import { Link as RouterLink } from "react-router-dom";
 
 import List from "@material-ui/core/List";
@@ -40,38 +41,71 @@ import rules from "../rules";
 
 const useStyles = makeStyles((theme) => ({
   menuHeader: {
-    padding: theme.spacing(2, 2, 1.5),
+    padding: theme.spacing(1.25, 2, 2.25),
   },
   menuTitle: {
     fontWeight: 700,
-    fontSize: "1.05rem",
-    letterSpacing: 0.2,
+    fontSize: "0.98rem",
+    letterSpacing: -0.1,
+    color: theme.palette.text.primary,
   },
   searchField: {
     marginTop: theme.spacing(1.25),
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: theme.palette.background.default,
+    },
   },
   groupHeader: {
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
-    paddingTop: theme.spacing(0.5),
-    paddingBottom: theme.spacing(0.5),
+    margin: theme.spacing(0.5, 1.25),
+    paddingLeft: theme.spacing(1.25),
+    paddingRight: theme.spacing(1.25),
+    paddingTop: theme.spacing(0.65),
+    paddingBottom: theme.spacing(0.65),
+    borderRadius: theme.shape.borderRadius + 2,
+    backgroundColor: theme.palette.background.default,
+    border: `1px solid ${theme.palette.divider}`,
+    "&:hover": {
+      backgroundColor: "rgba(229, 57, 53, 0.05)",
+    },
   },
   groupTitle: {
     fontWeight: 700,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
+    letterSpacing: 0.8,
     fontSize: "0.7rem",
     color: theme.palette.text.secondary,
   },
-  groupDivider: {
-    margin: theme.spacing(1, 0),
-  },
   listItemRoot: {
+    borderRadius: theme.shape.borderRadius + 2,
+    minHeight: 42,
     paddingTop: theme.spacing(0.6),
     paddingBottom: theme.spacing(0.6),
+    paddingRight: theme.spacing(1.5),
+    transition: "background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease",
+    color: theme.palette.text.primary,
+    border: "1px solid transparent",
+    "&:hover": {
+      backgroundColor: "rgba(229, 57, 53, 0.08)",
+      borderColor: "rgba(229, 57, 53, 0.10)",
+      boxShadow: "0 8px 18px rgba(15, 23, 42, 0.06)",
+      transform: "translateY(-1px)",
+    },
+    "& .MuiListItemIcon-root": {
+      color: theme.palette.text.secondary,
+      minWidth: 34,
+      "& svg": {
+        fontSize: "1.22rem",
+      },
+    },
+    "& .MuiListItemText-primary": {
+      fontSize: "0.8rem",
+      fontWeight: 500,
+      color: theme.palette.text.primary,
+    },
   },
   nestedItem: {
-    paddingLeft: theme.spacing(3.5),
+    margin: theme.spacing(0.15, 1.25),
+    paddingLeft: theme.spacing(1.5),
   },
   nestedItemSecondary: {
     paddingLeft: theme.spacing(5),
@@ -80,18 +114,39 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+    gap: theme.spacing(0.25),
   },
   collapsedItem: {
     justifyContent: "center",
+    alignItems: "center",
     paddingLeft: 0,
     paddingRight: 0,
+    margin: theme.spacing(0.15, 0),
+    width: 48,
+    height: 48,
+    borderRadius: theme.shape.borderRadius + 2,
+    border: "none",
+    backgroundColor: "transparent",
   },
   collapsedIcon: {
     minWidth: 0,
     margin: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    "& svg": {
+      fontSize: "1.18rem",
+    },
   },
   collapsedText: {
     display: "none",
+  },
+  menuItemIcon: {
+    minWidth: 34,
+    color: theme.palette.text.secondary,
+  },
+  menuItemText: {
+    margin: 0,
   },
 }));
 
@@ -145,7 +200,6 @@ const MainListItems = (props) => {
   const [openGroups, setOpenGroups] = useState({
     operation: true,
     communication: true,
-    ai: true,
     governance: true,
   });
 
@@ -202,7 +256,6 @@ const MainListItems = (props) => {
 
   const canAccessCommunication = canAccessAny([
     "campaigns.view",
-    "informatives.view",
     "dialogs.view",
     "flows.view",
     "tags.view",
@@ -210,18 +263,10 @@ const MainListItems = (props) => {
   ]);
 
 
-  const canAccessAi = canAccessAny([
-    "openai.settings.view",
-    "openai.use",
-    "openai.logs.view",
-    "settings.view",
-  ]);
-
   const canAccessGovernance = canAccessAny([
     "users.view",
     "sectors.view",
     "connections.view",
-    "integrations.view",
     "settings.view",
   ]);
 
@@ -279,12 +324,6 @@ const MainListItems = (props) => {
       to: "/campaigns",
       icon: <FlagOutlinedIcon />,
       permissions: ["campaigns.view"],
-    },
-    informatives: {
-      labelKey: "mainDrawer.listItems.informatives",
-      to: "/informatives",
-      icon: <AnnouncementOutlinedIcon />,
-      permissions: ["informatives.view"],
     },
     dialogs: {
       labelKey: "mainDrawer.listItems.dialogs",
@@ -379,8 +418,8 @@ const MainListItems = (props) => {
         icon={menuConfig[key].icon}
         className={className}
         denseClassName={classes.listItemRoot}
-        iconClassName={!isDrawerOpen ? classes.collapsedIcon : undefined}
-        textClassName={!isDrawerOpen ? classes.collapsedText : undefined}
+        iconClassName={clsx(classes.menuItemIcon, !isDrawerOpen && classes.collapsedIcon)}
+        textClassName={clsx(classes.menuItemText, !isDrawerOpen && classes.collapsedText)}
       />
     );
   };
@@ -492,7 +531,6 @@ const MainListItems = (props) => {
               )}
             </List>
           </Collapse>
-          {isDrawerOpen && <Divider className={classes.groupDivider} />}
         </>
       )}
 
@@ -524,10 +562,6 @@ const MainListItems = (props) => {
                 isDrawerOpen ? classes.nestedItem : classes.collapsedItem
               )}
               {renderMenuItem(
-                "informatives",
-                isDrawerOpen ? classes.nestedItem : classes.collapsedItem
-              )}
-              {renderMenuItem(
                 "dialogs",
                 isDrawerOpen ? classes.nestedItem : classes.collapsedItem
               )}
@@ -545,44 +579,6 @@ const MainListItems = (props) => {
               )}
             </List>
           </Collapse>
-          {isDrawerOpen && <Divider className={classes.groupDivider} />}
-        </>
-      )}
-
-      {canAccessAi && (
-        <>
-          {isDrawerOpen && (
-            <ListItem
-              button
-              onClick={() => toggleGroup("ai")}
-              className={classes.groupHeader}
-            >
-              <ListItemText
-                primary={i18n.t("mainDrawer.groups.aiIntegrations")}
-                primaryTypographyProps={{ className: classes.groupTitle }}
-              />
-            </ListItem>
-          )}
-          <Collapse
-            in={isDrawerOpen ? openGroups.ai : true}
-            timeout="auto"
-            unmountOnExit
-          >
-            <List
-              disablePadding
-              className={!isDrawerOpen ? classes.collapsedList : undefined}
-            >
-              {renderMenuItem(
-                "openai",
-                isDrawerOpen ? classes.nestedItem : classes.collapsedItem
-              )}
-              {renderMenuItem(
-                "apiAdmin",
-                isDrawerOpen ? classes.nestedItem : classes.collapsedItem
-              )}
-            </List>
-          </Collapse>
-          {isDrawerOpen && <Divider className={classes.groupDivider} />}
         </>
       )}
 
@@ -619,10 +615,6 @@ const MainListItems = (props) => {
               )}
               {renderMenuItem(
                 "connections",
-                isDrawerOpen ? classes.nestedItem : classes.collapsedItem
-              )}
-              {renderMenuItem(
-                "integrations",
                 isDrawerOpen ? classes.nestedItem : classes.collapsedItem
               )}
               {renderMenuItem(

@@ -12,6 +12,7 @@ import TableRow from "@material-ui/core/TableRow";
 import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
 import Avatar from "@material-ui/core/Avatar";
+import Checkbox from "@material-ui/core/Checkbox";
 import Typography from "@material-ui/core/Typography";
 import WhatsAppIcon from "@material-ui/icons/WhatsApp";
 import SearchIcon from "@material-ui/icons/Search";
@@ -82,9 +83,15 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles((theme) => ({
+  pageContainer: {
+    padding: theme.spacing(0.5, 0.5, 0),
+    [theme.breakpoints.down("sm")]: {
+      padding: theme.spacing(0.5, 0.5, 0),
+    },
+  },
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1.5, 2),
+    padding: theme.spacing(1.25, 1, 0),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
     borderRadius: 16,
@@ -99,24 +106,87 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "flex-start",
     gap: theme.spacing(0.5),
   },
+  headerTopRow: {
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing(1.5),
+    flexWrap: "wrap",
+  },
+  headerBottomRow: {
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: theme.spacing(1),
+    flexWrap: "wrap",
+    [theme.breakpoints.down("sm")]: {
+      justifyContent: "flex-start",
+    },
+  },
   pageSubtitle: {
-    color: "#64748b",
-    fontSize: "0.95rem",
+    color: "#111111",
+    fontSize: "0.9375rem",
+    fontWeight: 300,
+    lineHeight: 1.6,
   },
   searchField: {
-    minWidth: 280,
+    minWidth: 320,
     backgroundColor: "#ffffff",
+    marginLeft: "auto",
+    [theme.breakpoints.down("sm")]: {
+      minWidth: "100%",
+      marginLeft: 0,
+    },
   },
   searchInputRoot: {
     borderRadius: 12,
     backgroundColor: "#ffffff",
   },
   actionButton: {
-    borderRadius: 12,
+    borderRadius: 4,
     textTransform: "none",
     fontWeight: 600,
-    boxShadow: "0 12px 20px rgba(37, 99, 235, 0.22)",
-    backgroundImage: "linear-gradient(135deg, #2563eb 0%, #38bdf8 100%)",
+    boxShadow: "none !important",
+    backgroundImage: "none !important",
+    backgroundColor: "#FF1919 !important",
+    color: "#FFFFFF !important",
+    "&:hover": {
+      backgroundColor: "#E11414 !important",
+      boxShadow: "none !important",
+    },
+    "&.Mui-disabled": {
+      backgroundColor: "rgba(255, 25, 25, 0.18) !important",
+      color: "rgba(255, 255, 255, 0.72) !important",
+    },
+  },
+  importButton: {
+    marginLeft: "auto",
+    [theme.breakpoints.down("sm")]: {
+      marginLeft: 0,
+    },
+  },
+  bulkActionButton: {
+    borderRadius: 4,
+    textTransform: "none",
+    fontWeight: 600,
+    boxShadow: "none !important",
+    backgroundColor: "#FF1919 !important",
+    color: "#FFFFFF !important",
+    "&:hover": {
+      backgroundColor: "#E11414 !important",
+      boxShadow: "none !important",
+    },
+    "&.Mui-disabled": {
+      backgroundColor: "rgba(255, 25, 25, 0.18) !important",
+      color: "rgba(255, 255, 255, 0.72) !important",
+    },
+  },
+  selectionInfo: {
+    fontSize: "0.86rem",
+    color: theme.palette.text.secondary,
+    fontWeight: 600,
   },
   table: {
     borderCollapse: "separate",
@@ -126,7 +196,7 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: "transparent",
   },
   tableHeadCell: {
-    color: "#64748b",
+    color: "#111111",
     fontWeight: 700,
     fontSize: "0.78rem",
     textTransform: "uppercase",
@@ -156,6 +226,17 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing(1.25),
     paddingBottom: theme.spacing(1.25),
   },
+  leadingCell: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+  },
+  checkboxCell: {
+    width: 72,
+  },
+  checkboxRoot: {
+    padding: theme.spacing(0.5),
+  },
   avatar: {
     width: 36,
     height: 36,
@@ -182,9 +263,11 @@ const Contacts = () => {
   const [searchParam, setSearchParam] = useState("");
   const [contacts, dispatch] = useReducer(reducer, []);
   const [selectedContactId, setSelectedContactId] = useState(null);
+  const [selectedContactIds, setSelectedContactIds] = useState([]);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [deletingContact, setDeletingContact] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState("import");
   const [hasMore, setHasMore] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
 
@@ -199,6 +282,7 @@ const Contacts = () => {
   useEffect(() => {
     dispatch({ type: "RESET" });
     setPageNumber(1);
+    setSelectedContactIds([]);
   }, [searchParam, selectedTagIds]);
 
   useEffect(() => {
@@ -257,6 +341,23 @@ const Contacts = () => {
     setContactModalOpen(false);
   };
 
+  const handleToggleContactSelection = (contactId) => {
+    setSelectedContactIds((prevState) =>
+      prevState.includes(contactId)
+        ? prevState.filter((id) => id !== contactId)
+        : [...prevState, contactId]
+    );
+  };
+
+  const handleToggleSelectAll = (event) => {
+    if (event.target.checked) {
+      setSelectedContactIds(contacts.map((contact) => contact.id));
+      return;
+    }
+
+    setSelectedContactIds([]);
+  };
+
   const handleSaveTicket = async (contactId) => {
     if (!contactId) return;
     setLoading(true);
@@ -286,6 +387,20 @@ const Contacts = () => {
       toastError(err);
     }
     setDeletingContact(null);
+    setSelectedContactIds((prevState) => prevState.filter((id) => id !== contactId));
+    setSearchParam("");
+    setPageNumber(1);
+  };
+
+  const handleDeleteSelectedContacts = async () => {
+    try {
+      await Promise.all(selectedContactIds.map((contactId) => api.delete(`/contacts/${contactId}`)));
+      toast.success("Contatos selecionados excluídos.");
+      setSelectedContactIds([]);
+    } catch (err) {
+      toastError(err);
+    }
+    setDeletingContact(null);
     setSearchParam("");
     setPageNumber(1);
   };
@@ -303,6 +418,35 @@ const Contacts = () => {
     setPageNumber((prevState) => prevState + 1);
   };
 
+  const handleOpenImportConfirmation = () => {
+    setDeletingContact(null);
+    setConfirmAction("import");
+    setConfirmOpen(true);
+  };
+
+  const handleOpenBulkDeleteConfirmation = () => {
+    setDeletingContact(null);
+    setConfirmAction("bulk-delete");
+    setConfirmOpen(true);
+  };
+
+  const handleOpenSingleDeleteConfirmation = (contact) => {
+    setDeletingContact(contact);
+    setConfirmAction("single-delete");
+    setConfirmOpen(true);
+  };
+
+  const handleEditSelectedContact = () => {
+    if (selectedContactIds.length !== 1) {
+      return;
+    }
+
+    hadleEditContact(selectedContactIds[0]);
+  };
+
+  const allVisibleSelected = contacts.length > 0 && selectedContactIds.length === contacts.length;
+  const someVisibleSelected = selectedContactIds.length > 0 && !allVisibleSelected;
+
   const handleScroll = (e) => {
     if (!hasMore || loading) return;
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
@@ -312,7 +456,7 @@ const Contacts = () => {
   };
 
   return (
-    <MainContainer className={classes.mainContainer}>
+    <MainContainer className={classes.pageContainer}>
       <ContactModal
         open={contactModalOpen}
         onClose={handleCloseContactModal}
@@ -321,32 +465,36 @@ const Contacts = () => {
       ></ContactModal>
       <ConfirmationModal
         title={
-          deletingContact
-            ? `${i18n.t("contacts.confirmationModal.deleteTitle")} ${
-                deletingContact.name
-              }?`
+          confirmAction === "single-delete"
+            ? `${i18n.t("contacts.confirmationModal.deleteTitle")} ${deletingContact?.name}?`
+            : confirmAction === "bulk-delete"
+            ? `Excluir ${selectedContactIds.length} contatos selecionados?`
             : `${i18n.t("contacts.confirmationModal.importTitlte")}`
         }
         open={confirmOpen}
         onClose={setConfirmOpen}
         onConfirm={(e) =>
-          deletingContact
+          confirmAction === "single-delete"
             ? handleDeleteContact(deletingContact.id)
+            : confirmAction === "bulk-delete"
+            ? handleDeleteSelectedContacts()
             : handleimportContact()
         }
       >
-        {deletingContact
+        {confirmAction === "single-delete"
           ? `${i18n.t("contacts.confirmationModal.deleteMessage")}`
+          : confirmAction === "bulk-delete"
+          ? "Os contatos selecionados serão excluídos em lote."
           : `${i18n.t("contacts.confirmationModal.importMessage")}`}
       </ConfirmationModal>
       <MainHeader>
-        <div className={classes.headerTitle}>
-          <Title>Clientes</Title>
-          <Typography className={classes.pageSubtitle}>
-            {i18n.t("contacts.subtitle")}
-          </Typography>
-        </div>
-        <MainHeaderButtonsWrapper>
+        <div className={classes.headerTopRow}>
+          <div className={classes.headerTitle}>
+            <Title>Clientes</Title>
+            <Typography className={classes.pageSubtitle}>
+              {i18n.t("contacts.subtitle")}
+            </Typography>
+          </div>
           <TextField
             placeholder={i18n.t("contacts.searchPlaceholder")}
             type="search"
@@ -362,23 +510,50 @@ const Contacts = () => {
               ),
             }}
           />
+        </div>
+        <MainHeaderButtonsWrapper className={classes.headerBottomRow}>
           <TagSelect
             selectedTagIds={selectedTagIds}
             onChange={setSelectedTagIds}
             label={i18n.t("contacts.tagsFilter")}
             style={{ minWidth: 200 }}
           />
+          {selectedContactIds.length > 0 && (
+            <Typography className={classes.selectionInfo}>
+              {selectedContactIds.length} selecionado(s)
+            </Typography>
+          )}
           <Button
             variant="contained"
-            color="primary"
-            className={classes.actionButton}
-            onClick={(e) => setConfirmOpen(true)}
+            className={classes.bulkActionButton}
+            disabled={selectedContactIds.length !== 1}
+            onClick={handleEditSelectedContact}
+          >
+            Editar selecionado
+          </Button>
+          <Can
+            role={user.profile}
+            perform="contacts-page:deleteContact"
+            yes={() => (
+              <Button
+                variant="contained"
+                className={classes.bulkActionButton}
+                disabled={selectedContactIds.length === 0}
+                onClick={handleOpenBulkDeleteConfirmation}
+              >
+                Excluir selecionados
+              </Button>
+            )}
+          />
+          <Button
+            variant="contained"
+            className={`${classes.actionButton} ${classes.importButton}`}
+            onClick={handleOpenImportConfirmation}
           >
             {i18n.t("contacts.buttons.import")}
           </Button>
           <Button
             variant="contained"
-            color="primary"
             className={classes.actionButton}
             onClick={handleOpenContactModal}
           >
@@ -394,7 +569,15 @@ const Contacts = () => {
         <Table size="small" className={classes.table}>
           <TableHead className={classes.tableHead}>
             <TableRow>
-              <TableCell padding="checkbox" />
+              <TableCell padding="checkbox" className={classes.tableHeadCell}>
+                <Checkbox
+                  indeterminate={someVisibleSelected}
+                  checked={allVisibleSelected}
+                  onChange={handleToggleSelectAll}
+                  classes={{ root: classes.checkboxRoot }}
+                  color="primary"
+                />
+              </TableCell>
               <TableCell className={classes.tableHeadCell}>
                 {i18n.t("contacts.table.name")}
               </TableCell>
@@ -413,8 +596,16 @@ const Contacts = () => {
             <>
               {contacts.map((contact) => (
                 <TableRow key={contact.id} className={classes.tableRow}>
-                  <TableCell style={{ paddingRight: 0 }} className={classes.tableCell}>
-                    {<Avatar src={contact.profilePicUrl} className={classes.avatar} />}
+                  <TableCell className={classes.tableCell}>
+                    <div className={classes.leadingCell}>
+                      <Checkbox
+                        checked={selectedContactIds.includes(contact.id)}
+                        onChange={() => handleToggleContactSelection(contact.id)}
+                        classes={{ root: classes.checkboxRoot }}
+                        color="primary"
+                      />
+                      <Avatar src={contact.profilePicUrl} className={classes.avatar} />
+                    </div>
                   </TableCell>
                   <TableCell className={classes.tableCell}>{contact.name}</TableCell>
                   <TableCell align="center" className={classes.tableCell}>
@@ -445,10 +636,7 @@ const Contacts = () => {
                         <IconButton
                           size="small"
                           className={classes.actionIconButton}
-                          onClick={(e) => {
-                            setConfirmOpen(true);
-                            setDeletingContact(contact);
-                          }}
+                          onClick={() => handleOpenSingleDeleteConfirmation(contact)}
                         >
                           <DeleteOutlineIcon />
                         </IconButton>

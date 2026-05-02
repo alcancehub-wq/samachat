@@ -4,6 +4,7 @@ import openSocket from "../../services/socket-io";
 
 import {
   Button,
+  Checkbox,
   Chip,
   IconButton,
   InputAdornment,
@@ -38,6 +39,7 @@ import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_FLOWS") {
@@ -69,22 +71,7 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles(theme => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles
-  },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5)
-  },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem"
-  },
+  ...buildMenuListPageStyles(theme),
   tableActions: {
     whiteSpace: "nowrap"
   },
@@ -100,11 +87,13 @@ const Flows = () => {
   const [flows, dispatch] = useReducer(reducer, []);
   const [loading, setLoading] = useState(false);
   const [searchParam, setSearchParam] = useState("");
+  const [selectedFlowIds, setSelectedFlowIds] = useState([]);
 
   const [flowModalOpen, setFlowModalOpen] = useState(false);
   const [selectedFlow, setSelectedFlow] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deletingFlow, setDeletingFlow] = useState(null);
+  const [deleteTargetIds, setDeleteTargetIds] = useState([]);
 
   useEffect(() => {
     setLoading(true);
@@ -126,6 +115,10 @@ const Flows = () => {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
+  }, [searchParam]);
+
+  useEffect(() => {
+    setSelectedFlowIds([]);
   }, [searchParam]);
 
   useEffect(() => {
@@ -166,15 +159,62 @@ const Flows = () => {
   };
 
   const handleDeleteFlow = async flowId => {
+    return handleDeleteFlows([flowId]);
+  };
+
+  const handleDeleteFlows = async flowIds => {
     try {
-      await api.delete(`/flows/${flowId}`);
+      await Promise.all(flowIds.map(flowId => api.delete(`/flows/${flowId}`)));
       toast.success(i18n.t("flows.toasts.deleted"));
     } catch (err) {
       toastError(err);
     }
 
     setDeletingFlow(null);
+    setDeleteTargetIds([]);
+    setSelectedFlowIds([]);
   };
+
+  const handleToggleFlowSelection = flowId => {
+    setSelectedFlowIds(prevState =>
+      prevState.includes(flowId)
+        ? prevState.filter(id => id !== flowId)
+        : [...prevState, flowId]
+    );
+  };
+
+  const handleToggleSelectAll = event => {
+    if (event.target.checked) {
+      setSelectedFlowIds(flows.map(flow => flow.id));
+      return;
+    }
+
+    setSelectedFlowIds([]);
+  };
+
+  const handleEditSelectedFlow = () => {
+    if (selectedFlowIds.length !== 1) return;
+    const flow = flows.find(item => item.id === selectedFlowIds[0]);
+    if (flow) {
+      handleEditFlow(flow);
+    }
+  };
+
+  const handleOpenSingleDeleteConfirmation = flow => {
+    setDeletingFlow(flow);
+    setDeleteTargetIds([flow.id]);
+    setConfirmOpen(true);
+  };
+
+  const handleOpenBulkDeleteConfirmation = () => {
+    if (selectedFlowIds.length === 0) return;
+    setDeletingFlow(null);
+    setDeleteTargetIds(selectedFlowIds);
+    setConfirmOpen(true);
+  };
+
+  const allVisibleSelected = flows.length > 0 && selectedFlowIds.length === flows.length;
+  const someVisibleSelected = selectedFlowIds.length > 0 && !allVisibleSelected;
 
   const handlePublishFlow = async flow => {
     try {
@@ -198,12 +238,14 @@ const Flows = () => {
     <MainContainer>
       <ConfirmationModal
         title={
-          deletingFlow &&
-          `${i18n.t("flows.confirmationModal.deleteTitle")} ${deletingFlow.name}?`
+          deleteTargetIds.length > 1
+            ? `Excluir ${deleteTargetIds.length} fluxos selecionados?`
+            : deletingFlow &&
+              `${i18n.t("flows.confirmationModal.deleteTitle")} ${deletingFlow.name}?`
         }
         open={confirmOpen}
         onClose={setConfirmOpen}
-        onConfirm={() => handleDeleteFlow(deletingFlow.id)}
+        onConfirm={() => handleDeleteFlows(deleteTargetIds)}
       >
         {i18n.t("flows.confirmationModal.deleteMessage")}
       </ConfirmationModal>
@@ -220,12 +262,35 @@ const Flows = () => {
           </Typography>
         </div>
         <MainHeaderButtonsWrapper>
+          {selectedFlowIds.length > 0 && (
+            <Typography className={classes.bulkSelectionInfo}>
+              {selectedFlowIds.length} selecionado(s)
+            </Typography>
+          )}
+          <Button
+            variant="contained"
+            className={classes.bulkActionButton}
+            disabled={selectedFlowIds.length !== 1}
+            onClick={handleEditSelectedFlow}
+          >
+            Editar selecionado
+          </Button>
+          <Button
+            variant="outlined"
+            className={classes.bulkDeleteButton}
+            disabled={selectedFlowIds.length === 0}
+            onClick={handleOpenBulkDeleteConfirmation}
+          >
+            Excluir selecionados
+          </Button>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("flows.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <Search style={{ color: "gray" }} />
@@ -233,20 +298,28 @@ const Flows = () => {
               )
             }}
           />
-          <Button variant="contained" color="primary" onClick={handleOpenFlowModal}>
+          <Button variant="contained" color="primary" className={classes.actionButton} onClick={handleOpenFlowModal}>
             {i18n.t("flows.buttons.add")}
           </Button>
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper className={classes.mainPaper} variant="outlined">
-        <Table size="small">
-          <TableHead>
+        <Table size="small" className={classes.table}>
+          <TableHead className={classes.tableHead}>
             <TableRow>
-              <TableCell>{i18n.t("flows.table.name")}</TableCell>
-              <TableCell>{i18n.t("flows.table.status")}</TableCell>
-              <TableCell>{i18n.t("flows.table.active")}</TableCell>
-              <TableCell>{i18n.t("flows.table.updatedAt")}</TableCell>
-              <TableCell align="center">{i18n.t("flows.table.actions")}</TableCell>
+              <TableCell padding="checkbox" className={classes.tableHeadCell}>
+                <Checkbox
+                  indeterminate={someVisibleSelected}
+                  checked={allVisibleSelected}
+                  onChange={handleToggleSelectAll}
+                  classes={{ root: classes.checkboxRoot }}
+                />
+              </TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("flows.table.name")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("flows.table.status")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("flows.table.active")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("flows.table.updatedAt")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("flows.table.actions")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -254,9 +327,16 @@ const Flows = () => {
               <TableRowSkeleton columns={5} />
             ) : (
               flows.map(flow => (
-                <TableRow key={flow.id}>
-                  <TableCell>{flow.name}</TableCell>
-                  <TableCell>
+                <TableRow key={flow.id} className={classes.tableRow}>
+                  <TableCell className={`${classes.tableCell} ${classes.checkboxCell}`}>
+                    <Checkbox
+                      checked={selectedFlowIds.includes(flow.id)}
+                      onChange={() => handleToggleFlowSelection(flow.id)}
+                      classes={{ root: classes.checkboxRoot }}
+                    />
+                  </TableCell>
+                  <TableCell className={classes.tableCell}>{flow.name}</TableCell>
+                  <TableCell className={classes.tableCell}>
                     <Chip
                       className={classes.statusChip}
                       color={flow.status === "published" ? "primary" : "default"}
@@ -267,7 +347,7 @@ const Flows = () => {
                       }
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className={classes.tableCell}>
                     <Chip
                       className={classes.statusChip}
                       color={flow.isActive ? "primary" : "default"}
@@ -278,25 +358,23 @@ const Flows = () => {
                       }
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className={classes.tableCell}>
                     {flow.updatedAt ? new Date(flow.updatedAt).toLocaleString() : "-"}
                   </TableCell>
-                  <TableCell align="center" className={classes.tableActions}>
-                    <IconButton size="small" onClick={() => handlePublishFlow(flow)}>
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.tableActions}`}>
+                    <IconButton className={classes.actionIconButton} size="small" onClick={() => handlePublishFlow(flow)}>
                       <Publish />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleEditFlow(flow)}>
+                    <IconButton className={classes.actionIconButton} size="small" onClick={() => handleEditFlow(flow)}>
                       <Edit />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleOpenBuilder(flow.id)}>
+                    <IconButton className={classes.actionIconButton} size="small" onClick={() => handleOpenBuilder(flow.id)}>
                       <Launch />
                     </IconButton>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
-                      onClick={() => {
-                        setDeletingFlow(flow);
-                        setConfirmOpen(true);
-                      }}
+                      onClick={() => handleOpenSingleDeleteConfirmation(flow)}
                     >
                       <DeleteOutline />
                     </IconButton>

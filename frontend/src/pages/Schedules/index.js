@@ -45,6 +45,7 @@ import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_SCHEDULES") {
@@ -76,35 +77,62 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles(theme => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles
+  ...buildMenuListPageStyles(theme),
+  tabsPaper: {
+    marginBottom: theme.spacing(1),
+    borderRadius: 12,
+    border: "1px solid rgba(15, 23, 42, 0.08)",
+    boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
+    backgroundColor: "#ffffff",
+    overflow: "hidden",
   },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5)
+  tabsRoot: {
+    minHeight: 0,
+    "& .MuiTabs-indicator": {
+      display: "none",
+    },
   },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem"
+  tabRoot: {
+    minHeight: 48,
+    textTransform: "none",
+    fontWeight: 700,
+    color: "#6B7280",
+    "&$tabSelected": {
+      color: "#111111",
+    },
   },
+  tabSelected: {},
   filtersPaper: {
     padding: theme.spacing(1),
     marginBottom: theme.spacing(1),
     display: "flex",
     flexWrap: "wrap",
-    gap: theme.spacing(1)
+    gap: theme.spacing(1),
+    borderRadius: 16,
+    border: "1px solid rgba(15, 23, 42, 0.08)",
+    boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
+    backgroundColor: "#ffffff",
   },
   tableActions: {
     whiteSpace: "nowrap"
   },
   chip: {
-    textTransform: "capitalize"
-  }
+    textTransform: "capitalize",
+    fontWeight: 700,
+    borderRadius: 8,
+  },
+  sentChip: {
+    backgroundColor: "#2E7D32",
+    color: "#FFFFFF",
+  },
+  redChip: {
+    backgroundColor: "#FF1919",
+    color: "#FFFFFF",
+  },
+  pendingChip: {
+    backgroundColor: "rgba(17, 17, 17, 0.08)",
+    color: "#111111",
+  },
 }));
 
 const Schedules = () => {
@@ -266,8 +294,7 @@ const Schedules = () => {
     if (status === "sent") {
       return (
         <Chip
-          className={classes.chip}
-          color="primary"
+          className={`${classes.chip} ${classes.sentChip}`}
           label={i18n.t("schedules.status.sent")}
         />
       );
@@ -276,8 +303,7 @@ const Schedules = () => {
     if (status === "canceled") {
       return (
         <Chip
-          className={classes.chip}
-          color="secondary"
+          className={`${classes.chip} ${classes.redChip}`}
           label={i18n.t("schedules.status.canceled")}
         />
       );
@@ -286,8 +312,7 @@ const Schedules = () => {
     if (status === "failed") {
       return (
         <Chip
-          className={classes.chip}
-          color="secondary"
+          className={`${classes.chip} ${classes.redChip}`}
           label={i18n.t("schedules.status.failed")}
         />
       );
@@ -295,7 +320,7 @@ const Schedules = () => {
 
     return (
       <Chip
-        className={classes.chip}
+        className={`${classes.chip} ${classes.pendingChip}`}
         label={i18n.t("schedules.status.pending")}
       />
     );
@@ -335,11 +360,13 @@ const Schedules = () => {
         </div>
         <MainHeaderButtonsWrapper>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("schedules.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <Search style={{ color: "gray" }} />
@@ -347,27 +374,24 @@ const Schedules = () => {
               )
             }}
           />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleOpenScheduleModal}
-          >
+          <Button variant="contained" color="primary" className={classes.actionButton} onClick={handleOpenScheduleModal}>
             {i18n.t("schedules.buttons.add")}
           </Button>
         </MainHeaderButtonsWrapper>
       </MainHeader>
-      <Paper elevation={0} square>
+      <Paper elevation={0} className={classes.tabsPaper}>
         <Tabs
+          className={classes.tabsRoot}
           value={statusFilter}
           onChange={(event, value) => setStatusFilter(value)}
-          indicatorColor="primary"
-          textColor="primary"
+          textColor="inherit"
+          TabIndicatorProps={{ style: { display: "none" } }}
         >
-          <Tab value="all" label={i18n.t("schedules.status.all")} />
-          <Tab value="pending" label={i18n.t("schedules.status.pending")} />
-          <Tab value="sent" label={i18n.t("schedules.status.sent")} />
-          <Tab value="canceled" label={i18n.t("schedules.status.canceled")} />
-          <Tab value="failed" label={i18n.t("schedules.status.failed")} />
+          <Tab classes={{ root: classes.tabRoot, selected: classes.tabSelected }} value="all" label={i18n.t("schedules.status.all")} />
+          <Tab classes={{ root: classes.tabRoot, selected: classes.tabSelected }} value="pending" label={i18n.t("schedules.status.pending")} />
+          <Tab classes={{ root: classes.tabRoot, selected: classes.tabSelected }} value="sent" label={i18n.t("schedules.status.sent")} />
+          <Tab classes={{ root: classes.tabRoot, selected: classes.tabSelected }} value="canceled" label={i18n.t("schedules.status.canceled")} />
+          <Tab classes={{ root: classes.tabRoot, selected: classes.tabSelected }} value="failed" label={i18n.t("schedules.status.failed")} />
         </Tabs>
       </Paper>
       <Paper className={classes.filtersPaper} variant="outlined">
@@ -408,16 +432,16 @@ const Schedules = () => {
         />
       </Paper>
       <Paper className={classes.mainPaper} variant="outlined">
-        <Table size="small">
-          <TableHead>
+        <Table size="small" className={classes.table}>
+          <TableHead className={classes.tableHead}>
             <TableRow>
-              <TableCell>{i18n.t("schedules.table.body")}</TableCell>
-              <TableCell>{i18n.t("schedules.table.status")}</TableCell>
-              <TableCell>{i18n.t("schedules.table.scheduledAt")}</TableCell>
-              <TableCell>{i18n.t("schedules.table.assignee")}</TableCell>
-              <TableCell>{i18n.t("schedules.table.ticket")}</TableCell>
-              <TableCell>{i18n.t("schedules.table.contact")}</TableCell>
-              <TableCell align="center">
+              <TableCell className={classes.tableHeadCell}>{i18n.t("schedules.table.body")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("schedules.table.status")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("schedules.table.scheduledAt")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("schedules.table.assignee")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("schedules.table.ticket")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("schedules.table.contact")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("schedules.table.actions")}
               </TableCell>
             </TableRow>
@@ -427,18 +451,19 @@ const Schedules = () => {
               <TableRowSkeleton columns={7} />
             ) : (
               schedules.map(schedule => (
-                <TableRow key={schedule.id}>
-                  <TableCell>{schedule.body}</TableCell>
-                  <TableCell>{renderStatusChip(schedule.status)}</TableCell>
-                  <TableCell>{formatDate(schedule.scheduledAt)}</TableCell>
-                  <TableCell>{schedule.assignee?.name || "-"}</TableCell>
-                  <TableCell>
+                <TableRow key={schedule.id} className={classes.tableRow}>
+                  <TableCell className={classes.tableCell}>{schedule.body}</TableCell>
+                  <TableCell className={classes.tableCell}>{renderStatusChip(schedule.status)}</TableCell>
+                  <TableCell className={classes.tableCell}>{formatDate(schedule.scheduledAt)}</TableCell>
+                  <TableCell className={classes.tableCell}>{schedule.assignee?.name || "-"}</TableCell>
+                  <TableCell className={classes.tableCell}>
                     {schedule.ticketId ? `#${schedule.ticketId}` : "-"}
                   </TableCell>
-                  <TableCell>{schedule.contact?.name || "-"}</TableCell>
-                  <TableCell align="center" className={classes.tableActions}>
+                  <TableCell className={classes.tableCell}>{schedule.contact?.name || "-"}</TableCell>
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.tableActions}`}>
                     {schedule.status === "pending" && (
                       <IconButton
+                        className={classes.actionIconButton}
                         size="small"
                         onClick={() => handleCancelSchedule(schedule)}
                         title={i18n.t("schedules.buttons.cancel")}
@@ -449,6 +474,7 @@ const Schedules = () => {
                     {(schedule.status === "canceled" ||
                       schedule.status === "failed") && (
                       <IconButton
+                        className={classes.actionIconButton}
                         size="small"
                         onClick={() => handleReopenSchedule(schedule)}
                         title={i18n.t("schedules.buttons.reopen")}
@@ -457,18 +483,21 @@ const Schedules = () => {
                       </IconButton>
                     )}
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={() => handleEditSchedule(schedule)}
                     >
                       <Edit />
                     </IconButton>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={() => handleOpenTicket(schedule.ticketId)}
                     >
                       <Launch />
                     </IconButton>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={() => {
                         setDeletingSchedule(schedule);

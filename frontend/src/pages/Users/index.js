@@ -30,6 +30,7 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import UserModal from "../../components/UserModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_USERS") {
@@ -76,22 +77,7 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles((theme) => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
-  },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5),
-  },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem",
-  },
+  ...buildMenuListPageStyles(theme),
 }));
 
 const Users = () => {
@@ -223,11 +209,13 @@ const Users = () => {
         </div>
         <MainHeaderButtonsWrapper>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("users.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon style={{ color: "gray" }} />
@@ -238,6 +226,7 @@ const Users = () => {
           <Button
             variant="contained"
             color="primary"
+            className={classes.actionButton}
             onClick={handleOpenUserModal}
           >
             {i18n.t("users.buttons.add")}
@@ -249,20 +238,20 @@ const Users = () => {
         variant="outlined"
         onScroll={handleScroll}
       >
-        <Table size="small">
-          <TableHead>
+        <Table size="small" className={classes.table}>
+          <TableHead className={classes.tableHead}>
             <TableRow>
-              <TableCell align="center">{i18n.t("users.table.name")}</TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("users.table.name")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("users.table.email")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("users.table.profile")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("users.table.whatsapp")}
               </TableCell>              
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("users.table.actions")}
               </TableCell>
             </TableRow>
@@ -270,17 +259,18 @@ const Users = () => {
           <TableBody>
             <>
               {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell align="center">{user.name}</TableCell>
-                  <TableCell align="center">{user.email}</TableCell>
-                  <TableCell align="center">
+                <TableRow key={user.id} className={classes.tableRow}>
+                  <TableCell align="center" className={classes.tableCell}>{user.name}</TableCell>
+                  <TableCell align="center" className={classes.tableCell}>{user.email}</TableCell>
+                  <TableCell align="center" className={classes.tableCell}>
                     {i18n.t(`users.profiles.${user.profile}`, {
                       defaultValue: user.profile,
                     })}
                   </TableCell>
-                  <TableCell align="center">{user.whatsapp?.name}</TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={classes.tableCell}>{user.whatsapp?.name}</TableCell>
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.actionsCell}`}>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={() => handleEditUser(user)}
                     >
@@ -288,6 +278,7 @@ const Users = () => {
                     </IconButton>
 
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={(e) => {
                         setConfirmModalOpen(true);

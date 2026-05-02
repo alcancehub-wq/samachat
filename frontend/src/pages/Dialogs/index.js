@@ -4,6 +4,7 @@ import openSocket from "../../services/socket-io";
 
 import {
   Button,
+  Checkbox,
   IconButton,
   makeStyles,
   Paper,
@@ -36,29 +37,10 @@ import DialogPreviewModal from "../../components/DialogPreviewModal";
 import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import SearchIcon from "@material-ui/icons/Search";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const useStyles = makeStyles(theme => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1.5, 2),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
-    borderRadius: 16,
-    border: "1px solid rgba(15, 23, 42, 0.08)",
-    boxShadow: "0 16px 28px rgba(15, 23, 42, 0.08)",
-    backgroundColor: "#ffffff",
-    backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-  },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5)
-  },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem"
-  }
+  ...buildMenuListPageStyles(theme)
 }));
 
 const reducer = (state, action) => {
@@ -110,14 +92,17 @@ const Dialogs = () => {
   const [dialogs, dispatch] = useReducer(reducer, []);
   const [loading, setLoading] = useState(false);
   const [searchParam, setSearchParam] = useState("");
+  const [selectedDialogIds, setSelectedDialogIds] = useState([]);
 
   const [dialogModalOpen, setDialogModalOpen] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [selectedDialog, setSelectedDialog] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [deleteTargetIds, setDeleteTargetIds] = useState([]);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
+    setSelectedDialogIds([]);
   }, [searchParam]);
 
   useEffect(() => {
@@ -173,17 +158,61 @@ const Dialogs = () => {
   const handleCloseConfirmationModal = () => {
     setConfirmModalOpen(false);
     setSelectedDialog(null);
+    setDeleteTargetIds([]);
   };
 
-  const handleDeleteDialog = async dialogId => {
+  const handleDeleteDialogs = async dialogIds => {
     try {
-      await api.delete(`/dialogs/${dialogId}`);
+      await Promise.all(dialogIds.map(dialogId => api.delete(`/dialogs/${dialogId}`)));
       toast.success(i18n.t("dialogs.toasts.deleted"));
     } catch (err) {
       toastError(err);
     }
     setSelectedDialog(null);
+    setDeleteTargetIds([]);
+    setSelectedDialogIds([]);
   };
+
+  const handleToggleDialogSelection = dialogId => {
+    setSelectedDialogIds(prevState =>
+      prevState.includes(dialogId)
+        ? prevState.filter(id => id !== dialogId)
+        : [...prevState, dialogId]
+    );
+  };
+
+  const handleToggleSelectAll = event => {
+    if (event.target.checked) {
+      setSelectedDialogIds(dialogs.map(dialog => dialog.id));
+      return;
+    }
+
+    setSelectedDialogIds([]);
+  };
+
+  const handleEditSelectedDialog = () => {
+    if (selectedDialogIds.length !== 1) return;
+    const dialog = dialogs.find(item => item.id === selectedDialogIds[0]);
+    if (dialog) {
+      handleEditDialog(dialog);
+    }
+  };
+
+  const handleOpenSingleDeleteConfirmation = dialog => {
+    setSelectedDialog(dialog);
+    setDeleteTargetIds([dialog.id]);
+    setConfirmModalOpen(true);
+  };
+
+  const handleOpenBulkDeleteConfirmation = () => {
+    if (selectedDialogIds.length === 0) return;
+    setSelectedDialog(null);
+    setDeleteTargetIds(selectedDialogIds);
+    setConfirmModalOpen(true);
+  };
+
+  const allVisibleSelected = dialogs.length > 0 && selectedDialogIds.length === dialogs.length;
+  const someVisibleSelected = selectedDialogIds.length > 0 && !allVisibleSelected;
 
   const handleDuplicateDialog = async dialogId => {
     try {
@@ -220,12 +249,14 @@ const Dialogs = () => {
     <MainContainer>
       <ConfirmationModal
         title={
-          selectedDialog &&
-          `${i18n.t("dialogs.confirmationModal.deleteTitle")} ${selectedDialog.name}?`
+          deleteTargetIds.length > 1
+            ? `Excluir ${deleteTargetIds.length} dialogos selecionados?`
+            : selectedDialog &&
+              `${i18n.t("dialogs.confirmationModal.deleteTitle")} ${selectedDialog.name}?`
         }
         open={confirmModalOpen}
         onClose={handleCloseConfirmationModal}
-        onConfirm={() => handleDeleteDialog(selectedDialog.id)}
+        onConfirm={() => handleDeleteDialogs(deleteTargetIds)}
       >
         {i18n.t("dialogs.confirmationModal.deleteMessage")}
       </ConfirmationModal>
@@ -247,12 +278,35 @@ const Dialogs = () => {
           </Typography>
         </div>
         <MainHeaderButtonsWrapper>
+          {selectedDialogIds.length > 0 && (
+            <Typography className={classes.bulkSelectionInfo}>
+              {selectedDialogIds.length} selecionado(s)
+            </Typography>
+          )}
+          <Button
+            variant="contained"
+            className={classes.bulkActionButton}
+            disabled={selectedDialogIds.length !== 1}
+            onClick={handleEditSelectedDialog}
+          >
+            Editar selecionado
+          </Button>
+          <Button
+            variant="outlined"
+            className={classes.bulkDeleteButton}
+            disabled={selectedDialogIds.length === 0}
+            onClick={handleOpenBulkDeleteConfirmation}
+          >
+            Excluir selecionados
+          </Button>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("dialogs.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon style={{ color: "gray" }} />
@@ -260,60 +314,74 @@ const Dialogs = () => {
               )
             }}
           />
-          <Button variant="contained" color="primary" onClick={handleOpenDialogModal}>
+          <Button variant="contained" color="primary" className={classes.actionButton} onClick={handleOpenDialogModal}>
             {i18n.t("dialogs.buttons.add")}
           </Button>
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper className={classes.mainPaper} variant="outlined">
-        <Table size="small">
-          <TableHead>
+        <Table size="small" className={classes.table}>
+          <TableHead className={classes.tableHead}>
             <TableRow>
-              <TableCell align="center">{i18n.t("dialogs.table.name")}</TableCell>
-              <TableCell align="center">{i18n.t("dialogs.table.status")}</TableCell>
-              <TableCell align="center">{i18n.t("dialogs.table.updatedAt")}</TableCell>
-              <TableCell align="center">{i18n.t("dialogs.table.actions")}</TableCell>
+              <TableCell padding="checkbox" className={classes.tableHeadCell}>
+                <Checkbox
+                  indeterminate={someVisibleSelected}
+                  checked={allVisibleSelected}
+                  onChange={handleToggleSelectAll}
+                  classes={{ root: classes.checkboxRoot }}
+                />
+              </TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("dialogs.table.name")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("dialogs.table.status")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("dialogs.table.updatedAt")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("dialogs.table.actions")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             <>
               {dialogs.map(dialog => (
-                <TableRow key={dialog.id}>
-                  <TableCell align="center">{dialog.name}</TableCell>
-                  <TableCell align="center">
+                <TableRow key={dialog.id} className={classes.tableRow}>
+                  <TableCell className={`${classes.tableCell} ${classes.checkboxCell}`}>
+                    <Checkbox
+                      checked={selectedDialogIds.includes(dialog.id)}
+                      onChange={() => handleToggleDialogSelection(dialog.id)}
+                      classes={{ root: classes.checkboxRoot }}
+                    />
+                  </TableCell>
+                  <TableCell align="center" className={classes.tableCell}>{dialog.name}</TableCell>
+                  <TableCell align="center" className={classes.tableCell}>
                     {dialog.isActive
                       ? i18n.t("dialogs.table.active")
                       : i18n.t("dialogs.table.inactive")}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={classes.tableCell}>
                     {formatDate(dialog.updatedAt)}
                   </TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small" onClick={() => handleEditDialog(dialog)}>
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.actionsCell}`}>
+                    <IconButton className={classes.actionIconButton} size="small" onClick={() => handleEditDialog(dialog)}>
                       <Edit />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleOpenPreview(dialog)}>
+                    <IconButton className={classes.actionIconButton} size="small" onClick={() => handleOpenPreview(dialog)}>
                       <Visibility />
                     </IconButton>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={() => handleDuplicateDialog(dialog.id)}
                     >
                       <FileCopy />
                     </IconButton>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
-                      onClick={() => {
-                        setSelectedDialog(dialog);
-                        setConfirmModalOpen(true);
-                      }}
+                      onClick={() => handleOpenSingleDeleteConfirmation(dialog)}
                     >
                       <DeleteOutline />
                     </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={4} />}
+              {loading && <TableRowSkeleton columns={5} />}
             </>
           </TableBody>
         </Table>

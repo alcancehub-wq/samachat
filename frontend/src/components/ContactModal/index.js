@@ -29,7 +29,7 @@ const useStyles = makeStyles(theme => ({
 		flexWrap: "wrap",
 	},
 	dialogPaper: {
-		borderRadius: 18,
+		borderRadius: 12,
 		padding: theme.spacing(1),
 	},
 	dialogTitle: {
@@ -62,15 +62,28 @@ const useStyles = makeStyles(theme => ({
 		position: "relative",
 	},
 	primaryButton: {
-		borderRadius: 12,
+		borderRadius: 4,
 		textTransform: "none",
-		fontWeight: 600,
+		fontWeight: 500,
 		boxShadow: "none",
+		backgroundColor: "#FF1919",
+		color: "#FFFFFF",
+		"&:hover": {
+			backgroundColor: "#E11414",
+			boxShadow: "none",
+		},
 	},
 	secondaryButton: {
-		borderRadius: 12,
+		borderRadius: 4,
 		textTransform: "none",
-		fontWeight: 600,
+		fontWeight: 500,
+		backgroundColor: "#F3F4F6",
+		borderColor: "rgba(15, 23, 42, 0.12)",
+		color: "#111827",
+		"&:hover": {
+			backgroundColor: "#E5E7EB",
+			borderColor: "rgba(15, 23, 42, 0.16)",
+		},
 	},
 
 	buttonProgress: {

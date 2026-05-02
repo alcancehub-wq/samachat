@@ -31,11 +31,16 @@ const useStyles = makeStyles((theme) => ({
     borderBottomRightRadius: 0,
     backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,
+    backgroundImage: "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(250,251,252,0.96) 100%)",
   },
   tabsHeader: {
     flex: "none",
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
+    padding: theme.spacing(1.25, 1.25, 0.5),
+    "& .MuiTabs-flexContainer": {
+      gap: theme.spacing(0.75),
+    },
   },
   settingsIcon: {
     alignSelf: "center",
@@ -43,8 +48,38 @@ const useStyles = makeStyles((theme) => ({
     padding: 8,
   },
   tab: {
-    minWidth: 120,
-    width: 120,
+    minWidth: 112,
+    width: 112,
+    minHeight: 46,
+    borderRadius: theme.shape.borderRadius,
+    color: "#6B7280 !important",
+    fontWeight: 700,
+    "&.MuiTab-textColorPrimary": {
+      color: "#6B7280 !important",
+    },
+    "&.Mui-selected": {
+      color: "#111111 !important",
+      fontWeight: 700,
+    },
+    "&.MuiTab-textColorPrimary.Mui-selected": {
+      color: "#111111 !important",
+    },
+  },
+  subTabs: {
+  },
+  subTab: {
+    color: "#6B7280 !important",
+    fontWeight: 700,
+    "&.MuiTab-textColorPrimary": {
+      color: "#6B7280 !important",
+    },
+    "&.Mui-selected": {
+      color: "#111111 !important",
+      fontWeight: 700,
+    },
+    "&.MuiTab-textColorPrimary.Mui-selected": {
+      color: "#111111 !important",
+    },
   },
   ticketOptionsBox: {
     display: "flex",
@@ -52,20 +87,39 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     background: theme.palette.background.paper,
     padding: theme.spacing(1.5),
-    gap: theme.spacing(1),
+    gap: theme.spacing(1.25),
     borderBottom: `1px solid ${theme.palette.divider}`,
     flexWrap: "wrap",
   },
+  ticketOptionsPrimary: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    flexWrap: "wrap",
+  },
+  ticketOptionsSecondary: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    flexWrap: "wrap",
+    marginLeft: "auto",
+    [theme.breakpoints.down("sm")]: {
+      width: "100%",
+      marginLeft: 0,
+    },
+  },
   serachInputWrapper: {
-    flex: 1,
+    minWidth: 260,
+    flex: "1 1 280px",
     background: theme.palette.background.default,
     display: "flex",
-    borderRadius: 10,
-    padding: theme.spacing(0.5, 1),
-    marginRight: theme.spacing(1),
+    borderRadius: theme.shape.borderRadius,
+    padding: theme.spacing(0.85, 1.25),
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: "inset 0 1px 2px rgba(15, 23, 42, 0.03)",
   },
   searchIcon: {
-    color: "grey",
+    color: theme.palette.text.secondary,
     marginLeft: 6,
     marginRight: 6,
     alignSelf: "center",
@@ -73,12 +127,20 @@ const useStyles = makeStyles((theme) => ({
   searchInput: {
     flex: 1,
     border: "none",
-    borderRadius: 10,
+    borderRadius: theme.shape.borderRadius,
     color: theme.palette.text.primary,
     backgroundColor: theme.palette.background.default,
   },
   badge: {
-    right: "-10px",
+    right: "-8px",
+  },
+  pendingBadge: {
+    backgroundColor: "#FF1919",
+    color: "#FFFFFF",
+  },
+  openBadge: {
+    backgroundColor: "#FF1919",
+    color: "#FFFFFF",
   },
   show: {
     display: "block",
@@ -88,6 +150,41 @@ const useStyles = makeStyles((theme) => ({
   },
   newTicketButton: {
     whiteSpace: "nowrap",
+    paddingLeft: theme.spacing(2),
+    paddingRight: theme.spacing(2),
+    boxShadow: "none",
+    borderRadius: 4,
+    textTransform: "none",
+    fontWeight: 600,
+    backgroundColor: "#FF1919",
+    color: "#FFFFFF",
+    "&:hover": {
+      backgroundColor: "#E11414",
+      boxShadow: "none",
+    },
+  },
+  showAllControl: {
+    marginLeft: 0,
+    padding: theme.spacing(0.35, 1),
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default,
+  },
+  showAllSwitchBase: {
+    color: "rgba(15, 23, 42, 0.28)",
+    "&$showAllSwitchChecked": {
+      color: "#FF1919",
+      "& + $showAllSwitchTrack": {
+        backgroundColor: "rgba(255, 25, 25, 0.42)",
+        opacity: 1,
+        borderColor: "transparent",
+      },
+    },
+  },
+  showAllSwitchChecked: {},
+  showAllSwitchTrack: {
+    backgroundColor: "rgba(15, 23, 42, 0.18)",
+    opacity: 1,
   },
 }));
 
@@ -163,9 +260,9 @@ const TicketsManager = () => {
           value={tab}
           onChange={handleChangeTab}
           variant="fullWidth"
-          indicatorColor="primary"
-          textColor="primary"
+          textColor="inherit"
           aria-label="icon label tabs example"
+          TabIndicatorProps={{ style: { display: "none" } }}
         >
           <Tab
             value={"open"}
@@ -201,57 +298,66 @@ const TicketsManager = () => {
           </div>
         ) : (
           <>
-            <Button
-              variant="outlined"
-              color="primary"
-              className={classes.newTicketButton}
-              onClick={() => setNewTicketModalOpen(true)}
-            >
-              {i18n.t("ticketsManager.buttons.newTicket")}
-            </Button>
-            <Can
-              role={user.profile}
-              perform="tickets-manager:showall"
-              yes={() => (
-                <FormControlLabel
-                  label={i18n.t("tickets.buttons.showAll")}
-                  labelPlacement="start"
-                  control={
-                    <Switch
-                      size="small"
-                      checked={showAllTickets}
-                      onChange={() =>
-                        setShowAllTickets((prevState) => !prevState)
-                      }
-                      name="showAllTickets"
-                      color="primary"
-                    />
-                  }
-                />
-              )}
-            />
+            <div className={classes.ticketOptionsPrimary}>
+              <Button
+                variant="contained"
+                className={classes.newTicketButton}
+                onClick={() => setNewTicketModalOpen(true)}
+              >
+                {i18n.t("ticketsManager.buttons.newTicket")}
+              </Button>
+              <Can
+                role={user.profile}
+                perform="tickets-manager:showall"
+                yes={() => (
+                  <FormControlLabel
+                    className={classes.showAllControl}
+                    label={i18n.t("tickets.buttons.showAll")}
+                    labelPlacement="start"
+                    control={
+                      <Switch
+                        size="small"
+                        checked={showAllTickets}
+                        classes={{
+                          switchBase: classes.showAllSwitchBase,
+                          checked: classes.showAllSwitchChecked,
+                          track: classes.showAllSwitchTrack,
+                        }}
+                        onChange={() =>
+                          setShowAllTickets((prevState) => !prevState)
+                        }
+                        name="showAllTickets"
+                        color="primary"
+                      />
+                    }
+                  />
+                )}
+              />
+            </div>
+            <div className={classes.ticketOptionsSecondary}>
+              <TagSelect
+                selectedTagIds={selectedTagIds}
+                onChange={setSelectedTagIds}
+                label={i18n.t("ticketsManager.tagsFilter")}
+                style={{ minWidth: 180 }}
+              />
+              <TicketsQueueSelect
+                selectedQueueIds={selectedQueueIds}
+                userQueues={user?.queues}
+                onChange={(values) => setSelectedQueueIds(values)}
+              />
+            </div>
           </>
         )}
-        <TagSelect
-          selectedTagIds={selectedTagIds}
-          onChange={setSelectedTagIds}
-          label={i18n.t("ticketsManager.tagsFilter")}
-          style={{ minWidth: 180, marginLeft: 6 }}
-        />
-        <TicketsQueueSelect
-          style={{ marginLeft: 6 }}
-          selectedQueueIds={selectedQueueIds}
-          userQueues={user?.queues}
-          onChange={(values) => setSelectedQueueIds(values)}
-        />
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
         <Tabs
           value={tabOpen}
           onChange={handleChangeTabOpen}
-          indicatorColor="primary"
-          textColor="primary"
+          textColor="inherit"
           variant="fullWidth"
+          className={classes.subTabs}
+          TabIndicatorProps={{ style: { display: "none" } }}
         >
           <Tab
             label={
@@ -259,11 +365,13 @@ const TicketsManager = () => {
                 className={classes.badge}
                 badgeContent={openCount}
                 color="primary"
+                classes={{ badge: classes.openBadge }}
               >
                 {i18n.t("ticketsList.assignedHeader")}
               </Badge>
             }
             value={"open"}
+            className={classes.subTab}
           />
           <Tab
             label={
@@ -271,11 +379,13 @@ const TicketsManager = () => {
                 className={classes.badge}
                 badgeContent={pendingCount}
                 color="secondary"
+                classes={{ badge: classes.pendingBadge }}
               >
                 {i18n.t("ticketsList.pendingHeader")}
               </Badge>
             }
             value={"pending"}
+            className={classes.subTab}
           />
         </Tabs>
         <Paper className={classes.ticketsWrapper}>

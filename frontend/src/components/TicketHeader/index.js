@@ -9,12 +9,49 @@ import { useHistory } from "react-router-dom";
 const useStyles = makeStyles((theme) => ({
   ticketHeader: {
     display: "flex",
+    alignItems: "center",
     backgroundColor: theme.palette.background.paper,
     flex: "none",
     borderBottom: `1px solid ${theme.palette.divider}`,
-    borderRadius: 10,
+    borderRadius: theme.shape.borderRadius + 6,
+    boxShadow: "0 8px 18px rgba(15, 23, 42, 0.06)",
+    padding: theme.spacing(1.5, 1.75),
+    gap: theme.spacing(1.5),
     [theme.breakpoints.down("sm")]: {
       flexWrap: "wrap",
+      padding: theme.spacing(1, 1),
+      gap: theme.spacing(1),
+    },
+  },
+  backButton: {
+    minWidth: 42,
+    width: 44,
+    height: 44,
+    padding: 0,
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default,
+    boxShadow: "none",
+    flex: "none",
+    "&:hover": {
+      backgroundColor: "rgba(229, 57, 53, 0.08)",
+      boxShadow: "none",
+    },
+  },
+  backIcon: {
+    fontSize: "1rem",
+    color: theme.palette.text.primary,
+  },
+  content: {
+    display: "flex",
+    alignItems: "center",
+    flex: 1,
+    minWidth: 0,
+    gap: theme.spacing(1.5),
+    [theme.breakpoints.down("sm")]: {
+      width: "100%",
+      flexWrap: "wrap",
+      gap: theme.spacing(1),
     },
   },
 }));
@@ -32,10 +69,10 @@ const TicketHeader = ({ loading, children }) => {
         <TicketHeaderSkeleton />
       ) : (
         <Card className={classes.ticketHeader}>
-          <Button color="primary" onClick={handleBack}>
-            <ArrowBackIos />
+          <Button onClick={handleBack} className={classes.backButton}>
+            <ArrowBackIos className={classes.backIcon} />
           </Button>
-          {children}
+          <div className={classes.content}>{children}</div>
         </Card>
       )}
     </>
