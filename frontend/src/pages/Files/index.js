@@ -33,24 +33,10 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
 import { getBackendUrl } from "../../config";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const useStyles = makeStyles(theme => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles
-  },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5)
-  },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem"
-  },
+  ...buildMenuListPageStyles(theme),
   filtersPaper: {
     padding: theme.spacing(1),
     marginBottom: theme.spacing(1),
@@ -205,11 +191,13 @@ const Files = () => {
         </div>
         <MainHeaderButtonsWrapper>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("files.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={event => setSearchParam(event.target.value.toLowerCase())}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <Search style={{ color: "gray" }} />
@@ -272,16 +260,16 @@ const Files = () => {
         />
       </Paper>
       <Paper className={classes.mainPaper} variant="outlined">
-        <Table size="small">
-          <TableHead>
+        <Table size="small" className={classes.table}>
+          <TableHead className={classes.tableHead}>
             <TableRow>
-              <TableCell>{i18n.t("files.table.name")}</TableCell>
-              <TableCell>{i18n.t("files.table.type")}</TableCell>
-              <TableCell>{i18n.t("files.table.origin")}</TableCell>
-              <TableCell>{i18n.t("files.table.createdAt")}</TableCell>
-              <TableCell>{i18n.t("files.table.ticket")}</TableCell>
-              <TableCell>{i18n.t("files.table.contact")}</TableCell>
-              <TableCell align="center">{i18n.t("files.table.actions")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("files.table.name")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("files.table.type")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("files.table.origin")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("files.table.createdAt")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("files.table.ticket")}</TableCell>
+              <TableCell className={classes.tableHeadCell}>{i18n.t("files.table.contact")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("files.table.actions")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -289,27 +277,27 @@ const Files = () => {
               <TableRowSkeleton columns={7} />
             ) : (
               files.map(file => (
-                <TableRow key={file.id}>
-                  <TableCell>{file.mediaUrl?.split("/").pop() || file.body || "-"}</TableCell>
-                  <TableCell>
+                <TableRow key={file.id} className={classes.tableRow}>
+                  <TableCell className={classes.tableCell}>{file.mediaUrl?.split("/").pop() || file.body || "-"}</TableCell>
+                  <TableCell className={classes.tableCell}>
                     <Chip className={classes.chip} label={resolveMediaType(file.mediaType)} />
                   </TableCell>
-                  <TableCell>{resolveOrigin(file)}</TableCell>
-                  <TableCell>{formatDate(file.createdAt)}</TableCell>
-                  <TableCell>{file.ticketId ? `#${file.ticketId}` : "-"}</TableCell>
-                  <TableCell>{file.contact?.name || "-"}</TableCell>
-                  <TableCell align="center" className={classes.actions}>
-                    <IconButton size="small" onClick={() => handleOpenFile(file.mediaUrl)}>
+                  <TableCell className={classes.tableCell}>{resolveOrigin(file)}</TableCell>
+                  <TableCell className={classes.tableCell}>{formatDate(file.createdAt)}</TableCell>
+                  <TableCell className={classes.tableCell}>{file.ticketId ? `#${file.ticketId}` : "-"}</TableCell>
+                  <TableCell className={classes.tableCell}>{file.contact?.name || "-"}</TableCell>
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.actions}`}> 
+                    <IconButton className={classes.actionIconButton} size="small" onClick={() => handleOpenFile(file.mediaUrl)}>
                       <Launch />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleDownloadFile(file)}>
+                    <IconButton className={classes.actionIconButton} size="small" onClick={() => handleDownloadFile(file)}>
                       <CloudDownload />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleOpenTicket(file.ticketId)}>
+                    <IconButton className={classes.actionIconButton} size="small" onClick={() => handleOpenTicket(file.ticketId)}>
                       <ChatBubbleOutline />
                     </IconButton>
                     {file.contact?.id && (
-                      <IconButton size="small" onClick={() => handleOpenContact(file.contact)}>
+                      <IconButton className={classes.actionIconButton} size="small" onClick={() => handleOpenContact(file.contact)}>
                         <PersonOutline />
                       </IconButton>
                     )}

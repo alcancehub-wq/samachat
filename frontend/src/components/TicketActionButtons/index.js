@@ -22,6 +22,27 @@ const useStyles = makeStyles(theme => ({
 			margin: theme.spacing(1),
 		},
 	},
+	primaryActionButton: {
+		borderRadius: 4,
+		textTransform: "none",
+		fontWeight: 700,
+		boxShadow: "none !important",
+		backgroundColor: "#FF1919 !important",
+		color: "#FFFFFF !important",
+		"&:hover": {
+			backgroundColor: "#E11414 !important",
+			boxShadow: "none !important",
+		},
+	},
+	secondaryActionButton: {
+		borderRadius: 4,
+		textTransform: "none",
+		fontWeight: 700,
+		color: theme.palette.text.primary,
+	},
+	menuButton: {
+		color: theme.palette.text.secondary,
+	},
 }));
 
 const TicketActionButtons = ({ ticket }) => {
@@ -78,6 +99,7 @@ const TicketActionButtons = ({ ticket }) => {
 						loading={loading}
 						startIcon={<Replay />}
 						size="small"
+						className={classes.secondaryActionButton}
 						onClick={e => handleUpdateTicketStatus(e, "pending", null)}
 					>
 						{i18n.t("messagesList.header.buttons.return")}
@@ -86,12 +108,12 @@ const TicketActionButtons = ({ ticket }) => {
 						loading={loading}
 						size="small"
 						variant="contained"
-						color="primary"
+						className={classes.primaryActionButton}
 						onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
 					>
 						{i18n.t("messagesList.header.buttons.resolve")}
 					</ButtonWithSpinner>
-					<IconButton onClick={handleOpenTicketOptionsMenu}>
+					<IconButton className={classes.menuButton} onClick={handleOpenTicketOptionsMenu}>
 						<MoreVert />
 					</IconButton>
 					<TicketOptionsMenu
@@ -107,7 +129,7 @@ const TicketActionButtons = ({ ticket }) => {
 					loading={loading}
 					size="small"
 					variant="contained"
-					color="primary"
+					className={classes.primaryActionButton}
 					onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
 				>
 					{i18n.t("messagesList.header.buttons.accept")}

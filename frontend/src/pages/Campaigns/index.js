@@ -4,6 +4,7 @@ import openSocket from "../../services/socket-io";
 
 import {
   Button,
+  Checkbox,
   IconButton,
   makeStyles,
   Paper,
@@ -31,29 +32,10 @@ import CampaignReviewModal from "../../components/CampaignReviewModal";
 import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import SearchIcon from "@material-ui/icons/Search";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const useStyles = makeStyles(theme => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1.5, 2),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
-    borderRadius: 16,
-    border: "1px solid rgba(15, 23, 42, 0.08)",
-    boxShadow: "0 16px 28px rgba(15, 23, 42, 0.08)",
-    backgroundColor: "#ffffff",
-    backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-  },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5)
-  },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem"
-  },
+  ...buildMenuListPageStyles(theme),
   tagList: {
     maxWidth: 260,
     whiteSpace: "nowrap",
@@ -112,14 +94,17 @@ const Campaigns = () => {
   const [loading, setLoading] = useState(false);
   const [searchParam, setSearchParam] = useState("");
   const [tags, setTags] = useState([]);
+  const [selectedCampaignIds, setSelectedCampaignIds] = useState([]);
 
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [deleteTargetIds, setDeleteTargetIds] = useState([]);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
+    setSelectedCampaignIds([]);
   }, [searchParam]);
 
   useEffect(() => {
@@ -189,17 +174,61 @@ const Campaigns = () => {
   const handleCloseConfirmationModal = () => {
     setConfirmModalOpen(false);
     setSelectedCampaign(null);
+    setDeleteTargetIds([]);
   };
 
-  const handleDeleteCampaign = async campaignId => {
+  const handleDeleteCampaigns = async campaignIds => {
     try {
-      await api.delete(`/campaigns/${campaignId}`);
+      await Promise.all(campaignIds.map(campaignId => api.delete(`/campaigns/${campaignId}`)));
       toast.success(i18n.t("campaigns.toasts.deleted"));
     } catch (err) {
       toastError(err);
     }
     setSelectedCampaign(null);
+    setDeleteTargetIds([]);
+    setSelectedCampaignIds([]);
   };
+
+  const handleToggleCampaignSelection = campaignId => {
+    setSelectedCampaignIds(prevState =>
+      prevState.includes(campaignId)
+        ? prevState.filter(id => id !== campaignId)
+        : [...prevState, campaignId]
+    );
+  };
+
+  const handleToggleSelectAll = event => {
+    if (event.target.checked) {
+      setSelectedCampaignIds(campaigns.map(campaign => campaign.id));
+      return;
+    }
+
+    setSelectedCampaignIds([]);
+  };
+
+  const handleEditSelectedCampaign = () => {
+    if (selectedCampaignIds.length !== 1) return;
+    const campaign = campaigns.find(item => item.id === selectedCampaignIds[0]);
+    if (campaign) {
+      handleEditCampaign(campaign);
+    }
+  };
+
+  const handleOpenSingleDeleteConfirmation = campaign => {
+    setSelectedCampaign(campaign);
+    setDeleteTargetIds([campaign.id]);
+    setConfirmModalOpen(true);
+  };
+
+  const handleOpenBulkDeleteConfirmation = () => {
+    if (selectedCampaignIds.length === 0) return;
+    setSelectedCampaign(null);
+    setDeleteTargetIds(selectedCampaignIds);
+    setConfirmModalOpen(true);
+  };
+
+  const allVisibleSelected = campaigns.length > 0 && selectedCampaignIds.length === campaigns.length;
+  const someVisibleSelected = selectedCampaignIds.length > 0 && !allVisibleSelected;
 
   const handleSearch = event => {
     setSearchParam(event.target.value.toLowerCase());
@@ -231,12 +260,14 @@ const Campaigns = () => {
     <MainContainer>
       <ConfirmationModal
         title={
-          selectedCampaign &&
-          `${i18n.t("campaigns.confirmationModal.deleteTitle")} ${selectedCampaign.name}?`
+          deleteTargetIds.length > 1
+            ? `Excluir ${deleteTargetIds.length} campanhas selecionadas?`
+            : selectedCampaign &&
+              `${i18n.t("campaigns.confirmationModal.deleteTitle")} ${selectedCampaign.name}?`
         }
         open={confirmModalOpen}
         onClose={handleCloseConfirmationModal}
-        onConfirm={() => handleDeleteCampaign(selectedCampaign.id)}
+        onConfirm={() => handleDeleteCampaigns(deleteTargetIds)}
       >
         {i18n.t("campaigns.confirmationModal.deleteMessage")}
       </ConfirmationModal>
@@ -258,12 +289,35 @@ const Campaigns = () => {
           </Typography>
         </div>
         <MainHeaderButtonsWrapper>
+          {selectedCampaignIds.length > 0 && (
+            <Typography className={classes.bulkSelectionInfo}>
+              {selectedCampaignIds.length} selecionado(s)
+            </Typography>
+          )}
+          <Button
+            variant="contained"
+            className={classes.bulkActionButton}
+            disabled={selectedCampaignIds.length !== 1}
+            onClick={handleEditSelectedCampaign}
+          >
+            Editar selecionado
+          </Button>
+          <Button
+            variant="outlined"
+            className={classes.bulkDeleteButton}
+            disabled={selectedCampaignIds.length === 0}
+            onClick={handleOpenBulkDeleteConfirmation}
+          >
+            Excluir selecionados
+          </Button>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("campaigns.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon style={{ color: "gray" }} />
@@ -271,68 +325,81 @@ const Campaigns = () => {
               )
             }}
           />
-          <Button variant="contained" color="primary" onClick={handleOpenCampaignModal}>
+          <Button variant="contained" color="primary" className={classes.actionButton} onClick={handleOpenCampaignModal}>
             {i18n.t("campaigns.buttons.add")}
           </Button>
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper className={classes.mainPaper} variant="outlined">
-        <Table size="small">
-          <TableHead>
+        <Table size="small" className={classes.table}>
+          <TableHead className={classes.tableHead}>
             <TableRow>
-              <TableCell align="center">{i18n.t("campaigns.table.name")}</TableCell>
-              <TableCell align="center">{i18n.t("campaigns.table.dialog")}</TableCell>
-              <TableCell align="center">{i18n.t("campaigns.table.list")}</TableCell>
-              <TableCell align="center">{i18n.t("campaigns.table.tags")}</TableCell>
-              <TableCell align="center">{i18n.t("campaigns.table.status")}</TableCell>
-              <TableCell align="center">{i18n.t("campaigns.table.scheduledAt")}</TableCell>
-              <TableCell align="center">{i18n.t("campaigns.table.lastStatusAt")}</TableCell>
-              <TableCell align="center">{i18n.t("campaigns.table.actions")}</TableCell>
+              <TableCell padding="checkbox" className={classes.tableHeadCell}>
+                <Checkbox
+                  indeterminate={someVisibleSelected}
+                  checked={allVisibleSelected}
+                  onChange={handleToggleSelectAll}
+                  classes={{ root: classes.checkboxRoot }}
+                />
+              </TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.name")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.dialog")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.list")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.tags")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.status")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.scheduledAt")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.lastStatusAt")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.actions")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             <>
               {campaigns.map(campaign => (
-                <TableRow key={campaign.id}>
-                  <TableCell align="center">{campaign.name}</TableCell>
-                  <TableCell align="center">
+                <TableRow key={campaign.id} className={classes.tableRow}>
+                  <TableCell className={`${classes.tableCell} ${classes.checkboxCell}`}>
+                    <Checkbox
+                      checked={selectedCampaignIds.includes(campaign.id)}
+                      onChange={() => handleToggleCampaignSelection(campaign.id)}
+                      classes={{ root: classes.checkboxRoot }}
+                    />
+                  </TableCell>
+                  <TableCell align="center" className={classes.tableCell}>{campaign.name}</TableCell>
+                  <TableCell align="center" className={classes.tableCell}>
                     {campaign.dialog?.name || "-"}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={classes.tableCell}>
                     {campaign.contactList?.name || "-"}
                   </TableCell>
-                  <TableCell align="center" className={classes.tagList}>
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.tagList}`}>
                     {resolveTagNames(campaign.tagIds)}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={classes.tableCell}>
                     {i18n.t(`campaignModal.status.${campaign.status || "draft"}`)}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={classes.tableCell}>
                     {formatDate(campaign.scheduledAt)}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={classes.tableCell}>
                     {formatDate(campaign.lastStatusAt || campaign.updatedAt)}
                   </TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small" onClick={() => handleEditCampaign(campaign)}>
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.actionsCell}`}>
+                    <IconButton className={classes.actionIconButton} size="small" onClick={() => handleEditCampaign(campaign)}>
                       <Edit />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleOpenReview(campaign)}>
+                    <IconButton className={classes.actionIconButton} size="small" onClick={() => handleOpenReview(campaign)}>
                       <Visibility />
                     </IconButton>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
-                      onClick={() => {
-                        setSelectedCampaign(campaign);
-                        setConfirmModalOpen(true);
-                      }}
+                      onClick={() => handleOpenSingleDeleteConfirmation(campaign)}
                     >
                       <DeleteOutline />
                     </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={8} />}
+              {loading && <TableRowSkeleton columns={9} />}
             </>
           </TableBody>
         </Table>

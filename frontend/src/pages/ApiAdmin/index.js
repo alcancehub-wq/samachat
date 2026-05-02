@@ -16,11 +16,18 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     padding: theme.spacing(8, 8, 3),
   },
+  rootEmbedded: {
+    display: "block",
+    padding: 0,
+  },
   pageHeader: {
     marginBottom: theme.spacing(2),
   },
   pageSubtitle: {
-    color: theme.palette.text.secondary,
+    color: "#111111",
+    fontSize: "0.9375rem",
+    fontWeight: 300,
+    lineHeight: 1.6,
   },
   paper: {
     padding: theme.spacing(2),
@@ -28,9 +35,12 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     marginBottom: 12,
   },
+  containerEmbedded: {
+    padding: 0,
+  },
 }));
 
-const ApiAdmin = () => {
+const ApiAdmin = ({ embedded = false }) => {
   const classes = useStyles();
   const [settings, setSettings] = useState([]);
 
@@ -53,8 +63,8 @@ const ApiAdmin = () => {
   };
 
   return (
-    <div className={classes.root}>
-      <Container className={classes.container} maxWidth="sm">
+    <div className={embedded ? classes.rootEmbedded : classes.root}>
+      <Container className={embedded ? classes.containerEmbedded : classes.container} maxWidth="sm">
         <div className={classes.pageHeader}>
           <Typography variant="h6">{i18n.t("apiAdmin.title")}</Typography>
           <Typography variant="body2" className={classes.pageSubtitle}>

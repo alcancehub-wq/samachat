@@ -1,4 +1,5 @@
 import React from "react";
+import clsx from "clsx";
 
 import { makeStyles } from "@material-ui/core/styles";
 
@@ -32,10 +33,10 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const MainHeaderButtonsWrapper = ({ children }) => {
+const MainHeaderButtonsWrapper = ({ children, className }) => {
 	const classes = useStyles();
 
-	return <div className={classes.MainHeaderButtonsWrapper}>{children}</div>;
+	return <div className={clsx(classes.MainHeaderButtonsWrapper, className)}>{children}</div>;
 };
 
 export default MainHeaderButtonsWrapper;

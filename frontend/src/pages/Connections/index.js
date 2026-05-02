@@ -44,7 +44,7 @@ import toastError from "../../errors/toastError";
 const useStyles = makeStyles(theme => ({
 	mainPaper: {
 		flex: 1,
-		padding: theme.spacing(1.5, 2),
+		padding: theme.spacing(1.25, 1, 0),
 		overflowY: "scroll",
 		...theme.scrollbarStyles,
 		borderRadius: 16,
@@ -60,15 +60,23 @@ const useStyles = makeStyles(theme => ({
 		gap: theme.spacing(0.5),
 	},
 	pageSubtitle: {
-		color: "#64748b",
-		fontSize: "0.95rem",
+		color: "#111111",
+		fontSize: "0.9375rem",
+		fontWeight: 300,
+		lineHeight: 1.6,
 	},
 	primaryAction: {
-		borderRadius: 12,
+		borderRadius: 4,
 		textTransform: "none",
-		fontWeight: 600,
-		boxShadow: "0 12px 20px rgba(37, 99, 235, 0.22)",
-		backgroundImage: "linear-gradient(135deg, #2563eb 0%, #38bdf8 100%)",
+		fontWeight: 500,
+		boxShadow: "none",
+		backgroundImage: "none",
+		backgroundColor: "#FF1919",
+		color: "#FFFFFF",
+		"&:hover": {
+			backgroundColor: "#E11414",
+			boxShadow: "none",
+		},
 	},
 	statusPill: {
 		minWidth: 42,
@@ -102,7 +110,7 @@ const useStyles = makeStyles(theme => ({
 		borderSpacing: "0 8px",
 	},
 	tableHeadCell: {
-		color: "#64748b",
+		color: "#111111",
 		fontWeight: 700,
 		fontSize: "0.78rem",
 		textTransform: "uppercase",

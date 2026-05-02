@@ -29,30 +29,10 @@ import QueueModal from "../../components/QueueModal";
 import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import SectorPermissionsModal from "../../components/SectorPermissionsModal";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const useStyles = makeStyles((theme) => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1.5, 2),
-    overflowY: "auto",
-    minHeight: 0,
-    ...theme.scrollbarStyles,
-    borderRadius: 16,
-    border: "1px solid rgba(15, 23, 42, 0.08)",
-    boxShadow: "0 16px 28px rgba(15, 23, 42, 0.08)",
-    backgroundColor: "#ffffff",
-    backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-  },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5),
-  },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem",
-  },
+  ...buildMenuListPageStyles(theme),
   customTableCell: {
     display: "flex",
     alignItems: "center",
@@ -226,6 +206,7 @@ const Queues = () => {
           <Button
             variant="contained"
             color="primary"
+            className={classes.actionButton}
             onClick={handleOpenQueueModal}
           >
             {i18n.t("queues.buttons.add")}
@@ -233,28 +214,28 @@ const Queues = () => {
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper className={classes.mainPaper} variant="outlined">
-        <Table size="small">
-          <TableHead>
+        <Table size="small" className={classes.table}>
+          <TableHead className={classes.tableHead}>
             <TableRow>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("queues.table.name")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("queues.table.sortOrder")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("queues.table.color")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("queues.table.status")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("queues.table.users")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("queues.table.greeting")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("queues.table.actions")}
               </TableCell>
             </TableRow>
@@ -262,10 +243,10 @@ const Queues = () => {
           <TableBody>
             <>
               {queues.map((queue) => (
-                <TableRow key={queue.id}>
-                  <TableCell align="center">{queue.name}</TableCell>
-                  <TableCell align="center">{queue.sortOrder ?? 0}</TableCell>
-                  <TableCell align="center">
+                <TableRow key={queue.id} className={classes.tableRow}>
+                  <TableCell align="center" className={classes.tableCell}>{queue.name}</TableCell>
+                  <TableCell align="center" className={classes.tableCell}>{queue.sortOrder ?? 0}</TableCell>
+                  <TableCell align="center" className={classes.tableCell}>
                     <div className={classes.customTableCell}>
                       <span
                         style={{
@@ -277,7 +258,7 @@ const Queues = () => {
                       />
                     </div>
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={classes.tableCell}>
                     <Chip
                       className={classes.statusChip}
                       color={queue.isActive ? "primary" : "default"}
@@ -288,10 +269,10 @@ const Queues = () => {
                       }
                     />
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={classes.tableCell}>
                     {queue.users?.length || 0}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={classes.tableCell}>
                     <div className={classes.customTableCell}>
                       <Typography
                         style={{ width: 300, align: "center" }}
@@ -302,8 +283,9 @@ const Queues = () => {
                       </Typography>
                     </div>
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.actionsCell}`}>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={() => handleEditQueue(queue)}
                     >
@@ -311,6 +293,7 @@ const Queues = () => {
                     </IconButton>
 
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={() => {
                         setSelectedQueue(queue);
@@ -322,6 +305,7 @@ const Queues = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleOpenPermissions(queue)}
+                      className={classes.actionIconButton}
                       title={i18n.t("queues.buttons.permissions")}
                     >
                       <SettingsOutlined />
