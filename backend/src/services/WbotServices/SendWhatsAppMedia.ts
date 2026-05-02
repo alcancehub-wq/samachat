@@ -181,6 +181,10 @@ const ensureWhatsappReady = async (
   ticket: Ticket,
   whatsapp: Whatsapp
 ): Promise<void> => {
+  if (whatsappProvider.hasSession(whatsapp.id)) {
+    return;
+  }
+
   if (await waitForWhatsAppReady(whatsapp.id, INITIAL_READY_TIMEOUT_MS)) {
     return;
   }
