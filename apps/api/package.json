@@ -10,7 +10,7 @@
     "start": "node dist/main.js",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
-    "prisma:generate": "pnpm dlx prisma@6.1.0 generate --schema ../../packages/db/prisma/schema.prisma",
+    "prisma:generate": "pnpm exec prisma generate --schema ../../packages/db/prisma/schema.prisma",
     "postinstall": "pnpm run prisma:generate",
     "test": "jest"
   },

@@ -11,6 +11,14 @@ interface RawBodyRequest extends express.Request {
   rawBody?: Buffer;
 }
 
+function normalizeOrigin(origin: string) {
+  try {
+    return new URL(origin).origin;
+  } catch (_error) {
+    return origin.replace(/\/+$/, '');
+  }
+}
+
 async function bootstrap() {
   const requiredEnv = ['REDIS_URL', 'DATABASE_URL', 'PROVIDER_SECRET'];
   const missingEnv = requiredEnv.filter((key) => !process.env[key]);
@@ -20,10 +28,24 @@ async function bootstrap() {
   const appConfig = getConfig();
   const logger = getLogger({ service: 'api' });
 
-  const allowedOrigins = [
-    'https://samachat.com.br',
-    'https://app.samachat.com.br',
-  ];
+  const envOrigins = (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  const allowedOrigins = Array.from(
+    new Set(
+      [
+        'https://samachat.com.br',
+        'https://app.samachat.com.br',
+        'https://samachat-v2-staging-web.cspj5a.easypanel.host',
+        process.env.FRONTEND_URL,
+        ...envOrigins,
+      ]
+        .filter((origin): origin is string => Boolean(origin))
+        .map((origin) => normalizeOrigin(origin)),
+    ),
+  );
 
   app.enableCors({
     origin: allowedOrigins,
@@ -58,8 +80,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document);
 
-const port = Number(process.env.PORT) || appConfig.ports.api;
-await app.listen(port, '0.0.0.0');
+  const port = Number(process.env.PORT) || appConfig.ports.api;
+  await app.listen(port, '0.0.0.0');
   logger.info({ port }, 'API listening');
 }
 
