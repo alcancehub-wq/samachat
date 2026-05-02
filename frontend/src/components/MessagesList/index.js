@@ -116,7 +116,7 @@ const useStyles = makeStyles((theme) => ({
   quotedSideColorLeft: {
     flex: "none",
     width: "4px",
-    backgroundColor: "#6bcbef",
+    backgroundColor: "#FF1919",
   },
 
   messageRight: {
@@ -183,8 +183,8 @@ const useStyles = makeStyles((theme) => ({
 
   messageContactName: {
     display: "flex",
-    color: "#6bcbef",
-    fontWeight: 500,
+    color: "#C62828",
+    fontWeight: 700,
   },
 
   textContentItem: {

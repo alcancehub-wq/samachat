@@ -14,6 +14,7 @@ import Avatar from "@material-ui/core/Avatar";
 import Divider from "@material-ui/core/Divider";
 import Badge from "@material-ui/core/Badge";
 import IconButton from "@material-ui/core/IconButton";
+import Checkbox from "@material-ui/core/Checkbox";
 import LocalOfferIcon from "@material-ui/icons/LocalOffer";
 
 import { i18n } from "../../translate/i18n";
@@ -123,6 +124,27 @@ const useStyles = makeStyles(theme => ({
 		right: 16,
 		bottom: 14,
 		left: "auto",
+		borderRadius: 4,
+		textTransform: "none",
+		fontWeight: 600,
+		boxShadow: "none !important",
+		backgroundColor: "#FF1919 !important",
+		color: "#FFFFFF !important",
+		"&:hover": {
+			backgroundColor: "#E11414 !important",
+			boxShadow: "none !important",
+		},
+	},
+
+	selectCheckbox: {
+		position: "absolute",
+		top: 10,
+		right: 10,
+		zIndex: 2,
+		color: "rgba(15, 23, 42, 0.28)",
+		"&.Mui-checked": {
+			color: "#FF1919",
+		},
 	},
 
 	ticketQueueColor: {
@@ -196,7 +218,7 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const TicketListItem = ({ ticket }) => {
+const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, onToggleSelect }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const [loading, setLoading] = useState(false);
@@ -247,11 +269,19 @@ const TicketListItem = ({ ticket }) => {
 					if (ticket.status === "pending") return;
 					handleSelectTicket(ticket.id);
 				}}
-				selected={ticketId && +ticketId === ticket.id}
+				selected={(ticketId && +ticketId === ticket.id) || selectedInBulk}
 				className={clsx(classes.ticket, {
 					[classes.pendingTicket]: ticket.status === "pending",
 				})}
 			>
+				{selectable && (
+					<Checkbox
+						className={classes.selectCheckbox}
+						checked={selectedInBulk}
+						onClick={e => e.stopPropagation()}
+						onChange={() => onToggleSelect && onToggleSelect(ticket.id)}
+					/>
+				)}
 				<Tooltip
 					arrow
 					placement="right"
@@ -358,12 +388,14 @@ const TicketListItem = ({ ticket }) => {
 				/>
 				{ticket.status === "pending" && (
 					<ButtonWithSpinner
-						color="primary"
 						variant="contained"
 						className={classes.acceptButton}
 						size="small"
 						loading={loading}
-						onClick={e => handleAcepptTicket(ticket.id)}
+						onClick={e => {
+							e.stopPropagation();
+							handleAcepptTicket(ticket.id);
+						}}
 					>
 						{i18n.t("ticketsList.buttons.accept")}
 					</ButtonWithSpinner>

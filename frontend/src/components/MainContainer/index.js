@@ -6,12 +6,12 @@ import Container from "@material-ui/core/Container";
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
     flex: 1,
-    padding: theme.spacing(2),
+    padding: theme.spacing(0.5, 0.5, 0),
     height: "100%",
     minHeight: 0,
     backgroundColor: theme.palette.background.default,
     [theme.breakpoints.down("sm")]: {
-      padding: theme.spacing(1.5, 1),
+      padding: theme.spacing(0.5, 0.5, 0),
     },
   },
 
@@ -23,7 +23,7 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 0,
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.divider}`,
-    borderRadius: theme.shape.borderRadius + 4,
+    borderRadius: 16,
     boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
   },
 }));

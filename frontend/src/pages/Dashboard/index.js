@@ -46,8 +46,10 @@ const useStyles = makeStyles(theme => ({
 		},
 	},
 	pageSubtitle: {
-		color: theme.palette.text.secondary,
-		fontSize: "1rem",
+		color: "#111111",
+		fontSize: "0.9375rem",
+		fontWeight: 300,
+		lineHeight: 1.6,
 		marginTop: theme.spacing(1),
 		maxWidth: 620,
 	},
