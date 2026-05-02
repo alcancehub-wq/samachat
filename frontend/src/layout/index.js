@@ -38,28 +38,78 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.background.default,
   },
   toolbar: {
-    minHeight: 56,
-    padding: theme.spacing(0, 2),
-    gap: theme.spacing(1.5),
+    minHeight: 72,
+    padding: theme.spacing(1.5, 2.5),
+    gap: theme.spacing(2),
+    [theme.breakpoints.down("sm")]: {
+      minHeight: 64,
+      padding: theme.spacing(1, 1.5),
+      gap: theme.spacing(1),
+    },
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
+    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
   },
   menuButton: {
     color: theme.palette.text.primary,
+    borderRadius: theme.shape.borderRadius,
+    backgroundColor: theme.palette.background.default,
+    border: `1px solid ${theme.palette.divider}`,
+    width: 42,
+    height: 42,
+    "&:hover": {
+      backgroundColor: "rgba(229, 57, 53, 0.08)",
+    },
+  },
+  brandBlock: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1.5),
+    minWidth: 0,
+    flex: "1 1 auto",
+  },
+  brandAccent: {
+    width: 10,
+    height: 32,
+    borderRadius: 999,
+    background: "linear-gradient(180deg, #E53935 0%, #C62828 100%)",
+    boxShadow: "0 8px 18px rgba(198, 40, 40, 0.22)",
+    [theme.breakpoints.down("sm")]: {
+      display: "none",
+    },
   },
   title: {
-    flexGrow: 1,
     color: theme.palette.text.primary,
     fontWeight: 700,
-    letterSpacing: 0.3,
+    letterSpacing: -0.2,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  topActions: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: theme.spacing(1),
+    marginLeft: "auto",
+    [theme.breakpoints.down("sm")]: {
+      gap: theme.spacing(0.5),
+    },
   },
   bodyRow: {
     display: "flex",
     flex: 1,
     minHeight: 0,
+    gap: theme.spacing(1.5),
+    padding: theme.spacing(1.5),
+    boxSizing: "border-box",
+    [theme.breakpoints.down("sm")]: {
+      gap: 0,
+      padding: 0,
+    },
   },
   drawerPaper: {
     position: "relative",
@@ -71,11 +121,18 @@ const useStyles = makeStyles((theme) => ({
     }),
     backgroundColor: theme.palette.background.paper,
     borderRight: `1px solid ${theme.palette.divider}`,
+    borderRadius: theme.shape.borderRadius + 4,
+    boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+    overflowY: "auto",
     scrollbarWidth: "none",
     "-ms-overflow-style": "none",
     "&::-webkit-scrollbar": {
       width: 0,
       height: 0,
+    },
+    [theme.breakpoints.down("sm")]: {
+      borderRadius: 0,
+      boxShadow: "none",
     },
   },
   drawerPaperClose: {
@@ -84,7 +141,10 @@ const useStyles = makeStyles((theme) => ({
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
-    width: 72,
+    width: 84,
+  },
+  drawerList: {
+    padding: theme.spacing(1.5, 0),
   },
   content: {
     flex: 1,
@@ -92,29 +152,57 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     minHeight: 0,
     overflow: "hidden",
+    backgroundColor: theme.palette.background.default,
+    borderRadius: theme.shape.borderRadius + 4,
+    [theme.breakpoints.down("sm")]: {
+      borderRadius: 0,
+    },
   },
   switch: {
     transform: "scale(0.8)",
   },
   iconButton: {
     color: theme.palette.text.primary,
+    borderRadius: theme.shape.borderRadius,
+    width: 42,
+    height: 42,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
+    "&:hover": {
+      backgroundColor: theme.palette.background.default,
+    },
   },
   themeSwitchContainer: {
     display: "flex",
     alignItems: "center",
+    gap: theme.spacing(0.5),
+    padding: theme.spacing(0.5, 0.75),
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
   },
   themeIcon: {
-    color: theme.palette.text.primary,
+    color: theme.palette.text.secondary,
   },
   searchField: {
-    width: 320,
+    width: 340,
     [theme.breakpoints.down("sm")]: {
-      width: 200,
+      width: 170,
     },
   },
   searchInput: {
-    borderRadius: 10,
+    borderRadius: theme.shape.borderRadius,
     backgroundColor: theme.palette.background.default,
+    boxShadow: "inset 0 1px 2px rgba(15, 23, 42, 0.03)",
+  },
+  searchAdornment: {
+    color: theme.palette.text.secondary,
+  },
+  profileMenuPaper: {
+    marginTop: theme.spacing(1),
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: "0 16px 32px rgba(15, 23, 42, 0.12)",
   },
 }));
 
@@ -185,9 +273,13 @@ const LoggedInLayout = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography component="h1" variant="h6" className={classes.title}>
-            SamaChat
-          </Typography>
+
+          <div className={classes.brandBlock}>
+            <div className={classes.brandAccent} />
+            <Typography component="h1" variant="h6" className={classes.title}>
+              SamaChat
+            </Typography>
+          </div>
 
           <TextField
             value={menuSearch}
@@ -200,58 +292,61 @@ const LoggedInLayout = ({ children }) => {
               className: classes.searchInput,
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
+                  <SearchIcon fontSize="small" className={classes.searchAdornment} />
                 </InputAdornment>
               ),
             }}
           />
 
-          <div className={classes.themeSwitchContainer}>
-            <Brightness4Icon className={classes.themeIcon} />
-            <Switch
-              checked={darkMode}
-              onChange={toggleTheme}
-              color="default"
-              className={classes.switch}
-            />
-          </div>
+          <div className={classes.topActions}>
+            <div className={classes.themeSwitchContainer}>
+              <Brightness4Icon className={classes.themeIcon} />
+              <Switch
+                checked={darkMode}
+                onChange={toggleTheme}
+                color="default"
+                className={classes.switch}
+              />
+            </div>
 
-          {user?.id && (
-            <NotificationsPopOver className={classes.iconButton} />
-          )}
+            {user?.id && (
+              <NotificationsPopOver className={classes.iconButton} />
+            )}
 
-          <div>
-            <IconButton
-              aria-label="account of current user"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
-              onClick={handleMenu}
-              className={classes.iconButton}
-            >
-              <AccountCircle />
-            </IconButton>
-            <Menu
-              id="menu-appbar"
-              anchorEl={anchorEl}
-              getContentAnchorEl={null}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "right",
-              }}
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              open={menuOpen}
-              onClose={handleCloseMenu}
-            >
-              <MenuItem onClick={handleOpenUserModal}>
-                {i18n.t("mainDrawer.appBar.user.profile")}
-              </MenuItem>
-              <MenuItem onClick={handleClickLogout}>
-                {i18n.t("mainDrawer.appBar.user.logout")}
-              </MenuItem>
-            </Menu>
+            <div>
+              <IconButton
+                aria-label="account of current user"
+                aria-controls="menu-appbar"
+                aria-haspopup="true"
+                onClick={handleMenu}
+                className={classes.iconButton}
+              >
+                <AccountCircle />
+              </IconButton>
+              <Menu
+                id="menu-appbar"
+                anchorEl={anchorEl}
+                getContentAnchorEl={null}
+                anchorOrigin={{
+                  vertical: "bottom",
+                  horizontal: "right",
+                }}
+                transformOrigin={{
+                  vertical: "top",
+                  horizontal: "right",
+                }}
+                open={menuOpen}
+                onClose={handleCloseMenu}
+                classes={{ paper: classes.profileMenuPaper }}
+              >
+                <MenuItem onClick={handleOpenUserModal}>
+                  {i18n.t("mainDrawer.appBar.user.profile")}
+                </MenuItem>
+                <MenuItem onClick={handleClickLogout}>
+                  {i18n.t("mainDrawer.appBar.user.logout")}
+                </MenuItem>
+              </Menu>
+            </div>
           </div>
         </Toolbar>
       </AppBar>
@@ -267,7 +362,7 @@ const LoggedInLayout = ({ children }) => {
         }}
         open={drawerOpen}
       >
-        <List>
+        <List className={classes.drawerList}>
           <MainListItems
             drawerClose={drawerClose}
             showHeader={false}
