@@ -20,6 +20,7 @@
 - In Easypanel `backend` environment variables, set at least `BACKEND_URL=https://app.samachat.com.br`, `FRONTEND_URL=https://samachat.com.br`, and `PROXY_PORT=443` in addition to the database and Redis settings.
 - In Easypanel `frontend`, keep `VITE_BACKEND_URL=https://app.samachat.com.br`.
 - `.github/workflows/docker.yml` is now manual-only and no longer deploys to Fly.
+- For a safe parallel rollout of the modern stack, use [docs/easypanel-modern-staging.md](docs/easypanel-modern-staging.md).
 
 ## Environment Variables
 - API and worker require database, Redis, and provider credentials.
