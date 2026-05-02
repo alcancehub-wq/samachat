@@ -13,7 +13,8 @@
 
 ## Easypanel (VPS)
 - The current VPS deployment is managed directly by Easypanel GitHub sources for the legacy root `backend/` and `frontend/` apps.
-- When Easypanel is connected to `alcancehub-wq/samachat` on branch `main`, a push is enough for Easypanel to build and deploy those apps automatically.
+- Production backend/frontend should track the dedicated `legacy-prod` branch, with build paths `/backend` and `/frontend`, so unrelated pushes to `main` do not rebuild the live Samachat stack.
+- Push vetted legacy-stack changes to `legacy-prod` when you want Easypanel to build and deploy the live backend/frontend apps automatically.
 - No GitHub deploy hook secret is required for the frontend in that setup.
 - In the legacy root stack, the `backend` container already starts WhatsApp sessions, schedule polling, and campaign workers by default.
 - `backend/Dockerfile.worker` was removed from `main`, so an Easypanel `worker` service still pointing to that file should stay stopped unless you intentionally restore a dedicated worker image or migrate to `apps/worker`.
