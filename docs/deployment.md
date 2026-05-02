@@ -15,7 +15,8 @@
 - The current VPS deployment is managed directly by Easypanel GitHub sources for the legacy root `backend/` and `frontend/` apps.
 - When Easypanel is connected to `alcancehub-wq/samachat` on branch `main`, a push is enough for Easypanel to build and deploy those apps automatically.
 - No GitHub deploy hook secret is required for the frontend in that setup.
-- In the legacy root stack, the `backend` container already starts WhatsApp sessions, schedule polling, and campaign workers by default. Keep a separate Easypanel `worker` service only if it is intentionally running a distinct worker process.
+- In the legacy root stack, the `backend` container already starts WhatsApp sessions, schedule polling, and campaign workers by default.
+- `backend/Dockerfile.worker` was removed from `main`, so an Easypanel `worker` service still pointing to that file should stay stopped unless you intentionally restore a dedicated worker image or migrate to `apps/worker`.
 - In Easypanel `backend` environment variables, set at least `BACKEND_URL=https://app.samachat.com.br`, `FRONTEND_URL=https://samachat.com.br`, and `PROXY_PORT=443` in addition to the database and Redis settings.
 - In Easypanel `frontend`, keep `VITE_BACKEND_URL=https://app.samachat.com.br`.
 - `.github/workflows/docker.yml` is now manual-only and no longer deploys to Fly.

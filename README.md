@@ -515,13 +515,11 @@ chmod +x updateWhaticket
 
 ## Worker (deploy separado)
 
-Para subir o worker isolado, use o Dockerfile:
+O Dockerfile legado `backend/Dockerfile.worker` nao faz parte do branch `main`.
 
-- backend/Dockerfile.worker
-
-Comando de runtime:
-
-- node dist/worker.js
+Na stack legada atual, o proprio `backend` inicia sessions, scheduler e campaign workers.
+Mantenha um servico Easypanel separado para `worker` apenas se voce tiver uma imagem
+ou configuracao dedicada para esse processo.
 
 ## Contributing
 
