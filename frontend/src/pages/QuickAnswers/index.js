@@ -30,6 +30,7 @@ import QuickAnswersModal from "../../components/QuickAnswersModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { toast } from "react-toastify";
 import toastError from "../../errors/toastError";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_QUICK_ANSWERS") {
@@ -76,22 +77,7 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles((theme) => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
-  },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5),
-  },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem",
-  },
+  ...buildMenuListPageStyles(theme),
 }));
 
 const QuickAnswers = () => {
@@ -226,11 +212,13 @@ const QuickAnswers = () => {
         </div>
         <MainHeaderButtonsWrapper>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("quickAnswers.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon style={{ color: "gray" }} />
@@ -241,6 +229,7 @@ const QuickAnswers = () => {
           <Button
             variant="contained"
             color="primary"
+            className={classes.actionButton}
             onClick={handleOpenQuickAnswersModal}
           >
             {i18n.t("quickAnswers.buttons.add")}
@@ -252,16 +241,16 @@ const QuickAnswers = () => {
         variant="outlined"
         onScroll={handleScroll}
       >
-        <Table size="small">
-          <TableHead>
+        <Table size="small" className={classes.table}>
+          <TableHead className={classes.tableHead}>
             <TableRow>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("quickAnswers.table.shortcut")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("quickAnswers.table.message")}
               </TableCell>
-              <TableCell align="center">
+              <TableCell align="center" className={classes.tableHeadCell}>
                 {i18n.t("quickAnswers.table.actions")}
               </TableCell>
             </TableRow>
@@ -269,11 +258,12 @@ const QuickAnswers = () => {
           <TableBody>
             <>
               {quickAnswers.map((quickAnswer) => (
-                <TableRow key={quickAnswer.id}>
-                  <TableCell align="center">{quickAnswer.shortcut}</TableCell>
-                  <TableCell align="center">{quickAnswer.message}</TableCell>
-                  <TableCell align="center">
+                <TableRow key={quickAnswer.id} className={classes.tableRow}>
+                  <TableCell align="center" className={classes.tableCell}>{quickAnswer.shortcut}</TableCell>
+                  <TableCell align="center" className={classes.tableCell}>{quickAnswer.message}</TableCell>
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.actionsCell}`}>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={() => handleEditQuickAnswers(quickAnswer)}
                     >
@@ -281,6 +271,7 @@ const QuickAnswers = () => {
                     </IconButton>
 
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={(e) => {
                         setConfirmModalOpen(true);

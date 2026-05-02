@@ -34,6 +34,63 @@ import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles(theme => ({
+  headerTitle: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: theme.spacing(0.5)
+  },
+  pageSubtitle: {
+    color: "#111111",
+    fontSize: "0.9375rem",
+    fontWeight: 300,
+    lineHeight: 1.6
+  },
+  headerTopRow: {
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing(1.5),
+    flexWrap: "wrap"
+  },
+  headerBottomRow: {
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: theme.spacing(1),
+    flexWrap: "wrap",
+    [theme.breakpoints.down("sm")]: {
+      justifyContent: "flex-start"
+    }
+  },
+  searchField: {
+    minWidth: 320,
+    backgroundColor: "#ffffff",
+    marginLeft: "auto",
+    [theme.breakpoints.down("sm")]: {
+      minWidth: "100%",
+      marginLeft: 0
+    }
+  },
+  searchInputRoot: {
+    borderRadius: 12,
+    backgroundColor: "#ffffff"
+  },
+  actionButton: {
+    borderRadius: 4,
+    textTransform: "none",
+    fontWeight: 600,
+    boxShadow: "none !important",
+    backgroundImage: "none !important",
+    backgroundColor: "#FF1919 !important",
+    color: "#FFFFFF !important",
+    "&:hover": {
+      backgroundColor: "#E11414 !important",
+      boxShadow: "none !important"
+    }
+  },
   board: {
     display: "flex",
     gap: theme.spacing(2),
@@ -94,7 +151,20 @@ const useStyles = makeStyles(theme => ({
     gap: theme.spacing(1),
     alignItems: "center"
   },
+  filterField: {
+    width: 180,
+    minWidth: 180,
+    flex: "0 0 180px",
+    [theme.breakpoints.down("sm")]: {
+      width: "100%",
+      minWidth: "100%",
+      flexBasis: "100%"
+    }
+  },
   filterSelect: {
+    minWidth: 180
+  },
+  userFilter: {
     minWidth: 180
   },
   emptyColumn: {
@@ -348,33 +418,47 @@ const Kanban = () => {
         column={selectedColumn}
       />
       <MainHeader>
-        <div>
-          <Title>{i18n.t("kanban.title")}</Title>
-          <Typography color="textSecondary">{i18n.t("kanban.subtitle")}</Typography>
+        <div className={classes.headerTopRow}>
+          <div className={classes.headerTitle}>
+            <Title>{i18n.t("kanban.title")}</Title>
+            <Typography className={classes.pageSubtitle}>{i18n.t("kanban.subtitle")}</Typography>
+          </div>
+          <TextField
+            className={classes.searchField}
+            placeholder={i18n.t("kanban.searchPlaceholder")}
+            value={searchParam}
+            onChange={event => setSearchParam(event.target.value.toLowerCase())}
+            InputProps={{
+              classes: { root: classes.searchInputRoot },
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search style={{ color: "gray" }} />
+                </InputAdornment>
+              )
+            }}
+          />
         </div>
-        <MainHeaderButtonsWrapper>
+        <MainHeaderButtonsWrapper className={classes.headerBottomRow}>
           <div className={classes.filters}>
-            <TextField
-              placeholder={i18n.t("kanban.searchPlaceholder")}
-              value={searchParam}
-              onChange={event => setSearchParam(event.target.value.toLowerCase())}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search style={{ color: "gray" }} />
-                  </InputAdornment>
-                )
-              }}
-            />
-            <QueueSelect selectedQueueIds={queueIds} onChange={setQueueIds} />
-            <TagSelect selectedTagIds={tagIds} onChange={setTagIds} />
-            <FormControl variant="outlined" margin="dense" className={classes.filterSelect}>
-              <InputLabel>{i18n.t("kanban.filters.user")}</InputLabel>
+            <div className={classes.filterField}>
+              <QueueSelect selectedQueueIds={queueIds} onChange={setQueueIds} />
+            </div>
+            <div className={classes.filterField}>
+              <TagSelect selectedTagIds={tagIds} onChange={setTagIds} />
+            </div>
+            <FormControl variant="outlined" margin="dense" className={classes.userFilter}>
               <Select
                 value={userId}
                 onChange={event => setUserId(event.target.value)}
-                label={i18n.t("kanban.filters.user")}
                 displayEmpty
+                renderValue={selected => {
+                  if (!selected) {
+                    return i18n.t("kanban.filters.user");
+                  }
+
+                  const selectedUser = users.find(user => user.id === selected);
+                  return selectedUser?.name || i18n.t("kanban.filters.user");
+                }}
               >
                 <MenuItem value="">{i18n.t("kanban.filters.allUsers")}</MenuItem>
                 {users.map(user => (
@@ -387,6 +471,7 @@ const Kanban = () => {
             <Button
               variant="contained"
               color="primary"
+              className={classes.actionButton}
               startIcon={<Add />}
               onClick={() => handleOpenColumnModal(null)}
             >

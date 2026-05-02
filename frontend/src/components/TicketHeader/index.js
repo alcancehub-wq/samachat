@@ -40,6 +40,7 @@ const useStyles = makeStyles((theme) => ({
   },
   backIcon: {
     fontSize: "1rem",
+    color: theme.palette.text.primary,
   },
   content: {
     display: "flex",
@@ -68,7 +69,7 @@ const TicketHeader = ({ loading, children }) => {
         <TicketHeaderSkeleton />
       ) : (
         <Card className={classes.ticketHeader}>
-          <Button color="primary" onClick={handleBack} className={classes.backButton}>
+          <Button onClick={handleBack} className={classes.backButton}>
             <ArrowBackIos className={classes.backIcon} />
           </Button>
           <div className={classes.content}>{children}</div>

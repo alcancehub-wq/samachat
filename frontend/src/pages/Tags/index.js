@@ -4,6 +4,7 @@ import openSocket from "../../services/socket-io";
 
 import {
   Button,
+  Checkbox,
   IconButton,
   makeStyles,
   Paper,
@@ -30,24 +31,10 @@ import TagModal from "../../components/TagModal";
 import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import SearchIcon from "@material-ui/icons/Search";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const useStyles = makeStyles(theme => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles
-  },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5)
-  },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem"
-  },
+  ...buildMenuListPageStyles(theme),
   colorDot: {
     width: 18,
     height: 18,
@@ -105,13 +92,16 @@ const Tags = () => {
   const [tags, dispatch] = useReducer(reducer, []);
   const [loading, setLoading] = useState(false);
   const [searchParam, setSearchParam] = useState("");
+  const [selectedTagIds, setSelectedTagIds] = useState([]);
 
   const [tagModalOpen, setTagModalOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [deleteTargetIds, setDeleteTargetIds] = useState([]);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
+    setSelectedTagIds([]);
   }, [searchParam]);
 
   useEffect(() => {
@@ -167,17 +157,61 @@ const Tags = () => {
   const handleCloseConfirmationModal = () => {
     setConfirmModalOpen(false);
     setSelectedTag(null);
+    setDeleteTargetIds([]);
   };
 
-  const handleDeleteTag = async tagId => {
+  const handleDeleteTags = async tagIds => {
     try {
-      await api.delete(`/tags/${tagId}`);
+      await Promise.all(tagIds.map(tagId => api.delete(`/tags/${tagId}`)));
       toast.success(i18n.t("tags.toasts.deleted"));
     } catch (err) {
       toastError(err);
     }
     setSelectedTag(null);
+    setDeleteTargetIds([]);
+    setSelectedTagIds([]);
   };
+
+  const handleToggleTagSelection = tagId => {
+    setSelectedTagIds(prevState =>
+      prevState.includes(tagId)
+        ? prevState.filter(id => id !== tagId)
+        : [...prevState, tagId]
+    );
+  };
+
+  const handleToggleSelectAll = event => {
+    if (event.target.checked) {
+      setSelectedTagIds(tags.map(tag => tag.id));
+      return;
+    }
+
+    setSelectedTagIds([]);
+  };
+
+  const handleEditSelectedTag = () => {
+    if (selectedTagIds.length !== 1) return;
+    const tag = tags.find(item => item.id === selectedTagIds[0]);
+    if (tag) {
+      handleEditTag(tag);
+    }
+  };
+
+  const handleOpenSingleDeleteConfirmation = tag => {
+    setSelectedTag(tag);
+    setDeleteTargetIds([tag.id]);
+    setConfirmModalOpen(true);
+  };
+
+  const handleOpenBulkDeleteConfirmation = () => {
+    if (selectedTagIds.length === 0) return;
+    setSelectedTag(null);
+    setDeleteTargetIds(selectedTagIds);
+    setConfirmModalOpen(true);
+  };
+
+  const allVisibleSelected = tags.length > 0 && selectedTagIds.length === tags.length;
+  const someVisibleSelected = selectedTagIds.length > 0 && !allVisibleSelected;
 
   const handleSearch = event => {
     setSearchParam(event.target.value.toLowerCase());
@@ -187,11 +221,13 @@ const Tags = () => {
     <MainContainer>
       <ConfirmationModal
         title={
-          selectedTag && `${i18n.t("tags.confirmationModal.deleteTitle")} ${selectedTag.name}?`
+          deleteTargetIds.length > 1
+            ? `Excluir ${deleteTargetIds.length} tags selecionadas?`
+            : selectedTag && `${i18n.t("tags.confirmationModal.deleteTitle")} ${selectedTag.name}?`
         }
         open={confirmModalOpen}
         onClose={handleCloseConfirmationModal}
-        onConfirm={() => handleDeleteTag(selectedTag.id)}
+        onConfirm={() => handleDeleteTags(deleteTargetIds)}
       >
         {i18n.t("tags.confirmationModal.deleteMessage")}
       </ConfirmationModal>
@@ -208,12 +244,35 @@ const Tags = () => {
           </Typography>
         </div>
         <MainHeaderButtonsWrapper>
+          {selectedTagIds.length > 0 && (
+            <Typography className={classes.bulkSelectionInfo}>
+              {selectedTagIds.length} selecionado(s)
+            </Typography>
+          )}
+          <Button
+            variant="contained"
+            className={classes.bulkActionButton}
+            disabled={selectedTagIds.length !== 1}
+            onClick={handleEditSelectedTag}
+          >
+            Editar selecionado
+          </Button>
+          <Button
+            variant="outlined"
+            className={classes.bulkDeleteButton}
+            disabled={selectedTagIds.length === 0}
+            onClick={handleOpenBulkDeleteConfirmation}
+          >
+            Excluir selecionados
+          </Button>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("tags.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon style={{ color: "gray" }} />
@@ -221,48 +280,61 @@ const Tags = () => {
               )
             }}
           />
-          <Button variant="contained" color="primary" onClick={handleOpenTagModal}>
+          <Button variant="contained" color="primary" className={classes.actionButton} onClick={handleOpenTagModal}>
             {i18n.t("tags.buttons.add")}
           </Button>
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper className={classes.mainPaper} variant="outlined">
-        <Table size="small">
-          <TableHead>
+        <Table size="small" className={classes.table}>
+          <TableHead className={classes.tableHead}>
             <TableRow>
-              <TableCell align="center">{i18n.t("tags.table.name")}</TableCell>
-              <TableCell align="center">{i18n.t("tags.table.color")}</TableCell>
-              <TableCell align="center">{i18n.t("tags.table.actions")}</TableCell>
+              <TableCell padding="checkbox" className={classes.tableHeadCell}>
+                <Checkbox
+                  indeterminate={someVisibleSelected}
+                  checked={allVisibleSelected}
+                  onChange={handleToggleSelectAll}
+                  classes={{ root: classes.checkboxRoot }}
+                />
+              </TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("tags.table.name")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("tags.table.color")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("tags.table.actions")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             <>
               {tags.map(tag => (
-                <TableRow key={tag.id}>
-                  <TableCell align="center">{tag.name}</TableCell>
-                  <TableCell align="center">
+                <TableRow key={tag.id} className={classes.tableRow}>
+                  <TableCell className={`${classes.tableCell} ${classes.checkboxCell}`}>
+                    <Checkbox
+                      checked={selectedTagIds.includes(tag.id)}
+                      onChange={() => handleToggleTagSelection(tag.id)}
+                      classes={{ root: classes.checkboxRoot }}
+                    />
+                  </TableCell>
+                  <TableCell align="center" className={classes.tableCell}>{tag.name}</TableCell>
+                  <TableCell align="center" className={classes.tableCell}>
                     <span
                       className={classes.colorDot}
                       style={{ backgroundColor: tag.color || "#64748b" }}
                     />
                   </TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small" onClick={() => handleEditTag(tag)}>
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.actionsCell}`}>
+                    <IconButton className={classes.actionIconButton} size="small" onClick={() => handleEditTag(tag)}>
                       <Edit />
                     </IconButton>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
-                      onClick={() => {
-                        setSelectedTag(tag);
-                        setConfirmModalOpen(true);
-                      }}
+                      onClick={() => handleOpenSingleDeleteConfirmation(tag)}
                     >
                       <DeleteOutline />
                     </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={3} />}
+              {loading && <TableRowSkeleton columns={4} />}
             </>
           </TableBody>
         </Table>

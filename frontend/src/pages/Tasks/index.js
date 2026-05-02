@@ -38,6 +38,7 @@ import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_TASKS") {
@@ -69,22 +70,7 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles(theme => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles
-  },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5)
-  },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem"
-  },
+  ...buildMenuListPageStyles(theme),
   filtersPaper: {
     padding: theme.spacing(1),
     marginBottom: theme.spacing(1),
@@ -299,11 +285,13 @@ const Tasks = () => {
         </div>
         <MainHeaderButtonsWrapper>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("tasks.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <Search style={{ color: "gray" }} />
@@ -311,7 +299,7 @@ const Tasks = () => {
               )
             }}
           />
-          <Button variant="contained" color="primary" onClick={handleOpenTaskModal}>
+          <Button variant="contained" color="primary" className={classes.actionButton} onClick={handleOpenTaskModal}>
             {i18n.t("tasks.buttons.add")}
           </Button>
         </MainHeaderButtonsWrapper>

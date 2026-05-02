@@ -40,10 +40,30 @@ const useStyles = makeStyles(theme => ({
   },
   muted: {
     color: theme.palette.text.secondary
+  },
+  switchBase: {
+    color: "rgba(15, 23, 42, 0.28)",
+    "&$switchChecked": {
+      color: "#FF1919",
+      "& + $switchTrack": {
+        backgroundColor: "rgba(255, 25, 25, 0.42)",
+        opacity: 1,
+      },
+    },
+  },
+  switchChecked: {},
+  switchTrack: {
+    backgroundColor: "rgba(15, 23, 42, 0.18)",
+    opacity: 1,
+  },
+  embeddedRoot: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(2)
   }
 }));
 
-const OpenAI = () => {
+const OpenAI = ({ embedded = false }) => {
   const classes = useStyles();
 
   const [loading, setLoading] = useState(false);
@@ -229,9 +249,10 @@ const OpenAI = () => {
     }
   };
 
-  return (
-    <MainContainer>
-      <MainHeader>
+  const content = (
+    <>
+      {!embedded && (
+        <MainHeader>
         <Title>{i18n.t("openai.title")}</Title>
         <MainHeaderButtonsWrapper>
           <Button
@@ -251,7 +272,8 @@ const OpenAI = () => {
             {i18n.t("openai.settings.save")}
           </Button>
         </MainHeaderButtonsWrapper>
-      </MainHeader>
+        </MainHeader>
+      )}
 
       <Card className={classes.card} variant="outlined">
         <CardContent>
@@ -286,8 +308,12 @@ const OpenAI = () => {
                 control={
                   <Switch
                     checked={clearApiKey}
+                    classes={{
+                      switchBase: classes.switchBase,
+                      checked: classes.switchChecked,
+                      track: classes.switchTrack,
+                    }}
                     onChange={event => setClearApiKey(event.target.checked)}
-                    color="primary"
                   />
                 }
                 label={i18n.t("openai.settings.clearKey")}
@@ -298,13 +324,17 @@ const OpenAI = () => {
                 control={
                   <Switch
                     checked={settings.isActive}
+                    classes={{
+                      switchBase: classes.switchBase,
+                      checked: classes.switchChecked,
+                      track: classes.switchTrack,
+                    }}
                     onChange={event =>
                       setSettings(prev => ({
                         ...prev,
                         isActive: event.target.checked
                       }))
                     }
-                    color="primary"
                   />
                 }
                 label={i18n.t("openai.settings.active")}
@@ -520,13 +550,17 @@ const OpenAI = () => {
                 control={
                   <Switch
                     checked={settings.autoReplyEnabled}
+                    classes={{
+                      switchBase: classes.switchBase,
+                      checked: classes.switchChecked,
+                      track: classes.switchTrack,
+                    }}
                     onChange={event =>
                       setSettings(prev => ({
                         ...prev,
                         autoReplyEnabled: event.target.checked
                       }))
                     }
-                    color="primary"
                   />
                 }
                 label={i18n.t("openai.settings.autoReplyEnabled")}
@@ -689,8 +723,14 @@ const OpenAI = () => {
           </Table>
         </CardContent>
       </Card>
-    </MainContainer>
+    </>
   );
+
+  if (embedded) {
+    return <div className={classes.embeddedRoot}>{content}</div>;
+  }
+
+  return <MainContainer>{content}</MainContainer>;
 };
 
 export default OpenAI;

@@ -34,29 +34,10 @@ import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import SearchIcon from "@material-ui/icons/Search";
 import InformativeModal from "../../components/InformativeModal";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const useStyles = makeStyles(theme => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1.5, 2),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
-    borderRadius: 16,
-    border: "1px solid rgba(15, 23, 42, 0.08)",
-    boxShadow: "0 16px 28px rgba(15, 23, 42, 0.08)",
-    backgroundColor: "#ffffff",
-    backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-  },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5)
-  },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem"
-  },
+  ...buildMenuListPageStyles(theme),
   targetCell: {
     maxWidth: 220,
     whiteSpace: "nowrap",
@@ -300,11 +281,13 @@ const Informatives = () => {
         </div>
         <MainHeaderButtonsWrapper>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("informatives.searchPlaceholder")}
             type="search"
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon style={{ color: "gray" }} />
@@ -346,6 +329,7 @@ const Informatives = () => {
           <Button
             variant="contained"
             color="primary"
+            className={classes.actionButton}
             onClick={handleOpenInformativeModal}
           >
             {i18n.t("informatives.buttons.add")}
@@ -353,46 +337,48 @@ const Informatives = () => {
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper className={classes.mainPaper} variant="outlined">
-        <Table size="small">
-          <TableHead>
+        <Table size="small" className={classes.table}>
+          <TableHead className={classes.tableHead}>
             <TableRow>
-              <TableCell align="center">{i18n.t("informatives.table.title")}</TableCell>
-              <TableCell align="center">{i18n.t("informatives.table.audience")}</TableCell>
-              <TableCell align="center">{i18n.t("informatives.table.status")}</TableCell>
-              <TableCell align="center">{i18n.t("informatives.table.period")}</TableCell>
-              <TableCell align="center">{i18n.t("informatives.table.target")}</TableCell>
-              <TableCell align="center">{i18n.t("informatives.table.actions")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("informatives.table.title")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("informatives.table.audience")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("informatives.table.status")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("informatives.table.period")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("informatives.table.target")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("informatives.table.actions")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             <>
               {informatives.map(informative => (
-                <TableRow key={informative.id}>
-                  <TableCell align="center">{informative.title}</TableCell>
-                  <TableCell align="center">
+                <TableRow key={informative.id} className={classes.tableRow}>
+                  <TableCell align="center" className={classes.tableCell}>{informative.title}</TableCell>
+                  <TableCell align="center" className={classes.tableCell}>
                     {resolveAudienceLabel(informative.audience)}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={classes.tableCell}>
                     {informative.isActive
                       ? i18n.t("informatives.table.active")
                       : i18n.t("informatives.table.inactive")}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={classes.tableCell}>
                     {`${formatDate(informative.startsAt)} - ${formatDate(
                       informative.endsAt
                     )}`}
                   </TableCell>
-                  <TableCell align="center" className={classes.targetCell}>
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.targetCell}`}>
                     {resolveTarget(informative)}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className={`${classes.tableCell} ${classes.actionsCell}`}>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={() => handleEditInformative(informative)}
                     >
                       <Edit />
                     </IconButton>
                     <IconButton
+                      className={classes.actionIconButton}
                       size="small"
                       onClick={() => {
                         setSelectedInformative(informative);

@@ -4,13 +4,19 @@ import openSocket from "../../services/socket-io";
 import { makeStyles } from "@material-ui/core/styles";
 import List from "@material-ui/core/List";
 import Paper from "@material-ui/core/Paper";
+import Checkbox from "@material-ui/core/Checkbox";
+import Button from "@material-ui/core/Button";
+import Typography from "@material-ui/core/Typography";
 
 import TicketListItem from "../TicketListItem";
 import TicketsListSkeleton from "../TicketsListSkeleton";
+import { Can } from "../Can";
 
 import useTickets from "../../hooks/useTickets";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import api from "../../services/api";
+import toastError from "../../errors/toastError";
 
 const useStyles = makeStyles(theme => ({
 	ticketsListWrapper: {
@@ -49,15 +55,18 @@ const useStyles = makeStyles(theme => ({
 
 	noTicketsText: {
 		textAlign: "center",
-		color: "rgb(104, 121, 146)",
-		fontSize: "14px",
-		lineHeight: "1.4",
+		color: "#111111",
+		fontSize: "15px",
+		fontWeight: 300,
+		lineHeight: 1.6,
 	},
 
 	noTicketsTitle: {
 		textAlign: "center",
-		fontSize: "16px",
-		fontWeight: "600",
+		color: "#111111",
+		fontSize: "18px",
+		fontWeight: 700,
+		lineHeight: 1.25,
 		margin: "0px",
 	},
 
@@ -68,6 +77,75 @@ const useStyles = makeStyles(theme => ({
 		flexDirection: "column",
 		alignItems: "center",
 		justifyContent: "center",
+	},
+
+	pendingActionsBar: {
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: theme.spacing(1),
+		padding: theme.spacing(1, 1.25),
+		borderBottom: `1px solid ${theme.palette.divider}`,
+		backgroundColor: theme.palette.background.paper,
+		flexWrap: "wrap",
+	},
+
+	selectAllControl: {
+		display: "flex",
+		alignItems: "center",
+		gap: theme.spacing(0.5),
+		fontSize: "0.85rem",
+		color: theme.palette.text.secondary,
+		fontWeight: 600,
+	},
+
+	pendingActions: {
+		display: "flex",
+		alignItems: "center",
+		gap: theme.spacing(1),
+		flexWrap: "wrap",
+	},
+
+	bulkAcceptButton: {
+		borderRadius: 4,
+		textTransform: "none",
+		fontWeight: 600,
+		boxShadow: "none !important",
+		backgroundColor: "#FF1919 !important",
+		color: "#FFFFFF !important",
+		"&:hover": {
+			backgroundColor: "#E11414 !important",
+			boxShadow: "none !important",
+		},
+		"&.Mui-disabled": {
+			backgroundColor: "rgba(255, 25, 25, 0.18) !important",
+			color: "rgba(255, 255, 255, 0.72) !important",
+		},
+	},
+
+	bulkDeleteButton: {
+		borderRadius: 4,
+		textTransform: "none",
+		fontWeight: 600,
+		boxShadow: "none !important",
+		backgroundColor: "#F3F4F6 !important",
+		borderColor: "rgba(15, 23, 42, 0.12) !important",
+		color: "#111827 !important",
+		"&:hover": {
+			backgroundColor: "#E5E7EB !important",
+			borderColor: "rgba(15, 23, 42, 0.16) !important",
+			boxShadow: "none !important",
+		},
+	},
+
+	selectAllCheckbox: {
+		color: "rgba(15, 23, 42, 0.28)",
+		"&.Mui-checked": {
+			color: "#FF1919",
+		},
+		"&.MuiCheckbox-indeterminate": {
+			color: "#FF1919",
+		},
 	},
 }));
 
@@ -159,10 +237,15 @@ const reducer = (state, action) => {
 	const [pageNumber, setPageNumber] = useState(1);
 	const [ticketsList, dispatch] = useReducer(reducer, []);
 	const { user } = useContext(AuthContext);
+	const [selectedTicketIds, setSelectedTicketIds] = useState([]);
+	const [bulkAccepting, setBulkAccepting] = useState(false);
+	const [bulkDeleting, setBulkDeleting] = useState(false);
+	const isPendingList = status === "pending";
 
 	useEffect(() => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
+		setSelectedTicketIds([]);
 	}, [status, searchParam, dispatch, showAll, selectedQueueIds, selectedTagIds]);
 
 	const { tickets, hasMore, loading } = useTickets({
@@ -265,6 +348,68 @@ const reducer = (state, action) => {
 		setPageNumber(prevState => prevState + 1);
 	};
 
+	const handleToggleTicketSelection = ticketId => {
+		setSelectedTicketIds(prevState =>
+			prevState.includes(ticketId)
+				? prevState.filter(id => id !== ticketId)
+				: [...prevState, ticketId]
+		);
+	};
+
+	const handleToggleSelectAll = () => {
+		if (selectedTicketIds.length === ticketsList.length) {
+			setSelectedTicketIds([]);
+			return;
+		}
+
+		setSelectedTicketIds(ticketsList.map(ticket => ticket.id));
+	};
+
+	const handleBulkAccept = async () => {
+		if (selectedTicketIds.length === 0) return;
+
+		setBulkAccepting(true);
+		try {
+			await Promise.all(
+				selectedTicketIds.map(ticketId =>
+					api.put(`/tickets/${ticketId}`, {
+						status: "open",
+						userId: user?.id,
+					})
+				)
+			);
+
+			selectedTicketIds.forEach(ticketId => {
+				dispatch({ type: "DELETE_TICKET", payload: ticketId });
+			});
+			setSelectedTicketIds([]);
+		} catch (err) {
+			toastError(err);
+		} finally {
+			setBulkAccepting(false);
+		}
+	};
+
+	const handleBulkDelete = async () => {
+		if (selectedTicketIds.length === 0) return;
+
+		setBulkDeleting(true);
+		try {
+			await Promise.all(
+				selectedTicketIds.map(ticketId => api.delete(`/tickets/${ticketId}`))
+			);
+
+			selectedTicketIds.forEach(ticketId => {
+				dispatch({ type: "DELETE_TICKET", payload: ticketId });
+			});
+			setSelectedTicketIds([]);
+		} catch (err) {
+			toastError(err);
+		} finally {
+			setBulkDeleting(false);
+		}
+	};
+
 	const handleScroll = e => {
 		if (!hasMore || loading) return;
 
@@ -278,6 +423,47 @@ const reducer = (state, action) => {
 
 	return (
     <Paper className={classes.ticketsListWrapper} style={style}>
+			{isPendingList && ticketsList.length > 0 && (
+				<div className={classes.pendingActionsBar}>
+					<label className={classes.selectAllControl}>
+						<Checkbox
+							className={classes.selectAllCheckbox}
+							checked={selectedTicketIds.length > 0 && selectedTicketIds.length === ticketsList.length}
+							indeterminate={selectedTicketIds.length > 0 && selectedTicketIds.length < ticketsList.length}
+							onChange={handleToggleSelectAll}
+						/>
+						<Typography variant="body2" component="span">
+							{i18n.t("ticketsList.buttons.selectAll")}
+						</Typography>
+					</label>
+					{selectedTicketIds.length > 0 && (
+						<div className={classes.pendingActions}>
+						<Button
+							variant="contained"
+							className={classes.bulkAcceptButton}
+							disabled={selectedTicketIds.length === 0 || bulkAccepting || bulkDeleting}
+							onClick={handleBulkAccept}
+						>
+							{i18n.t("ticketsList.buttons.acceptSelected")}
+						</Button>
+						<Can
+							role={user.profile}
+							perform="ticket-options:deleteTicket"
+							yes={() => (
+								<Button
+									variant="outlined"
+									className={classes.bulkDeleteButton}
+									disabled={selectedTicketIds.length === 0 || bulkAccepting || bulkDeleting}
+									onClick={handleBulkDelete}
+								>
+									{i18n.t("ticketsList.buttons.deleteSelected")}
+								</Button>
+							)}
+						/>
+						</div>
+					)}
+				</div>
+			)}
 			<Paper
 				square
 				name="closed"
@@ -298,7 +484,13 @@ const reducer = (state, action) => {
 					) : (
 						<>
 							{ticketsList.map(ticket => (
-								<TicketListItem ticket={ticket} key={ticket.id} />
+								<TicketListItem
+									ticket={ticket}
+									key={ticket.id}
+									selectable={isPendingList}
+									selectedInBulk={selectedTicketIds.includes(ticket.id)}
+									onToggleSelect={handleToggleTicketSelection}
+								/>
 							))}
 						</>
 					)}

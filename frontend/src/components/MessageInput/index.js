@@ -189,13 +189,29 @@ const useStyles = makeStyles(theme => ({
   replyginSelfMsgSideColor: {
     flex: "none",
     width: "4px",
-    backgroundColor: "#6bcbef",
+    backgroundColor: "#FF1919",
   },
 
   messageContactName: {
     display: "flex",
-    color: "#6bcbef",
-    fontWeight: 500,
+    color: "#C62828",
+    fontWeight: 700,
+  },
+  signSwitchBase: {
+    color: "rgba(15, 23, 42, 0.28)",
+    "&$signSwitchChecked": {
+      color: "#FF1919",
+      "& + $signSwitchTrack": {
+        backgroundColor: "rgba(255, 25, 25, 0.42)",
+        opacity: 1,
+        borderColor: "transparent",
+      },
+    },
+  },
+  signSwitchChecked: {},
+  signSwitchTrack: {
+    backgroundColor: "rgba(15, 23, 42, 0.18)",
+    opacity: 1,
   },
   messageQuickAnswersWrapper: {
     margin: 0,
@@ -603,11 +619,15 @@ const MessageInput = ({ ticketStatus }) => {
                 <Switch
                   size="small"
                   checked={signMessage}
+                  classes={{
+                    switchBase: classes.signSwitchBase,
+                    checked: classes.signSwitchChecked,
+                    track: classes.signSwitchTrack,
+                  }}
                   onChange={e => {
                     setSignMessage(e.target.checked);
                   }}
                   name="showAllTickets"
-                  color="primary"
                 />
               }
             />
@@ -665,11 +685,15 @@ const MessageInput = ({ ticketStatus }) => {
                     <Switch
                       size="small"
                       checked={signMessage}
+                      classes={{
+                        switchBase: classes.signSwitchBase,
+                        checked: classes.signSwitchChecked,
+                        track: classes.signSwitchTrack,
+                      }}
                       onChange={e => {
                         setSignMessage(e.target.checked);
                       }}
                       name="showAllTickets"
-                      color="primary"
                     />
                   }
                 />

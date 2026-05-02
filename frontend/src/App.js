@@ -59,19 +59,33 @@ const App = () => {
         divider: "rgba(15, 23, 42, 0.10)",
       },
       shape: {
-        borderRadius: 12,
+        borderRadius: 6,
       },
       typography: {
         fontFamily: '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
         h6: {
+          fontSize: "1.125rem",
           fontWeight: 700,
+          lineHeight: 1.25,
           letterSpacing: 0.1,
         },
         subtitle1: {
           fontWeight: 600,
         },
+        body1: {
+          fontSize: "0.9375rem",
+          fontWeight: 300,
+          lineHeight: 1.6,
+          color: "#111111",
+        },
+        body2: {
+          fontSize: "0.9375rem",
+          fontWeight: 300,
+          lineHeight: 1.6,
+          color: "#111111",
+        },
         button: {
-          fontWeight: 600,
+          fontWeight: 500,
           textTransform: "none",
         },
       },
@@ -92,15 +106,22 @@ const App = () => {
         },
         MuiButton: {
           root: {
-            borderRadius: 12,
+            borderRadius: 6,
             boxShadow: "none",
             padding: "8px 16px",
           },
           containedPrimary: {
-            boxShadow: "0 8px 24px rgba(198, 40, 40, 0.18)",
+            boxShadow: "none",
             "&:hover": {
               backgroundColor: "#B71C1C",
-              boxShadow: "0 10px 26px rgba(183, 28, 28, 0.22)",
+              boxShadow: "none",
+            },
+          },
+          containedSecondary: {
+            boxShadow: "none",
+            "&:hover": {
+              backgroundColor: "#C62828",
+              boxShadow: "none",
             },
           },
           outlined: {
@@ -109,7 +130,7 @@ const App = () => {
         },
         MuiPaper: {
           rounded: {
-            borderRadius: 12,
+            borderRadius: 10,
           },
           outlined: {
             borderColor: "rgba(15, 23, 42, 0.10)",
@@ -120,23 +141,44 @@ const App = () => {
         },
         MuiCard: {
           root: {
-            borderRadius: 12,
+            borderRadius: 10,
             border: "1px solid rgba(15, 23, 42, 0.10)",
             boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
           },
+        },
+        MuiDialog: {
+          paper: {
+            borderRadius: 12,
+          },
+        },
+        MuiTabs: {
+          indicator: {
+            display: "none",
+          },
+        },
+        MuiTab: {
+          root: {
+            color: "#6B7280",
+            fontWeight: 700,
+            textTransform: "none",
+            "&$selected": {
+              color: "#111111",
+            },
+          },
+          selected: {},
         },
         MuiTableCell: {
           root: {
             borderBottom: "1px solid rgba(15, 23, 42, 0.10)",
           },
           head: {
-            color: "#6B7280",
+            color: "#111111",
             fontWeight: 700,
           },
         },
         MuiOutlinedInput: {
           root: {
-            borderRadius: 12,
+            borderRadius: 8,
             backgroundColor: "#FFFFFF",
             "&:hover .MuiOutlinedInput-notchedOutline": {
               borderColor: "rgba(15, 23, 42, 0.16)",
@@ -156,6 +198,21 @@ const App = () => {
         MuiInputBase: {
           root: {
             color: "#1F2937",
+            fontWeight: 300,
+          },
+        },
+        MuiTypography: {
+          body1: {
+            fontWeight: 300,
+            fontSize: "0.9375rem",
+            lineHeight: 1.6,
+            color: "#111111",
+          },
+          body2: {
+            fontWeight: 300,
+            fontSize: "0.9375rem",
+            lineHeight: 1.6,
+            color: "#111111",
           },
         },
         MuiFormLabel: {
@@ -164,6 +221,32 @@ const App = () => {
             "&.Mui-focused": {
               color: "#C62828",
             },
+          },
+        },
+        MuiSwitch: {
+          switchBase: {
+            color: "rgba(15, 23, 42, 0.28)",
+            "&$checked": {
+              color: "#FF1919",
+              "& + $track": {
+                backgroundColor: "rgba(255, 25, 25, 0.42)",
+                opacity: 1,
+              },
+            },
+          },
+          colorPrimary: {
+            "&$checked": {
+              color: "#FF1919",
+              "& + $track": {
+                backgroundColor: "rgba(255, 25, 25, 0.42)",
+                opacity: 1,
+              },
+            },
+          },
+          checked: {},
+          track: {
+            backgroundColor: "rgba(15, 23, 42, 0.18)",
+            opacity: 1,
           },
         },
       },

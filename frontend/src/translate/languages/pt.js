@@ -281,6 +281,9 @@ const messages = {
         connectionTitle: "Conexão que está sendo utilizada atualmente.",
         buttons: {
           accept: "Aceitar",
+          selectAll: "Selecionar todos",
+          acceptSelected: "Aceitar selecionados",
+          deleteSelected: "Excluir selecionados",
         },
       },
       newTicketModal: {
@@ -314,10 +317,11 @@ const messages = {
           campaigns: "Campanhas",
           kanban: "Kanban",
           informatives: "Informativos",
+          openai: "IA",
           integrations: "Integracoes",
           administration: "Administração",
           users: "Usuários",
-          settings: "Ajustes",
+          settings: "Configurações",
           apiAdmin: "API Admin",
         },
         groups: {
@@ -333,6 +337,16 @@ const messages = {
           user: {
             profile: "Perfil",
             logout: "Sair",
+          },
+        },
+        drawerUser: {
+          menu: {
+            informatives: "Informativos",
+            releaseNotes: "Notas da versão",
+            profile: "Perfil",
+            theme: "Tema",
+            manual: "Manual",
+            lgpd: "LGPD",
           },
         },
       },
@@ -999,9 +1013,15 @@ const messages = {
         },
       },
       settings: {
-        success: "Ajustes salvos com sucesso.",
-        title: "Ajustes",
-        description: "Controle permissoes administrativas e dados de acesso.",
+        success: "Configurações salvas com sucesso.",
+        title: "Configurações",
+        description: "Centralize preferências administrativas, IA, API Admin e integrações.",
+        tabs: {
+          general: "Geral",
+          ia: "IA",
+          apiAdmin: "API Admin",
+          integrations: "Integrações",
+        },
         apiToken: {
           label: "Token da API",
           helper: "Somente leitura. Use em integracoes internas seguras.",

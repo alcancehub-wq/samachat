@@ -32,29 +32,10 @@ import SearchIcon from "@material-ui/icons/Search";
 import IntegrationModal from "../../components/IntegrationModal";
 import WebhookModal from "../../components/WebhookModal";
 import WebhookLogsModal from "../../components/WebhookLogsModal";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 const useStyles = makeStyles(theme => ({
-  mainPaper: {
-    flex: 1,
-    padding: theme.spacing(1.5, 2),
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
-    borderRadius: 16,
-    border: "1px solid rgba(15, 23, 42, 0.08)",
-    boxShadow: "0 16px 28px rgba(15, 23, 42, 0.08)",
-    backgroundColor: "#ffffff",
-    backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-  },
-  headerTitle: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: theme.spacing(0.5)
-  },
-  headerSubtitle: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.9rem"
-  },
+  ...buildMenuListPageStyles(theme),
   spacer: {
     marginTop: theme.spacing(3)
   },
@@ -69,6 +50,10 @@ const useStyles = makeStyles(theme => ({
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis"
+  },
+  embeddedRoot: {
+    display: "flex",
+    flexDirection: "column"
   }
 }));
 
@@ -158,7 +143,7 @@ const webhookReducer = (state, action) => {
   }
 };
 
-const Integrations = () => {
+const Integrations = ({ embedded = false }) => {
   const classes = useStyles();
 
   const [integrations, dispatchIntegrations] = useReducer(integrationReducer, []);
@@ -325,8 +310,8 @@ const Integrations = () => {
       .join(", ");
   };
 
-  return (
-    <MainContainer>
+  const content = (
+    <>
       <ConfirmationModal
         title={
           selectedIntegration &&
@@ -364,7 +349,8 @@ const Integrations = () => {
         onClose={handleCloseLogs}
         webhookId={selectedWebhook?.id}
       />
-      <MainHeader>
+      {!embedded && (
+        <MainHeader>
         <div className={classes.headerTitle}>
           <Title>{i18n.t("integrations.title")}</Title>
           <Typography className={classes.headerSubtitle}>
@@ -373,11 +359,13 @@ const Integrations = () => {
         </div>
         <MainHeaderButtonsWrapper>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("integrations.searchPlaceholder")}
             type="search"
             value={integrationSearch}
             onChange={event => setIntegrationSearch(event.target.value.toLowerCase())}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon style={{ color: "gray" }} />
@@ -385,11 +373,12 @@ const Integrations = () => {
               )
             }}
           />
-          <Button variant="contained" color="primary" onClick={handleOpenIntegrationModal}>
+          <Button variant="contained" color="primary" className={classes.actionButton} onClick={handleOpenIntegrationModal}>
             {i18n.t("integrations.buttons.add")}
           </Button>
         </MainHeaderButtonsWrapper>
-      </MainHeader>
+        </MainHeader>
+      )}
       <Paper className={classes.mainPaper} variant="outlined">
         <Table size="small">
           <TableHead>
@@ -437,7 +426,8 @@ const Integrations = () => {
 
       <div className={classes.spacer} />
 
-      <MainHeader>
+      {!embedded && (
+        <MainHeader>
         <div className={classes.headerTitle}>
           <Title>{i18n.t("webhooks.title")}</Title>
           <Typography className={classes.headerSubtitle}>
@@ -446,11 +436,13 @@ const Integrations = () => {
         </div>
         <MainHeaderButtonsWrapper>
           <TextField
+            className={classes.searchField}
             placeholder={i18n.t("webhooks.searchPlaceholder")}
             type="search"
             value={webhookSearch}
             onChange={event => setWebhookSearch(event.target.value.toLowerCase())}
             InputProps={{
+              classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon style={{ color: "gray" }} />
@@ -458,11 +450,12 @@ const Integrations = () => {
               )
             }}
           />
-          <Button variant="contained" color="primary" onClick={handleOpenWebhookModal}>
+          <Button variant="contained" color="primary" className={classes.actionButton} onClick={handleOpenWebhookModal}>
             {i18n.t("webhooks.buttons.add")}
           </Button>
         </MainHeaderButtonsWrapper>
-      </MainHeader>
+        </MainHeader>
+      )}
       <Paper className={classes.mainPaper} variant="outlined">
         <Table size="small">
           <TableHead>
@@ -523,8 +516,14 @@ const Integrations = () => {
           </TableBody>
         </Table>
       </Paper>
-    </MainContainer>
+    </>
   );
+
+  if (embedded) {
+    return <div className={classes.embeddedRoot}>{content}</div>;
+  }
+
+  return <MainContainer>{content}</MainContainer>;
 };
 
 export default Integrations;
