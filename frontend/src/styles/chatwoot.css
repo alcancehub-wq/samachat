@@ -1,18 +1,42 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap");
-
 :root {
+  --cw-primary: #c62828;
+  --cw-primary-hover: #b71c1c;
+  --cw-accent: #e53935;
+  --cw-accent-soft: #fdecec;
+  --cw-background: #f5f6f8;
   --cw-surface: #ffffff;
-  --cw-surface-muted: #f8fafc;
-  --cw-surface-strong: #f1f5f9;
-  --cw-border: rgba(15, 23, 42, 0.08);
-  --cw-text: #0f172a;
+  --cw-surface-muted: #fafbfc;
+  --cw-surface-strong: #eef1f4;
+  --cw-border: rgba(15, 23, 42, 0.1);
+  --cw-border-strong: rgba(15, 23, 42, 0.16);
+  --cw-text: #1f2937;
   --cw-text-muted: #64748b;
-  --cw-primary: #3b82f6;
-  --cw-primary-strong: #2563eb;
+  --cw-success: #2e7d32;
+  --cw-warning: #ed6c02;
+  --cw-danger: #d32f2f;
+  --cw-radius-small: 10px;
+  --cw-radius-base: 12px;
+  --cw-radius-large: 16px;
+  --cw-shadow-light: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --cw-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --cw-space-1: 4px;
+  --cw-space-2: 8px;
+  --cw-space-3: 12px;
+  --cw-space-4: 16px;
+  --cw-space-6: 24px;
+  --cw-space-8: 32px;
+  --cw-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background: var(--cw-background);
 }
 
 html,
@@ -23,7 +47,60 @@ body,
 
 body {
   margin: 0;
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-family: var(--cw-font-family);
   color: var(--cw-text);
+  background: var(--cw-background);
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(198, 40, 40, 0.14);
+  color: var(--cw-text);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.26);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.4);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.cw-surface-card {
+  background: var(--cw-surface);
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius-base);
+}
+
+.cw-border-soft {
+  border: 1px solid var(--cw-border);
+}
+
+.cw-shadow-soft {
+  box-shadow: var(--cw-shadow-soft);
+}
+
+.cw-text-muted {
+  color: var(--cw-text-muted);
+}
+
+.cw-bg-muted {
   background: var(--cw-surface-muted);
 }
