@@ -13,9 +13,9 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.background.paper,
     flex: "none",
     borderBottom: `1px solid ${theme.palette.divider}`,
-    borderRadius: theme.shape.borderRadius + 4,
-    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
-    padding: theme.spacing(1.25, 1.5),
+    borderRadius: theme.shape.borderRadius + 6,
+    boxShadow: "0 8px 18px rgba(15, 23, 42, 0.06)",
+    padding: theme.spacing(1.5, 1.75),
     gap: theme.spacing(1.5),
     [theme.breakpoints.down("sm")]: {
       flexWrap: "wrap",
@@ -25,8 +25,8 @@ const useStyles = makeStyles((theme) => ({
   },
   backButton: {
     minWidth: 42,
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     padding: 0,
     borderRadius: theme.shape.borderRadius,
     border: `1px solid ${theme.palette.divider}`,

@@ -40,7 +40,7 @@ import rules from "../rules";
 
 const useStyles = makeStyles((theme) => ({
   menuHeader: {
-    padding: theme.spacing(1, 2, 2),
+    padding: theme.spacing(1.25, 2, 2.25),
   },
   menuTitle: {
     fontWeight: 700,
@@ -55,15 +55,16 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   groupHeader: {
-    margin: theme.spacing(0.5, 1.5),
+    margin: theme.spacing(0.75, 1.25),
     paddingLeft: theme.spacing(1.25),
     paddingRight: theme.spacing(1.25),
     paddingTop: theme.spacing(0.75),
     paddingBottom: theme.spacing(0.75),
-    borderRadius: theme.shape.borderRadius,
-    backgroundColor: "transparent",
+    borderRadius: theme.shape.borderRadius + 2,
+    backgroundColor: theme.palette.background.default,
+    border: `1px solid ${theme.palette.divider}`,
     "&:hover": {
-      backgroundColor: "rgba(15, 23, 42, 0.04)",
+      backgroundColor: "rgba(229, 57, 53, 0.05)",
     },
   },
   groupTitle: {
@@ -77,15 +78,19 @@ const useStyles = makeStyles((theme) => ({
     margin: theme.spacing(1.25, 1.75),
   },
   listItemRoot: {
-    borderRadius: theme.shape.borderRadius,
-    minHeight: 42,
+    borderRadius: theme.shape.borderRadius + 2,
+    minHeight: 48,
     paddingTop: theme.spacing(1),
     paddingBottom: theme.spacing(1),
     paddingRight: theme.spacing(1.5),
     transition: "background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease",
     color: theme.palette.text.primary,
+    border: "1px solid transparent",
     "&:hover": {
       backgroundColor: "rgba(229, 57, 53, 0.08)",
+      borderColor: "rgba(229, 57, 53, 0.10)",
+      boxShadow: "0 8px 18px rgba(15, 23, 42, 0.06)",
+      transform: "translateY(-1px)",
     },
     "& .MuiListItemIcon-root": {
       color: theme.palette.text.secondary,
@@ -98,7 +103,7 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   nestedItem: {
-    margin: theme.spacing(0.35, 1.5),
+    margin: theme.spacing(0.4, 1.25),
     paddingLeft: theme.spacing(1.5),
   },
   nestedItemSecondary: {
@@ -115,9 +120,11 @@ const useStyles = makeStyles((theme) => ({
     paddingLeft: 0,
     paddingRight: 0,
     margin: theme.spacing(0.25, 0),
-    width: 52,
-    height: 52,
-    borderRadius: theme.shape.borderRadius,
+    width: 56,
+    height: 56,
+    borderRadius: theme.shape.borderRadius + 2,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
   },
   collapsedIcon: {
     minWidth: 0,
