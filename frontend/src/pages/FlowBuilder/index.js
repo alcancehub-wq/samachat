@@ -16,11 +16,14 @@ import {
   TextField,
   Typography
 } from "@material-ui/core";
+import { makeStyles } from "@material-ui/core/styles";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
+import PageBackButton from "../../components/PageBackButton";
 import Title from "../../components/Title";
+import buildMenuListPageStyles from "../../styles/menuListPageStyles";
 
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
@@ -50,7 +53,164 @@ const triggerTypes = [
   { value: "queue", label: "flowBuilder.triggerTypes.queue" }
 ];
 
+const useStyles = makeStyles(theme => ({
+  ...buildMenuListPageStyles(theme),
+  pageBody: {
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
+    padding: theme.spacing(1.25, 1, 0),
+    ...theme.scrollbarStyles,
+    [theme.breakpoints.down("sm")]: {
+      padding: theme.spacing(1, 0.75, 0),
+    },
+  },
+  actionRow: {
+    gap: theme.spacing(1),
+  },
+  headerActionButton: {
+    minHeight: 40,
+    borderRadius: 4,
+    textTransform: "none",
+    fontWeight: 600,
+    boxShadow: "none !important",
+  },
+  neutralButton: {
+    minHeight: 40,
+    borderRadius: 4,
+    textTransform: "none",
+    fontWeight: 600,
+    boxShadow: "none !important",
+    backgroundColor: "#FFFFFF !important",
+    border: "1px solid rgba(15, 23, 42, 0.12) !important",
+    color: "#111111 !important",
+    "&:hover": {
+      backgroundColor: "#F9FAFB !important",
+      borderColor: "rgba(15, 23, 42, 0.18) !important",
+      boxShadow: "none !important",
+    },
+  },
+  surface: {
+    padding: theme.spacing(2.5),
+    border: "1px solid rgba(15, 23, 42, 0.08)",
+    borderRadius: 16,
+    boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
+    backgroundColor: "#FFFFFF",
+  },
+  sectionSpacing: {
+    marginTop: theme.spacing(2),
+  },
+  sectionHeader: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    [theme.breakpoints.down("sm")]: {
+      flexDirection: "column",
+      alignItems: "stretch",
+    },
+  },
+  sectionTitle: {
+    fontSize: "0.95rem",
+    fontWeight: 700,
+    color: "#111111",
+    textTransform: "none",
+  },
+  sectionHint: {
+    color: "#111111",
+    fontSize: "0.9375rem",
+    fontWeight: 300,
+    lineHeight: 1.6,
+  },
+  stack: {
+    display: "grid",
+    gap: theme.spacing(1.5),
+  },
+  nodeCard: {
+    padding: theme.spacing(1.75, 2),
+    borderRadius: 12,
+    border: "1px solid rgba(15, 23, 42, 0.08)",
+    backgroundColor: "#FFFFFF",
+    boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
+  },
+  nodeName: {
+    color: "#111111",
+    fontSize: "0.9375rem",
+    fontWeight: 300,
+    lineHeight: 1.6,
+  },
+  nodeHeader: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: theme.spacing(1.5),
+    [theme.breakpoints.down("sm")]: {
+      flexDirection: "column",
+    },
+  },
+  rowActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    flexWrap: "wrap",
+  },
+  rowActionButton: {
+    minWidth: "auto",
+    padding: 0,
+    fontWeight: 700,
+    color: "#111111",
+    "&:hover": {
+      backgroundColor: "transparent",
+      color: "#111111",
+    },
+  },
+  rowDangerButton: {
+    minWidth: "auto",
+    padding: 0,
+    fontWeight: 700,
+    color: "#FF1919",
+    "&:hover": {
+      backgroundColor: "transparent",
+      color: "#E11414",
+    },
+  },
+  formRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: theme.spacing(1.5),
+    alignItems: "center",
+    "& > *": {
+      minWidth: 140,
+      flex: "1 1 140px",
+    },
+  },
+  compactAction: {
+    minWidth: "auto",
+    flex: "0 0 auto",
+    paddingLeft: theme.spacing(1),
+    paddingRight: theme.spacing(1),
+  },
+  executionMeta: {
+    display: "flex",
+    gap: theme.spacing(1),
+    flexWrap: "wrap",
+    marginBottom: theme.spacing(1.5),
+  },
+  chipSuccess: {
+    backgroundColor: "rgba(17, 17, 17, 0.08)",
+    color: "#111111",
+    fontWeight: 700,
+  },
+  chipError: {
+    backgroundColor: "#FF1919",
+    color: "#FFFFFF",
+    fontWeight: 700,
+  },
+}));
+
 const FlowBuilder = () => {
+  const classes = useStyles();
   const { flowId } = useParams();
 
   const [flow, setFlow] = useState(null);
@@ -274,72 +434,111 @@ const FlowBuilder = () => {
   return (
     <MainContainer>
       <MainHeader>
-        <div>
+        <div className={classes.headerTitle}>
+          <PageBackButton fallbackTo="/flows" />
           <Title>{i18n.t("flowBuilder.title")}</Title>
-          <Typography variant="body2">
+          <Typography className={classes.headerSubtitle}>
             {flow?.name ? `${flow.name}` : ""}
           </Typography>
         </div>
-        <MainHeaderButtonsWrapper>
-          <Button variant="outlined" color="primary" onClick={handleAddNode}>
+        <MainHeaderButtonsWrapper className={classes.actionRow}>
+          <Button
+            variant="outlined"
+            onClick={handleAddNode}
+            className={classes.neutralButton}
+          >
             {i18n.t("flowBuilder.buttons.addNode")}
           </Button>
-          <Button variant="outlined" color="primary" onClick={handleAddEdge}>
+          <Button
+            variant="outlined"
+            onClick={handleAddEdge}
+            className={classes.neutralButton}
+          >
             {i18n.t("flowBuilder.buttons.addEdge")}
           </Button>
-          <Button variant="contained" color="primary" onClick={handleSaveGraph}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSaveGraph}
+            className={`${classes.actionButton} ${classes.headerActionButton}`}
+          >
             {i18n.t("flowBuilder.buttons.save")}
           </Button>
-          <Button variant="outlined" color="default" onClick={handleTestFlow}>
+          <Button
+            variant="outlined"
+            onClick={handleTestFlow}
+            className={classes.neutralButton}
+          >
             {i18n.t("flowBuilder.buttons.test")}
           </Button>
-          <Button variant="outlined" color="default" onClick={handleExecuteFlow}>
+          <Button
+            variant="outlined"
+            onClick={handleExecuteFlow}
+            className={classes.neutralButton}
+          >
             {i18n.t("flowBuilder.buttons.execute")}
           </Button>
         </MainHeaderButtonsWrapper>
       </MainHeader>
 
-      <Paper style={{ padding: 16, marginBottom: 16 }} variant="outlined">
-        <Typography variant="subtitle1" gutterBottom>
-          {i18n.t("flowBuilder.nodes.title")}
-        </Typography>
-        {nodes.length === 0 && (
-          <Typography variant="body2">{i18n.t("flowBuilder.nodes.empty")}</Typography>
-        )}
-        {nodes.map(node => (
-          <Paper key={node.id} style={{ padding: 12, marginBottom: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
+      <div className={classes.pageBody}>
+        <Paper className={classes.mainPaper} variant="outlined">
+          <Paper className={classes.surface} variant="outlined">
+            <div className={classes.sectionHeader}>
               <div>
-                <Typography variant="subtitle2">
-                  {getNodeLabel(node)}
+                <Typography variant="subtitle1" className={classes.sectionTitle}>
+                  {i18n.t("flowBuilder.nodes.title")}
                 </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  {node.name || "-"}
+                <Typography variant="body2" className={classes.sectionHint}>
+                  Estruture os passos principais do fluxo e revise a sequencia antes de salvar.
                 </Typography>
-              </div>
-              <div>
-                <Button size="small" onClick={() => handleEditNode(node)}>
-                  {i18n.t("flowBuilder.nodes.edit")}
-                </Button>
-                <Button size="small" onClick={() => handleRemoveNode(node.id)}>
-                  {i18n.t("flowBuilder.nodes.remove")}
-                </Button>
               </div>
             </div>
+            {nodes.length === 0 && (
+              <Typography variant="body2">{i18n.t("flowBuilder.nodes.empty")}</Typography>
+            )}
+            <div className={classes.stack}>
+              {nodes.map(node => (
+                <Paper key={node.id} className={classes.nodeCard}>
+                  <div className={classes.nodeHeader}>
+                    <div>
+                      <Typography variant="subtitle2">{getNodeLabel(node)}</Typography>
+                      <Typography className={classes.nodeName}>
+                        {node.name || "-"}
+                      </Typography>
+                    </div>
+                    <div className={classes.rowActions}>
+                      <Button size="small" className={classes.rowActionButton} onClick={() => handleEditNode(node)}>
+                        {i18n.t("flowBuilder.nodes.edit")}
+                      </Button>
+                      <Button size="small" className={classes.rowDangerButton} onClick={() => handleRemoveNode(node.id)}>
+                        {i18n.t("flowBuilder.nodes.remove")}
+                      </Button>
+                    </div>
+                  </div>
+                </Paper>
+              ))}
+            </div>
           </Paper>
-        ))}
-      </Paper>
 
-      <Paper style={{ padding: 16 }} variant="outlined">
-        <Typography variant="subtitle1" gutterBottom>
-          {i18n.t("flowBuilder.edges.title")}
-        </Typography>
-        {edges.length === 0 && (
-          <Typography variant="body2">{i18n.t("flowBuilder.edges.empty")}</Typography>
-        )}
-        {edges.map(edge => (
-          <Paper key={edge.id} style={{ padding: 12, marginBottom: 8 }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        <Paper className={`${classes.surface} ${classes.sectionSpacing}`} variant="outlined">
+          <div className={classes.sectionHeader}>
+            <div>
+              <Typography variant="subtitle1" className={classes.sectionTitle}>
+                {i18n.t("flowBuilder.edges.title")}
+              </Typography>
+              <Typography variant="body2" className={classes.sectionHint}>
+                Defina as regras de transicao entre os nos e mantenha as prioridades consistentes.
+              </Typography>
+            </div>
+          </div>
+          {edges.length === 0 && (
+            <Typography variant="body2">{i18n.t("flowBuilder.edges.empty")}</Typography>
+          )}
+          <div className={classes.stack}>
+            {edges.map(edge => (
+              <Paper key={edge.id} className={classes.nodeCard}>
+                <div className={classes.formRow}>
               <FormControl variant="outlined" size="small">
                 <InputLabel>{i18n.t("flowBuilder.edges.source")}</InputLabel>
                 <Select
@@ -441,31 +640,42 @@ const FlowBuilder = () => {
                   })
                 }
               />
-              <Button size="small" onClick={() => handleRemoveEdge(edge.id)}>
+              <Button
+                size="small"
+                onClick={() => handleRemoveEdge(edge.id)}
+                className={`${classes.rowDangerButton} ${classes.compactAction}`}
+              >
                 {i18n.t("flowBuilder.edges.remove")}
               </Button>
-            </div>
-          </Paper>
-        ))}
-      </Paper>
+                </div>
+              </Paper>
+            ))}
+          </div>
+        </Paper>
 
-      <Paper style={{ padding: 16, marginTop: 16 }} variant="outlined">
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <Typography variant="subtitle1" gutterBottom>
-            {i18n.t("flowBuilder.triggers.title")}
-          </Typography>
-          <Button size="small" onClick={handleAddTrigger}>
-            {i18n.t("flowBuilder.triggers.add")}
-          </Button>
-        </div>
-        {triggers.length === 0 && (
-          <Typography variant="body2">
-            {i18n.t("flowBuilder.triggers.empty")}
-          </Typography>
-        )}
-        {triggers.map(trigger => (
-          <Paper key={trigger.id} style={{ padding: 12, marginBottom: 8 }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        <Paper className={`${classes.surface} ${classes.sectionSpacing}`} variant="outlined">
+          <div className={classes.sectionHeader}>
+            <div>
+              <Typography variant="subtitle1" className={classes.sectionTitle}>
+                {i18n.t("flowBuilder.triggers.title")}
+              </Typography>
+              <Typography variant="body2" className={classes.sectionHint}>
+                Controle quando o fluxo deve iniciar e quais entradas ativam cada disparo.
+              </Typography>
+            </div>
+            <Button size="small" className={classes.rowActionButton} onClick={handleAddTrigger}>
+              {i18n.t("flowBuilder.triggers.add")}
+            </Button>
+          </div>
+          {triggers.length === 0 && (
+            <Typography variant="body2">
+              {i18n.t("flowBuilder.triggers.empty")}
+            </Typography>
+          )}
+          <div className={classes.stack}>
+            {triggers.map(trigger => (
+              <Paper key={trigger.id} className={classes.nodeCard}>
+                <div className={classes.formRow}>
               <FormControl variant="outlined" size="small">
                 <InputLabel>{i18n.t("flowBuilder.triggers.type")}</InputLabel>
                 <Select
@@ -538,53 +748,69 @@ const FlowBuilder = () => {
                   </MenuItem>
                 </Select>
               </FormControl>
-              <Button size="small" onClick={() => handleRemoveTrigger(trigger.id)}>
+              <Button size="small" className={classes.rowDangerButton} onClick={() => handleRemoveTrigger(trigger.id)}>
                 {i18n.t("flowBuilder.triggers.remove")}
               </Button>
             </div>
           </Paper>
         ))}
-      </Paper>
+          </div>
+        </Paper>
 
-      <Paper style={{ padding: 16, marginTop: 16 }} variant="outlined">
-        <Typography variant="subtitle1" gutterBottom>
-          {i18n.t("flowBuilder.execution.title")}
-        </Typography>
-        {!executionResult && (
-          <Typography variant="body2">
-            {i18n.t("flowBuilder.execution.empty")}
-          </Typography>
-        )}
-        {executionResult && (
-          <>
-            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <Chip
-                label={`${i18n.t("flowBuilder.execution.status")}: ${
-                  executionResult.status || "-"
-                }`}
-                color={executionResult.status === "failed" ? "secondary" : "default"}
-              />
-              <Chip
-                label={`${i18n.t("flowBuilder.execution.id")}: ${executionResult.id}`}
-              />
-            </div>
-            {executionLogs.length === 0 ? (
-              <Typography variant="body2">
-                {i18n.t("flowBuilder.execution.noLogs")}
+        <Paper className={`${classes.surface} ${classes.sectionSpacing}`} variant="outlined">
+          <div className={classes.sectionHeader}>
+            <div>
+              <Typography variant="subtitle1" className={classes.sectionTitle}>
+                {i18n.t("flowBuilder.execution.title")}
               </Typography>
-            ) : (
-              executionLogs.map(log => (
-                <Paper key={log.id} style={{ padding: 12, marginBottom: 8 }}>
-                  <Typography variant="subtitle2">{log.event}</Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {log.message || "-"}
-                  </Typography>
-                </Paper>
-              ))
-            )}
-          </>
-        )}
-      </Paper>
+              <Typography variant="body2" className={classes.sectionHint}>
+                Consulte o resultado mais recente para revisar status, identificador e eventos gerados.
+              </Typography>
+            </div>
+          </div>
+          {!executionResult && (
+            <Typography variant="body2">
+              {i18n.t("flowBuilder.execution.empty")}
+            </Typography>
+          )}
+          {executionResult && (
+            <>
+              <div className={classes.executionMeta}>
+                <Chip
+                  label={`${i18n.t("flowBuilder.execution.status")}: ${
+                    executionResult.status || "-"
+                  }`}
+                  className={
+                    executionResult.status === "failed"
+                      ? classes.chipError
+                      : classes.chipSuccess
+                  }
+                />
+                <Chip
+                  label={`${i18n.t("flowBuilder.execution.id")}: ${executionResult.id}`}
+                />
+              </div>
+              {executionLogs.length === 0 ? (
+                <Typography variant="body2">
+                  {i18n.t("flowBuilder.execution.noLogs")}
+                </Typography>
+              ) : (
+                <div className={classes.stack}>
+                  {executionLogs.map(log => (
+                    <Paper key={log.id} className={classes.nodeCard}>
+                      <Typography variant="subtitle2">{log.event}</Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        {log.message || "-"}
+                      </Typography>
+                    </Paper>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </Paper>
+        </Paper>
+      </div>
 
       <Dialog open={nodeModalOpen} onClose={() => setNodeModalOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{i18n.t("flowBuilder.nodes.modalTitle")}</DialogTitle>

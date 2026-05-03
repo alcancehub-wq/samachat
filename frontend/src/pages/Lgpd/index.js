@@ -6,6 +6,7 @@ import Typography from "@material-ui/core/Typography";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
+import PageBackButton from "../../components/PageBackButton";
 import Title from "../../components/Title";
 
 const sections = [
@@ -189,6 +190,7 @@ const Lgpd = () => {
     <MainContainer>
       <MainHeader>
         <div className={classes.headerBlock}>
+          <PageBackButton fallbackTo="/dashboard" />
           <Title>LGPD e Bases Legais</Title>
           <div className={classes.metaBlock}>
             <Typography className={classes.metaLine}>Ultima atualizacao: 2025-10-01</Typography>

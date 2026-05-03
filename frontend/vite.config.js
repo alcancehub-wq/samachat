@@ -1,6 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+const backendTarget = process.env.VITE_BACKEND_URL || "https://app.samachat.com.br";
+
 export default defineConfig({
   plugins: [
     react({
@@ -10,6 +12,20 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    proxy: {
+      "/proxy": {
+        target: backendTarget,
+        changeOrigin: true,
+        secure: false,
+        rewrite: path => path.replace(/^\/proxy/, ""),
+      },
+      "/socket.io": {
+        target: backendTarget,
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
+    },
   },
   build: {
     outDir: "dist",

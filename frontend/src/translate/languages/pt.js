@@ -308,7 +308,7 @@ const messages = {
           quickAnswers: "Atalhos",
           tasks: "Tarefas",
           schedules: "Agendamentos",
-          flows: "Flowbuilder",
+          flows: "Fluxos",
           files: "Arquivos",
           queues: "Setores",
           tags: "Tags",
@@ -439,7 +439,7 @@ const messages = {
           tasks: "Tarefas",
           files: "Arquivos",
           schedules: "Agendamentos",
-          flows: "Flowbuilder",
+          flows: "Fluxos",
           openai: "OpenAI / IA",
           tickets: "Atendimentos",
           messages: "Mensagens",
@@ -1207,7 +1207,7 @@ const messages = {
         success: "Agendamento salvo com sucesso.",
       },
       flows: {
-        title: "Flowbuilder",
+        title: "Fluxos",
         subtitle: "Desenhe fluxos de atendimento automatizado.",
         searchPlaceholder: "Buscar fluxos",
         buttons: {
@@ -1325,7 +1325,7 @@ const messages = {
         success: "Fluxo salvo com sucesso.",
       },
       flowBuilder: {
-        title: "Flowbuilder",
+        title: "Construtor de Fluxos",
         buttons: {
           addNode: "Adicionar no",
           addEdge: "Adicionar conexao",

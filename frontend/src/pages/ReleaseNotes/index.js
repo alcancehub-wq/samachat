@@ -6,6 +6,7 @@ import Typography from "@material-ui/core/Typography";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
+import PageBackButton from "../../components/PageBackButton";
 import Title from "../../components/Title";
 
 const releases = [
@@ -138,6 +139,7 @@ const ReleaseNotes = () => {
     <MainContainer>
       <MainHeader>
         <div className={classes.headerBlock}>
+          <PageBackButton fallbackTo="/dashboard" />
           <Title>Notas da versao</Title>
           <div className={classes.metaBlock}>
             <Typography className={classes.metaLine}>Historico de atualizacoes do frontend e da operacao</Typography>
