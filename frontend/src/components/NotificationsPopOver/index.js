@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import { useHistory } from "react-router-dom";
 import { format } from "date-fns";
 import openSocket from "../../services/socket-io";
-import useSound from "use-sound";
 
 import Popover from "@material-ui/core/Popover";
 import IconButton from "@material-ui/core/IconButton";
@@ -56,20 +55,26 @@ const NotificationsPopOver = () => {
 	const [, setDesktopNotifications] = useState([]);
 
 	const { tickets } = useTickets({ withUnreadMessages: "true" });
-	const [play] = useSound(alertSound);
 	const soundAlertRef = useRef();
 
 	const historyRef = useRef(history);
 
 	useEffect(() => {
-		soundAlertRef.current = play;
+		soundAlertRef.current = () => {
+			try {
+				const audio = new Audio(alertSound);
+				void audio.play().catch(() => undefined);
+			} catch (_err) {
+				return undefined;
+			}
+		};
 
 		if (!("Notification" in window)) {
 			console.log("This browser doesn't support notifications");
 		} else {
 			Notification.requestPermission();
 		}
-	}, [play]);
+	}, []);
 
 	useEffect(() => {
 		setNotifications(tickets);

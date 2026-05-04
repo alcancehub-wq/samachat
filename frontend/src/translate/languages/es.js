@@ -35,8 +35,31 @@ const messages = {
         },
       },
       dashboard: {
-        title: "Vista general",
-        subtitle: "Indicadores operativos principales de SamaChat en tiempo real.",
+        title: "Vista estratégica",
+        subtitle: "Sigue tickets, colas, conexiones, agenda y automatizaciones en un solo panel operativo.",
+        lastUpdated: "Actualizado a las {{time}}",
+        buttons: {
+          refresh: "Actualizar panel",
+          tickets: "Abrir tickets",
+          connections: "Ver conexiones",
+          tasks: "Ver tareas",
+          schedules: "Ver agenda"
+        },
+        periods: {
+          today: "Hoy",
+          "7d": "Últimos 7 días",
+          "30d": "Últimos 30 días"
+        },
+        filters: {
+          period: "Período",
+          queue: "Cola",
+          assignee: "Responsable",
+          allQueues: "Todas las colas",
+          allAssignees: "Todos los responsables",
+          periodHint: "Define la ventana temporal usada por los indicadores.",
+          queueHint: "Enfoca la lectura operativa en una cola específica.",
+          assigneeHint: "Resalta la carga operativa del responsable seleccionado."
+        },
         charts: {
           perDay: {
             title: "Atenciones hoy: ",
@@ -53,6 +76,95 @@ const messages = {
           closed: {
             title: "Finalizados"
           }
+        },
+        summary: {
+          unread: "No leídos",
+          today: "hoy",
+          contacts: "Contactos válidos",
+          activeConnections: "Conexiones activas",
+          pendingSchedules: "Programaciones pendientes"
+        },
+        sections: {
+          timeline: {
+            title: "Evolución del volumen",
+            subtitle: "Tickets creados en {{period}} para seguir la presión operativa."
+          },
+          hourly: {
+            title: "Ritmo operativo del día",
+            subtitle: "Volumen de tickets creados hoy por franja horaria."
+          },
+          queues: {
+            title: "Distribución por cola",
+            subtitle: "Compara el volumen abierto y pendiente entre las colas visibles para el usuario."
+          },
+          connections: {
+            title: "Salud de conexiones",
+            subtitle: "Estado de las sesiones de WhatsApp con foco en las que requieren atención."
+          },
+          workbench: {
+            title: "Pendientes y automatización",
+            subtitle: "Lectura rápida de lo que necesita acción ahora en el backoffice."
+          },
+          recent: {
+            title: "Actividad reciente",
+            subtitle: "Tickets actualizados hace poco con acceso rápido para actuar."
+          },
+          tasks: {
+            title: "Tareas prioritarias",
+            subtitle: "Elementos abiertos con mayor urgencia operativa."
+          },
+          schedules: {
+            title: "Próximas programaciones",
+            subtitle: "Mensajes planificados listos para seguimiento."
+          },
+          empty: "No hay datos disponibles en este momento."
+        },
+        workbench: {
+          openTasks: "Tareas abiertas",
+          overdueTasks: "Tareas vencidas",
+          pendingSchedules: "Programaciones pendientes",
+          scheduledInPeriod: "Programadas en el período",
+          todaySchedules: "Previstas para hoy",
+          publishedFlows: "Flujos publicados",
+          scheduledCampaigns: "Campañas programadas"
+        },
+        connections: {
+          connected: "Conectadas",
+          attention: "En atención",
+          disconnected: "Desconectadas",
+          noData: "No hay conexiones registradas por ahora.",
+          updated: "Última actualización a las {{time}}"
+        },
+        recent: {
+          noQueue: "Sin cola",
+          unassigned: "Sin responsable",
+          noMessage: "Sin vista previa del mensaje",
+          unread: "no leídos"
+        },
+        status: {
+          open: "En servicio",
+          pending: "Pendiente",
+          closed: "Finalizado",
+          connected: "Conectado",
+          attention: "Atención",
+          disconnected: "Desconectado"
+        },
+        priority: {
+          high: "Alta",
+          medium: "Media",
+          low: "Baja"
+        },
+        sla: {
+          firstResponseRate: "SLA 1ª respuesta",
+          respondedTickets: "tickets respondidos",
+          averageFirstResponse: "Promedio 1ª respuesta",
+          averageResolution: "Promedio resolución",
+          minutes: "min",
+          hours: "h",
+          target: "Meta SLA"
+        },
+        schedules: {
+          noContact: "Contacto no identificado"
         }
       },
       connections: {
@@ -1323,11 +1435,28 @@ const messages = {
           type: "Tipo",
           name: "Nombre",
           message: "Mensaje",
+          mediaUpload: "Subir archivo del nodo",
+          mediaUploading: "Subiendo archivo...",
+          mediaFile: "Archivo configurado",
+          mediaNotSelected: "Ningun archivo seleccionado.",
+          mediaPreview: "Ver archivo",
+          mediaCaption: "Leyenda o texto de apoyo",
           queue: "Sector",
           queuePlaceholder: "Seleccione un sector",
           decisionHint: "Nota",
+          summaryEmpty: "Sin contenido configurado.",
+          summaryWaitInput: "Espera la respuesta del cliente antes de continuar.",
           cancel: "Cancelar",
           save: "Guardar",
+          typeHelp: {
+            start: "Use un unico nodo de inicio para definir donde comienza el flujo.",
+            message: "Envie el texto exacto que el cliente debe recibir en este paso.",
+            media: "Envie audio, imagen, video o documento aprobado para este paso.",
+            decision: "Este nodo pausa el flujo y espera la respuesta del cliente para elegir el siguiente camino.",
+            queue: "Mueve la conversacion a un sector y continua el flujo si hay otro paso.",
+            handoff: "Entrega la conversacion al sector seleccionado y finaliza la automatizacion.",
+            end: "Finaliza el flujo sin transferir a otro sector."
+          },
         },
         edges: {
           title: "Conexiones",
@@ -1355,6 +1484,7 @@ const messages = {
         nodeTypes: {
           start: "Inicio",
           message: "Mensaje",
+          media: "Media",
           decision: "Decision",
           queue: "Sector",
           handoff: "Handoff",
@@ -1372,6 +1502,16 @@ const messages = {
           tag: "Tag",
           queue: "Sector",
         },
+        guide: {
+          title: "Como crear un agente guiado",
+          subtitle: "Arme el flujo en bloques simples para que el agente solo responda lo que usted definio.",
+          step1Title: "Empiece por el guion",
+          step1Text: "Cree un nodo de inicio y despues agregue los primeros mensajes o archivos que recibira el cliente.",
+          step2Title: "Agregue decisiones controladas",
+          step2Text: "Use un nodo de decision para esperar la respuesta del cliente y conexiones por palabra clave para cada opcion.",
+          step3Title: "Defina el cierre",
+          step3Text: "Termine con fin, cambio de sector o handoff a un agente humano cuando sea necesario."
+        },
         execution: {
           title: "Ejecucion",
           empty: "Ninguna ejecucion registrada.",
@@ -1383,9 +1523,12 @@ const messages = {
           saved: "Flujo guardado.",
           tested: "Flujo probado.",
           executed: "Flujo ejecutado.",
+          mediaUploaded: "Archivo del flujo subido.",
         },
         errors: {
           needTwoNodes: "Cree al menos dos nodos para conectar.",
+          singleStart: "El flujo debe tener un solo nodo de inicio.",
+          mediaRequired: "Seleccione un archivo antes de guardar el nodo de media.",
         },
       },
       files: {

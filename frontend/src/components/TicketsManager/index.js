@@ -19,6 +19,7 @@ import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import { Button } from "@material-ui/core";
 import TagSelect from "../TagSelect";
+import { useLocation } from "react-router-dom";
 
 const useStyles = makeStyles((theme) => ({
   ticketsWrapper: {
@@ -31,15 +32,20 @@ const useStyles = makeStyles((theme) => ({
     borderBottomRightRadius: 0,
     backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,
-    backgroundImage: "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(250,251,252,0.96) 100%)",
+    backgroundImage: theme.palette.type === "dark"
+      ? theme.custom.panelGradientSoft
+      : "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(250,251,252,0.96) 100%)",
   },
   tabsHeader: {
     flex: "none",
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
-    padding: theme.spacing(1.25, 1.25, 0.5),
+    padding: theme.spacing(2.5, 3, 1),
     "& .MuiTabs-flexContainer": {
       gap: theme.spacing(0.75),
+    },
+    [theme.breakpoints.down("sm")]: {
+      padding: theme.spacing(2, 2, 0.75),
     },
   },
   settingsIcon: {
@@ -52,33 +58,38 @@ const useStyles = makeStyles((theme) => ({
     width: 112,
     minHeight: 46,
     borderRadius: theme.shape.borderRadius,
-    color: "#6B7280 !important",
+    color: `${theme.palette.text.secondary} !important`,
     fontWeight: 700,
     "&.MuiTab-textColorPrimary": {
-      color: "#6B7280 !important",
+      color: `${theme.palette.text.secondary} !important`,
     },
     "&.Mui-selected": {
-      color: "#111111 !important",
+      color: `${theme.palette.text.primary} !important`,
       fontWeight: 700,
+      backgroundColor: theme.palette.type === "dark" ? theme.custom.softBackground : "rgba(229, 57, 53, 0.08)",
     },
     "&.MuiTab-textColorPrimary.Mui-selected": {
-      color: "#111111 !important",
+      color: `${theme.palette.text.primary} !important`,
     },
   },
   subTabs: {
+    backgroundColor: theme.palette.type === "dark" ? theme.custom.inputBackground : theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.divider}`,
   },
   subTab: {
-    color: "#6B7280 !important",
+    color: `${theme.palette.text.secondary} !important`,
     fontWeight: 700,
+    minHeight: 44,
     "&.MuiTab-textColorPrimary": {
-      color: "#6B7280 !important",
+      color: `${theme.palette.text.secondary} !important`,
     },
     "&.Mui-selected": {
-      color: "#111111 !important",
+      color: `${theme.palette.text.primary} !important`,
       fontWeight: 700,
+      backgroundColor: theme.palette.type === "dark" ? theme.custom.softBackground : "rgba(229, 57, 53, 0.08)",
     },
     "&.MuiTab-textColorPrimary.Mui-selected": {
-      color: "#111111 !important",
+      color: `${theme.palette.text.primary} !important`,
     },
   },
   ticketOptionsBox: {
@@ -86,10 +97,13 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "space-between",
     alignItems: "center",
     background: theme.palette.background.paper,
-    padding: theme.spacing(1.5),
+    padding: theme.spacing(1.25, 3, 2),
     gap: theme.spacing(1.25),
     borderBottom: `1px solid ${theme.palette.divider}`,
     flexWrap: "wrap",
+    [theme.breakpoints.down("sm")]: {
+      padding: theme.spacing(0.5, 2, 1.5),
+    },
   },
   ticketOptionsPrimary: {
     display: "flex",
@@ -116,7 +130,7 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.shape.borderRadius,
     padding: theme.spacing(0.85, 1.25),
     border: `1px solid ${theme.palette.divider}`,
-    boxShadow: "inset 0 1px 2px rgba(15, 23, 42, 0.03)",
+    boxShadow: "none",
   },
   searchIcon: {
     color: theme.palette.text.secondary,
@@ -169,13 +183,17 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.shape.borderRadius,
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.default,
+    "& .MuiFormControlLabel-label": {
+      color: theme.palette.text.primary,
+      fontWeight: 600,
+    },
   },
   showAllSwitchBase: {
-    color: "rgba(15, 23, 42, 0.28)",
+    color: theme.palette.type === "dark" ? "rgba(243, 246, 252, 0.42)" : "rgba(15, 23, 42, 0.28)",
     "&$showAllSwitchChecked": {
       color: "#FF1919",
       "& + $showAllSwitchTrack": {
-        backgroundColor: "rgba(255, 25, 25, 0.42)",
+        backgroundColor: theme.palette.type === "dark" ? "rgba(255, 90, 95, 0.56)" : "rgba(255, 25, 25, 0.42)",
         opacity: 1,
         borderColor: "transparent",
       },
@@ -183,7 +201,7 @@ const useStyles = makeStyles((theme) => ({
   },
   showAllSwitchChecked: {},
   showAllSwitchTrack: {
-    backgroundColor: "rgba(15, 23, 42, 0.18)",
+    backgroundColor: theme.palette.type === "dark" ? "rgba(148, 163, 184, 0.28)" : "rgba(15, 23, 42, 0.18)",
     opacity: 1,
   },
 }));
@@ -191,38 +209,94 @@ const useStyles = makeStyles((theme) => ({
 const TicketsManager = () => {
   const classes = useStyles();
   const [searchParam, setSearchParam] = useState("");
+  const [searchInputValue, setSearchInputValue] = useState("");
   const [tab, setTab] = useState("open");
   const [tabOpen, setTabOpen] = useState("open");
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
   const searchInputRef = useRef();
+  const searchTimeoutRef = useRef();
   const { user } = useContext(AuthContext);
+  const location = useLocation();
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
+  const canShowAllTickets =
+    user?.profile?.toUpperCase() === "ADMIN" ||
+    user?.permissions?.includes("tickets-manager:showall");
+  const existingTicketSearch =
+    location.state && typeof location.state.existingTicketSearch === "string"
+      ? location.state.existingTicketSearch.trim()
+      : "";
+  const dashboardFilters =
+    location.state && location.state.dashboardFilters
+      ? location.state.dashboardFilters
+      : null;
 
   useEffect(() => {
-    if (user.profile.toUpperCase() === "ADMIN") {
+    if (canShowAllTickets) {
       setShowAllTickets(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [canShowAllTickets]);
 
   useEffect(() => {
     if (tab === "search") {
-      searchInputRef.current.focus();
-      setSearchParam("");
+      searchInputRef.current?.focus();
+      if (!searchInputValue) {
+        setSearchParam("");
+      }
     }
-  }, [tab]);
+  }, [tab, searchInputValue]);
 
-  let searchTimeout;
+  useEffect(() => {
+    if (!existingTicketSearch) {
+      return;
+    }
+
+    setTab("search");
+    setSearchInputValue(existingTicketSearch);
+    setSearchParam(existingTicketSearch.toLowerCase());
+  }, [existingTicketSearch]);
+
+  useEffect(() => {
+    if (!dashboardFilters) {
+      return;
+    }
+
+    if (dashboardFilters.tab) {
+      setTab(dashboardFilters.tab);
+    }
+
+    if (dashboardFilters.tabOpen) {
+      setTabOpen(dashboardFilters.tabOpen);
+    }
+
+    if (Array.isArray(dashboardFilters.queueIds)) {
+      setSelectedQueueIds(dashboardFilters.queueIds);
+    }
+
+    if (Array.isArray(dashboardFilters.tagIds)) {
+      setSelectedTagIds(dashboardFilters.tagIds);
+    }
+
+    if (
+      typeof dashboardFilters.showAllTickets === "boolean" &&
+      canShowAllTickets
+    ) {
+      setShowAllTickets(dashboardFilters.showAllTickets);
+    }
+  }, [dashboardFilters, canShowAllTickets]);
 
   const handleSearch = (e) => {
-    const searchedTerm = e.target.value.toLowerCase();
+    const inputValue = e.target.value;
+    const searchedTerm = inputValue.toLowerCase();
 
-    clearTimeout(searchTimeout);
+    setSearchInputValue(inputValue);
+
+    clearTimeout(searchTimeoutRef.current);
 
     if (searchedTerm === "") {
       setSearchParam(searchedTerm);
@@ -230,7 +304,7 @@ const TicketsManager = () => {
       return;
     }
 
-    searchTimeout = setTimeout(() => {
+    searchTimeoutRef.current = setTimeout(() => {
       setSearchParam(searchedTerm);
     }, 500);
   };
@@ -293,6 +367,7 @@ const TicketsManager = () => {
               inputRef={searchInputRef}
               placeholder={i18n.t("tickets.search.placeholder")}
               type="search"
+              value={searchInputValue}
               onChange={handleSearch}
             />
           </div>

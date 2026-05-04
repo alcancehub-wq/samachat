@@ -5,10 +5,10 @@ const buildMenuListPageStyles = theme => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
     borderRadius: 16,
-    border: "1px solid rgba(15, 23, 42, 0.08)",
-    boxShadow: "0 16px 28px rgba(15, 23, 42, 0.08)",
-    backgroundColor: "#ffffff",
-    backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+    border: `1px solid ${theme.custom.panelBorder}`,
+    boxShadow: "none",
+    backgroundColor: theme.palette.background.paper,
+    backgroundImage: theme.custom.panelGradient,
   },
   headerTitle: {
     display: "flex",
@@ -17,14 +17,14 @@ const buildMenuListPageStyles = theme => ({
     gap: theme.spacing(0.5),
   },
   headerSubtitle: {
-    color: "#111111",
+    color: theme.palette.text.secondary,
     fontSize: "0.9375rem",
-    fontWeight: 300,
+    fontWeight: 400,
     lineHeight: 1.6,
   },
   searchField: {
     minWidth: 320,
-    backgroundColor: "#ffffff",
+    backgroundColor: theme.custom.inputBackground,
     marginLeft: "auto",
     [theme.breakpoints.down("sm")]: {
       minWidth: "100%",
@@ -33,7 +33,7 @@ const buildMenuListPageStyles = theme => ({
   },
   searchInputRoot: {
     borderRadius: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: theme.custom.inputBackground,
   },
   actionButton: {
     borderRadius: 4,
@@ -54,9 +54,9 @@ const buildMenuListPageStyles = theme => ({
   },
   bulkSelectionInfo: {
     fontSize: "0.9375rem",
-    fontWeight: 300,
+    fontWeight: 400,
     lineHeight: 1.6,
-    color: "#111111",
+    color: theme.palette.text.primary,
   },
   bulkActionButton: {
     borderRadius: 4,
@@ -79,12 +79,12 @@ const buildMenuListPageStyles = theme => ({
     textTransform: "none",
     fontWeight: 600,
     boxShadow: "none !important",
-    backgroundColor: "#F3F4F6 !important",
-    borderColor: "rgba(15, 23, 42, 0.12) !important",
-    color: "#111827 !important",
+    backgroundColor: `${theme.custom.neutralButtonBackground} !important`,
+    borderColor: `${theme.custom.panelBorderStrong} !important`,
+    color: `${theme.custom.neutralButtonText} !important`,
     "&:hover": {
-      backgroundColor: "#E5E7EB !important",
-      borderColor: "rgba(15, 23, 42, 0.16) !important",
+      backgroundColor: `${theme.custom.neutralButtonBackgroundHover} !important`,
+      borderColor: `${theme.custom.panelBorderStrong} !important`,
       boxShadow: "none !important",
     },
   },
@@ -93,7 +93,7 @@ const buildMenuListPageStyles = theme => ({
   },
   checkboxRoot: {
     padding: 6,
-    color: "rgba(15, 23, 42, 0.28)",
+    color: theme.palette.type === "dark" ? "rgba(243, 246, 252, 0.42)" : "rgba(15, 23, 42, 0.28)",
     "&.Mui-checked": {
       color: "#FF1919",
     },
@@ -109,7 +109,7 @@ const buildMenuListPageStyles = theme => ({
     backgroundColor: "transparent",
   },
   tableHeadCell: {
-    color: "#111111",
+    color: theme.palette.text.primary,
     fontWeight: 700,
     fontSize: "0.78rem",
     textTransform: "uppercase",
@@ -117,8 +117,7 @@ const buildMenuListPageStyles = theme => ({
     borderBottom: "none",
   },
   tableRow: {
-    backgroundColor: "#ffffff",
-    boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
+    backgroundColor: theme.palette.background.paper,
     borderRadius: 12,
     "& > td": {
       borderBottom: "none",
@@ -132,7 +131,7 @@ const buildMenuListPageStyles = theme => ({
       borderBottomRightRadius: 12,
     },
     "&:hover": {
-      backgroundColor: "rgba(14, 165, 233, 0.06)",
+      backgroundColor: theme.custom.tableHover,
     },
   },
   tableCell: {
@@ -143,9 +142,13 @@ const buildMenuListPageStyles = theme => ({
     whiteSpace: "nowrap",
   },
   actionIconButton: {
-    backgroundColor: "rgba(15, 23, 42, 0.06)",
+    backgroundColor: theme.custom.iconButtonBackground,
     marginRight: theme.spacing(0.5),
     borderRadius: 10,
+    color: theme.palette.text.secondary,
+    "&:hover": {
+      backgroundColor: theme.custom.iconButtonBackgroundHover,
+    },
   },
 });
 

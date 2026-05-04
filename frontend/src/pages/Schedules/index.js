@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import openSocket from "../../services/socket-io";
 
 import {
@@ -79,11 +79,15 @@ const reducer = (state, action) => {
 const useStyles = makeStyles(theme => ({
   ...buildMenuListPageStyles(theme),
   tabsPaper: {
-    marginBottom: theme.spacing(1),
-    borderRadius: 12,
-    border: "1px solid rgba(15, 23, 42, 0.08)",
-    boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
-    backgroundColor: "#ffffff",
+    marginBottom: 0,
+    borderRadius: 0,
+    borderTop: 0,
+    borderLeft: 0,
+    borderRight: 0,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    boxShadow: "none",
+    backgroundColor: theme.palette.background.paper,
+    backgroundImage: theme.custom.panelGradient,
     overflow: "hidden",
   },
   tabsRoot: {
@@ -96,22 +100,52 @@ const useStyles = makeStyles(theme => ({
     minHeight: 48,
     textTransform: "none",
     fontWeight: 700,
-    color: "#6B7280",
+    color: theme.palette.text.secondary,
     "&$tabSelected": {
-      color: "#111111",
+      color: theme.palette.text.primary,
+      backgroundColor: theme.palette.type === "dark" ? theme.custom.softBackground : "rgba(229, 57, 53, 0.08)",
     },
   },
   tabSelected: {},
   filtersPaper: {
-    padding: theme.spacing(1),
-    marginBottom: theme.spacing(1),
+    padding: theme.spacing(1.25, 1.5),
+    marginBottom: 0,
     display: "flex",
     flexWrap: "wrap",
     gap: theme.spacing(1),
-    borderRadius: 16,
-    border: "1px solid rgba(15, 23, 42, 0.08)",
-    boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
-    backgroundColor: "#ffffff",
+    alignItems: "flex-end",
+    borderRadius: 0,
+    borderTop: 0,
+    borderLeft: 0,
+    borderRight: 0,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    boxShadow: "none",
+    backgroundColor: theme.palette.background.paper,
+    backgroundImage: theme.custom.panelGradient,
+  },
+  filterControl: {
+    minWidth: 180,
+    flex: "0 1 200px",
+    "& .MuiOutlinedInput-root": {
+      minHeight: 50,
+      backgroundColor: theme.custom.inputBackground,
+    },
+    "& .MuiInputLabel-root": {
+      color: theme.palette.text.secondary,
+    },
+    "& .MuiInputLabel-shrink": {
+      backgroundColor: theme.palette.background.paper,
+      padding: "0 6px",
+      marginLeft: -4,
+    },
+  },
+  connectedMainPaper: {
+    borderRadius: 0,
+    borderTop: 0,
+    borderLeft: 0,
+    borderRight: 0,
+    boxShadow: "none",
+    backgroundImage: theme.custom.panelGradient,
   },
   tableActions: {
     whiteSpace: "nowrap"
@@ -130,14 +164,15 @@ const useStyles = makeStyles(theme => ({
     color: "#FFFFFF",
   },
   pendingChip: {
-    backgroundColor: "rgba(17, 17, 17, 0.08)",
-    color: "#111111",
+    backgroundColor: theme.custom.softBackground,
+    color: theme.palette.text.primary,
   },
 }));
 
 const Schedules = () => {
   const classes = useStyles();
   const history = useHistory();
+  const location = useLocation();
 
   const [schedules, dispatch] = useReducer(reducer, []);
   const [loading, setLoading] = useState(false);
@@ -152,6 +187,36 @@ const Schedules = () => {
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deletingSchedule, setDeletingSchedule] = useState(null);
+  const dashboardFilters =
+    location.state && location.state.dashboardFilters
+      ? location.state.dashboardFilters
+      : null;
+
+  useEffect(() => {
+    if (!dashboardFilters) {
+      return;
+    }
+
+    if (dashboardFilters.searchParam) {
+      setSearchParam(String(dashboardFilters.searchParam).toLowerCase());
+    }
+
+    if (dashboardFilters.statusFilter) {
+      setStatusFilter(dashboardFilters.statusFilter);
+    }
+
+    if (dashboardFilters.assigneeId) {
+      setAssigneeFilter(String(dashboardFilters.assigneeId));
+    }
+
+    if (dashboardFilters.scheduledFrom) {
+      setScheduledFrom(dashboardFilters.scheduledFrom);
+    }
+
+    if (dashboardFilters.scheduledTo) {
+      setScheduledTo(dashboardFilters.scheduledTo);
+    }
+  }, [dashboardFilters]);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -360,7 +425,7 @@ const Schedules = () => {
         </div>
         <MainHeaderButtonsWrapper>
           <TextField
-            className={classes.searchField}
+            className={`${classes.searchField} ${classes.filterControl}`}
             placeholder={i18n.t("schedules.searchPlaceholder")}
             type="search"
             value={searchParam}
@@ -369,7 +434,7 @@ const Schedules = () => {
               classes: { root: classes.searchInputRoot },
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search style={{ color: "gray" }} />
+                  <Search style={{ color: "inherit" }} />
                 </InputAdornment>
               )
             }}
@@ -395,7 +460,7 @@ const Schedules = () => {
         </Tabs>
       </Paper>
       <Paper className={classes.filtersPaper} variant="outlined">
-        <FormControl variant="outlined" size="small" style={{ minWidth: 180 }}>
+        <FormControl variant="outlined" size="small" className={classes.filterControl}>
           <InputLabel>{i18n.t("schedules.filters.assignee")}</InputLabel>
           <Select
             value={assigneeFilter}
@@ -413,6 +478,7 @@ const Schedules = () => {
           </Select>
         </FormControl>
         <TextField
+          className={classes.filterControl}
           label={i18n.t("schedules.filters.dateFrom")}
           type="date"
           variant="outlined"
@@ -422,6 +488,7 @@ const Schedules = () => {
           InputLabelProps={{ shrink: true }}
         />
         <TextField
+          className={classes.filterControl}
           label={i18n.t("schedules.filters.dateTo")}
           type="date"
           variant="outlined"
@@ -431,7 +498,7 @@ const Schedules = () => {
           InputLabelProps={{ shrink: true }}
         />
       </Paper>
-      <Paper className={classes.mainPaper} variant="outlined">
+      <Paper className={`${classes.mainPaper} ${classes.connectedMainPaper}`} variant="outlined">
         <Table size="small" className={classes.table}>
           <TableHead className={classes.tableHead}>
             <TableRow>

@@ -95,10 +95,10 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
     borderRadius: 16,
-    border: "1px solid rgba(15, 23, 42, 0.08)",
-    boxShadow: "0 16px 28px rgba(15, 23, 42, 0.08)",
-    backgroundColor: "#ffffff",
-    backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+    border: `1px solid ${theme.custom.panelBorder}`,
+    boxShadow: "none",
+    backgroundColor: theme.palette.background.paper,
+    backgroundImage: theme.custom.panelGradient,
   },
   headerTitle: {
     display: "flex",
@@ -126,14 +126,14 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   pageSubtitle: {
-    color: "#111111",
+    color: theme.palette.text.secondary,
     fontSize: "0.9375rem",
     fontWeight: 300,
     lineHeight: 1.6,
   },
   searchField: {
     minWidth: 320,
-    backgroundColor: "#ffffff",
+    backgroundColor: theme.custom.inputBackground,
     marginLeft: "auto",
     [theme.breakpoints.down("sm")]: {
       minWidth: "100%",
@@ -142,7 +142,7 @@ const useStyles = makeStyles((theme) => ({
   },
   searchInputRoot: {
     borderRadius: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: theme.custom.inputBackground,
   },
   actionButton: {
     borderRadius: 4,
@@ -196,7 +196,7 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: "transparent",
   },
   tableHeadCell: {
-    color: "#111111",
+    color: theme.palette.text.primary,
     fontWeight: 700,
     fontSize: "0.78rem",
     textTransform: "uppercase",
@@ -204,8 +204,7 @@ const useStyles = makeStyles((theme) => ({
     borderBottom: "none",
   },
   tableRow: {
-    backgroundColor: "#ffffff",
-    boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
+    backgroundColor: theme.palette.background.paper,
     borderRadius: 12,
     "& > td": {
       borderBottom: "none",
@@ -219,7 +218,7 @@ const useStyles = makeStyles((theme) => ({
       borderBottomRightRadius: 12,
     },
     "&:hover": {
-      backgroundColor: "rgba(14, 165, 233, 0.06)",
+      backgroundColor: theme.custom.tableHover,
     },
   },
   tableCell: {
@@ -245,9 +244,10 @@ const useStyles = makeStyles((theme) => ({
     whiteSpace: "nowrap",
   },
   actionIconButton: {
-    backgroundColor: "rgba(15, 23, 42, 0.06)",
+    backgroundColor: theme.custom.iconButtonBackground,
     marginRight: theme.spacing(0.5),
     borderRadius: 10,
+    color: theme.palette.text.secondary,
   },
 }));
 
@@ -358,18 +358,25 @@ const Contacts = () => {
     setSelectedContactIds([]);
   };
 
-  const handleSaveTicket = async (contactId) => {
-    if (!contactId) return;
+  const handleSaveTicket = async (contact) => {
+    if (!contact?.id) return;
     setLoading(true);
     try {
       const { data: ticket } = await api.post("/tickets", {
-        contactId: contactId,
+        contactId: contact.id,
         userId: user?.id,
         status: "open",
       });
       history.push(`/tickets/${ticket.id}`);
     } catch (err) {
       toastError(err);
+
+      const errorCode = err.response?.data?.message || err.response?.data?.error;
+      const existingTicketSearch = contact.number || contact.name;
+
+      if (errorCode === "ERR_OTHER_OPEN_TICKET" && existingTicketSearch) {
+        history.push("/tickets", { existingTicketSearch });
+      }
     }
     setLoading(false);
   };
@@ -618,7 +625,7 @@ const Contacts = () => {
                     <IconButton
                       size="small"
                       className={classes.actionIconButton}
-                      onClick={() => handleSaveTicket(contact.id)}
+                      onClick={() => handleSaveTicket(contact)}
                     >
                       <WhatsAppIcon />
                     </IconButton>
