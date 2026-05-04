@@ -856,14 +856,10 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
         }
 
         wbot.sendPresenceAvailable();
-        if (process.env.WWEBJS_SYNC_UNREAD === "true") {
-          await syncUnreadMessages(wbot);
-        } else {
-          logger.info(
-            { whatsappId: whatsapp.id },
-            "Skipping unread sync on READY"
-          );
-        }
+        logger.info(
+          { whatsappId: whatsapp.id },
+          "Skipping automatic unread sync on READY to avoid backfilling contacts and tickets"
+        );
       } catch (err) {
         logger.error(err, "Error on whatsapp ready event");
       }

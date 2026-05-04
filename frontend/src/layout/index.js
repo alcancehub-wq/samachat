@@ -58,7 +58,7 @@ const useStyles = makeStyles((theme) => ({
     zIndex: theme.zIndex.drawer + 1,
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
-    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)",
+    boxShadow: "none",
   },
   menuButton: {
     color: theme.palette.text.primary,
@@ -82,8 +82,7 @@ const useStyles = makeStyles((theme) => ({
     width: 12,
     height: 40,
     borderRadius: 999,
-    background: "linear-gradient(180deg, #E53935 0%, #C62828 100%)",
-    boxShadow: "0 12px 22px rgba(198, 40, 40, 0.24)",
+    background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.main} 100%)`,
     [theme.breakpoints.down("sm")]: {
       display: "none",
     },
@@ -148,7 +147,7 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 0,
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
-    boxShadow: "0 18px 36px rgba(15, 23, 42, 0.08)",
+    boxShadow: "none",
     overflowY: "auto",
     overflowX: "hidden",
     scrollbarWidth: "none",
@@ -194,11 +193,10 @@ const useStyles = makeStyles((theme) => ({
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.default,
     cursor: "pointer",
-    transition: "background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease",
+    transition: "background-color 0.2s ease, border-color 0.2s ease",
     "&:hover": {
       backgroundColor: "rgba(229, 57, 53, 0.05)",
       borderColor: "rgba(229, 57, 53, 0.12)",
-      boxShadow: "0 8px 18px rgba(15, 23, 42, 0.06)",
     },
   },
   drawerFooterCollapsed: {
@@ -284,7 +282,7 @@ const useStyles = makeStyles((theme) => ({
   searchInput: {
     borderRadius: theme.shape.borderRadius,
     backgroundColor: theme.palette.background.default,
-    boxShadow: "inset 0 1px 2px rgba(15, 23, 42, 0.03)",
+    boxShadow: "none",
     border: `1px solid ${theme.palette.divider}`,
   },
   searchAdornment: {
@@ -294,13 +292,13 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing(1),
     borderRadius: theme.shape.borderRadius,
     border: `1px solid ${theme.palette.divider}`,
-    boxShadow: "0 16px 32px rgba(15, 23, 42, 0.12)",
+    boxShadow: "none",
   },
   drawerUserMenuPaper: {
     marginTop: theme.spacing(1),
     borderRadius: theme.shape.borderRadius + 4,
     border: `1px solid ${theme.palette.divider}`,
-    boxShadow: "0 16px 32px rgba(15, 23, 42, 0.12)",
+    boxShadow: "none",
     minWidth: 220,
   },
   drawerUserMenuItem: {

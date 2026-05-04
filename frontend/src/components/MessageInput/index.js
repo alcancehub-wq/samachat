@@ -63,11 +63,11 @@ const stopMediaStream = () => {
 
 const useStyles = makeStyles(theme => ({
   mainWrapper: {
-    background: "#eee",
+    background: theme.custom.softBackground,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    borderTop: `1px solid ${theme.palette.divider}`,
     [theme.breakpoints.down("sm")]: {
       position: "fixed",
       bottom: 0,
@@ -76,7 +76,7 @@ const useStyles = makeStyles(theme => ({
   },
 
   newMessageBox: {
-    background: "#eee",
+    background: theme.custom.softBackground,
     width: "100%",
     display: "flex",
     padding: "7px",
@@ -86,7 +86,7 @@ const useStyles = makeStyles(theme => ({
   messageInputWrapper: {
     padding: 6,
     marginRight: 7,
-    background: "#fff",
+    background: theme.custom.inputBackground,
     display: "flex",
     borderRadius: 20,
     flex: 1,
@@ -100,7 +100,7 @@ const useStyles = makeStyles(theme => ({
   },
 
   sendMessageIcons: {
-    color: "grey",
+    color: theme.palette.text.secondary,
   },
 
   uploadInput: {
@@ -113,15 +113,15 @@ const useStyles = makeStyles(theme => ({
     position: "relative",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#eee",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    backgroundColor: theme.custom.softBackground,
+    borderTop: `1px solid ${theme.palette.divider}`,
   },
 
   emojiBox: {
     position: "absolute",
     bottom: 63,
     width: 40,
-    borderTop: "1px solid #e8e8e8",
+    borderTop: `1px solid ${theme.palette.divider}`,
   },
 
   circleLoading: {
@@ -194,7 +194,7 @@ const useStyles = makeStyles(theme => ({
 
   messageContactName: {
     display: "flex",
-    color: "#C62828",
+    color: theme.palette.primary.main,
     fontWeight: 700,
   },
   signSwitchBase: {
@@ -251,6 +251,7 @@ const MessageInput = ({ ticketStatus }) => {
   const [quickAnswers, setQuickAnswer] = useState([]);
   const [typeBar, setTypeBar] = useState(false);
   const inputRef = useRef();
+  const acceptedPendingTicketRef = useRef(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
@@ -271,6 +272,10 @@ const MessageInput = ({ ticketStatus }) => {
       setReplyingMessage(null);
     };
   }, [ticketId, setReplyingMessage]);
+
+  useEffect(() => {
+    acceptedPendingTicketRef.current = false;
+  }, [ticketId, ticketStatus]);
 
   const resetRecordingState = () => {
     isStopping = false;
@@ -325,6 +330,8 @@ const MessageInput = ({ ticketStatus }) => {
   };
 
   const uploadMediaFiles = async files => {
+    await ensureTicketIsOpen();
+
     const formData = new FormData();
     formData.append("fromMe", true);
     files.forEach(media => {
@@ -333,6 +340,24 @@ const MessageInput = ({ ticketStatus }) => {
     });
 
     await api.post(`/messages/${ticketId}`, formData);
+  };
+
+  const ensureTicketIsOpen = async () => {
+    if (
+      ticketStatus !== "pending" ||
+      acceptedPendingTicketRef.current ||
+      !ticketId ||
+      !user?.id
+    ) {
+      return;
+    }
+
+    await api.put(`/tickets/${ticketId}`, {
+      status: "open",
+      userId: user.id,
+    });
+
+    acceptedPendingTicketRef.current = true;
   };
 
   const handleSendMessage = async () => {
@@ -349,6 +374,7 @@ const MessageInput = ({ ticketStatus }) => {
       quotedMsg: replyingMessage,
     };
     try {
+      await ensureTicketIsOpen();
       await api.post(`/messages/${ticketId}`, message);
       console.log("Mensagem enviada com sucesso");
       window.dispatchEvent(new Event("refreshMessages"));

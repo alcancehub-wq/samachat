@@ -35,19 +35,15 @@ const useStyles = makeStyles(theme => ({
 		borderRadius: theme.shape.borderRadius + 2,
 		border: `1px solid ${theme.palette.divider}`,
 		backgroundColor: theme.palette.background.paper,
-		boxShadow: "0 10px 22px rgba(15, 23, 42, 0.05)",
 		alignItems: "flex-start",
-		transition: "transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease",
+		transition: "border-color 0.18s ease, background-color 0.18s ease",
 		"&:hover": {
-			transform: "translateY(-1px)",
-			boxShadow: "0 16px 30px rgba(15, 23, 42, 0.08)",
-			borderColor: "rgba(229, 57, 53, 0.14)",
-			backgroundColor: "rgba(255, 255, 255, 0.98)",
+			borderColor: theme.palette.type === "dark" ? "rgba(255, 90, 95, 0.26)" : "rgba(229, 57, 53, 0.14)",
+			backgroundColor: theme.custom.tableHover,
 		},
 		"&.Mui-selected": {
-			backgroundColor: "rgba(229, 57, 53, 0.08)",
-			borderColor: "rgba(229, 57, 53, 0.18)",
-			boxShadow: "0 18px 34px rgba(198, 40, 40, 0.10)",
+			backgroundColor: theme.custom.dangerSoft,
+			borderColor: theme.palette.type === "dark" ? "rgba(255, 90, 95, 0.26)" : "rgba(229, 57, 53, 0.18)",
 		},
 	},
 
@@ -67,13 +63,14 @@ const useStyles = makeStyles(theme => ({
 
 	noTicketsText: {
 		textAlign: "center",
-		color: "rgb(104, 121, 146)",
+		color: theme.palette.text.secondary,
 		fontSize: "14px",
 		lineHeight: "1.4",
 	},
 
 	noTicketsTitle: {
 		textAlign: "center",
+		color: theme.palette.text.primary,
 		fontSize: "16px",
 		fontWeight: "600",
 		margin: "0px",
@@ -116,7 +113,6 @@ const useStyles = makeStyles(theme => ({
 		color: "white",
 		backgroundColor: green[500],
 		fontWeight: 700,
-		boxShadow: "0 6px 12px rgba(46, 125, 50, 0.22)",
 	},
 
 	acceptButton: {
@@ -141,7 +137,7 @@ const useStyles = makeStyles(theme => ({
 		top: 10,
 		right: 10,
 		zIndex: 2,
-		color: "rgba(15, 23, 42, 0.28)",
+		color: theme.palette.type === "dark" ? "rgba(243, 246, 252, 0.42)" : "rgba(15, 23, 42, 0.28)",
 		"&.Mui-checked": {
 			color: "#FF1919",
 		},
@@ -166,7 +162,7 @@ const useStyles = makeStyles(theme => ({
 		background: theme.palette.background.default,
 		color: theme.palette.text.primary,
 		border: `1px solid ${theme.palette.divider}`,
-		boxShadow: "0 1px 2px rgba(15, 23, 42, 0.05)",
+		boxShadow: "none",
 		padding: "3px 8px",
 		borderRadius: 999,
 		fontSize: "0.7rem",
@@ -176,7 +172,7 @@ const useStyles = makeStyles(theme => ({
 		width: 46,
 		height: 46,
 		border: `1px solid ${theme.palette.divider}`,
-		boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
+		boxShadow: "none",
 	},
 	contactName: {
 		fontWeight: 700,
@@ -201,19 +197,19 @@ const useStyles = makeStyles(theme => ({
 		alignItems: "center",
 	},
 	tagChip: {
-		background: "rgba(229, 57, 53, 0.08)",
+		background: theme.custom.dangerSoft,
 		color: theme.palette.text.primary,
 		borderRadius: 999,
 		padding: "4px 8px",
 		fontSize: "0.7rem",
 		whiteSpace: "nowrap",
 		fontWeight: 600,
-		border: "1px solid rgba(229, 57, 53, 0.10)",
+		border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 90, 95, 0.18)" : "rgba(229, 57, 53, 0.10)"}`,
 	},
 	tagButton: {
 		padding: 6,
 		marginLeft: 6,
-		backgroundColor: theme.palette.background.default,
+		backgroundColor: theme.custom.softBackground,
 		border: `1px solid ${theme.palette.divider}`,
 	},
 }));

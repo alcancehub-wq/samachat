@@ -1,8 +1,9 @@
-:root {
-  --cw-primary: #c62828;
-  --cw-primary-hover: #b71c1c;
-  --cw-accent: #e53935;
-  --cw-accent-soft: #fdecec;
+:root,
+.theme-light {
+  --cw-primary: #ff1919;
+  --cw-primary-hover: #ff1919;
+  --cw-accent: #ff1919;
+  --cw-accent-soft: rgba(255, 25, 25, 0.08);
   --cw-background: #f5f6f8;
   --cw-surface: #ffffff;
   --cw-surface-muted: #fafbfc;
@@ -13,12 +14,12 @@
   --cw-text-muted: #64748b;
   --cw-success: #2e7d32;
   --cw-warning: #ed6c02;
-  --cw-danger: #d32f2f;
+  --cw-danger: #ff1919;
   --cw-radius-small: 10px;
   --cw-radius-base: 12px;
   --cw-radius-large: 16px;
-  --cw-shadow-light: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --cw-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --cw-shadow-light: none;
+  --cw-shadow-soft: none;
   --cw-space-1: 4px;
   --cw-space-2: 8px;
   --cw-space-3: 12px;
@@ -26,6 +27,24 @@
   --cw-space-6: 24px;
   --cw-space-8: 32px;
   --cw-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+.theme-dark {
+  --cw-primary: #ff1919;
+  --cw-primary-hover: #ff1919;
+  --cw-accent: #ff1919;
+  --cw-accent-soft: rgba(255, 25, 25, 0.16);
+  --cw-background: #0b1220;
+  --cw-surface: #121a2b;
+  --cw-surface-muted: #0f172a;
+  --cw-surface-strong: #182338;
+  --cw-border: rgba(148, 163, 184, 0.18);
+  --cw-border-strong: rgba(148, 163, 184, 0.26);
+  --cw-text: #f3f6fc;
+  --cw-text-muted: #a6b2c8;
+  --cw-success: #58d68d;
+  --cw-warning: #f4b740;
+  --cw-danger: #ff1919;
 }
 
 * {
@@ -50,6 +69,19 @@ body {
   font-family: var(--cw-font-family);
   color: var(--cw-text);
   background: var(--cw-background);
+}
+
+.MuiAppBar-root,
+.MuiPaper-root,
+.MuiCard-root,
+.MuiDrawer-paper,
+.MuiPopover-paper,
+.MuiMenu-paper,
+.MuiDialog-paper,
+.MuiListItem-root,
+.MuiButton-root {
+  box-shadow: none !important;
+  filter: none !important;
 }
 
 a {
@@ -77,10 +109,18 @@ a {
   background-clip: padding-box;
 }
 
+.theme-dark *::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.26);
+}
+
 *::-webkit-scrollbar-thumb:hover {
   background: rgba(107, 114, 128, 0.4);
   border: 2px solid transparent;
   background-clip: padding-box;
+}
+
+.theme-dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
 }
 
 .cw-surface-card {

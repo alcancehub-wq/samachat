@@ -201,6 +201,22 @@ export const updateGraph = async (
   });
 };
 
+export const uploadAsset = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  if (!req.file) {
+    throw new AppError("ERR_FLOW_MEDIA_REQUIRED", 400);
+  }
+
+  return res.status(200).json({
+    fileName: req.file.filename,
+    originalName: req.file.originalname,
+    mimetype: req.file.mimetype,
+    publicUrl: `/public/${req.file.filename}`
+  });
+};
+
 export const publish = async (req: Request, res: Response): Promise<Response> => {
   const { flowId } = req.params;
 

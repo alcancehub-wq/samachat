@@ -1,11 +1,14 @@
 import express from "express";
+import multer from "multer";
 import isAuth from "../middleware/isAuth";
 import checkSectorPermission from "../middleware/checkSectorPermission";
+import uploadConfig from "../config/upload";
 
 import * as FlowController from "../controllers/FlowController";
 import * as FlowNodeController from "../controllers/FlowNodeController";
 
 const flowRoutes = express.Router();
+const upload = multer(uploadConfig);
 
 flowRoutes.get(
 	"/flows",
@@ -40,6 +43,14 @@ flowRoutes.put(
 	isAuth,
 	checkSectorPermission("flows.graph.update"),
 	FlowController.updateGraph
+);
+
+flowRoutes.post(
+	"/flows/assets/upload",
+	isAuth,
+	checkSectorPermission("flows.graph.update"),
+	upload.single("media"),
+	FlowController.uploadAsset
 );
 
 flowRoutes.get(
