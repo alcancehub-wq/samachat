@@ -35,8 +35,31 @@ const messages = {
         },
       },
       dashboard: {
-        title: "Overview",
-        subtitle: "Main SamaChat operational indicators in real time.",
+        title: "Strategic overview",
+        subtitle: "Track tickets, queues, connections, schedules and automations in one operational dashboard.",
+        lastUpdated: "Updated at {{time}}",
+        buttons: {
+          refresh: "Refresh dashboard",
+          tickets: "Open tickets",
+          connections: "View connections",
+          tasks: "View tasks",
+          schedules: "View schedule"
+        },
+        periods: {
+          today: "Today",
+          "7d": "Last 7 days",
+          "30d": "Last 30 days"
+        },
+        filters: {
+          period: "Period",
+          queue: "Queue",
+          assignee: "Assignee",
+          allQueues: "All queues",
+          allAssignees: "All assignees",
+          periodHint: "Defines the time window used by charts and metrics.",
+          queueHint: "Focus the operational view on a specific queue.",
+          assigneeHint: "Highlights workload for the selected assignee."
+        },
         charts: {
           perDay: {
             title: "Attendances today: ",
@@ -53,6 +76,95 @@ const messages = {
           closed: {
             title: "Closed"
           }
+        },
+        summary: {
+          unread: "Unread",
+          today: "today",
+          contacts: "Valid contacts",
+          activeConnections: "Active connections",
+          pendingSchedules: "Pending schedules"
+        },
+        sections: {
+          timeline: {
+            title: "Volume trend",
+            subtitle: "Tickets created in {{period}} so you can track current pressure."
+          },
+          hourly: {
+            title: "Daily operating pace",
+            subtitle: "Volume of tickets created today by hour."
+          },
+          queues: {
+            title: "Queue distribution",
+            subtitle: "Compare open and pending volume across the queues visible to this user."
+          },
+          connections: {
+            title: "Connection health",
+            subtitle: "WhatsApp session status with emphasis on connections that need attention."
+          },
+          workbench: {
+            title: "Pending work and automation",
+            subtitle: "Quick read of what needs action now in the backoffice."
+          },
+          recent: {
+            title: "Recent activity",
+            subtitle: "Recently updated tickets with quick access for action."
+          },
+          tasks: {
+            title: "Priority tasks",
+            subtitle: "Open items with the highest operational urgency."
+          },
+          schedules: {
+            title: "Upcoming schedules",
+            subtitle: "Planned messages ready for monitoring and follow-up."
+          },
+          empty: "No data available right now."
+        },
+        workbench: {
+          openTasks: "Open tasks",
+          overdueTasks: "Overdue tasks",
+          pendingSchedules: "Pending schedules",
+          scheduledInPeriod: "Scheduled in period",
+          todaySchedules: "Due today",
+          publishedFlows: "Published flows",
+          scheduledCampaigns: "Scheduled campaigns"
+        },
+        connections: {
+          connected: "Connected",
+          attention: "Attention",
+          disconnected: "Disconnected",
+          noData: "No connections registered right now.",
+          updated: "Last update at {{time}}"
+        },
+        recent: {
+          noQueue: "No queue",
+          unassigned: "Unassigned",
+          noMessage: "No message preview",
+          unread: "unread"
+        },
+        status: {
+          open: "In service",
+          pending: "Pending",
+          closed: "Closed",
+          connected: "Connected",
+          attention: "Attention",
+          disconnected: "Disconnected"
+        },
+        priority: {
+          high: "High",
+          medium: "Medium",
+          low: "Low"
+        },
+        sla: {
+          firstResponseRate: "First response SLA",
+          respondedTickets: "responded tickets",
+          averageFirstResponse: "Avg first response",
+          averageResolution: "Avg resolution",
+          minutes: "min",
+          hours: "h",
+          target: "SLA target"
+        },
+        schedules: {
+          noContact: "Unknown contact"
         }
       },
       connections: {
@@ -1319,11 +1431,28 @@ const messages = {
           type: "Type",
           name: "Name",
           message: "Message",
+          mediaUpload: "Upload node file",
+          mediaUploading: "Uploading file...",
+          mediaFile: "Configured file",
+          mediaNotSelected: "No file selected.",
+          mediaPreview: "Preview file",
+          mediaCaption: "Caption or support text",
           queue: "Sector",
           queuePlaceholder: "Select a sector",
           decisionHint: "Note",
+          summaryEmpty: "No content configured.",
+          summaryWaitInput: "Waits for the customer response before continuing.",
           cancel: "Cancel",
           save: "Save",
+          typeHelp: {
+            start: "Use a single start node to define where the flow begins.",
+            message: "Send the exact text the customer should receive at this step.",
+            media: "Send an approved audio, image, video or document for this step.",
+            decision: "This node pauses the flow and waits for the customer response before choosing the next path.",
+            queue: "Moves the conversation to a sector and keeps the flow going if there is another step.",
+            handoff: "Hands the conversation to the selected sector and ends automation.",
+            end: "Finishes the flow without transferring to another sector."
+          },
         },
         edges: {
           title: "Connections",
@@ -1351,6 +1480,7 @@ const messages = {
         nodeTypes: {
           start: "Start",
           message: "Message",
+          media: "Media",
           decision: "Decision",
           queue: "Sector",
           handoff: "Handoff",
@@ -1368,6 +1498,16 @@ const messages = {
           tag: "Tag",
           queue: "Sector",
         },
+        guide: {
+          title: "How to build a guided agent",
+          subtitle: "Create the flow in simple blocks so the agent only replies with what you explicitly defined.",
+          step1Title: "Start with the script",
+          step1Text: "Create a start node and then add the first messages or media the customer should receive.",
+          step2Title: "Add controlled choices",
+          step2Text: "Use a decision node to wait for the customer answer and keyword-based edges for each option.",
+          step3Title: "Define the ending",
+          step3Text: "Finish with end, sector change or handoff to a human agent when needed."
+        },
         execution: {
           title: "Execution",
           empty: "No execution recorded.",
@@ -1379,9 +1519,12 @@ const messages = {
           saved: "Flow saved.",
           tested: "Flow tested.",
           executed: "Flow executed.",
+          mediaUploaded: "Flow file uploaded.",
         },
         errors: {
           needTwoNodes: "Create at least two nodes to connect.",
+          singleStart: "The flow must have only one start node.",
+          mediaRequired: "Select a file before saving the media node.",
         },
       },
       files: {

@@ -48,14 +48,14 @@ const useStyles = makeStyles(theme => ({
 
 	ticketsCount: {
 		fontWeight: "normal",
-		color: "rgb(104, 121, 146)",
+		color: theme.palette.text.secondary,
 		marginLeft: "8px",
 		fontSize: "14px",
 	},
 
 	noTicketsText: {
 		textAlign: "center",
-		color: "#111111",
+		color: theme.palette.text.secondary,
 		fontSize: "15px",
 		fontWeight: 300,
 		lineHeight: 1.6,
@@ -63,7 +63,7 @@ const useStyles = makeStyles(theme => ({
 
 	noTicketsTitle: {
 		textAlign: "center",
-		color: "#111111",
+		color: theme.palette.text.primary,
 		fontSize: "18px",
 		fontWeight: 700,
 		lineHeight: 1.25,
@@ -128,12 +128,12 @@ const useStyles = makeStyles(theme => ({
 		textTransform: "none",
 		fontWeight: 600,
 		boxShadow: "none !important",
-		backgroundColor: "#F3F4F6 !important",
-		borderColor: "rgba(15, 23, 42, 0.12) !important",
-		color: "#111827 !important",
+		backgroundColor: `${theme.custom.neutralButtonBackground} !important`,
+		borderColor: `${theme.custom.panelBorderStrong} !important`,
+		color: `${theme.custom.neutralButtonText} !important`,
 		"&:hover": {
-			backgroundColor: "#E5E7EB !important",
-			borderColor: "rgba(15, 23, 42, 0.16) !important",
+			backgroundColor: `${theme.custom.neutralButtonBackgroundHover} !important`,
+			borderColor: `${theme.custom.panelBorderStrong} !important`,
 			boxShadow: "none !important",
 		},
 	},

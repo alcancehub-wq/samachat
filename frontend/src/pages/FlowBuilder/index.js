@@ -29,10 +29,12 @@ import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
+import { getBackendUrl } from "../../config";
 
 const nodeTypes = [
   { value: "start", label: "flowBuilder.nodeTypes.start" },
   { value: "message", label: "flowBuilder.nodeTypes.message" },
+  { value: "media", label: "flowBuilder.nodeTypes.media" },
   { value: "decision", label: "flowBuilder.nodeTypes.decision" },
   { value: "queue", label: "flowBuilder.nodeTypes.queue" },
   { value: "handoff", label: "flowBuilder.nodeTypes.handoff" },
@@ -127,6 +129,24 @@ const useStyles = makeStyles(theme => ({
     display: "grid",
     gap: theme.spacing(1.5),
   },
+  quickActions: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    marginTop: theme.spacing(1.5),
+  },
+  quickActionButton: {
+    minHeight: 36,
+    borderRadius: 999,
+    textTransform: "none",
+    fontWeight: 600,
+  },
+  helperCallout: {
+    marginTop: theme.spacing(1),
+    color: theme.palette.text.secondary,
+    fontSize: "0.85rem",
+    lineHeight: 1.5,
+  },
   nodeCard: {
     padding: theme.spacing(1.75, 2),
     borderRadius: 12,
@@ -139,6 +159,14 @@ const useStyles = makeStyles(theme => ({
     fontSize: "0.9375rem",
     fontWeight: 300,
     lineHeight: 1.6,
+  },
+  nodeSummary: {
+    marginTop: theme.spacing(0.5),
+    color: theme.palette.text.secondary,
+    fontSize: "0.85rem",
+    lineHeight: 1.5,
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
   },
   nodeHeader: {
     display: "flex",
@@ -207,7 +235,60 @@ const useStyles = makeStyles(theme => ({
     color: "#FFFFFF",
     fontWeight: 700,
   },
+  guideList: {
+    display: "grid",
+    gap: theme.spacing(1),
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  },
+  guideItem: {
+    padding: theme.spacing(1.25, 1.5),
+    borderRadius: 12,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.custom.softBackground,
+  },
+  assetMeta: {
+    marginTop: theme.spacing(1),
+    padding: theme.spacing(1.25),
+    borderRadius: 10,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.custom.softBackground,
+  },
+  previewButton: {
+    marginTop: theme.spacing(1),
+    textTransform: "none",
+    fontWeight: 600,
+  },
 }));
+
+const buildNodeData = (type, currentData = {}) => {
+  switch (type) {
+    case "message":
+      return { text: currentData.text || "" };
+    case "media":
+      return {
+        caption: currentData.caption || "",
+        fileName: currentData.fileName || "",
+        originalName: currentData.originalName || "",
+        mimetype: currentData.mimetype || "",
+        publicUrl: currentData.publicUrl || ""
+      };
+    case "decision":
+      return { hint: currentData.hint || "" };
+    case "queue":
+    case "handoff":
+      return { queueId: currentData.queueId || "" };
+    default:
+      return {};
+  }
+};
+
+const buildNodeDraft = type => ({
+  type,
+  name: "",
+  data: buildNodeData(type),
+  positionX: 0,
+  positionY: 0
+});
 
 const FlowBuilder = () => {
   const classes = useStyles();
@@ -221,6 +302,7 @@ const FlowBuilder = () => {
   const [selectedNode, setSelectedNode] = useState(null);
   const [nodeModalOpen, setNodeModalOpen] = useState(false);
   const [executionResult, setExecutionResult] = useState(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   useEffect(() => {
     const fetchFlow = async () => {
@@ -249,35 +331,63 @@ const FlowBuilder = () => {
   }, [flowId]);
 
   const handleAddNode = () => {
-    setSelectedNode({
-      type: "message",
-      name: "",
-      data: { text: "" },
-      positionX: 0,
-      positionY: 0
-    });
+    setSelectedNode(buildNodeDraft("message"));
+    setNodeModalOpen(true);
+  };
+
+  const handleAddNodeOfType = type => {
+    setSelectedNode(buildNodeDraft(type));
     setNodeModalOpen(true);
   };
 
   const handleEditNode = node => {
-    setSelectedNode({ ...node });
+    setSelectedNode({
+      ...node,
+      data: buildNodeData(node.type, node.data || {})
+    });
     setNodeModalOpen(true);
   };
+
+  const getNodeLabelByType = type => {
+    const key = nodeTypes.find(item => item.value === type)?.label;
+    return key ? i18n.t(key) : type;
+  };
+
+  const getDefaultNodeName = type => getNodeLabelByType(type);
 
   const handleSaveNode = () => {
     if (!selectedNode) {
       return;
     }
 
+    if (
+      selectedNode.type === "start" &&
+      nodes.some(node => node.type === "start" && node.id !== selectedNode.id)
+    ) {
+      toast.error(i18n.t("flowBuilder.errors.singleStart"));
+      return;
+    }
+
+    const nextNode = {
+      ...selectedNode,
+      name: (selectedNode.name || "").trim() || getDefaultNodeName(selectedNode.type),
+      data: buildNodeData(selectedNode.type, selectedNode.data || {})
+    };
+
+    if (nextNode.type === "media" && !nextNode.data.fileName) {
+      toast.error(i18n.t("flowBuilder.errors.mediaRequired"));
+      return;
+    }
+
     setNodes(prevNodes => {
-      if (selectedNode.id) {
+      if (nextNode.id) {
         return prevNodes.map(node =>
-          node.id === selectedNode.id ? selectedNode : node
+          node.id === nextNode.id ? nextNode : node
         );
       }
 
       const tempId = Math.min(0, ...prevNodes.map(node => node.id || 0)) - 1;
-      return [...prevNodes, { ...selectedNode, id: tempId }];
+      return [...prevNodes, { ...nextNode, id: tempId }];
     });
 
     setNodeModalOpen(false);
@@ -298,8 +408,8 @@ const FlowBuilder = () => {
       return;
     }
 
-    const source = nodes[0];
-    const target = nodes[1];
+    const source = nodes[nodes.length - 2];
+    const target = nodes[nodes.length - 1];
 
     const tempId = Math.min(0, ...edges.map(edge => edge.id || 0)) - 1;
 
@@ -355,7 +465,7 @@ const FlowBuilder = () => {
     try {
       const payload = {
         nodes: nodes.map(node => ({
-          id: node.id > 0 ? node.id : undefined,
+          id: node.id,
           type: node.type,
           name: node.name,
           data: node.data,
@@ -389,6 +499,37 @@ const FlowBuilder = () => {
     }
   };
 
+  const handleUploadMedia = async event => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("media", file);
+
+    setUploadingMedia(true);
+    try {
+      const { data } = await api.post("/flows/assets/upload", formData);
+      setSelectedNode(prev => ({
+        ...prev,
+        data: {
+          ...buildNodeData("media", prev?.data || {}),
+          fileName: data.fileName,
+          originalName: data.originalName,
+          mimetype: data.mimetype,
+          publicUrl: data.publicUrl
+        }
+      }));
+      toast.success(i18n.t("flowBuilder.toasts.mediaUploaded"));
+    } catch (err) {
+      toastError(err);
+    }
+    setUploadingMedia(false);
+    event.target.value = "";
+  };
+
   const handleTestFlow = async () => {
     try {
       const { data } = await api.post(`/flows/${flowId}/test`, {
@@ -420,14 +561,61 @@ const FlowBuilder = () => {
   };
 
   const getNodeLabel = node => {
-    const key = nodeTypes.find(type => type.value === node.type)?.label;
-    return key ? i18n.t(key) : node.type;
+    return getNodeLabelByType(node.type);
   };
 
   const queueOptions = useMemo(
     () => queues.map(queue => ({ value: queue.id, label: queue.name })),
     [queues]
   );
+  const queueLabelMap = useMemo(
+    () => new Map(queueOptions.map(queue => [String(queue.value), queue.label])),
+    [queueOptions]
+  );
+
+  const getPublicAssetUrl = value => {
+    if (!value) {
+      return "";
+    }
+
+    if (String(value).startsWith("http")) {
+      return value;
+    }
+
+    const backendUrl = getBackendUrl().replace(/\/+$/, "");
+    const relativePath = String(value).startsWith("/public/")
+      ? value
+      : `/public/${value}`;
+    return `${backendUrl}${relativePath}`;
+  };
+
+  const getNodeSummary = node => {
+    const nodeData = node.data || {};
+
+    if (node.type === "message") {
+      return nodeData.text || i18n.t("flowBuilder.nodes.summaryEmpty");
+    }
+
+    if (node.type === "media") {
+      return nodeData.originalName || i18n.t("flowBuilder.nodes.mediaNotSelected");
+    }
+
+    if (node.type === "decision") {
+      return nodeData.hint || i18n.t("flowBuilder.nodes.summaryWaitInput");
+    }
+
+    if (node.type === "queue" || node.type === "handoff") {
+      return nodeData.queueId
+        ? queueLabelMap.get(String(nodeData.queueId)) || i18n.t("flowBuilder.nodes.queuePlaceholder")
+        : i18n.t("flowBuilder.nodes.queuePlaceholder");
+    }
+
+    return i18n.t(`flowBuilder.nodes.typeHelp.${node.type}`);
+  };
+
+  const selectedNodeHelp = selectedNode?.type
+    ? i18n.t(`flowBuilder.nodes.typeHelp.${selectedNode.type}`)
+    : "";
 
   const executionLogs = executionResult?.logs || [];
 
@@ -482,6 +670,39 @@ const FlowBuilder = () => {
       </MainHeader>
 
       <div className={classes.pageBody}>
+        <Paper className={classes.surface} variant="outlined">
+          <div className={classes.sectionHeader}>
+            <div>
+              <Typography variant="subtitle1" className={classes.sectionTitle}>
+                {i18n.t("flowBuilder.guide.title")}
+              </Typography>
+              <Typography variant="body2" className={classes.sectionHint}>
+                {i18n.t("flowBuilder.guide.subtitle")}
+              </Typography>
+            </div>
+          </div>
+          <div className={classes.guideList}>
+            <div className={classes.guideItem}>
+              <Typography variant="subtitle2">1. {i18n.t("flowBuilder.guide.step1Title")}</Typography>
+              <Typography variant="body2" className={classes.nodeSummary}>
+                {i18n.t("flowBuilder.guide.step1Text")}
+              </Typography>
+            </div>
+            <div className={classes.guideItem}>
+              <Typography variant="subtitle2">2. {i18n.t("flowBuilder.guide.step2Title")}</Typography>
+              <Typography variant="body2" className={classes.nodeSummary}>
+                {i18n.t("flowBuilder.guide.step2Text")}
+              </Typography>
+            </div>
+            <div className={classes.guideItem}>
+              <Typography variant="subtitle2">3. {i18n.t("flowBuilder.guide.step3Title")}</Typography>
+              <Typography variant="body2" className={classes.nodeSummary}>
+                {i18n.t("flowBuilder.guide.step3Text")}
+              </Typography>
+            </div>
+          </div>
+        </Paper>
+
         <Paper className={classes.mainPaper} variant="outlined">
           <Paper className={classes.surface} variant="outlined">
             <div className={classes.sectionHeader}>
@@ -492,6 +713,20 @@ const FlowBuilder = () => {
                 <Typography variant="body2" className={classes.sectionHint}>
                   Estruture os passos principais do fluxo e revise a sequencia antes de salvar.
                 </Typography>
+                <div className={classes.quickActions}>
+                  {nodeTypes.map(type => (
+                    <Button
+                      key={type.value}
+                      variant="outlined"
+                      size="small"
+                      className={classes.quickActionButton}
+                      onClick={() => handleAddNodeOfType(type.value)}
+                      disabled={type.value === "start" && nodes.some(node => node.type === "start")}
+                    >
+                      {i18n.t(type.label)}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
             {nodes.length === 0 && (
@@ -505,6 +740,9 @@ const FlowBuilder = () => {
                       <Typography variant="subtitle2">{getNodeLabel(node)}</Typography>
                       <Typography className={classes.nodeName}>
                         {node.name || "-"}
+                      </Typography>
+                      <Typography className={classes.nodeSummary}>
+                        {getNodeSummary(node)}
                       </Typography>
                     </div>
                     <div className={classes.rowActions}>
@@ -538,6 +776,13 @@ const FlowBuilder = () => {
           <div className={classes.stack}>
             {edges.map(edge => (
               <Paper key={edge.id} className={classes.nodeCard}>
+                <Typography variant="subtitle2" className={classes.nodeSummary}>
+                  {(nodes.find(node => node.id === edge.sourceNodeId)?.name ||
+                    getNodeLabel(nodes.find(node => node.id === edge.sourceNodeId) || { type: "message" }))}
+                  {" -> "}
+                  {(nodes.find(node => node.id === edge.targetNodeId)?.name ||
+                    getNodeLabel(nodes.find(node => node.id === edge.targetNodeId) || { type: "message" }))}
+                </Typography>
                 <div className={classes.formRow}>
               <FormControl variant="outlined" size="small">
                 <InputLabel>{i18n.t("flowBuilder.edges.source")}</InputLabel>
@@ -822,7 +1067,8 @@ const FlowBuilder = () => {
               onChange={event =>
                 setSelectedNode(prev => ({
                   ...prev,
-                  type: event.target.value
+                  type: event.target.value,
+                  data: buildNodeData(event.target.value, prev?.data || {})
                 }))
               }
               label={i18n.t("flowBuilder.nodes.type")}
@@ -834,6 +1080,9 @@ const FlowBuilder = () => {
               ))}
             </Select>
           </FormControl>
+          <Typography className={classes.helperCallout}>
+            {selectedNodeHelp}
+          </Typography>
           <TextField
             label={i18n.t("flowBuilder.nodes.name")}
             variant="outlined"
@@ -863,6 +1112,57 @@ const FlowBuilder = () => {
                 }))
               }
             />
+          )}
+          {selectedNode?.type === "media" && (
+            <>
+              <Button
+                variant="outlined"
+                color="primary"
+                component="label"
+                disabled={uploadingMedia}
+                className={classes.previewButton}
+              >
+                {uploadingMedia
+                  ? i18n.t("flowBuilder.nodes.mediaUploading")
+                  : i18n.t("flowBuilder.nodes.mediaUpload")}
+                <input hidden type="file" onChange={handleUploadMedia} />
+              </Button>
+              <div className={classes.assetMeta}>
+                <Typography variant="subtitle2">
+                  {i18n.t("flowBuilder.nodes.mediaFile")}
+                </Typography>
+                <Typography variant="body2" className={classes.nodeSummary}>
+                  {selectedNode?.data?.originalName || i18n.t("flowBuilder.nodes.mediaNotSelected")}
+                </Typography>
+                {selectedNode?.data?.fileName && (
+                  <Button
+                    variant="text"
+                    color="primary"
+                    href={getPublicAssetUrl(selectedNode?.data?.publicUrl || selectedNode?.data?.fileName)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={classes.previewButton}
+                  >
+                    {i18n.t("flowBuilder.nodes.mediaPreview")}
+                  </Button>
+                )}
+              </div>
+              <TextField
+                label={i18n.t("flowBuilder.nodes.mediaCaption")}
+                variant="outlined"
+                fullWidth
+                margin="dense"
+                multiline
+                rows={2}
+                value={selectedNode?.data?.caption || ""}
+                onChange={event =>
+                  setSelectedNode(prev => ({
+                    ...prev,
+                    data: { ...buildNodeData("media", prev?.data || {}), caption: event.target.value }
+                  }))
+                }
+              />
+            </>
           )}
           {(selectedNode?.type === "queue" || selectedNode?.type === "handoff") && (
             <FormControl variant="outlined" fullWidth margin="dense">

@@ -9,6 +9,7 @@ import CreateFlowExecutionLogService from "./CreateFlowExecutionLogService";
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
+import SendStoredWhatsAppMedia from "../WbotServices/SendStoredWhatsAppMedia";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 
@@ -122,35 +123,52 @@ const ExecuteFlowService = async ({
     throw new AppError("ERR_FLOW_NOT_FOUND", 404);
   }
 
+  let execution = null as FlowExecution | null;
+  let resumedFromNodeId: number | null = null;
+
   if (ticketId || contactId) {
-    const running = await FlowExecution.findOne({
+    const activeExecution = await FlowExecution.findOne({
       where: {
         flowId: flow.id,
-        status: "running",
+        status: ["running", "waiting_input"],
         ...(ticketId ? { ticketId } : {}),
         ...(contactId ? { contactId } : {})
       }
     });
 
-    if (running) {
-      throw new AppError("ERR_FLOW_ALREADY_RUNNING");
+    if (activeExecution) {
+      resumedFromNodeId = activeExecution.currentNodeId || null;
+      await activeExecution.update({
+        status: "running",
+        finishedAt: null,
+        input: input || null
+      });
+      execution = activeExecution;
+      await CreateFlowExecutionLogService({
+        flowExecutionId: activeExecution.id,
+        nodeId: resumedFromNodeId || undefined,
+        event: "resume",
+        message: "Flow resumed"
+      });
     }
   }
 
-  const execution = await FlowExecution.create({
-    flowId: flow.id,
-    ticketId: ticketId || null,
-    contactId: contactId || null,
-    status: "running",
-    startedAt: new Date(),
-    input: input || null
-  });
+  if (!execution) {
+    execution = await FlowExecution.create({
+      flowId: flow.id,
+      ticketId: ticketId || null,
+      contactId: contactId || null,
+      status: "running",
+      startedAt: new Date(),
+      input: input || null
+    });
 
-  await CreateFlowExecutionLogService({
-    flowExecutionId: execution.id,
-    event: "start",
-    message: `Flow ${mode} started`
-  });
+    await CreateFlowExecutionLogService({
+      flowExecutionId: execution.id,
+      event: "start",
+      message: `Flow ${mode} started`
+    });
+  }
 
   const nodes = flow.nodes || [];
   const edges = flow.edges || [];
@@ -160,6 +178,9 @@ const ExecuteFlowService = async ({
 
   const startNode =
     nodes.find(node => node.type === "start") || nodes[0] || null;
+  const resumeNode = resumedFromNodeId
+    ? nodeMap.get(resumedFromNodeId) || null
+    : null;
 
   if (!startNode) {
     await execution.update({
@@ -175,7 +196,7 @@ const ExecuteFlowService = async ({
     return execution;
   }
 
-  let currentNode: FlowNode | null = startNode;
+  let currentNode: FlowNode | null = resumeNode || startNode;
   let stepCount = 0;
 
   while (currentNode && stepCount < 50) {
@@ -196,6 +217,64 @@ const ExecuteFlowService = async ({
     });
 
     const nodeData = parseJson(currentNode.data) || {};
+
+    if (currentNode.type === "decision") {
+      const outgoing = edges
+        .filter(edge => edge.sourceNodeId === currentNode!.id)
+        .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+
+      const resumingDecision = resumedFromNodeId === currentNode.id;
+      const normalizedInput = String(input || "").trim();
+
+      if (!resumingDecision || !normalizedInput) {
+        await execution.update({
+          status: "waiting_input",
+          currentNodeId: currentNode.id
+        });
+        await CreateFlowExecutionLogService({
+          flowExecutionId: execution.id,
+          nodeId: currentNode.id,
+          event: "waiting_input",
+          message: nodeData.hint || "Waiting for input"
+        });
+        break;
+      }
+
+      const matchedDecision = outgoing.find(edge =>
+        matchCondition(edge, normalizedInput, tags, queueId)
+      );
+
+      if (!matchedDecision) {
+        await execution.update({
+          status: "waiting_input",
+          currentNodeId: currentNode.id,
+          input: normalizedInput
+        });
+        await CreateFlowExecutionLogService({
+          flowExecutionId: execution.id,
+          nodeId: currentNode.id,
+          event: "invalid_input",
+          message: `No decision matched for input: ${normalizedInput}`
+        });
+        break;
+      }
+
+      await CreateFlowExecutionLogService({
+        flowExecutionId: execution.id,
+        nodeId: currentNode.id,
+        event: "decision_matched",
+        message: matchedDecision.conditionType || "always",
+        data: {
+          edgeId: matchedDecision.id,
+          input: normalizedInput,
+          conditionValue: parseJson(matchedDecision.conditionValue)
+        }
+      });
+
+      resumedFromNodeId = null;
+      currentNode = nodeMap.get(matchedDecision.targetNodeId) || null;
+      continue;
+    }
 
     if (currentNode.type === "message") {
       await CreateFlowExecutionLogService({
@@ -222,6 +301,55 @@ const ExecuteFlowService = async ({
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : "Message send failed";
+          await execution.update({
+            status: "failed",
+            finishedAt: new Date()
+          });
+          await CreateFlowExecutionLogService({
+            flowExecutionId: execution.id,
+            nodeId: currentNode.id,
+            event: "error",
+            message
+          });
+          break;
+        }
+      }
+    }
+
+    if (currentNode.type === "media") {
+      await CreateFlowExecutionLogService({
+        flowExecutionId: execution.id,
+        nodeId: currentNode.id,
+        event: "media",
+        message: nodeData.originalName || nodeData.fileName || "Media node executed",
+        data: nodeData
+      });
+
+      if (mode === "execute") {
+        try {
+          const ticket = await resolveTicket(ticketId, contactId);
+          const fileName = String(nodeData.fileName || "").trim();
+
+          if (!fileName) {
+            throw new Error("ERR_FLOW_MEDIA_EMPTY");
+          }
+
+          await SendStoredWhatsAppMedia({
+            ticket,
+            fileName,
+            originalName: nodeData.originalName,
+            mimetype: nodeData.mimetype,
+            body: nodeData.caption || null
+          });
+
+          await CreateFlowExecutionLogService({
+            flowExecutionId: execution.id,
+            nodeId: currentNode.id,
+            event: "media_sent",
+            message: "Media sent"
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Media send failed";
           await execution.update({
             status: "failed",
             finishedAt: new Date()
@@ -360,6 +488,7 @@ const ExecuteFlowService = async ({
       break;
     }
 
+    resumedFromNodeId = null;
     currentNode = nodeMap.get(matched.targetNodeId) || null;
   }
 

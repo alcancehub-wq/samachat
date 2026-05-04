@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import openSocket from "../../services/socket-io";
 
 import {
@@ -89,6 +89,7 @@ const useStyles = makeStyles(theme => ({
 const Tasks = () => {
   const classes = useStyles();
   const history = useHistory();
+  const location = useLocation();
 
   const [tasks, dispatch] = useReducer(reducer, []);
   const [loading, setLoading] = useState(false);
@@ -102,6 +103,32 @@ const Tasks = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deletingTask, setDeletingTask] = useState(null);
+  const dashboardFilters =
+    location.state && location.state.dashboardFilters
+      ? location.state.dashboardFilters
+      : null;
+
+  useEffect(() => {
+    if (!dashboardFilters) {
+      return;
+    }
+
+    if (dashboardFilters.searchParam) {
+      setSearchParam(String(dashboardFilters.searchParam).toLowerCase());
+    }
+
+    if (dashboardFilters.statusFilter) {
+      setStatusFilter(dashboardFilters.statusFilter);
+    }
+
+    if (dashboardFilters.priorityFilter !== undefined) {
+      setPriorityFilter(dashboardFilters.priorityFilter || "");
+    }
+
+    if (dashboardFilters.assigneeId) {
+      setAssigneeFilter(String(dashboardFilters.assigneeId));
+    }
+  }, [dashboardFilters]);
 
   useEffect(() => {
     const loadUsers = async () => {

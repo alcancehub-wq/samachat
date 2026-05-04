@@ -48,10 +48,10 @@ const useStyles = makeStyles(theme => ({
 		overflowY: "scroll",
 		...theme.scrollbarStyles,
 		borderRadius: 16,
-		border: "1px solid rgba(15, 23, 42, 0.08)",
-		boxShadow: "0 16px 28px rgba(15, 23, 42, 0.08)",
-		backgroundColor: "#ffffff",
-		backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+		border: `1px solid ${theme.custom.panelBorder}`,
+		boxShadow: "none",
+		backgroundColor: theme.palette.background.paper,
+		backgroundImage: theme.custom.panelGradient,
 	},
 	headerTitle: {
 		display: "flex",
@@ -60,7 +60,7 @@ const useStyles = makeStyles(theme => ({
 		gap: theme.spacing(0.5),
 	},
 	pageSubtitle: {
-		color: "#111111",
+		color: theme.palette.text.secondary,
 		fontSize: "0.9375rem",
 		fontWeight: 300,
 		lineHeight: 1.6,
@@ -85,7 +85,7 @@ const useStyles = makeStyles(theme => ({
 		display: "inline-flex",
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: "rgba(15, 23, 42, 0.06)",
+		backgroundColor: theme.custom.softBackground,
 	},
 	actionGroup: {
 		display: "flex",
@@ -98,19 +98,20 @@ const useStyles = makeStyles(theme => ({
 		textTransform: "none",
 		fontWeight: 600,
 		boxShadow: "none",
-		borderColor: "rgba(15, 23, 42, 0.12)",
+		borderColor: theme.custom.panelBorderStrong,
 	},
 	actionIconButton: {
-		backgroundColor: "rgba(15, 23, 42, 0.06)",
+		backgroundColor: theme.custom.iconButtonBackground,
 		marginLeft: theme.spacing(0.5),
 		borderRadius: 10,
+		color: theme.palette.text.secondary,
 	},
 	table: {
 		borderCollapse: "separate",
 		borderSpacing: "0 8px",
 	},
 	tableHeadCell: {
-		color: "#111111",
+		color: theme.palette.text.primary,
 		fontWeight: 700,
 		fontSize: "0.78rem",
 		textTransform: "uppercase",
@@ -118,8 +119,8 @@ const useStyles = makeStyles(theme => ({
 		borderBottom: "none",
 	},
 	tableRow: {
-		backgroundColor: "#ffffff",
-		boxShadow: "0 12px 20px rgba(15, 23, 42, 0.08)",
+		backgroundColor: theme.palette.background.paper,
+		boxShadow: "none",
 		borderRadius: 12,
 		"& > td": {
 			borderBottom: "none",
@@ -133,7 +134,7 @@ const useStyles = makeStyles(theme => ({
 			borderBottomRightRadius: 12,
 		},
 		"&:hover": {
-			backgroundColor: "rgba(14, 165, 233, 0.06)",
+			backgroundColor: theme.custom.tableHover,
 		},
 	},
 	tableCell: {
@@ -146,10 +147,10 @@ const useStyles = makeStyles(theme => ({
 		justifyContent: "center",
 	},
 	tooltip: {
-		backgroundColor: "#f5f5f9",
-		color: "rgba(0, 0, 0, 0.87)",
+		backgroundColor: theme.palette.background.paper,
+		color: theme.palette.text.primary,
 		fontSize: theme.typography.pxToRem(14),
-		border: "1px solid #dadde9",
+		border: `1px solid ${theme.palette.divider}`,
 		maxWidth: 450,
 	},
 	tooltipPopper: {

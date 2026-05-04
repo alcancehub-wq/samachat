@@ -19,6 +19,7 @@ import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTi
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
+import HandleIncomingFlowMessageService from "../services/FlowExecutionServices/HandleIncomingFlowMessageService";
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
@@ -346,7 +347,22 @@ export const handleMessage = async (
 
     await processVcardMessage(processedMessage);
 
+    let flowHandled = false;
+    if (!contextPayload.groupContact && !processedMessage.fromMe) {
+      try {
+        const flowResult = await HandleIncomingFlowMessageService({
+          ticketId: ticket.id,
+          contactId: contact.id,
+          messageBody: processedMessage.body || mediaPayload?.filename || ""
+        });
+        flowHandled = flowResult.handled;
+      } catch (flowErr) {
+        logger.error({ err: flowErr, ticketId: ticket.id }, "Error handling incoming flow automation");
+      }
+    }
+
     if (
+      !flowHandled &&
       !ticket.queue &&
       !contextPayload.groupContact &&
       !processedMessage.fromMe &&

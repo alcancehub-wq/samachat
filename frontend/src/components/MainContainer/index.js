@@ -24,7 +24,7 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.divider}`,
     borderRadius: 16,
-    boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+    boxShadow: "none",
   },
 }));
 

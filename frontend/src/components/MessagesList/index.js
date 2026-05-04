@@ -45,6 +45,8 @@ const useStyles = makeStyles((theme) => ({
 
   messagesList: {
     backgroundImage: `url(${whatsBackground})`,
+    backgroundColor: theme.custom.softBackground,
+    backgroundBlendMode: theme.palette.type === "dark" ? "multiply" : "normal",
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,
@@ -81,8 +83,8 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: "#ffffff",
-    color: "#303030",
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
     alignSelf: "flex-start",
     borderTopLeftRadius: 0,
     borderTopRightRadius: 8,
@@ -92,13 +94,14 @@ const useStyles = makeStyles((theme) => ({
     paddingRight: 5,
     paddingTop: 5,
     paddingBottom: 0,
-    boxShadow: "0 1px 1px #b3b3b3",
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: "none",
   },
 
   quotedContainerLeft: {
     margin: "-3px -80px 6px -6px",
     overflow: "hidden",
-    backgroundColor: "#f0f0f0",
+    backgroundColor: theme.custom.softBackground,
     borderRadius: "7.5px",
     display: "flex",
     position: "relative",
@@ -116,7 +119,7 @@ const useStyles = makeStyles((theme) => ({
   quotedSideColorLeft: {
     flex: "none",
     width: "4px",
-    backgroundColor: "#FF1919",
+    backgroundColor: theme.palette.primary.main,
   },
 
   messageRight: {
@@ -135,8 +138,8 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: "#dcf8c6",
-    color: "#303030",
+  backgroundColor: "#DCF8C6",
+  color: "#1F2937",
     alignSelf: "flex-end",
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
@@ -146,13 +149,14 @@ const useStyles = makeStyles((theme) => ({
     paddingRight: 5,
     paddingTop: 5,
     paddingBottom: 0,
-    boxShadow: "0 1px 1px #b3b3b3",
+    border: "1px solid rgba(53, 205, 150, 0.20)",
+    boxShadow: "none",
   },
 
   quotedContainerRight: {
     margin: "-3px -80px 6px -6px",
     overflowY: "hidden",
-    backgroundColor: "#cfe9ba",
+    backgroundColor: theme.palette.type === "dark" ? "rgba(88, 214, 141, 0.12)" : "#cfe9ba",
     borderRadius: "7.5px",
     display: "flex",
     position: "relative",
@@ -174,7 +178,7 @@ const useStyles = makeStyles((theme) => ({
   messageActionsButton: {
     display: "none",
     position: "relative",
-    color: "#999",
+    color: theme.palette.text.secondary,
     zIndex: 1,
     backgroundColor: "inherit",
     opacity: "90%",
@@ -183,7 +187,7 @@ const useStyles = makeStyles((theme) => ({
 
   messageContactName: {
     display: "flex",
-    color: "#C62828",
+    color: theme.palette.primary.main,
     fontWeight: 700,
   },
 
