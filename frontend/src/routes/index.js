@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext } from "react";
 import { BrowserRouter, Switch, Redirect } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 
@@ -31,13 +31,19 @@ import Lgpd from "../pages/Lgpd/";
 import Manual from "../pages/Manual/";
 import ReleaseNotes from "../pages/ReleaseNotes/";
 import { AuthProvider } from "../context/Auth/AuthContext";
+import { AuthContext } from "../context/Auth/AuthContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
 import { ThemeProvider } from "../context/DarkMode";
+import { getDefaultRouteForUser } from "../utils/permissions";
 import Route from "./Route";
 
 const Routes = () => {
   const RedirectToQueues = () => <Redirect to="/queues" />;
   const RedirectToSettings = () => <Redirect to="/settings" />;
+  const RedirectToDefaultRoute = () => {
+	const { user } = useContext(AuthContext);
+	return <Redirect to={getDefaultRouteForUser(user)} />;
+  };
 
   return (
     <BrowserRouter>
@@ -48,7 +54,7 @@ const Routes = () => {
             <Route exact path="/signup" component={Signup} />
             <WhatsAppsProvider>
               <LoggedInLayout>
-                <Route exact path="/" component={Dashboard} isPrivate />
+                <Route exact path="/" component={RedirectToDefaultRoute} isPrivate />
                 <Route exact path="/dashboard" component={Dashboard} isPrivate />
                 <Route exact path="/tickets/:ticketId?" component={Tickets} isPrivate />
                 <Route exact path="/connections" component={Connections} isPrivate />

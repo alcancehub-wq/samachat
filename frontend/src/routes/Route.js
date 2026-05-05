@@ -3,9 +3,10 @@ import { Route as RouterRoute, Redirect } from "react-router-dom";
 
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
+import { getDefaultRouteForUser } from "../utils/permissions";
 
 const Route = ({ component: Component, isPrivate = false, ...rest }) => {
-  const { isAuth, loading } = useContext(AuthContext);
+  const { isAuth, loading, user } = useContext(AuthContext);
 
   if (loading) {
     return <BackdropLoading />;
@@ -22,7 +23,9 @@ const Route = ({ component: Component, isPrivate = false, ...rest }) => {
   if (isAuth && !isPrivate) {
     return (
       <>
-        <Redirect to={{ pathname: "/", state: { from: rest.location } }} />;
+        <Redirect
+          to={{ pathname: getDefaultRouteForUser(user), state: { from: rest.location } }}
+        />
       </>
     );
   }

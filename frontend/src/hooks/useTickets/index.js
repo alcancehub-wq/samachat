@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { getHoursCloseTicketsAuto } from "../../config";
 import toastError from "../../errors/toastError";
 
 import api from "../../services/api";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import { userHasPermission } from "../../utils/permissions";
 
 const useTickets = ({
     searchParam,
@@ -19,8 +21,18 @@ const useTickets = ({
     const [hasMore, setHasMore] = useState(false);
     const [tickets, setTickets] = useState([]);
     const [count, setCount] = useState(0);
+    const { isAuth, loading: authLoading, user } = useContext(AuthContext);
+    const canViewTickets = userHasPermission(user, "tickets.view");
 
     useEffect(() => {
+		if (authLoading || !isAuth || !canViewTickets) {
+			setTickets([]);
+			setHasMore(false);
+			setCount(0);
+			setLoading(false);
+			return undefined;
+		}
+
         setLoading(true);
         const delayDebounceFn = setTimeout(() => {
             const fetchTickets = async() => {
@@ -62,7 +74,9 @@ const useTickets = ({
                     setLoading(false)
                 } catch (err) {
                     setLoading(false)
-                    toastError(err)
+                    if (err?.response?.status !== 403) {
+						toastError(err)
+					}
                 }
             }
 
@@ -78,9 +92,12 @@ const useTickets = ({
         return () => clearTimeout(delayDebounceFn)
     }, [
         searchParam,
+        authLoading,
+        canViewTickets,
         pageNumber,
         status,
         date,
+        isAuth,
         showAll,
         queueIds,
         withUnreadMessages,

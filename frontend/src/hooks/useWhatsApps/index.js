@@ -4,6 +4,7 @@ import toastError from "../../errors/toastError";
 
 import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { userHasPermission } from "../../utils/permissions";
 
 const reducer = (state, action) => {
 	if (action.type === "LOAD_WHATSAPPS") {
@@ -57,10 +58,11 @@ const reducer = (state, action) => {
 const useWhatsApps = () => {
 	const [whatsApps, dispatch] = useReducer(reducer, []);
 	const [loading, setLoading] = useState(true);
-	const { isAuth, loading: authLoading } = useContext(AuthContext);
+	const { isAuth, loading: authLoading, user } = useContext(AuthContext);
+	const canViewConnections = userHasPermission(user, "connections.view");
 
 	const loadWhatsApps = useCallback(async () => {
-		if (authLoading || !isAuth) {
+		if (authLoading || !isAuth || !canViewConnections) {
 			dispatch({ type: "RESET" });
 			setLoading(false);
 			return;
@@ -72,17 +74,20 @@ const useWhatsApps = () => {
 			dispatch({ type: "LOAD_WHATSAPPS", payload: data });
 			setLoading(false);
 		} catch (err) {
+			dispatch({ type: "RESET" });
 			setLoading(false);
-			toastError(err);
+			if (err?.response?.status !== 403) {
+				toastError(err);
+			}
 		}
-	}, [authLoading, isAuth]);
+	}, [authLoading, canViewConnections, isAuth]);
 
 	useEffect(() => {
 		loadWhatsApps();
 	}, [loadWhatsApps]);
 
 	useEffect(() => {
-		if (authLoading || !isAuth) {
+		if (authLoading || !isAuth || !canViewConnections) {
 			return undefined;
 		}
 
@@ -109,7 +114,7 @@ const useWhatsApps = () => {
 		return () => {
 			socket.disconnect();
 		};
-	}, [authLoading, isAuth]);
+	}, [authLoading, canViewConnections, isAuth]);
 
 	return { whatsApps, loading, reload: loadWhatsApps };
 };

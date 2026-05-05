@@ -34,6 +34,7 @@ import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
 import { useThemeContext } from "../context/DarkMode";
+import { userHasPermission } from "../utils/permissions";
 
 const drawerWidth = 280;
 
@@ -331,6 +332,7 @@ const LoggedInLayout = ({ children }) => {
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   const { darkMode, toggleTheme } = useThemeContext();
   const [menuSearch, setMenuSearch] = useState("");
+  const canViewTickets = userHasPermission(user, "tickets.view");
 
   useEffect(() => {
     if (document.body.offsetWidth > 600) {
@@ -447,7 +449,7 @@ const LoggedInLayout = ({ children }) => {
           />
 
           <div className={classes.topActions}>
-            {user?.id && (
+            {user?.id && canViewTickets && (
               <NotificationsPopOver className={classes.iconButton} />
             )}
 

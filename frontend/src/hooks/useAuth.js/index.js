@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { getDefaultRouteForUser } from "../../utils/permissions";
 
 const getStoredToken = () => {
 	const token = localStorage.getItem("token");
@@ -62,6 +63,10 @@ const useAuth = () => {
 			response => response,
 			async error => {
 				const originalRequest = error.config || {};
+				const isInvalidAccessTokenError =
+					error?.response?.status === 403 &&
+					error?.response?.data?.error ===
+						"Invalid token. We'll try to assign a new one on next request";
 
 				if (originalRequest._skipAuthRefresh) {
 					if (
@@ -73,7 +78,7 @@ const useAuth = () => {
 					return Promise.reject(error);
 				}
 
-				if (error?.response?.status === 403 && !originalRequest._retry) {
+				if (isInvalidAccessTokenError && !originalRequest._retry) {
 					originalRequest._retry = true;
 
 					try {
@@ -138,7 +143,7 @@ const useAuth = () => {
 			setUser(data.user);
 			setIsAuth(true);
 			toast.success(i18n.t("auth.toasts.success"));
-			history.push("/tickets");
+			history.push(getDefaultRouteForUser(data.user));
 			setLoading(false);
 		} catch (err) {
 			toastError(err);

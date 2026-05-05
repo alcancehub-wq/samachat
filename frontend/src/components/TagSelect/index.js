@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import InputLabel from "@material-ui/core/InputLabel";
 import MenuItem from "@material-ui/core/MenuItem";
@@ -8,6 +8,8 @@ import Chip from "@material-ui/core/Chip";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import { userHasPermission } from "../../utils/permissions";
 
 const useStyles = makeStyles(theme => ({
   chips: {
@@ -22,17 +24,30 @@ const useStyles = makeStyles(theme => ({
 const TagSelect = ({ selectedTagIds = [], onChange, label, style }) => {
   const classes = useStyles();
   const [tags, setTags] = useState([]);
+  const { user } = useContext(AuthContext);
+  const canViewTags = userHasPermission(user, "tags.view");
 
   useEffect(() => {
+	if (!canViewTags) {
+		setTags([]);
+		return undefined;
+	}
+
     (async () => {
       try {
         const { data } = await api.get("/tags");
         setTags(data);
       } catch (err) {
-        toastError(err);
+		if (err?.response?.status !== 403) {
+			toastError(err);
+		}
       }
     })();
-  }, []);
+  }, [canViewTags]);
+
+	if (!canViewTags) {
+		return null;
+	}
 
   const handleChange = event => {
     if (typeof onChange === "function") {
