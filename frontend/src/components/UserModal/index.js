@@ -116,8 +116,24 @@ const UserModal = ({ open, onClose, userId }) => {
 	const {loading, whatsApps} = useWhatsApps();
 
 	useEffect(() => {
+		if (!open) {
+			return;
+		}
+
 		const fetchUser = async () => {
 			if (!userId) return;
+
+			if (Number(userId) === Number(loggedInUser?.id)) {
+				setUser(prevState => ({
+					...prevState,
+					...loggedInUser,
+					signMessages: loggedInUser?.signMessages !== false,
+				}));
+				setSelectedQueueIds((loggedInUser?.queues || []).map(queue => queue.id));
+				setWhatsappId(loggedInUser?.whatsapp?.id || "");
+				return;
+			}
+
 			try {
 				const { data } = await api.get(`/users/${userId}`);
 				setUser(prevState => {
@@ -136,7 +152,7 @@ const UserModal = ({ open, onClose, userId }) => {
 		};
 
 		fetchUser();
-	}, [userId, open]);
+	}, [loggedInUser, open, userId]);
 
 	const handleClose = () => {
 		onClose();

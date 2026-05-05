@@ -63,10 +63,12 @@ const useAuth = () => {
 			response => response,
 			async error => {
 				const originalRequest = error.config || {};
-				const isInvalidAccessTokenError =
-					error?.response?.status === 403 &&
-					error?.response?.data?.error ===
-						"Invalid token. We'll try to assign a new one on next request";
+				const responseStatus = error?.response?.status;
+				const responseErrorCode = error?.response?.data?.error;
+				const shouldTryRefresh =
+					!originalRequest._retry &&
+					(responseStatus === 401 || responseStatus === 403) &&
+					responseErrorCode !== "ERR_NO_PERMISSION";
 
 				if (originalRequest._skipAuthRefresh) {
 					if (
@@ -78,7 +80,7 @@ const useAuth = () => {
 					return Promise.reject(error);
 				}
 
-				if (isInvalidAccessTokenError && !originalRequest._retry) {
+				if (shouldTryRefresh) {
 					originalRequest._retry = true;
 
 					try {
@@ -90,7 +92,7 @@ const useAuth = () => {
 					}
 				}
 
-				if (error?.response?.status === 401) {
+				if (responseStatus === 401 || responseStatus === 403) {
 					clearAuthState();
 				}
 
