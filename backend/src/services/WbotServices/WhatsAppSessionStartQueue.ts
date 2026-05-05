@@ -13,7 +13,14 @@ let lastStartedAt = 0;
 const delay = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
 
-const getSessionStartDelayMs = (): number => {
+const shouldThrottleStart = (reason: string): boolean =>
+  reason === "boot" || reason.startsWith("boot:");
+
+const getSessionStartDelayMs = (reason: string): number => {
+  if (!shouldThrottleStart(reason)) {
+    return 0;
+  }
+
   const configuredDelay = Number(
     process.env.WWEBJS_SESSION_START_DELAY_MS ||
       process.env.WWEBJS_BOOT_START_DELAY_MS ||
@@ -55,7 +62,7 @@ export const enqueueWhatsAppSessionStart = (
     return existingStart;
   }
 
-  const delayMs = getSessionStartDelayMs();
+  const delayMs = getSessionStartDelayMs(options.reason);
 
   logger.info(
     {
@@ -63,6 +70,7 @@ export const enqueueWhatsAppSessionStart = (
       sessionName,
       reason: options.reason,
       delayMs,
+      throttled: delayMs > 0,
       queuedSessions: queuedSessionStarts.size + 1
     },
     "WhatsApp session queued for controlled start"

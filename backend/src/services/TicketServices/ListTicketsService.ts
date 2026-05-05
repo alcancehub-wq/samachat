@@ -1,11 +1,10 @@
-import { Op, fn, where, col, Filterable, Includeable } from "sequelize";
+import { Op, fn, where, col, Includeable, WhereOptions } from "sequelize";
 import { startOfDay, endOfDay, parseISO } from "date-fns";
 
 import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
 import Message from "../../models/Message";
 import Queue from "../../models/Queue";
-import ShowUserService from "../UserServices/ShowUserService";
 import Whatsapp from "../../models/Whatsapp";
 import Tag from "../../models/Tag";
 import User from "../../models/User";
@@ -18,6 +17,7 @@ interface Request {
   date?: string;
   showAll?: string;
   userId: string;
+  profile?: string;
   withUnreadMessages?: string;
   queueIds: number[];
   tagIds?: number[];
@@ -30,6 +30,36 @@ interface Response {
   hasMore: boolean;
 }
 
+const combineWhere = (
+  ...conditions: Array<WhereOptions | undefined>
+): WhereOptions => {
+  const filteredConditions = conditions.filter(Boolean) as WhereOptions[];
+
+  if (!filteredConditions.length) {
+    return {};
+  }
+
+  if (filteredConditions.length === 1) {
+    return filteredConditions[0];
+  }
+
+  return {
+    [Op.and]: filteredConditions
+  };
+};
+
+const buildQueueVisibilityScope = (queueIds: number[]): WhereOptions | undefined => {
+  if (!queueIds.length) {
+    return undefined;
+  }
+
+  return {
+    queueId: {
+      [Op.or]: [queueIds, null]
+    }
+  };
+};
+
 const ListTicketsService = async ({
   searchParam = "",
   pageNumber = "1",
@@ -38,14 +68,19 @@ const ListTicketsService = async ({
   date,
   showAll,
   userId,
+  profile,
   withUnreadMessages,
   tagIds = [],
   followUp
 }: Request): Promise<Response> => {
-  let whereCondition: Filterable["where"] = {
-    [Op.or]: [{ userId }, { status: "pending" }],
-    queueId: { [Op.or]: [queueIds, null] }
-  };
+  const isAdmin = String(profile || "").toLowerCase() === "admin";
+  const queueVisibilityScope = buildQueueVisibilityScope(queueIds);
+  const assignedVisibilityScope = isAdmin ? undefined : { userId };
+  const canShowAllTickets = isAdmin && showAll === "true";
+  let whereCondition: WhereOptions = combineWhere(
+    canShowAllTickets ? undefined : assignedVisibilityScope,
+    queueVisibilityScope
+  );
   let includeCondition: Includeable[];
 
   includeCondition = [
@@ -79,15 +114,8 @@ const ListTicketsService = async ({
     }
   ];
 
-  if (showAll === "true") {
-    whereCondition = { queueId: { [Op.or]: [queueIds, null] } };
-  }
-
   if (status) {
-    whereCondition = {
-      ...whereCondition,
-      status
-    };
+    whereCondition = combineWhere(whereCondition, { status });
   }
 
   if (searchParam) {
@@ -111,52 +139,50 @@ const ListTicketsService = async ({
       }
     ];
 
-    whereCondition = {
-      ...whereCondition,
-      [Op.or]: [
-        {
-          "$contact.name$": where(
-            fn("LOWER", col("contact.name")),
-            "LIKE",
-            `%${sanitizedSearchParam}%`
-          )
-        },
-        { "$contact.number$": { [Op.like]: `%${sanitizedSearchParam}%` } },
-        {
-          "$message.body$": where(
-            fn("LOWER", col("body")),
-            "LIKE",
-            `%${sanitizedSearchParam}%`
-          )
-        }
-      ]
-    };
+    whereCondition = combineWhere(
+      whereCondition,
+      {
+        [Op.or]: [
+          {
+            "$contact.name$": where(
+              fn("LOWER", col("contact.name")),
+              "LIKE",
+              `%${sanitizedSearchParam}%`
+            )
+          },
+          { "$contact.number$": { [Op.like]: `%${sanitizedSearchParam}%` } },
+          {
+            "$message.body$": where(
+              fn("LOWER", col("body")),
+              "LIKE",
+              `%${sanitizedSearchParam}%`
+            )
+          }
+        ]
+      }
+    );
   }
 
   if (date) {
-    whereCondition = {
+    whereCondition = combineWhere(whereCondition, {
       createdAt: {
         [Op.between]: [+startOfDay(parseISO(date)), +endOfDay(parseISO(date))]
       }
-    };
+    });
   }
 
   if (withUnreadMessages === "true") {
-    const user = await ShowUserService(userId);
-    const userQueueIds = user.queues.map(queue => queue.id);
-
-    whereCondition = {
-      [Op.or]: [{ userId }, { status: "pending" }],
-      queueId: { [Op.or]: [userQueueIds, null] },
-      unreadMessages: { [Op.gt]: 0 }
-    };
+    whereCondition = combineWhere(
+      canShowAllTickets ? undefined : assignedVisibilityScope,
+      queueVisibilityScope,
+      { unreadMessages: { [Op.gt]: 0 } }
+    );
   }
 
   if (followUp === "true") {
-    whereCondition = {
-      ...whereCondition,
+    whereCondition = combineWhere(whereCondition, {
       "$tags.name$": FOLLOW_UP_TAG_NAME
-    };
+    });
   }
 
   const limit = 40;

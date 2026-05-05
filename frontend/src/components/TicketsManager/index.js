@@ -16,7 +16,6 @@ import TicketsList from "../TicketsList";
 import TabPanel from "../TabPanel";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import { Button } from "@material-ui/core";
 import TagSelect from "../TagSelect";
@@ -225,9 +224,7 @@ const TicketsManager = () => {
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
-  const canShowAllTickets =
-    user?.profile?.toUpperCase() === "ADMIN" ||
-    user?.permissions?.includes("tickets-manager:showall");
+  const canShowAllTickets = user?.profile?.toUpperCase() === "ADMIN";
   const existingTicketSearch =
     location.state && typeof location.state.existingTicketSearch === "string"
       ? location.state.existingTicketSearch.trim()
@@ -398,33 +395,29 @@ const TicketsManager = () => {
               >
                 {i18n.t("ticketsManager.buttons.newTicket")}
               </Button>
-              <Can
-                role={user.profile}
-                perform="tickets-manager:showall"
-                yes={() => (
-                  <FormControlLabel
-                    className={classes.showAllControl}
-                    label={i18n.t("tickets.buttons.showAll")}
-                    labelPlacement="start"
-                    control={
-                      <Switch
-                        size="small"
-                        checked={showAllTickets}
-                        classes={{
-                          switchBase: classes.showAllSwitchBase,
-                          checked: classes.showAllSwitchChecked,
-                          track: classes.showAllSwitchTrack,
-                        }}
-                        onChange={() =>
-                          setShowAllTickets((prevState) => !prevState)
-                        }
-                        name="showAllTickets"
-                        color="primary"
-                      />
-                    }
-                  />
-                )}
-              />
+              {canShowAllTickets && (
+                <FormControlLabel
+                  className={classes.showAllControl}
+                  label={i18n.t("tickets.buttons.showAll")}
+                  labelPlacement="start"
+                  control={
+                    <Switch
+                      size="small"
+                      checked={showAllTickets}
+                      classes={{
+                        switchBase: classes.showAllSwitchBase,
+                        checked: classes.showAllSwitchChecked,
+                        track: classes.showAllSwitchTrack,
+                      }}
+                      onChange={() =>
+                        setShowAllTickets((prevState) => !prevState)
+                      }
+                      name="showAllTickets"
+                      color="primary"
+                    />
+                  }
+                />
+              )}
             </div>
             <div className={classes.ticketOptionsSecondary}>
               <TagSelect

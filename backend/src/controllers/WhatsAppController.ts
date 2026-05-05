@@ -43,7 +43,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     queueIds
   });
 
-  StartWhatsAppSession(whatsapp);
+  StartWhatsAppSession(whatsapp, { reason: "create" });
 
   const io = getIO();
   io.emit("whatsapp", {
@@ -123,7 +123,7 @@ export const restart = async (
   const whatsapp = await ShowWhatsAppService(whatsappId);
 
   await whatsappProvider.removeSession(whatsapp.id);
-  void StartWhatsAppSession(whatsapp);
+  void StartWhatsAppSession(whatsapp, { reason: "manual_restart" });
 
   return res.status(200).json({ message: "Restarting session." });
 };

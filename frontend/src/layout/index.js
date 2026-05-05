@@ -383,9 +383,16 @@ const LoggedInLayout = ({ children }) => {
 
   const drawerUserMenuOpen = Boolean(drawerUserAnchorEl);
 
-  const userRoleLabel = user?.profile
+  const userSectorLabel = Array.isArray(user?.queues)
+    ? user.queues
+        .map((queue) => queue?.name)
+        .filter(Boolean)
+        .join(" / ")
+    : "";
+
+  const userRoleLabel = userSectorLabel || (user?.profile
     ? user.profile.charAt(0).toUpperCase() + user.profile.slice(1)
-    : "Usuario";
+    : "Usuario");
 
   const userInitials = user?.name
     ? user.name

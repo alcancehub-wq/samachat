@@ -45,6 +45,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   } = req.query as IndexQuery;
 
   const userId = req.user.id;
+  const profile = req.user.profile;
 
   let queueIds: number[] = [];
   let tagIds: number[] = [];
@@ -64,6 +65,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     date,
     showAll,
     userId,
+    profile,
     queueIds,
     withUnreadMessages,
     tagIds,

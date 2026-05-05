@@ -59,9 +59,7 @@ const NotificationsPopOver = () => {
 
 	const historyRef = useRef(history);
 	const userQueueIds = (user?.queues || []).map(queue => queue.id);
-	const canShowAllTickets =
-		user?.profile?.toUpperCase() === "ADMIN" ||
-		user?.permissions?.includes("tickets-manager:showall");
+	const canShowAllTickets = user?.profile?.toUpperCase() === "ADMIN";
 
 	const removeNotification = ticketId => {
 		setNotifications(prevState => {
@@ -99,7 +97,7 @@ const NotificationsPopOver = () => {
 			return false;
 		}
 
-		if (canShowAllTickets || !ticket.userId) {
+		if (canShowAllTickets) {
 			return true;
 		}
 
