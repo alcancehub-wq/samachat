@@ -13,6 +13,7 @@ export interface WhatsappProvider {
   init(whatsapp: Whatsapp): Promise<void>;
   hasSession(sessionId: number): boolean;
   isSessionReady(sessionId: number): boolean;
+  isSessionActive(sessionId: number): boolean;
   removeSession(whatsappId: number): Promise<void>;
   logout(sessionId: number): Promise<void>;
   sendMessage(

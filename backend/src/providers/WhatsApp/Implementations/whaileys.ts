@@ -84,6 +84,10 @@ const isSessionReady = (sessionId: number): boolean => {
   return hasSession(sessionId);
 };
 
+const isSessionActive = (sessionId: number): boolean => {
+  return hasSession(sessionId);
+};
+
 const msgRetryCounterLRU = new LRUCache<string, number>({
   max: 5000,
   ttl: 600 * 1000,
@@ -1531,6 +1535,7 @@ export const WhaileysProvider: WhatsappProvider = {
   init,
   hasSession,
   isSessionReady,
+  isSessionActive,
   removeSession,
   logout,
   sendMessage,

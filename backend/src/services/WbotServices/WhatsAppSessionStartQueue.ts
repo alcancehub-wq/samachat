@@ -1,0 +1,116 @@
+import Whatsapp from "../../models/Whatsapp";
+import { logger } from "../../utils/logger";
+
+const DEFAULT_START_DELAY_MS = 30000;
+const MIN_START_DELAY_MS = 20000;
+const MAX_START_DELAY_MS = 40000;
+
+const queuedSessionStarts = new Map<number, Promise<void>>();
+
+let queueTail: Promise<void> = Promise.resolve();
+let lastStartedAt = 0;
+
+const delay = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+const getSessionStartDelayMs = (): number => {
+  const configuredDelay = Number(
+    process.env.WWEBJS_SESSION_START_DELAY_MS ||
+      process.env.WWEBJS_BOOT_START_DELAY_MS ||
+      DEFAULT_START_DELAY_MS
+  );
+
+  if (!Number.isFinite(configuredDelay)) {
+    return DEFAULT_START_DELAY_MS;
+  }
+
+  return Math.min(
+    MAX_START_DELAY_MS,
+    Math.max(MIN_START_DELAY_MS, configuredDelay)
+  );
+};
+
+interface EnqueueSessionStartOptions {
+  reason: string;
+  sessionName?: string;
+}
+
+export const enqueueWhatsAppSessionStart = (
+  whatsapp: Whatsapp,
+  options: EnqueueSessionStartOptions,
+  task: () => Promise<void>
+): Promise<void> => {
+  const existingStart = queuedSessionStarts.get(whatsapp.id);
+  const sessionName = options.sessionName || whatsapp.name;
+
+  if (existingStart) {
+    logger.warn(
+      {
+        whatsappId: whatsapp.id,
+        sessionName,
+        reason: options.reason
+      },
+      "WhatsApp session start already queued"
+    );
+    return existingStart;
+  }
+
+  const delayMs = getSessionStartDelayMs();
+
+  logger.info(
+    {
+      whatsappId: whatsapp.id,
+      sessionName,
+      reason: options.reason,
+      delayMs,
+      queuedSessions: queuedSessionStarts.size + 1
+    },
+    "WhatsApp session queued for controlled start"
+  );
+
+  let queuedPromise: Promise<void> | undefined;
+  queuedPromise = queueTail
+    .catch(() => undefined)
+    .then(async () => {
+      const elapsedMs = Date.now() - lastStartedAt;
+      const waitMs = Math.max(0, delayMs - elapsedMs);
+
+      if (waitMs > 0) {
+        logger.info(
+          {
+            whatsappId: whatsapp.id,
+            sessionName,
+            reason: options.reason,
+            waitMs
+          },
+          "Waiting before starting queued WhatsApp session"
+        );
+        await delay(waitMs);
+      }
+
+      lastStartedAt = Date.now();
+      logger.info(
+        {
+          whatsappId: whatsapp.id,
+          sessionName,
+          reason: options.reason
+        },
+        "Dequeued WhatsApp session start"
+      );
+
+      await task();
+    })
+    .finally(() => {
+      if (
+        queuedPromise &&
+        queuedSessionStarts.get(whatsapp.id) === queuedPromise
+      ) {
+        queuedSessionStarts.delete(whatsapp.id);
+      }
+    });
+
+  queueTail = queuedPromise.catch(() => undefined);
+  queuedSessionStarts.set(whatsapp.id, queuedPromise);
+
+  return queuedPromise;
+};
