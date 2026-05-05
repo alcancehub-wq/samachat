@@ -2,9 +2,29 @@ import User from "../../models/User";
 import Queue from "../../models/Queue";
 import QueuePermission from "../../models/QueuePermission";
 import { expandSectorPermissions } from "../../utils/sectorPermissions";
+import { logger } from "../../utils/logger";
 
-const normalizePermissions = (permissions?: string[] | null): string[] => {
-  return expandSectorPermissions(permissions);
+const normalizePermissions = (permissions?: unknown): string[] => {
+  if (Array.isArray(permissions)) {
+    return expandSectorPermissions(
+      permissions.filter(permission => typeof permission === "string")
+    );
+  }
+
+  if (typeof permissions === "string") {
+    try {
+      const parsed = JSON.parse(permissions);
+      if (Array.isArray(parsed)) {
+        return expandSectorPermissions(
+          parsed.filter(permission => typeof permission === "string")
+        );
+      }
+    } catch (error) {
+      logger?.warn({ err: error }, "Queue permissions JSON parse failed");
+    }
+  }
+
+  return expandSectorPermissions();
 };
 
 const GetUserPermissionsService = async (
