@@ -62,10 +62,16 @@ const useStyles = makeStyles(theme => ({
 		minHeight: 0,
 		backgroundColor: theme.palette.background.paper,
 		flexDirection: "column",
-		padding: "8px 0px 8px 8px",
+		gap: theme.spacing(1.25),
+		padding: theme.spacing(1, 1, 2, 1),
 		overflowY: "auto",
 		overflowX: "hidden",
+		scrollbarGutter: "stable",
+		overscrollBehaviorY: "contain",
 		WebkitOverflowScrolling: "touch",
+		"& > *": {
+			flexShrink: 0,
+		},
 		...theme.scrollbarStyles,
 	},
 
@@ -87,10 +93,10 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	contactDetails: {
-		marginTop: 8,
 		padding: 8,
 		display: "flex",
 		flexDirection: "column",
+		gap: theme.spacing(1),
 	},
 	contactExtraInfo: {
 		marginTop: 4,
