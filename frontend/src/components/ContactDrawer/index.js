@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 
 import { makeStyles } from "@material-ui/core/styles";
 import Typography from "@material-ui/core/Typography";
@@ -18,6 +18,8 @@ import ContactDrawerSkeleton from "../ContactDrawerSkeleton";
 import MarkdownWrapper from "../MarkdownWrapper";
 import TicketTasks from "../TicketTasks";
 import TicketAIPanel from "../TicketAIPanel";
+
+const CONTACT_NOTES_FIELD = "__contact_notes__";
 
 const drawerWidth = 320;
 
@@ -94,6 +96,31 @@ const useStyles = makeStyles(theme => ({
 		marginTop: 4,
 		padding: 6,
 	},
+	notesCard: {
+		padding: theme.spacing(1.25),
+		display: "flex",
+		flexDirection: "column",
+		gap: theme.spacing(1),
+	},
+	sectionHeader: {
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: theme.spacing(1),
+	},
+	noteText: {
+		color: theme.palette.text.primary,
+		lineHeight: 1.65,
+		whiteSpace: "pre-wrap",
+		wordBreak: "break-word",
+	},
+	emptyState: {
+		color: theme.palette.text.secondary,
+	},
+	sectionButton: {
+		textTransform: "none",
+		fontWeight: 600,
+	},
 }));
 
 const ContactDrawer = ({
@@ -107,6 +134,18 @@ const ContactDrawer = ({
 	const classes = useStyles();
 
 	const [modalOpen, setModalOpen] = useState(false);
+	const contactNotes = useMemo(
+		() =>
+			contact?.extraInfo?.find(info => info?.name === CONTACT_NOTES_FIELD)?.value || "",
+		[contact]
+	);
+	const contactExtraInfo = useMemo(
+		() =>
+			(contact?.extraInfo || []).filter(
+				info => info?.name !== CONTACT_NOTES_FIELD
+			),
+		[contact]
+	);
 
 	return (
 		<Drawer
@@ -155,6 +194,33 @@ const ContactDrawer = ({
 							{i18n.t("contactDrawer.buttons.edit")}
 						</Button>
 					</Paper>
+					<Paper square variant="outlined" className={classes.notesCard}>
+						<div className={classes.sectionHeader}>
+							<Typography variant="subtitle1">
+								{i18n.t("contactDrawer.notes")}
+							</Typography>
+							<Button
+								size="small"
+								color="primary"
+								className={classes.sectionButton}
+								onClick={() => setModalOpen(true)}
+							>
+								{contactNotes
+									? i18n.t("contactDrawer.buttons.editNote")
+									: i18n.t("contactDrawer.buttons.addNote")}
+							</Button>
+						</div>
+						<Typography
+							component="div"
+							className={contactNotes ? classes.noteText : `${classes.noteText} ${classes.emptyState}`}
+						>
+							{contactNotes ? (
+								<MarkdownWrapper>{contactNotes}</MarkdownWrapper>
+							) : (
+								i18n.t("contactDrawer.notesEmpty")
+							)}
+						</Typography>
+					</Paper>
 					<Paper square variant="outlined" className={classes.contactDetails}>
 						<ContactModal
 							open={modalOpen}
@@ -164,7 +230,7 @@ const ContactDrawer = ({
 						<Typography variant="subtitle1">
 							{i18n.t("contactDrawer.extraInfo")}
 						</Typography>
-						{contact?.extraInfo?.map(info => (
+						{contactExtraInfo.length > 0 ? contactExtraInfo.map(info => (
 							<Paper
 								key={info.id}
 								square
@@ -176,7 +242,11 @@ const ContactDrawer = ({
 									<MarkdownWrapper>{info.value}</MarkdownWrapper>
 								</Typography>
 							</Paper>
-						))}
+						)) : (
+							<Typography className={classes.emptyState}>
+								{i18n.t("contactDrawer.extraInfoEmpty")}
+							</Typography>
+						)}
 					</Paper>
 					<TicketTasks ticketId={ticketId} contactId={contact?.id} />
 					<TicketAIPanel ticket={ticket} />

@@ -20,11 +20,9 @@ import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
 import {
-  FormControlLabel,
   Hidden,
   Menu,
   MenuItem,
-  Switch,
 } from "@material-ui/core";
 import ClickAwayListener from "@material-ui/core/ClickAwayListener";
 import { toast } from "react-toastify";
@@ -34,7 +32,6 @@ import api from "../../services/api";
 import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
 
 let mediaRecorder = null;
@@ -197,22 +194,6 @@ const useStyles = makeStyles(theme => ({
     color: theme.palette.primary.main,
     fontWeight: 700,
   },
-  signSwitchBase: {
-    color: "rgba(15, 23, 42, 0.28)",
-    "&$signSwitchChecked": {
-      color: "#FF1919",
-      "& + $signSwitchTrack": {
-        backgroundColor: "rgba(255, 25, 25, 0.42)",
-        opacity: 1,
-        borderColor: "transparent",
-      },
-    },
-  },
-  signSwitchChecked: {},
-  signSwitchTrack: {
-    backgroundColor: "rgba(15, 23, 42, 0.18)",
-    opacity: 1,
-  },
   messageQuickAnswersWrapper: {
     margin: 0,
     position: "absolute",
@@ -256,8 +237,6 @@ const MessageInput = ({ ticketStatus }) => {
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
   const { user } = useContext(AuthContext);
-
-  const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
 
   useEffect(() => {
     inputRef.current.focus();
@@ -363,12 +342,13 @@ const MessageInput = ({ ticketStatus }) => {
   const handleSendMessage = async () => {
     if (inputMessage.trim() === "") return;
     setLoading(true);
+    const shouldSignMessages = user?.signMessages !== false;
 
     const message = {
       read: 1,
       fromMe: true,
       mediaUrl: "",
-      body: signMessage
+      body: shouldSignMessages
         ? `*${user?.name}:*\n${inputMessage.trim()}`
         : inputMessage.trim(),
       quotedMsg: replyingMessage,
@@ -637,26 +617,6 @@ const MessageInput = ({ ticketStatus }) => {
                 <AttachFileIcon className={classes.sendMessageIcons} />
               </IconButton>
             </label>
-            <FormControlLabel
-              style={{ marginRight: 7, color: "gray" }}
-              label={i18n.t("messagesInput.signMessage")}
-              labelPlacement="start"
-              control={
-                <Switch
-                  size="small"
-                  checked={signMessage}
-                  classes={{
-                    switchBase: classes.signSwitchBase,
-                    checked: classes.signSwitchChecked,
-                    track: classes.signSwitchTrack,
-                  }}
-                  onChange={e => {
-                    setSignMessage(e.target.checked);
-                  }}
-                  name="showAllTickets"
-                />
-              }
-            />
           </Hidden>
           <Hidden only={["md", "lg", "xl"]}>
             <IconButton
@@ -701,28 +661,6 @@ const MessageInput = ({ ticketStatus }) => {
                     <AttachFileIcon className={classes.sendMessageIcons} />
                   </IconButton>
                 </label>
-              </MenuItem>
-              <MenuItem onClick={handleMenuItemClick}>
-                <FormControlLabel
-                  style={{ marginRight: 7, color: "gray" }}
-                  label={i18n.t("messagesInput.signMessage")}
-                  labelPlacement="start"
-                  control={
-                    <Switch
-                      size="small"
-                      checked={signMessage}
-                      classes={{
-                        switchBase: classes.signSwitchBase,
-                        checked: classes.signSwitchChecked,
-                        track: classes.signSwitchTrack,
-                      }}
-                      onChange={e => {
-                        setSignMessage(e.target.checked);
-                      }}
-                      name="showAllTickets"
-                    />
-                  }
-                />
               </MenuItem>
             </Menu>
           </Hidden>

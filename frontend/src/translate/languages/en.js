@@ -280,6 +280,8 @@ const messages = {
           emailHelper: "Optional. Used for contact and notices.",
           tags: "Tags",
           tagsPlaceholder: "Select tags",
+          notes: "Notes",
+          notesHelper: "Internal notes about this contact.",
           extraName: "Field name",
           extraNameHelper: "Example: Company, Role, City.",
           extraValue: "Value",
@@ -422,6 +424,8 @@ const messages = {
           passwordHelper: "Minimum 5 characters.",
           profile: "Access role",
           profileHelper: "Defines the user's access level.",
+          signMessages: "Sign messages by default",
+          signMessagesHelper: "When enabled, messages sent by this user automatically include the name signature.",
           whatsapp: "Default Connection",
           whatsappHelper: "Default connection for new attendances.",
         },
@@ -1157,10 +1161,15 @@ const messages = {
       },
       contactDrawer: {
         header: "Contact details",
+        notes: "Notes",
         buttons: {
           edit: "Edit contact",
+          addNote: "Add note",
+          editNote: "Edit note",
         },
         extraInfo: "Other information",
+        notesEmpty: "No notes saved for this contact yet.",
+        extraInfoEmpty: "No additional information saved.",
       },
       ticketTasks: {
         title: "Tasks",

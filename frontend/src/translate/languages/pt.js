@@ -281,6 +281,8 @@ const messages = {
           emailHelper: "Opcional. Usado para contato e avisos.",
           tags: "Tags",
           tagsPlaceholder: "Selecione tags",
+          notes: "Notas",
+          notesHelper: "Anotações internas sobre esse contato.",
           extraName: "Nome do campo",
           extraNameHelper: "Ex: Empresa, Cargo, Cidade.",
           extraValue: "Valor",
@@ -326,6 +328,8 @@ const messages = {
           passwordHelper: "Minimo 5 caracteres.",
           profile: "Perfil de acesso",
           profileHelper: "Define o nível de acesso do usuário.",
+          signMessages: "Assinar mensagens por padrão",
+          signMessagesHelper: "Quando ativo, as mensagens enviadas por esse usuário incluem a assinatura com o nome automaticamente.",
           whatsapp: "Conexão Padrão",
           whatsappHelper: "Conexão padrão para novos atendimentos.",
         },
@@ -1180,10 +1184,15 @@ const messages = {
       },
       contactDrawer: {
         header: "Dados do contato",
+        notes: "Notas",
         buttons: {
           edit: "Editar contato",
+          addNote: "Adicionar nota",
+          editNote: "Editar nota",
         },
         extraInfo: "Outras informações",
+        notesEmpty: "Nenhuma nota cadastrada para este contato.",
+        extraInfoEmpty: "Nenhuma informação adicional cadastrada.",
       },
       ticketTasks: {
         title: "Tarefas",

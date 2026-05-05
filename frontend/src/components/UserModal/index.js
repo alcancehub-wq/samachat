@@ -16,9 +16,11 @@ import {
 	MenuItem,
 	FormControl,
 	FormHelperText,
+	FormControlLabel,
 	TextField,
 	InputAdornment,
-	IconButton
+	IconButton,
+	Switch
   } from '@material-ui/core';
 
 import { Visibility, VisibilityOff } from '@material-ui/icons';
@@ -63,6 +65,26 @@ const useStyles = makeStyles(theme => ({
 		margin: theme.spacing(1),
 		minWidth: 120,
 	},
+	preferenceRow: {
+		marginTop: theme.spacing(1.25),
+		padding: theme.spacing(1.25, 1.5),
+		borderRadius: 16,
+		border: `1px solid ${theme.custom.panelBorder}`,
+		backgroundColor: theme.custom.mutedBackground,
+	},
+	preferenceLabel: {
+		margin: 0,
+		width: "100%",
+		justifyContent: "space-between",
+		"& .MuiFormControlLabel-label": {
+			fontWeight: 600,
+			color: theme.palette.text.primary,
+		},
+	},
+	preferenceHelper: {
+		marginTop: theme.spacing(0.5),
+		color: theme.palette.text.secondary,
+	},
 }));
 
 const UserSchema = Yup.object().shape({
@@ -81,7 +103,8 @@ const UserModal = ({ open, onClose, userId }) => {
 		name: "",
 		email: "",
 		password: "",
-		profile: "user"
+		profile: "user",
+		signMessages: true
 	};
 
 	const { user: loggedInUser } = useContext(AuthContext);
@@ -89,7 +112,7 @@ const UserModal = ({ open, onClose, userId }) => {
 	const [user, setUser] = useState(initialState);
 	const [selectedQueueIds, setSelectedQueueIds] = useState([]);
 	const [showPassword, setShowPassword] = useState(false);
-	const [whatsappId, setWhatsappId] = useState(false);
+	const [whatsappId, setWhatsappId] = useState("");
 	const {loading, whatsApps} = useWhatsApps();
 
 	useEffect(() => {
@@ -98,7 +121,11 @@ const UserModal = ({ open, onClose, userId }) => {
 			try {
 				const { data } = await api.get(`/users/${userId}`);
 				setUser(prevState => {
-					return { ...prevState, ...data };
+					return {
+						...prevState,
+						...data,
+						signMessages: data?.signMessages !== false,
+					};
 				});
 				const userQueueIds = data.queues?.map(queue => queue.id);
 				setSelectedQueueIds(userQueueIds);
@@ -156,7 +183,7 @@ const UserModal = ({ open, onClose, userId }) => {
 						}, 400);
 					}}
 				>
-					{({ touched, errors, isSubmitting }) => (
+					{({ touched, errors, isSubmitting, values, setFieldValue }) => (
 						<Form>
 							<DialogContent dividers>
 								<div className={classes.multFieldLine}>
@@ -288,6 +315,25 @@ const UserModal = ({ open, onClose, userId }) => {
 										</FormControl>
 									)}
 								/>
+									<div className={classes.preferenceRow}>
+										<FormControlLabel
+											className={classes.preferenceLabel}
+											label={i18n.t("userModal.form.signMessages")}
+											labelPlacement="start"
+											control={
+												<Switch
+													color="primary"
+													checked={values.signMessages !== false}
+													onChange={event =>
+														setFieldValue("signMessages", event.target.checked)
+													}
+												/>
+											}
+										/>
+										<FormHelperText className={classes.preferenceHelper}>
+											{i18n.t("userModal.form.signMessagesHelper")}
+										</FormHelperText>
+									</div>
 							</DialogContent>
 							<DialogActions>
 								<Button

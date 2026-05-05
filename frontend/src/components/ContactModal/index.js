@@ -23,6 +23,27 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import TagSelect from "../TagSelect";
 
+const CONTACT_NOTES_FIELD = "__contact_notes__";
+
+const normalizeExtraInfo = extraInfo =>
+	(Array.isArray(extraInfo) ? extraInfo : []).filter(
+		info => info?.name !== CONTACT_NOTES_FIELD
+	);
+
+const extractNotes = extraInfo =>
+	(Array.isArray(extraInfo) ? extraInfo : []).find(
+		info => info?.name === CONTACT_NOTES_FIELD
+	)?.value || "";
+
+const normalizeContactValues = source => ({
+	name: source?.name || "",
+	number: source?.number || "",
+	email: source?.email || "",
+	tagIds: source?.tagIds || source?.tags?.map(tag => tag.id) || [],
+	extraInfo: normalizeExtraInfo(source?.extraInfo),
+	notes: extractNotes(source?.extraInfo),
+});
+
 const useStyles = makeStyles(theme => ({
 	root: {
 		display: "flex",
@@ -113,6 +134,8 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 		name: "",
 		number: "",
 		email: "",
+		notes: "",
+		extraInfo: [],
 		tagIds: [],
 	};
 
@@ -127,9 +150,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 	useEffect(() => {
 		const fetchContact = async () => {
 			if (initialValues) {
-				setContact(prevState => {
-					return { ...prevState, ...initialValues };
-				});
+				setContact(normalizeContactValues(initialValues));
 			}
 
 			if (!contactId) return;
@@ -137,10 +158,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 			try {
 				const { data } = await api.get(`/contacts/${contactId}`);
 				if (isMounted.current) {
-					setContact({
-						...data,
-						tagIds: data?.tags ? data.tags.map(tag => tag.id) : [],
-					});
+					setContact(normalizeContactValues(data));
 				}
 			} catch (err) {
 				toastError(err);
@@ -156,12 +174,27 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 	};
 
 	const handleSaveContact = async values => {
+		const normalizedExtraInfo = (values.extraInfo || []).filter(
+			info => info?.name?.trim() || info?.value?.trim()
+		);
+		const payload = {
+			...values,
+			extraInfo: values.notes?.trim()
+				? [
+					...normalizedExtraInfo,
+					{ name: CONTACT_NOTES_FIELD, value: values.notes.trim() },
+				]
+				: normalizedExtraInfo,
+		};
+
+		delete payload.notes;
+
 		try {
 			if (contactId) {
-				await api.put(`/contacts/${contactId}`, values);
+				await api.put(`/contacts/${contactId}`, payload);
 				handleClose();
 			} else {
-				const { data } = await api.post("/contacts", values);
+				const { data } = await api.post("/contacts", payload);
 				if (onSave) {
 					onSave(data);
 				}
@@ -261,6 +294,24 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 									selectedTagIds={values.tagIds || []}
 									onChange={(ids) => setFieldValue("tagIds", ids)}
 									label={i18n.t("contactModal.form.tagsPlaceholder")}
+								/>
+								<Typography
+									style={{ marginBottom: 8, marginTop: 12 }}
+									variant="subtitle1"
+									className={classes.sectionTitle}
+								>
+									{i18n.t("contactModal.form.notes")}
+								</Typography>
+								<Field
+									as={TextField}
+									label={i18n.t("contactModal.form.notes")}
+									name="notes"
+									helperText={i18n.t("contactModal.form.notesHelper")}
+									variant="outlined"
+									margin="dense"
+									fullWidth
+									multiline
+									rows={4}
 								/>
 								<Typography
 									style={{ marginBottom: 8, marginTop: 12 }}

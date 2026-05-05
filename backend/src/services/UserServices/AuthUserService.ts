@@ -14,6 +14,7 @@ interface SerializedUser {
   name: string;
   email: string;
   profile: string;
+  signMessages: boolean;
   queues: Queue[];
 }
 
