@@ -8,6 +8,7 @@ import Tab from "@material-ui/core/Tab";
 import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
+import AccessTimeIcon from "@material-ui/icons/AccessTime";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
 import NewTicketModal from "../NewTicketModal";
@@ -220,6 +221,7 @@ const TicketsManager = () => {
   const location = useLocation();
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const [followUpCount, setFollowUpCount] = useState(0);
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
@@ -342,6 +344,21 @@ const TicketsManager = () => {
             value={"open"}
             icon={<MoveToInboxIcon />}
             label={i18n.t("tickets.tabs.open.title")}
+            classes={{ root: classes.tab }}
+          />
+          <Tab
+            value={"followUp"}
+            icon={<AccessTimeIcon />}
+            label={
+              <Badge
+                className={classes.badge}
+                badgeContent={followUpCount}
+                color="primary"
+                classes={{ badge: classes.openBadge }}
+              >
+                {i18n.t("tickets.tabs.followUp.title")}
+              </Badge>
+            }
             classes={{ root: classes.tab }}
           />
           <Tab
@@ -487,6 +504,16 @@ const TicketsManager = () => {
           showAll={true}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}
+        />
+      </TabPanel>
+      <TabPanel value={tab} name="followUp" className={classes.ticketsWrapper}>
+        <TicketsList
+          status="closed"
+          showAll={true}
+          selectedQueueIds={selectedQueueIds}
+          selectedTagIds={selectedTagIds}
+          followUp="true"
+          updateCount={(val) => setFollowUpCount(val)}
         />
       </TabPanel>
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>

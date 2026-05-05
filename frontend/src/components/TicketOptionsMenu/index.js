@@ -1,21 +1,21 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
+import { useHistory } from "react-router-dom";
 
 import MenuItem from "@material-ui/core/MenuItem";
 import Menu from "@material-ui/core/Menu";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
-import ConfirmationModal from "../ConfirmationModal";
 import TransferTicketModal from "../TransferTicketModal";
 import toastError from "../../errors/toastError";
-import { Can } from "../Can";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
 const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
-	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
+	const [loading, setLoading] = useState(false);
 	const isMounted = useRef(true);
 	const { user } = useContext(AuthContext);
+	const history = useHistory();
 
 	useEffect(() => {
 		return () => {
@@ -23,22 +23,59 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 		};
 	}, []);
 
-	const handleDeleteTicket = async () => {
+	const handleUpdateTicket = async payload => {
+		handleClose();
+		setLoading(true);
+
 		try {
-			await api.delete(`/tickets/${ticket.id}`);
+			await api.put(`/tickets/${ticket.id}`, payload);
+
+			if (payload.status === "open") {
+				history.push(`/tickets/${ticket.id}`);
+			} else {
+				history.push("/tickets");
+			}
 		} catch (err) {
 			toastError(err);
+		} finally {
+			if (isMounted.current) {
+				setLoading(false);
+			}
 		}
 	};
 
-	const handleOpenConfirmationModal = e => {
-		setConfirmationOpen(true);
+	const handleOpenTransferModal = e => {
+		if (loading) {
+			return;
+		}
+
+		setTransferTicketModalOpen(true);
 		handleClose();
 	};
 
-	const handleOpenTransferModal = e => {
-		setTransferTicketModalOpen(true);
-		handleClose();
+	const handleMoveToFollowUp = () => {
+		handleUpdateTicket({
+			status: "closed",
+			userId: ticket.userId || user?.id || null,
+			followUp: true,
+		});
+	};
+
+	const handleReopen = () => {
+		if (ticket.status === "closed") {
+			handleUpdateTicket({
+				status: "open",
+				userId: user?.id,
+				followUp: false,
+			});
+			return;
+		}
+
+		handleUpdateTicket({
+			status: "pending",
+			userId: null,
+			followUp: false,
+		});
 	};
 
 	const handleCloseTransferTicketModal = () => {
@@ -65,31 +102,20 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				open={menuOpen}
 				onClose={handleClose}
 			>
-				<MenuItem onClick={handleOpenTransferModal}>
+				<MenuItem onClick={handleOpenTransferModal} disabled={loading}>
 					{i18n.t("ticketOptionsMenu.transfer")}
 				</MenuItem>
-				<Can
-					role={user.profile}
-					perform="ticket-options:deleteTicket"
-					yes={() => (
-						<MenuItem onClick={handleOpenConfirmationModal}>
-							{i18n.t("ticketOptionsMenu.delete")}
-						</MenuItem>
-					)}
-				/>
+				{ticket.status === "open" && (
+					<MenuItem onClick={handleMoveToFollowUp} disabled={loading}>
+						{i18n.t("ticketOptionsMenu.followUp")}
+					</MenuItem>
+				)}
+				{ticket.status !== "pending" && (
+					<MenuItem onClick={handleReopen} disabled={loading}>
+						{i18n.t("ticketOptionsMenu.reopen")}
+					</MenuItem>
+				)}
 			</Menu>
-			<ConfirmationModal
-				title={`${i18n.t("ticketOptionsMenu.confirmationModal.title")}${
-					ticket.id
-				} ${i18n.t("ticketOptionsMenu.confirmationModal.titleFrom")} ${
-					ticket.contact.name
-				}?`}
-				open={confirmationOpen}
-				onClose={setConfirmationOpen}
-				onConfirm={handleDeleteTicket}
-			>
-				{i18n.t("ticketOptionsMenu.confirmationModal.message")}
-			</ConfirmationModal>
 			<TransferTicketModal
 				modalOpen={transferTicketModalOpen}
 				onClose={handleCloseTransferTicketModal}

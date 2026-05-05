@@ -222,6 +222,10 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 	const isMounted = useRef(true);
 	const { user } = useContext(AuthContext);
 	const [tagsModalOpen, setTagsModalOpen] = useState(false);
+	const assigneeLabel = ticket.user?.name || ticket.whatsapp?.name;
+	const assigneeTitle = ticket.user?.name
+		? i18n.t("messagesList.header.assignedTo")
+		: i18n.t("ticketsList.connectionTitle");
 
 	useEffect(() => {
 		return () => {
@@ -326,8 +330,8 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 									)}
 								</Typography>
 							)}
-							{ticket.whatsappId && (
-								<div className={classes.userTag} title={i18n.t("ticketsList.connectionTitle")}>{ticket.whatsapp?.name}</div>
+							{assigneeLabel && (
+								<div className={classes.userTag} title={assigneeTitle}>{assigneeLabel}</div>
 							)}
 							<IconButton
 								size="small"

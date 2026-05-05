@@ -461,6 +461,7 @@ const messages = {
         },
         tabs: {
           open: { title: "Attendances" },
+          followUp: { title: "Follow up" },
           closed: { title: "Resolved" },
           search: { title: "Search" },
         },
@@ -1578,6 +1579,8 @@ const messages = {
       ticketOptionsMenu: {
         delete: "Delete",
         transfer: "Transfer",
+        followUp: "Follow up",
+        reopen: "Reopen",
         confirmationModal: {
           title: "Delete ticket #",
           titleFrom: "from contact ",

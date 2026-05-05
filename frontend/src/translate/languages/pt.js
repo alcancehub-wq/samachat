@@ -365,6 +365,7 @@ const messages = {
         },
         tabs: {
           open: { title: "Atendimentos" },
+          followUp: { title: "Follow up" },
           closed: { title: "Resolvidos" },
           search: { title: "Busca" },
         },
@@ -1601,6 +1602,8 @@ const messages = {
       ticketOptionsMenu: {
         delete: "Deletar",
         transfer: "Transferir",
+        followUp: "Follow up",
+        reopen: "Reabrir",
         confirmationModal: {
           title: "Deletar o ticket do contato",
           message:

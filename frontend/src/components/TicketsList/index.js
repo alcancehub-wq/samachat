@@ -18,6 +18,8 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 
+const FOLLOW_UP_TAG_NAME = "Follow up";
+
 const useStyles = makeStyles(theme => ({
 	ticketsListWrapper: {
 		position: "relative",
@@ -231,7 +233,7 @@ const reducer = (state, action) => {
 };
 
 	const TicketsList = (props) => {
-		const { status, searchParam, showAll, selectedQueueIds, selectedTagIds, updateCount, style } =
+		const { status, searchParam, showAll, selectedQueueIds, selectedTagIds, updateCount, style, followUp } =
 			props;
 	const classes = useStyles();
 	const [pageNumber, setPageNumber] = useState(1);
@@ -255,6 +257,7 @@ const reducer = (state, action) => {
 		showAll,
 		queueIds: JSON.stringify(selectedQueueIds),
 		tagIds: JSON.stringify(selectedTagIds || []),
+		followUp,
 	});
 
 	useEffect(() => {
@@ -274,13 +277,22 @@ const reducer = (state, action) => {
 			return ticket.tags.some(tag => selectedTagIds.indexOf(tag.id) > -1);
 		};
 
+		const hasFollowUpMatch = ticket => {
+			if (followUp !== "true") return true;
+			return ticket.tags?.some(tag => tag.name === FOLLOW_UP_TAG_NAME);
+		};
+
 		const shouldUpdateTicket = ticket => !searchParam &&
 			(!ticket.userId || ticket.userId === user?.id || showAll) &&
 			(!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1) &&
-			hasTagMatch(ticket);
+			hasTagMatch(ticket) &&
+			hasFollowUpMatch(ticket);
 
 		const notBelongsToUserQueues = ticket =>
 			ticket.queueId && selectedQueueIds.indexOf(ticket.queueId) === -1;
+
+		const shouldRemoveFromFollowUp = ticket =>
+			followUp === "true" && !hasFollowUpMatch(ticket);
 
 		socket.on("connect", () => {
 			if (status) {
@@ -306,6 +318,10 @@ const reducer = (state, action) => {
 			}
 
 			if (data.action === "update" && notBelongsToUserQueues(data.ticket)) {
+				dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
+			}
+
+			if (data.action === "update" && shouldRemoveFromFollowUp(data.ticket)) {
 				dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
 			}
 
@@ -335,7 +351,7 @@ const reducer = (state, action) => {
 		return () => {
 			socket.disconnect();
 		};
-	}, [status, searchParam, showAll, user, selectedQueueIds, selectedTagIds]);
+	}, [followUp, status, searchParam, showAll, user, selectedQueueIds, selectedTagIds]);
 
 	useEffect(() => {
     if (typeof updateCount === "function") {

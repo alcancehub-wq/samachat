@@ -19,6 +19,7 @@ type IndexQuery = {
   withUnreadMessages: string;
   queueIds: string;
   tagIds: string;
+  followUp?: string;
 };
 
 interface TicketData {
@@ -27,6 +28,7 @@ interface TicketData {
   queueId: number;
   userId: number;
   tagIds?: number[];
+  followUp?: boolean;
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -38,7 +40,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     showAll,
     queueIds: queueIdsStringified,
     withUnreadMessages,
-    tagIds: tagIdsStringified
+    tagIds: tagIdsStringified,
+    followUp
   } = req.query as IndexQuery;
 
   const userId = req.user.id;
@@ -63,7 +66,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     userId,
     queueIds,
     withUnreadMessages,
-    tagIds
+    tagIds,
+    followUp
   });
 
   return res.status(200).json({ tickets, count, hasMore });
@@ -103,7 +107,7 @@ export const update = async (
     ticketId
   });
 
-  if (ticket.status === "closed") {
+  if (ticket.status === "closed" && !ticketData.followUp) {
     const whatsapp = await ShowWhatsAppService(ticket.whatsappId);
 
     const { farewellMessage } = whatsapp;

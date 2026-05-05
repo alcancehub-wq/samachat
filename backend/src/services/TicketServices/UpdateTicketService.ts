@@ -2,9 +2,11 @@ import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import SetTicketMessagesAsRead from "../../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../../libs/socket";
 import Ticket from "../../models/Ticket";
+import Tag from "../../models/Tag";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import ShowTicketService from "./ShowTicketService";
+import { FOLLOW_UP_TAG_COLOR, FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag";
 
 interface TicketData {
   status?: string;
@@ -12,6 +14,7 @@ interface TicketData {
   queueId?: number;
   whatsappId?: number;
   tagIds?: number[];
+  followUp?: boolean;
 }
 
 interface Request {
@@ -29,7 +32,7 @@ const UpdateTicketService = async ({
   ticketData,
   ticketId
 }: Request): Promise<Response> => {
-  const { status, userId, queueId, whatsappId, tagIds } = ticketData;
+  const { status, userId, queueId, whatsappId, tagIds, followUp } = ticketData;
 
   const ticket = await ShowTicketService(ticketId);
   await SetTicketMessagesAsRead(ticket);
@@ -57,8 +60,45 @@ const UpdateTicketService = async ({
     });
   }
 
-  if (tagIds) {
-    await ticket.$set("tags", tagIds);
+  let nextTagIds = tagIds;
+
+  if (typeof followUp === "boolean") {
+    const currentTagIds = ticket.tags?.map(tag => tag.id) || [];
+    nextTagIds = Array.isArray(tagIds) ? [...tagIds] : [...currentTagIds];
+
+    let followUpTag: Tag | null = null;
+
+    if (followUp) {
+      const [tag] = await Tag.findOrCreate({
+        where: { name: FOLLOW_UP_TAG_NAME },
+        defaults: {
+          name: FOLLOW_UP_TAG_NAME,
+          color: FOLLOW_UP_TAG_COLOR
+        }
+      });
+
+      followUpTag = tag;
+    } else {
+      followUpTag = await Tag.findOne({
+        where: { name: FOLLOW_UP_TAG_NAME }
+      });
+    }
+
+    if (followUpTag) {
+      const followUpTagId = followUpTag.id;
+
+      if (followUp) {
+        if (!nextTagIds.includes(followUpTagId)) {
+          nextTagIds.push(followUpTagId);
+        }
+      } else {
+        nextTagIds = nextTagIds.filter(tagId => tagId !== followUpTagId);
+      }
+    }
+  }
+
+  if (nextTagIds) {
+    await ticket.$set("tags", Array.from(new Set(nextTagIds)));
   }
 
   await ticket.reload({ include: ["contact", "queue", "whatsapp", "user", "tags"] });

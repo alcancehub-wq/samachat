@@ -55,13 +55,31 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 
 	useEffect(() => {
 		const loadQueues = async () => {
-			const list = await findAllQueues();
-			setAllQueues(list);
-			setQueues(list);
+			const fallbackQueues = loggedInUser?.queues || [];
+
+			if (loggedInUser?.profile?.toLowerCase() !== "admin") {
+				setAllQueues(fallbackQueues);
+				setQueues(fallbackQueues);
+				return;
+			}
+
+			try {
+				const list = await findAllQueues();
+				setAllQueues(list);
+				setQueues(list);
+			} catch (err) {
+				if (fallbackQueues.length > 0) {
+					setAllQueues(fallbackQueues);
+					setQueues(fallbackQueues);
+					return;
+				}
+
+				toastError(err);
+			}
 		}
 		loadQueues();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [loggedInUser]);
 
 	useEffect(() => {
 		if (!modalOpen || searchParam.length < 3) {

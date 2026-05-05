@@ -8,6 +8,8 @@ import Queue from "../../models/Queue";
 import ShowUserService from "../UserServices/ShowUserService";
 import Whatsapp from "../../models/Whatsapp";
 import Tag from "../../models/Tag";
+import User from "../../models/User";
+import { FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag";
 
 interface Request {
   searchParam?: string;
@@ -19,6 +21,7 @@ interface Request {
   withUnreadMessages?: string;
   queueIds: number[];
   tagIds?: number[];
+  followUp?: string;
 }
 
 interface Response {
@@ -36,7 +39,8 @@ const ListTicketsService = async ({
   showAll,
   userId,
   withUnreadMessages,
-  tagIds = []
+  tagIds = [],
+  followUp
 }: Request): Promise<Response> => {
   let whereCondition: Filterable["where"] = {
     [Op.or]: [{ userId }, { status: "pending" }],
@@ -54,6 +58,11 @@ const ListTicketsService = async ({
       model: Queue,
       as: "queue",
       attributes: ["id", "name", "color"]
+    },
+    {
+      model: User,
+      as: "user",
+      attributes: ["id", "name"]
     },
     {
       model: Whatsapp,
@@ -140,6 +149,13 @@ const ListTicketsService = async ({
       [Op.or]: [{ userId }, { status: "pending" }],
       queueId: { [Op.or]: [userQueueIds, null] },
       unreadMessages: { [Op.gt]: 0 }
+    };
+  }
+
+  if (followUp === "true") {
+    whereCondition = {
+      ...whereCondition,
+      "$tags.name$": FOLLOW_UP_TAG_NAME
     };
   }
 

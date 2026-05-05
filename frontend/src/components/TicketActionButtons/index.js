@@ -3,7 +3,7 @@ import { useHistory } from "react-router-dom";
 
 import { makeStyles } from "@material-ui/core/styles";
 import { IconButton } from "@material-ui/core";
-import { MoreVert, Replay } from "@material-ui/icons";
+import { MoreVert } from "@material-ui/icons";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -83,47 +83,6 @@ const TicketActionButtons = ({ ticket }) => {
 
 	return (
 		<div className={classes.actionButtons}>
-			{ticket.status === "closed" && (
-				<ButtonWithSpinner
-					loading={loading}
-					startIcon={<Replay />}
-					size="small"
-					onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-				>
-					{i18n.t("messagesList.header.buttons.reopen")}
-				</ButtonWithSpinner>
-			)}
-			{ticket.status === "open" && (
-				<>
-					<ButtonWithSpinner
-						loading={loading}
-						startIcon={<Replay />}
-						size="small"
-						className={classes.secondaryActionButton}
-						onClick={e => handleUpdateTicketStatus(e, "pending", null)}
-					>
-						{i18n.t("messagesList.header.buttons.return")}
-					</ButtonWithSpinner>
-					<ButtonWithSpinner
-						loading={loading}
-						size="small"
-						variant="contained"
-						className={classes.primaryActionButton}
-						onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
-					>
-						{i18n.t("messagesList.header.buttons.resolve")}
-					</ButtonWithSpinner>
-					<IconButton className={classes.menuButton} onClick={handleOpenTicketOptionsMenu}>
-						<MoreVert />
-					</IconButton>
-					<TicketOptionsMenu
-						ticket={ticket}
-						anchorEl={anchorEl}
-						menuOpen={ticketOptionsMenuOpen}
-						handleClose={handleCloseTicketOptionsMenu}
-					/>
-				</>
-			)}
 			{ticket.status === "pending" && (
 				<ButtonWithSpinner
 					loading={loading}
@@ -135,6 +94,15 @@ const TicketActionButtons = ({ ticket }) => {
 					{i18n.t("messagesList.header.buttons.accept")}
 				</ButtonWithSpinner>
 			)}
+			<IconButton className={classes.menuButton} onClick={handleOpenTicketOptionsMenu}>
+				<MoreVert />
+			</IconButton>
+			<TicketOptionsMenu
+				ticket={ticket}
+				anchorEl={anchorEl}
+				menuOpen={ticketOptionsMenuOpen}
+				handleClose={handleCloseTicketOptionsMenu}
+			/>
 		</div>
 	);
 };

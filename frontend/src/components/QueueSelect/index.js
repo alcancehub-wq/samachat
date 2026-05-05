@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import InputLabel from "@material-ui/core/InputLabel";
 import MenuItem from "@material-ui/core/MenuItem";
@@ -8,6 +8,7 @@ import Chip from "@material-ui/core/Chip";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const useStyles = makeStyles(theme => ({
 	chips: {
@@ -22,17 +23,30 @@ const useStyles = makeStyles(theme => ({
 const QueueSelect = ({ selectedQueueIds, onChange }) => {
 	const classes = useStyles();
 	const [queues, setQueues] = useState([]);
+	const { user } = useContext(AuthContext);
 
 	useEffect(() => {
 		(async () => {
+			const fallbackQueues = user?.queues || [];
+
+			if (user?.profile?.toLowerCase() !== "admin") {
+				setQueues(fallbackQueues);
+				return;
+			}
+
 			try {
 				const { data } = await api.get("/queue");
 				setQueues(data);
 			} catch (err) {
+				if (fallbackQueues.length > 0) {
+					setQueues(fallbackQueues);
+					return;
+				}
+
 				toastError(err);
 			}
 		})();
-	}, []);
+	}, [user]);
 
 	const handleChange = e => {
 		onChange(e.target.value);
