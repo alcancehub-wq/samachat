@@ -108,3 +108,24 @@ export const SECTOR_PERMISSION_KEYS = [
 ];
 
 export const DEFAULT_SECTOR_PERMISSIONS = [...SECTOR_PERMISSION_KEYS];
+
+export const expandSectorPermissions = (
+  permissions?: string[] | null
+): string[] => {
+  if (!permissions || permissions.length === 0) {
+    return [...DEFAULT_SECTOR_PERMISSIONS];
+  }
+
+  const permissionSet = new Set(permissions);
+
+  // Keep queues created before the session-specific permission working.
+  if (permissionSet.has("connections.update")) {
+    permissionSet.add("connections.session.manage");
+  }
+
+  if (permissionSet.has("tickets.showAll")) {
+    permissionSet.add("tickets-manager:showall");
+  }
+
+  return Array.from(permissionSet);
+};

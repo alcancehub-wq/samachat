@@ -1,7 +1,10 @@
 import Queue from "../models/Queue";
 import User from "../models/User";
 import Whatsapp from "../models/Whatsapp";
-import { DEFAULT_SECTOR_PERMISSIONS } from "../utils/sectorPermissions";
+import {
+  DEFAULT_SECTOR_PERMISSIONS,
+  expandSectorPermissions
+} from "../utils/sectorPermissions";
 import { logger } from "../utils/logger";
 
 interface SerializedUser {
@@ -47,7 +50,7 @@ export const SerializeUser = (user: User): SerializedUser => {
       );
       const permissions =
         normalizedPermissions.length > 0
-          ? normalizedPermissions
+          ? expandSectorPermissions(normalizedPermissions)
           : DEFAULT_SECTOR_PERMISSIONS;
 
       permissions.forEach(permission => permissionSet.add(permission));

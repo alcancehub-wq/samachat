@@ -38,6 +38,7 @@ import WhatsAppModal from "../../components/WhatsAppModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import QrcodeModal from "../../components/QrcodeModal";
 import { i18n } from "../../translate/i18n";
+import { AuthContext } from "../../context/Auth/AuthContext";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 import toastError from "../../errors/toastError";
 
@@ -189,6 +190,7 @@ const Connections = () => {
 	const classes = useStyles();
 
 	const { whatsApps, loading, reload } = useContext(WhatsAppsContext);
+	const { user } = useContext(AuthContext);
 	const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
 	const [qrModalOpen, setQrModalOpen] = useState(false);
 	const [selectedWhatsApp, setSelectedWhatsApp] = useState(null);
@@ -204,6 +206,13 @@ const Connections = () => {
 	const [confirmModalInfo, setConfirmModalInfo] = useState(
 		confirmationModalInitialState
 	);
+	const permissions = user?.permissions || [];
+	const isAdmin = user?.profile?.toLowerCase() === "admin";
+	const hasPermission = permission => isAdmin || permissions.includes(permission);
+	const canCreateConnection = hasPermission("connections.create");
+	const canEditConnection = hasPermission("connections.update");
+	const canDeleteConnection = hasPermission("connections.delete");
+	const canManageSession = hasPermission("connections.session.manage");
 
 	const handleStartWhatsAppSession = async whatsAppId => {
 		try {
@@ -310,6 +319,10 @@ const Connections = () => {
 	const renderActionButtons = whatsApp => {
 		const isRestarting = Boolean(restartingIds[whatsApp.id]);
 		const hasQrCode = Boolean(whatsApp.qrcode);
+
+		if (!canManageSession) {
+			return null;
+		}
 
 		return (
 			<>
@@ -462,14 +475,16 @@ const Connections = () => {
 					</Typography>
 				</div>
 				<MainHeaderButtonsWrapper>
-					<Button
-						variant="contained"
-						color="primary"
-						className={classes.primaryAction}
-						onClick={handleOpenWhatsAppModal}
-					>
-						{i18n.t("connections.buttons.add")}
-					</Button>
+					{canCreateConnection && (
+						<Button
+							variant="contained"
+							color="primary"
+							className={classes.primaryAction}
+							onClick={handleOpenWhatsAppModal}
+						>
+							{i18n.t("connections.buttons.add")}
+						</Button>
+					)}
 				</MainHeaderButtonsWrapper>
 			</MainHeader>
 			<Paper className={classes.mainPaper} variant="outlined">
@@ -526,23 +541,27 @@ const Connections = () => {
 												)}
 											</TableCell>
 											<TableCell align="center" className={classes.tableCell}>
-												<IconButton
-													size="small"
-													className={classes.actionIconButton}
-													onClick={() => handleEditWhatsApp(whatsApp)}
-												>
-													<Edit />
-												</IconButton>
+												{canEditConnection && (
+													<IconButton
+														size="small"
+														className={classes.actionIconButton}
+														onClick={() => handleEditWhatsApp(whatsApp)}
+													>
+														<Edit />
+													</IconButton>
+												)}
 
-												<IconButton
-													size="small"
-													className={classes.actionIconButton}
-													onClick={e => {
-														handleOpenConfirmationModal("delete", whatsApp.id);
-													}}
-												>
-													<DeleteOutline />
-												</IconButton>
+												{canDeleteConnection && (
+													<IconButton
+														size="small"
+														className={classes.actionIconButton}
+														onClick={e => {
+															handleOpenConfirmationModal("delete", whatsApp.id);
+														}}
+													>
+														<DeleteOutline />
+													</IconButton>
+												)}
 											</TableCell>
 										</TableRow>
 									))}

@@ -1149,7 +1149,12 @@ const messages = {
         placeholderOpen: "Escriba un mensaje o presione '' / '' para usar las respuestas rápidas registradas",
         placeholderClosed:
           "Vuelva a abrir o acepte este ticket para enviar un mensaje.",
+        placeholderInternal:
+          "Escriba un mensaje interno visible solo para el equipo.",
         signMessage: "Firmar",
+        internalModeLabel: "Interna",
+        internalModeEnabled: "Modo de mensaje interno activo",
+        internalModeDisabled: "Modo de conversación con el cliente activo",
         audioPermissionDenied:
           "El micrófono está bloqueado en este navegador. Permita el acceso al micrófono para grabar audio.",
         audioUnsupported:

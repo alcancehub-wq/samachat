@@ -1,14 +1,10 @@
 import User from "../../models/User";
 import Queue from "../../models/Queue";
 import QueuePermission from "../../models/QueuePermission";
-import { DEFAULT_SECTOR_PERMISSIONS } from "../../utils/sectorPermissions";
+import { expandSectorPermissions } from "../../utils/sectorPermissions";
 
 const normalizePermissions = (permissions?: string[] | null): string[] => {
-  if (!permissions || permissions.length === 0) {
-    return DEFAULT_SECTOR_PERMISSIONS;
-  }
-
-  return permissions;
+  return expandSectorPermissions(permissions);
 };
 
 const GetUserPermissionsService = async (

@@ -14,11 +14,13 @@ import IconButton from "@material-ui/core/IconButton";
 import MoreVert from "@material-ui/icons/MoreVert";
 import MoodIcon from "@material-ui/icons/Mood";
 import SendIcon from "@material-ui/icons/Send";
+import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
 import CancelIcon from "@material-ui/icons/Cancel";
 import ClearIcon from "@material-ui/icons/Clear";
 import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
+import SpeakerNotesOutlinedIcon from "@material-ui/icons/SpeakerNotesOutlined";
 import {
   Hidden,
   Menu,
@@ -88,6 +90,11 @@ const useStyles = makeStyles(theme => ({
     borderRadius: 20,
     flex: 1,
     position: "relative",
+  },
+
+  modeToggleButtonActive: {
+    backgroundColor: `${theme.palette.primary.main} !important`,
+    color: "#ffffff !important",
   },
 
   messageInput: {
@@ -229,6 +236,7 @@ const MessageInput = ({ ticketStatus }) => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [isInternalMessage, setIsInternalMessage] = useState(false);
   const [quickAnswers, setQuickAnswer] = useState([]);
   const [typeBar, setTypeBar] = useState(false);
   const inputRef = useRef();
@@ -248,6 +256,7 @@ const MessageInput = ({ ticketStatus }) => {
       setInputMessage("");
       setShowEmoji(false);
       setMedias([]);
+      setIsInternalMessage(false);
       setReplyingMessage(null);
     };
   }, [ticketId, setReplyingMessage]);
@@ -280,6 +289,10 @@ const MessageInput = ({ ticketStatus }) => {
   };
 
   const handleChangeMedias = e => {
+    if (isInternalMessage) {
+      return;
+    }
+
     if (!e.target.files) {
       return;
     }
@@ -289,9 +302,26 @@ const MessageInput = ({ ticketStatus }) => {
   };
 
   const handleInputPaste = e => {
+    if (isInternalMessage) {
+      return;
+    }
+
     if (e.clipboardData.files[0]) {
       setMedias([e.clipboardData.files[0]]);
     }
+  };
+
+  const handleToggleInternalMessage = () => {
+    setIsInternalMessage(prevState => {
+      const nextState = !prevState;
+
+      if (nextState) {
+        setShowEmoji(false);
+        setMedias([]);
+      }
+
+      return nextState;
+    });
   };
 
   const handleUploadMedia = async e => {
@@ -343,15 +373,18 @@ const MessageInput = ({ ticketStatus }) => {
     if (inputMessage.trim() === "") return;
     setLoading(true);
     const shouldSignMessages = user?.signMessages !== false;
+    const trimmedMessage = inputMessage.trim();
 
     const message = {
       read: 1,
       fromMe: true,
       mediaUrl: "",
-      body: shouldSignMessages
-        ? `*${user?.name}:*\n${inputMessage.trim()}`
-        : inputMessage.trim(),
+      body:
+        isInternalMessage || !shouldSignMessages
+          ? trimmedMessage
+          : `*${user?.name}:*\n${trimmedMessage}`,
       quotedMsg: replyingMessage,
+      isInternal: isInternalMessage,
     };
     try {
       await ensureTicketIsOpen();
@@ -582,7 +615,12 @@ const MessageInput = ({ ticketStatus }) => {
             <IconButton
               aria-label="emojiPicker"
               component="span"
-              disabled={loading || recording || ticketStatus !== "open"}
+              disabled={
+                loading ||
+                recording ||
+                ticketStatus !== "open" ||
+                isInternalMessage
+              }
               onClick={e => setShowEmoji(prevState => !prevState)}
             >
               <MoodIcon className={classes.sendMessageIcons} />
@@ -604,7 +642,12 @@ const MessageInput = ({ ticketStatus }) => {
               multiple
               type="file"
               id="upload-button"
-              disabled={loading || recording || ticketStatus !== "open"}
+              disabled={
+                loading ||
+                recording ||
+                ticketStatus !== "open" ||
+                isInternalMessage
+              }
               className={classes.uploadInput}
               onChange={handleChangeMedias}
             />
@@ -612,7 +655,12 @@ const MessageInput = ({ ticketStatus }) => {
               <IconButton
                 aria-label="upload"
                 component="span"
-                disabled={loading || recording || ticketStatus !== "open"}
+                disabled={
+                  loading ||
+                  recording ||
+                  ticketStatus !== "open" ||
+                  isInternalMessage
+                }
               >
                 <AttachFileIcon className={classes.sendMessageIcons} />
               </IconButton>
@@ -637,7 +685,12 @@ const MessageInput = ({ ticketStatus }) => {
                 <IconButton
                   aria-label="emojiPicker"
                   component="span"
-                  disabled={loading || recording || ticketStatus !== "open"}
+                  disabled={
+                    loading ||
+                    recording ||
+                    ticketStatus !== "open" ||
+                    isInternalMessage
+                  }
                   onClick={e => setShowEmoji(prevState => !prevState)}
                 >
                   <MoodIcon className={classes.sendMessageIcons} />
@@ -648,7 +701,12 @@ const MessageInput = ({ ticketStatus }) => {
                   multiple
                   type="file"
                   id="upload-button"
-                  disabled={loading || recording || ticketStatus !== "open"}
+                  disabled={
+                    loading ||
+                    recording ||
+                    ticketStatus !== "open" ||
+                    isInternalMessage
+                  }
                   className={classes.uploadInput}
                   onChange={handleChangeMedias}
                 />
@@ -656,7 +714,12 @@ const MessageInput = ({ ticketStatus }) => {
                   <IconButton
                     aria-label="upload"
                     component="span"
-                    disabled={loading || recording || ticketStatus !== "open"}
+                    disabled={
+                      loading ||
+                      recording ||
+                      ticketStatus !== "open" ||
+                      isInternalMessage
+                    }
                   >
                     <AttachFileIcon className={classes.sendMessageIcons} />
                   </IconButton>
@@ -664,6 +727,26 @@ const MessageInput = ({ ticketStatus }) => {
               </MenuItem>
             </Menu>
           </Hidden>
+          <IconButton
+            aria-label="toggleInternalMessage"
+            component="span"
+            className={clsx({
+              [classes.modeToggleButtonActive]: isInternalMessage,
+            })}
+            disabled={loading || recording || ticketStatus !== "open"}
+            onClick={handleToggleInternalMessage}
+            title={
+              isInternalMessage
+                ? i18n.t("messagesInput.internalModeEnabled")
+                : i18n.t("messagesInput.internalModeDisabled")
+            }
+          >
+            {isInternalMessage ? (
+              <SpeakerNotesOutlinedIcon />
+            ) : (
+              <ChatBubbleOutlineIcon className={classes.sendMessageIcons} />
+            )}
+          </IconButton>
           <div className={classes.messageInputWrapper}>
             <InputBase
               inputRef={input => {
@@ -672,9 +755,11 @@ const MessageInput = ({ ticketStatus }) => {
               }}
               className={classes.messageInput}
               placeholder={
-                ticketStatus === "open"
-                  ? i18n.t("messagesInput.placeholderOpen")
-                  : i18n.t("messagesInput.placeholderClosed")
+                ticketStatus !== "open"
+                  ? i18n.t("messagesInput.placeholderClosed")
+                  : isInternalMessage
+                  ? i18n.t("messagesInput.placeholderInternal")
+                  : i18n.t("messagesInput.placeholderOpen")
               }
               multiline
               maxRows={5}
@@ -682,7 +767,7 @@ const MessageInput = ({ ticketStatus }) => {
               onChange={handleChangeInput}
               disabled={recording || loading || ticketStatus !== "open"}
               onPaste={e => {
-                ticketStatus === "open" && handleInputPaste(e);
+                ticketStatus === "open" && !isInternalMessage && handleInputPaste(e);
               }}
               onKeyPress={e => {
                 if (loading || e.shiftKey) return;
@@ -752,7 +837,7 @@ const MessageInput = ({ ticketStatus }) => {
             <IconButton
               aria-label="showRecorder"
               component="span"
-              disabled={loading || ticketStatus !== "open"}
+              disabled={loading || ticketStatus !== "open" || isInternalMessage}
               onClick={handleStartRecording}
             >
               <MicIcon className={classes.sendMessageIcons} />

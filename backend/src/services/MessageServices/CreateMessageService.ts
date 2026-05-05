@@ -14,13 +14,21 @@ interface MessageData {
   mediaUrl?: string;
   ack?: number;
   quotedMsgId?: string;
+  isInternal?: boolean;
+  senderName?: string;
 }
 interface Request {
   messageData: MessageData;
+  broadcastToTicketRoom?: boolean;
+  broadcastToStatus?: boolean;
+  broadcastToNotification?: boolean;
 }
 
 const CreateMessageService = async ({
-  messageData
+  messageData,
+  broadcastToTicketRoom = true,
+  broadcastToStatus = true,
+  broadcastToNotification = true
 }: Request): Promise<Message> => {
   await Message.upsert(messageData);
 
@@ -53,15 +61,30 @@ const CreateMessageService = async ({
   }
 
   const io = getIO();
-  io.to(message.ticketId.toString())
-    .to(message.ticket.status)
-    .to("notification")
-    .emit("appMessage", {
-      action: "create",
-      message,
-      ticket: message.ticket,
-      contact: message.ticket.contact
-    });
+  const payload = {
+    action: "create",
+    message,
+    ticket: message.ticket,
+    contact: message.ticket.contact
+  };
+
+  if (broadcastToTicketRoom) {
+    io.to(message.ticketId.toString()).emit("appMessage", payload);
+  }
+
+  if (broadcastToStatus || broadcastToNotification) {
+    let broadcaster = io;
+
+    if (broadcastToStatus) {
+      broadcaster = broadcaster.to(message.ticket.status);
+    }
+
+    if (broadcastToNotification) {
+      broadcaster = broadcaster.to("notification");
+    }
+
+    broadcaster.emit("appMessage", payload);
+  }
 
   return message;
 };

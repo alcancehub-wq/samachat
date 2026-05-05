@@ -32,6 +32,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import Audio from "../Audio";
 import { getBackendUrl } from "../../config";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   messagesListWrapper: {
@@ -153,6 +154,11 @@ const useStyles = makeStyles((theme) => ({
     boxShadow: "none",
   },
 
+  internalMessageRight: {
+    backgroundColor: "#FFF4DB",
+    border: "1px solid #F0D08B",
+  },
+
   quotedContainerRight: {
     margin: "-3px -80px 6px -6px",
     overflowY: "hidden",
@@ -189,6 +195,28 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     color: theme.palette.primary.main,
     fontWeight: 700,
+  },
+
+  internalMeta: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(0.75),
+    padding: theme.spacing(0.25, 0.4, 0, 0.4),
+    color: "#8A5B00",
+    fontSize: "0.76rem",
+    fontWeight: 700,
+  },
+
+  internalBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: theme.spacing(0.25, 0.75),
+    borderRadius: 999,
+    backgroundColor: "rgba(138, 91, 0, 0.12)",
+    border: "1px solid rgba(138, 91, 0, 0.18)",
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    fontSize: "0.68rem",
   },
 
   textContentItem: {
@@ -540,6 +568,10 @@ const MessagesList = ({ ticketId, isGroup }) => {
   };
 
   const renderMessageAck = (message) => {
+    if (message.isInternal) {
+      return null;
+    }
+
     if (message.ack === 0) {
       return <AccessTime fontSize="small" className={classes.ackIcons} />;
     }
@@ -621,13 +653,34 @@ const MessagesList = ({ ticketId, isGroup }) => {
           })}
         ></span>
         <div className={classes.quotedMsg}>
-          {!message.quotedMsg?.fromMe && (
+          {message.quotedMsg?.isInternal ? (
+            <span className={classes.messageContactName}>
+              {`${i18n.t("messagesInput.internalModeLabel")}${
+                message.quotedMsg?.senderName ? ` • ${message.quotedMsg.senderName}` : ""
+              }`}
+            </span>
+          ) : !message.quotedMsg?.fromMe && (
             <span className={classes.messageContactName}>
               {message.quotedMsg?.contact?.name}
             </span>
           )}
           {message.quotedMsg?.body}
         </div>
+      </div>
+    );
+  };
+
+  const renderInternalMeta = message => {
+    if (!message.isInternal) {
+      return null;
+    }
+
+    return (
+      <div className={classes.internalMeta}>
+        <span className={classes.internalBadge}>
+          {i18n.t("messagesInput.internalModeLabel")}
+        </span>
+        {message.senderName && <span>{message.senderName}</span>}
       </div>
     );
   };
@@ -641,6 +694,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
               {renderDailyTimestamps(message, index)}
               {renderMessageDivider(message, index)}
               <div className={classes.messageLeft}>
+                {renderInternalMeta(message)}
                 <IconButton
                   variant="contained"
                   size="small"
@@ -674,7 +728,12 @@ const MessagesList = ({ ticketId, isGroup }) => {
             <React.Fragment key={message.id}>
               {renderDailyTimestamps(message, index)}
               {renderMessageDivider(message, index)}
-              <div className={classes.messageRight}>
+              <div
+                className={clsx(classes.messageRight, {
+                  [classes.internalMessageRight]: message.isInternal,
+                })}
+              >
+                {renderInternalMeta(message)}
                 <IconButton
                   variant="contained"
                   size="small"

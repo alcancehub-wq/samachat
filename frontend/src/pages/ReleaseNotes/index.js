@@ -11,6 +11,20 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.05.05 / Operacao, atendimento e estabilidade",
+    label: "Execucoes do dia",
+    summary:
+      "Consolidacao das entregas do dia no legado em producao, com foco em estabilidade de WhatsApp, atendimento interno e controle de acesso por setor.",
+    changes: [
+      "Promovidas para o legado as correcoes funcionais preservadas sem redesign, incluindo assinaturas padrao por usuario, notas internas no contato e retorno seguro do alias /dashboard.",
+      "Ajustada a serializacao e inicializacao de sessoes WhatsApp para reduzir falhas de reconexao e manter o fluxo de envio mais estavel.",
+      "Restaurado o scroll vertical da lateral Dados do contato no frontend de producao.",
+      "Corrigido o roteamento das notificacoes de novos chats em Aguardando e Atendendo para respeitar responsavel, filas do usuario e permissao de ver todos.",
+      "Adicionado modo de mensagem interna no composer: quando ativado, a mensagem fica visivel apenas para usuarios internos e nao e enviada ao cliente.",
+      "Compatibilizadas permissoes antigas de conexao para que atendentes possam operar suas sessoes de WhatsApp por permissao de setor, sem precisar virar admin, mantendo a regra de visibilidade por proprietario salvo liberacao do administrador.",
+    ],
+  },
+  {
     version: "2026.05.02 / Fase 1",
     label: "Base visual",
     summary:

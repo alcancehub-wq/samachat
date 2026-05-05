@@ -58,6 +58,64 @@ const NotificationsPopOver = () => {
 	const soundAlertRef = useRef();
 
 	const historyRef = useRef(history);
+	const userQueueIds = (user?.queues || []).map(queue => queue.id);
+	const canShowAllTickets =
+		user?.profile?.toUpperCase() === "ADMIN" ||
+		user?.permissions?.includes("tickets-manager:showall");
+
+	const removeNotification = ticketId => {
+		setNotifications(prevState => {
+			const ticketIndex = prevState.findIndex(t => t.id === ticketId);
+			if (ticketIndex !== -1) {
+				prevState.splice(ticketIndex, 1);
+				return [...prevState];
+			}
+			return prevState;
+		});
+
+		setDesktopNotifications(prevState => {
+			const notificationIndex = prevState.findIndex(
+				n => n.tag === String(ticketId)
+			);
+			if (notificationIndex !== -1) {
+				prevState[notificationIndex].close();
+				prevState.splice(notificationIndex, 1);
+				return [...prevState];
+			}
+			return prevState;
+		});
+	};
+
+	const canTrackTicket = ticket => {
+		if (!ticket) {
+			return false;
+		}
+
+		if (
+			!canShowAllTickets &&
+			ticket.queueId &&
+			!userQueueIds.includes(ticket.queueId)
+		) {
+			return false;
+		}
+
+		if (canShowAllTickets || !ticket.userId) {
+			return true;
+		}
+
+		return Number(ticket.userId) === Number(user?.id);
+	};
+
+	const syncNotification = ticket => {
+		setNotifications(prevState => {
+			const ticketIndex = prevState.findIndex(t => t.id === ticket.id);
+			if (ticketIndex !== -1) {
+				prevState[ticketIndex] = ticket;
+				return [...prevState];
+			}
+			return [ticket, ...prevState];
+		});
+	};
 
 	useEffect(() => {
 		soundAlertRef.current = () => {
@@ -91,48 +149,29 @@ const NotificationsPopOver = () => {
 
 		socket.on("ticket", data => {
 			if (data.action === "updateUnread" || data.action === "delete") {
-				setNotifications(prevState => {
-					const ticketIndex = prevState.findIndex(t => t.id === data.ticketId);
-					if (ticketIndex !== -1) {
-						prevState.splice(ticketIndex, 1);
-						return [...prevState];
-					}
-					return prevState;
-				});
+				removeNotification(data.ticketId);
+			}
 
-				setDesktopNotifications(prevState => {
-					const notfiticationIndex = prevState.findIndex(
-						n => n.tag === String(data.ticketId)
-					);
-					if (notfiticationIndex !== -1) {
-						prevState[notfiticationIndex].close();
-						prevState.splice(notfiticationIndex, 1);
-						return [...prevState];
-					}
-					return prevState;
-				});
+			if (data.action === "update") {
+				if (canTrackTicket(data.ticket) && Number(data.ticket.unreadMessages) > 0) {
+					syncNotification(data.ticket);
+					return;
+				}
+
+				removeNotification(data.ticket.id);
 			}
 		});
 
 		socket.on("appMessage", data => {
-			if (
-				data.action === "create" &&
-				!data.message.read &&
-				(data.ticket.userId === user?.id || !data.ticket.userId)
-			) {
-				setNotifications(prevState => {
-					const ticketIndex = prevState.findIndex(t => t.id === data.ticket.id);
-					if (ticketIndex !== -1) {
-						prevState[ticketIndex] = data.ticket;
-						return [...prevState];
-					}
-					return [data.ticket, ...prevState];
-				});
+			if (data.action === "create" && !data.message.read && canTrackTicket(data.ticket)) {
+				syncNotification(data.ticket);
 
 				const shouldNotNotificate =
 					(data.message.ticketId === ticketIdRef.current &&
 						document.visibilityState === "visible") ||
-					(data.ticket.userId && data.ticket.userId !== user?.id) ||
+					(!canShowAllTickets &&
+						data.ticket.userId &&
+						Number(data.ticket.userId) !== Number(user?.id)) ||
 					data.ticket.isGroup;
 
 				if (shouldNotNotificate) return;
@@ -144,7 +183,7 @@ const NotificationsPopOver = () => {
 		return () => {
 			socket.disconnect();
 		};
-	}, [user]);
+	}, [canShowAllTickets, user]);
 
 	const handleNotifications = data => {
 		const { message, contact, ticket } = data;

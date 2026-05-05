@@ -34,6 +34,13 @@ class Message extends Model<Message> {
   @Column(DataType.TEXT)
   body: string;
 
+  @Default(false)
+  @Column
+  isInternal: boolean;
+
+  @Column(DataType.STRING)
+  senderName: string;
+
   @Column(DataType.STRING)
   get mediaUrl(): string | null {
     if (this.getDataValue("mediaUrl")) {

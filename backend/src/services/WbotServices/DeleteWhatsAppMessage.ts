@@ -18,6 +18,11 @@ const DeleteWhatsAppMessage = async (messageId: string): Promise<Message> => {
     throw new AppError("No message found with this ID.");
   }
 
+  if (message.isInternal) {
+    await message.update({ isDeleted: true });
+    return message;
+  }
+
   const { ticket } = message;
 
   const chatId = `${ticket.contact.number}@${ticket.isGroup ? "g" : "c"}.us`;

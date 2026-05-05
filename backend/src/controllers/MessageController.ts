@@ -1,11 +1,14 @@
 import { Request, Response } from "express";
+import { v4 as uuidv4 } from "uuid";
 
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
 import Message from "../models/Message";
 
+import CreateMessageService from "../services/MessageServices/CreateMessageService";
 import ListMessagesService from "../services/MessageServices/ListMessagesService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
+import ShowUserService from "../services/UserServices/ShowUserService";
 import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessage";
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
@@ -19,6 +22,7 @@ type MessageData = {
   fromMe: boolean;
   read: boolean;
   quotedMsg?: Message;
+  isInternal?: boolean;
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -37,10 +41,33 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
-  const { body, quotedMsg }: MessageData = req.body;
+  const { body, quotedMsg, isInternal }: MessageData = req.body;
   const medias = req.files as Express.Multer.File[];
 
   const ticket = await ShowTicketService(ticketId);
+
+  if (isInternal) {
+    const senderUser = await ShowUserService(req.user.id);
+    const message = await CreateMessageService({
+      messageData: {
+        id: uuidv4(),
+        ticketId: ticket.id,
+        body: body.trim(),
+        contactId: ticket.contactId,
+        fromMe: true,
+        read: true,
+        quotedMsgId: quotedMsg?.id,
+        isInternal: true,
+        senderName: senderUser.name
+      },
+      broadcastToStatus: false,
+      broadcastToNotification: false
+    });
+
+    await ticket.update({ lastMessage: body.trim() });
+
+    return res.status(201).json(message);
+  }
 
   SetTicketMessagesAsRead(ticket);
 
