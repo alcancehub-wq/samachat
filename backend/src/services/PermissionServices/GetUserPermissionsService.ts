@@ -14,6 +14,7 @@ const GetUserPermissionsService = async (
     include: [
       {
         model: Queue,
+        as: "queues",
         include: [QueuePermission]
       }
     ]
