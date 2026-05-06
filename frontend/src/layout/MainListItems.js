@@ -273,7 +273,7 @@ const MainListItems = (props) => {
   const menuConfig = {
     dashboard: {
       labelKey: "mainDrawer.listItems.dashboard",
-      to: "/",
+      to: "/dashboard",
       icon: <DashboardOutlinedIcon />,
       permissions: ["login.access", "tickets.view", "messages.view"],
     },
