@@ -75,7 +75,13 @@ const ListTicketsService = async ({
 }: Request): Promise<Response> => {
   const isAdmin = String(profile || "").toLowerCase() === "admin";
   const queueVisibilityScope = buildQueueVisibilityScope(queueIds);
-  const assignedVisibilityScope = isAdmin ? undefined : { userId };
+  const assignedVisibilityScope: WhereOptions | undefined = isAdmin
+    ? undefined
+    : status === "pending"
+      ? ({
+          [Op.or]: [{ userId }, { status: "pending" }]
+        } as WhereOptions)
+      : ({ userId } as WhereOptions);
   const canShowAllTickets = isAdmin && showAll === "true";
   let whereCondition: WhereOptions = combineWhere(
     canShowAllTickets ? undefined : assignedVisibilityScope,

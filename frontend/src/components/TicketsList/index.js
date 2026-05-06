@@ -355,10 +355,17 @@ const reducer = (state, action) => {
 
 	useEffect(() => {
     if (typeof updateCount === "function") {
-      updateCount(ticketsList.length);
+			const nextCount = status === "open"
+				? ticketsList.reduce(
+					(total, ticket) => total + (Number(ticket.unreadMessages) > 0 ? 1 : 0),
+					0
+				)
+				: ticketsList.length;
+
+			updateCount(nextCount);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticketsList]);
+  }, [status, ticketsList]);
 
 	const loadMore = () => {
 		setPageNumber(prevState => prevState + 1);
