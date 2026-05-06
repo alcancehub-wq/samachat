@@ -84,6 +84,21 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 		}
 	};
 
+	const handleMarkAsUnread = async () => {
+		handleClose();
+		setLoading(true);
+
+		try {
+			await api.put(`/tickets/${ticket.id}/unread`);
+		} catch (err) {
+			toastError(err);
+		} finally {
+			if (isMounted.current) {
+				setLoading(false);
+			}
+		}
+	};
+
 	return (
 		<>
 			<Menu
@@ -108,6 +123,11 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				{ticket.status === "open" && (
 					<MenuItem onClick={handleMoveToFollowUp} disabled={loading}>
 						{i18n.t("ticketOptionsMenu.followUp")}
+					</MenuItem>
+				)}
+				{ticket.unreadMessages === 0 && (
+					<MenuItem onClick={handleMarkAsUnread} disabled={loading}>
+						{i18n.t("ticketOptionsMenu.markAsUnread")}
 					</MenuItem>
 				)}
 				{ticket.status !== "pending" && (

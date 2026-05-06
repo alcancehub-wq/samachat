@@ -34,6 +34,13 @@ ticketRoutes.put(
 	TicketController.update
 );
 
+ticketRoutes.put(
+	"/tickets/:ticketId/unread",
+	isAuth,
+	checkSectorPermission("tickets.update"),
+	TicketController.markAsUnread
+);
+
 ticketRoutes.delete(
 	"/tickets/:ticketId",
 	isAuth,

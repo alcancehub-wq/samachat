@@ -1604,6 +1604,7 @@ const messages = {
         delete: "Deletar",
         transfer: "Transferir",
         followUp: "Follow up",
+        markAsUnread: "Marcar como não lido",
         reopen: "Reabrir",
         confirmationModal: {
           title: "Deletar o ticket do contato",

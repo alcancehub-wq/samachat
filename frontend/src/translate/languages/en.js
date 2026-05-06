@@ -1581,6 +1581,7 @@ const messages = {
         delete: "Delete",
         transfer: "Transfer",
         followUp: "Follow up",
+        markAsUnread: "Mark as unread",
         reopen: "Reopen",
         confirmationModal: {
           title: "Delete ticket #",
