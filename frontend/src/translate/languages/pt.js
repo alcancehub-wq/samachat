@@ -212,6 +212,7 @@ const messages = {
         },
         table: {
           name: "Nome",
+          connectedNumber: "Numero conectado",
           status: "Status",
           lastUpdate: "Última atualização",
           default: "Padrão",

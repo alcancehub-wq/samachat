@@ -54,6 +54,12 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 	const { user: loggedInUser } = useContext(AuthContext);
 
 	useEffect(() => {
+		if (modalOpen) {
+			setSelectedWhatsapp(ticketWhatsappId);
+		}
+	}, [modalOpen, ticketWhatsappId]);
+
+	useEffect(() => {
 		const loadQueues = async () => {
 			const fallbackQueues = loggedInUser?.queues || [];
 
@@ -110,6 +116,8 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 		onClose();
 		setSearchParam("");
 		setSelectedUser(null);
+		setSelectedQueue('');
+		setSelectedWhatsapp(ticketWhatsappId);
 	};
 
 	const handleSaveTicket = async e => {
@@ -120,7 +128,8 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 			let data = {};
 
 			if (selectedUser) {
-				data.userId = selectedUser.id
+				data.userId = selectedUser.id;
+				data.applyUserDefaultWhatsappOnTransfer = true;
 			}
 
 			if (selectedQueue && selectedQueue !== null) {
@@ -132,7 +141,7 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 				}
 			}
 
-			if(selectedWhatsapp) {
+			if (selectedWhatsapp && selectedWhatsapp !== ticketWhatsappId) {
 				data.whatsappId = selectedWhatsapp;
 			}
 

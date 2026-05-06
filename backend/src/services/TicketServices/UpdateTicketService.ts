@@ -5,6 +5,7 @@ import Ticket from "../../models/Ticket";
 import Tag from "../../models/Tag";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
+import GetDefaultWhatsAppByUser from "../../helpers/GetDefaultWhatsAppByUser";
 import ShowTicketService from "./ShowTicketService";
 import { FOLLOW_UP_TAG_COLOR, FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag";
 
@@ -15,6 +16,7 @@ interface TicketData {
   whatsappId?: number;
   tagIds?: number[];
   followUp?: boolean;
+  applyUserDefaultWhatsappOnTransfer?: boolean;
 }
 
 interface Request {
@@ -32,17 +34,42 @@ const UpdateTicketService = async ({
   ticketData,
   ticketId
 }: Request): Promise<Response> => {
-  const { status, userId, queueId, whatsappId, tagIds, followUp } = ticketData;
+  const {
+    status,
+    userId,
+    queueId,
+    whatsappId,
+    tagIds,
+    followUp,
+    applyUserDefaultWhatsappOnTransfer
+  } = ticketData;
 
   const ticket = await ShowTicketService(ticketId);
   await SetTicketMessagesAsRead(ticket);
 
-  if (whatsappId && ticket.whatsappId !== whatsappId) {
-    await CheckContactOpenTickets(ticket.contactId, whatsappId);
-  }
-
   const oldStatus = ticket.status;
   const oldUserId = ticket.user?.id;
+
+  let nextWhatsappId = whatsappId;
+  const hasExplicitWhatsappSelection =
+    !!whatsappId && whatsappId !== ticket.whatsappId;
+
+  if (
+    applyUserDefaultWhatsappOnTransfer &&
+    userId &&
+    userId !== oldUserId &&
+    !hasExplicitWhatsappSelection
+  ) {
+    const userWhatsapp = await GetDefaultWhatsAppByUser(userId);
+
+    if (userWhatsapp) {
+      nextWhatsappId = userWhatsapp.id;
+    }
+  }
+
+  if (nextWhatsappId && ticket.whatsappId !== nextWhatsappId) {
+    await CheckContactOpenTickets(ticket.contactId, nextWhatsappId);
+  }
 
   if (oldStatus === "closed") {
     await CheckContactOpenTickets(ticket.contact.id, ticket.whatsappId);
@@ -54,9 +81,9 @@ const UpdateTicketService = async ({
     userId
   });
 
-  if (whatsappId) {
+  if (nextWhatsappId) {
     await ticket.update({
-      whatsappId
+      whatsappId: nextWhatsappId
     });
   }
 

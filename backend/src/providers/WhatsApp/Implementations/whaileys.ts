@@ -95,6 +95,15 @@ const msgRetryCounterLRU = new LRUCache<string, number>({
   updateAgeOnGet: true
 });
 
+const extractSessionPhoneNumber = (sessionUserId?: string | null): string | null => {
+  if (!sessionUserId || typeof sessionUserId !== "string") {
+    return null;
+  }
+
+  const normalizedValue = sessionUserId.split("@")[0].replace(/\D/g, "");
+  return normalizedValue || null;
+};
+
 const msgRetryCounterMap = new Proxy<MessageRetryMap>({} as MessageRetryMap, {
   get(target, prop) {
     if (typeof prop === "string") {
@@ -1128,10 +1137,13 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     if (connection === "open") {
       await flushPendingCredsSave(sessionId);
 
+      const connectedPhoneNumber = extractSessionPhoneNumber(wbot.user?.id);
+
       await whatsapp.update({
         status: "CONNECTED",
         qrcode: "",
-        retries: 0
+        retries: 0,
+        phoneNumber: connectedPhoneNumber
       });
 
       const updatedWhatsapp = await Whatsapp.findByPk(sessionId);

@@ -27,8 +27,10 @@ interface TicketData {
   status: string;
   queueId: number;
   userId: number;
+  whatsappId?: number;
   tagIds?: number[];
   followUp?: boolean;
+  applyUserDefaultWhatsappOnTransfer?: boolean;
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {

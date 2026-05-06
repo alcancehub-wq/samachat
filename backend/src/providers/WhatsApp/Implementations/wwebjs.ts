@@ -388,6 +388,23 @@ const convertToContactPayload = async (
   };
 };
 
+const extractSessionPhoneNumber = (wbot: Session): string | null => {
+  const clientInfo = (wbot.info || {}) as any;
+  const rawValue =
+    clientInfo?.wid?.user ||
+    clientInfo?.me?.user ||
+    clientInfo?.wid?._serialized ||
+    clientInfo?.me?._serialized ||
+    "";
+
+  if (typeof rawValue !== "string") {
+    return null;
+  }
+
+  const normalizedValue = rawValue.split("@")[0].replace(/\D/g, "");
+  return normalizedValue || null;
+};
+
 const verifyQuotedMessage = async (
   msg: WbotMessage
 ): Promise<string | undefined> => {
@@ -926,10 +943,13 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
       readySessions.add(whatsapp.id);
 
       try {
+        const connectedPhoneNumber = extractSessionPhoneNumber(wbot);
+
         await whatsapp.update({
           status: "CONNECTED",
           qrcode: "",
-          retries: 0
+          retries: 0,
+          phoneNumber: connectedPhoneNumber
         });
 
         io.emit("whatsappSession", {

@@ -495,6 +495,9 @@ const Connections = () => {
 								{i18n.t("connections.table.name")}
 							</TableCell>
 							<TableCell align="center" className={classes.tableHeadCell}>
+								{i18n.t("connections.table.connectedNumber")}
+							</TableCell>
+							<TableCell align="center" className={classes.tableHeadCell}>
 								{i18n.t("connections.table.status")}
 							</TableCell>
 							<TableCell align="center" className={classes.tableHeadCell}>
@@ -521,6 +524,9 @@ const Connections = () => {
 										<TableRow key={whatsApp.id} className={classes.tableRow}>
 											<TableCell align="center" className={classes.tableCell}>
 												{whatsApp.name}
+											</TableCell>
+											<TableCell align="center" className={classes.tableCell}>
+												{whatsApp.phoneNumber || "-"}
 											</TableCell>
 											<TableCell align="center" className={classes.tableCell}>
 												{renderStatusToolTips(whatsApp)}
