@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
@@ -18,6 +19,20 @@ const CreateTicketService = async ({
   userId,
   queueId
 }: Request): Promise<Ticket> => {
+  const existingTicket = await Ticket.findOne({
+    where: {
+      contactId,
+      status: {
+        [Op.or]: ["open", "pending"]
+      }
+    },
+    order: [["updatedAt", "DESC"]]
+  });
+
+  if (existingTicket) {
+    throw new AppError("ERR_OTHER_OPEN_TICKET");
+  }
+
   const defaultWhatsapp = await GetDefaultWhatsApp(userId);
 
   await CheckContactOpenTickets(contactId, defaultWhatsapp.id);

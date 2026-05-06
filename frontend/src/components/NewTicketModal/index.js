@@ -15,6 +15,7 @@ import CircularProgress from "@material-ui/core/CircularProgress";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
+import findExistingTicketByContact from "../../services/findExistingTicketByContact";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ContactModal from "../ContactModal";
 import toastError from "../../errors/toastError";
@@ -66,21 +67,53 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 		setSelectedContact(null);
 	};
 
-	const handleSaveTicket = async contactId => {
-		if (!contactId) return;
+	const handleSaveTicket = async contact => {
+		const targetContact =
+			typeof contact === "object"
+				? contact
+				: { id: contact, number: selectedContact?.number, name: selectedContact?.name };
+
+		if (!targetContact?.id) return;
 		setLoading(true);
 		try {
+			const existingTicket = await findExistingTicketByContact(targetContact);
+
+			if (existingTicket?.id) {
+				history.push(`/tickets/${existingTicket.id}`);
+				return;
+			}
+
 			const { data: ticket } = await api.post("/tickets", {
-				contactId: contactId,
+				contactId: targetContact.id,
 				userId: user.id,
 				status: "open",
 			});
 			history.push(`/tickets/${ticket.id}`);
 		} catch (err) {
+			const errorCode = err.response?.data?.message || err.response?.data?.error;
+			const existingTicketSearch = targetContact.number || targetContact.name;
+
+			if (errorCode === "ERR_OTHER_OPEN_TICKET" && existingTicketSearch) {
+				try {
+					const existingTicket = await findExistingTicketByContact(targetContact);
+
+					if (existingTicket?.id) {
+						history.push(`/tickets/${existingTicket.id}`);
+						return;
+					}
+				} catch (searchErr) {
+					toastError(searchErr);
+				}
+
+				history.push("/tickets", { existingTicketSearch });
+				return;
+			}
+
 			toastError(err);
+		} finally {
+			setLoading(false);
+			handleClose();
 		}
-		setLoading(false);
-		handleClose();
 	};
 
 	const handleSelectOption = (e, newValue) => {
@@ -97,7 +130,7 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 	};
 
 	const handleAddNewContactTicket = contact => {
-		handleSaveTicket(contact.id);
+		handleSaveTicket(contact);
 	};
 
 	const createAddContactOption = (filterOptions, params) => {
@@ -163,7 +196,7 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 								onKeyPress={e => {
 									if (loading || !selectedContact) return;
 									else if (e.key === "Enter") {
-										handleSaveTicket(selectedContact.id);
+										handleSaveTicket(selectedContact);
 									}
 								}}
 								InputProps={{

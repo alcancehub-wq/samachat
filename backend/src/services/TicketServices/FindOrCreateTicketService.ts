@@ -10,14 +10,16 @@ const FindOrCreateTicketService = async (
   unreadMessages: number,
   groupContact?: Contact
 ): Promise<Ticket> => {
+  const ticketContactId = groupContact ? groupContact.id : contact.id;
+
   let ticket = await Ticket.findOne({
     where: {
       status: {
         [Op.or]: ["open", "pending"]
       },
-      contactId: groupContact ? groupContact.id : contact.id,
-      whatsappId: whatsappId
-    }
+      contactId: ticketContactId
+    },
+    order: [["updatedAt", "DESC"]]
   });
 
   if (ticket) {
@@ -65,7 +67,7 @@ const FindOrCreateTicketService = async (
 
   if (!ticket) {
     ticket = await Ticket.create({
-      contactId: groupContact ? groupContact.id : contact.id,
+      contactId: ticketContactId,
       status: "pending",
       isGroup: !!groupContact,
       unreadMessages,

@@ -24,6 +24,7 @@ import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
 
 import api from "../../services/api";
+import findExistingTicketByContact from "../../services/findExistingTicketByContact";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ContactModal from "../../components/ContactModal";
 import ConfirmationModal from "../../components/ConfirmationModal/";
@@ -361,7 +362,15 @@ const Contacts = () => {
   const handleSaveTicket = async (contact) => {
     if (!contact?.id) return;
     setLoading(true);
+
     try {
+      const existingTicket = await findExistingTicketByContact(contact);
+
+      if (existingTicket?.id) {
+        history.push(`/tickets/${existingTicket.id}`);
+        return;
+      }
+
       const { data: ticket } = await api.post("/tickets", {
         contactId: contact.id,
         userId: user?.id,
@@ -369,16 +378,29 @@ const Contacts = () => {
       });
       history.push(`/tickets/${ticket.id}`);
     } catch (err) {
-      toastError(err);
-
       const errorCode = err.response?.data?.message || err.response?.data?.error;
       const existingTicketSearch = contact.number || contact.name;
 
       if (errorCode === "ERR_OTHER_OPEN_TICKET" && existingTicketSearch) {
+        try {
+          const existingTicket = await findExistingTicketByContact(contact);
+
+          if (existingTicket?.id) {
+            history.push(`/tickets/${existingTicket.id}`);
+            return;
+          }
+        } catch (searchErr) {
+          toastError(searchErr);
+        }
+
         history.push("/tickets", { existingTicketSearch });
+        return;
       }
+
+      toastError(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const hadleEditContact = (contactId) => {

@@ -129,6 +129,21 @@ export const update = async (
   res: Response
 ): Promise<Response> => {
   const contactData: ContactData = req.body;
+  const { contactId } = req.params;
+  const currentContact = await ShowContactService(contactId);
+
+  const normalizedInputNumber =
+    typeof contactData.number === "string"
+      ? contactData.number.replace(/\D/g, "")
+      : undefined;
+  const normalizedCurrentNumber =
+    typeof currentContact.number === "string"
+      ? currentContact.number.replace(/\D/g, "")
+      : "";
+
+  if (typeof normalizedInputNumber === "string") {
+    contactData.number = normalizedInputNumber;
+  }
 
   const schema = Yup.object().shape({
     name: Yup.string(),
@@ -144,9 +159,17 @@ export const update = async (
     throw new AppError(err.message);
   }
 
-  await CheckIsValidContact(contactData.number);
+  const numberChanged =
+    typeof normalizedInputNumber === "string" &&
+    normalizedInputNumber.length > 0 &&
+    normalizedInputNumber !== normalizedCurrentNumber;
 
-  const { contactId } = req.params;
+  if (numberChanged) {
+    await CheckIsValidContact(normalizedInputNumber);
+    contactData.number = await CheckContactNumber(normalizedInputNumber);
+  } else {
+    contactData.number = currentContact.number;
+  }
 
   const contact = await UpdateContactService({ contactData, contactId });
 
