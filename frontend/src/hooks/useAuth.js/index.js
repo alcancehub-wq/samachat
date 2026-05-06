@@ -65,6 +65,8 @@ const useAuth = () => {
 				const originalRequest = error.config || {};
 				const responseStatus = error?.response?.status;
 				const responseErrorCode = error?.response?.data?.error;
+				const isPermissionDenied =
+					responseStatus === 403 && responseErrorCode === "ERR_NO_PERMISSION";
 				const shouldTryRefresh =
 					!originalRequest._retry &&
 					(responseStatus === 401 || responseStatus === 403) &&
@@ -72,8 +74,9 @@ const useAuth = () => {
 
 				if (originalRequest._skipAuthRefresh) {
 					if (
-						error?.response?.status === 401 ||
-						error?.response?.status === 403
+						(error?.response?.status === 401 ||
+							error?.response?.status === 403) &&
+						!isPermissionDenied
 					) {
 						clearAuthState();
 					}
@@ -92,7 +95,7 @@ const useAuth = () => {
 					}
 				}
 
-				if (responseStatus === 401 || responseStatus === 403) {
+				if ((responseStatus === 401 || responseStatus === 403) && !isPermissionDenied) {
 					clearAuthState();
 				}
 

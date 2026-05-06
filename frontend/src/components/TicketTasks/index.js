@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
 import {
   Button,
@@ -16,6 +16,8 @@ import { CheckCircle, Replay, Add, Launch } from "@material-ui/icons";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import { userHasPermission } from "../../utils/permissions";
 import TaskModal from "../TaskModal";
 
 const useStyles = makeStyles(theme => ({
@@ -47,10 +49,20 @@ const useStyles = makeStyles(theme => ({
 const TicketTasks = ({ ticketId, contactId }) => {
   const classes = useStyles();
   const history = useHistory();
+  const { user } = useContext(AuthContext);
   const [tasks, setTasks] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const canViewTasks = userHasPermission(user, "tasks.view");
+  const canCreateTasks = userHasPermission(user, "tasks.create");
+  const canCloseTasks = userHasPermission(user, "tasks.close");
+  const canReopenTasks = userHasPermission(user, "tasks.reopen");
 
   const loadTasks = async () => {
+    if (!canViewTasks) {
+      setTasks([]);
+      return;
+    }
+
     try {
       const { data } = await api.get("/tasks", {
         params: {
@@ -66,10 +78,23 @@ const TicketTasks = ({ ticketId, contactId }) => {
   };
 
   useEffect(() => {
+    if (!canViewTasks) {
+      setTasks([]);
+      return;
+    }
+
     loadTasks();
-  }, [ticketId, contactId]);
+  }, [canViewTasks, ticketId, contactId]);
 
   const handleToggle = async task => {
+    const canToggleTask =
+      (task.status === "completed" && canReopenTasks) ||
+      (task.status !== "completed" && canCloseTasks);
+
+    if (!canToggleTask) {
+      return;
+    }
+
     try {
       if (task.status === "completed") {
         await api.put(`/tasks/${task.id}/reopen`);
@@ -82,19 +107,25 @@ const TicketTasks = ({ ticketId, contactId }) => {
     }
   };
 
+  if (!canViewTasks) {
+    return null;
+  }
+
   return (
     <div className={classes.wrapper}>
       <div className={classes.header}>
         <Typography variant="subtitle1">
           {i18n.t("ticketTasks.title")}
         </Typography>
-        <Button
-          size="small"
-          startIcon={<Add />}
-          onClick={() => setModalOpen(true)}
-        >
-          {i18n.t("ticketTasks.add")}
-        </Button>
+        {canCreateTasks && (
+          <Button
+            size="small"
+            startIcon={<Add />}
+            onClick={() => setModalOpen(true)}
+          >
+            {i18n.t("ticketTasks.add")}
+          </Button>
+        )}
       </div>
       <Paper variant="outlined">
         {tasks.length === 0 ? (
@@ -111,9 +142,12 @@ const TicketTasks = ({ ticketId, contactId }) => {
                   classes={{ primary: task.status === "completed" ? classes.statusDone : undefined }}
                 />
                 <ListItemSecondaryAction className={classes.actions}>
-                  <IconButton size="small" onClick={() => handleToggle(task)}>
-                    {task.status === "completed" ? <Replay /> : <CheckCircle />}
-                  </IconButton>
+                  {((task.status === "completed" && canReopenTasks) ||
+                    (task.status !== "completed" && canCloseTasks)) && (
+                    <IconButton size="small" onClick={() => handleToggle(task)}>
+                      {task.status === "completed" ? <Replay /> : <CheckCircle />}
+                    </IconButton>
+                  )}
                   {task.ticketId && (
                     <IconButton
                       size="small"
