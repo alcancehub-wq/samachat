@@ -51,6 +51,7 @@ const NotificationsPopOver = () => {
 	const anchorEl = useRef();
 	const [isOpen, setIsOpen] = useState(false);
 	const [notifications, setNotifications] = useState([]);
+ 	const notificationsRef = useRef([]);
 
 	const [, setDesktopNotifications] = useState([]);
 
@@ -82,6 +83,46 @@ const NotificationsPopOver = () => {
 			}
 			return prevState;
 		});
+	};
+
+	const handleTicketReminderNotification = ticket => {
+		if (!ticket) {
+			return;
+		}
+
+		const options = {
+			body: ticket.lastMessage || i18n.t("dashboard.recent.noMessage"),
+			icon: ticket.contact?.profilePicUrl,
+			tag: String(ticket.id),
+			renotify: true,
+		};
+
+		const notification = new Notification(
+			`${i18n.t("tickets.notification.message")} ${ticket.contact?.name || ""}`.trim(),
+			options
+		);
+
+		notification.onclick = e => {
+			e.preventDefault();
+			window.focus();
+			historyRef.current.push(`/tickets/${ticket.id}`);
+		};
+
+		setDesktopNotifications(prevState => {
+			const notificationIndex = prevState.findIndex(
+				n => n.tag === notification.tag
+			);
+
+			if (notificationIndex !== -1) {
+				prevState[notificationIndex].close();
+				prevState[notificationIndex] = notification;
+				return [...prevState];
+			}
+
+			return [notification, ...prevState];
+		});
+
+		soundAlertRef.current();
 	};
 
 	const canTrackTicket = ticket => {
@@ -137,6 +178,10 @@ const NotificationsPopOver = () => {
 	}, [tickets]);
 
 	useEffect(() => {
+		notificationsRef.current = notifications;
+	}, [notifications]);
+
+	useEffect(() => {
 		ticketIdRef.current = ticketIdUrl;
 	}, [ticketIdUrl]);
 
@@ -152,7 +197,15 @@ const NotificationsPopOver = () => {
 
 			if (data.action === "update") {
 				if (canTrackTicket(data.ticket) && Number(data.ticket.unreadMessages) > 0) {
+						const previousTicket = notificationsRef.current.find(
+							ticket => ticket.id === data.ticket.id
+						);
+						const wasUnread = Number(previousTicket?.unreadMessages) > 0;
 					syncNotification(data.ticket);
+
+						if (!wasUnread) {
+							handleTicketReminderNotification(data.ticket);
+						}
 					return;
 				}
 

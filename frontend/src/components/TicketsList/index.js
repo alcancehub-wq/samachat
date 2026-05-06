@@ -270,6 +270,7 @@ const reducer = (state, action) => {
 
 	useEffect(() => {
 		const socket = openSocket();
+		const normalizedSearchParam = String(searchParam || "").trim().toLowerCase();
 
 		const hasTagMatch = ticket => {
 			if (!selectedTagIds || selectedTagIds.length === 0) return true;
@@ -277,12 +278,32 @@ const reducer = (state, action) => {
 			return ticket.tags.some(tag => selectedTagIds.indexOf(tag.id) > -1);
 		};
 
+		const matchesSearchParam = ticket => {
+			if (!normalizedSearchParam) {
+				return true;
+			}
+
+			const searchableValues = [
+				ticket.contact?.name,
+				ticket.contact?.number,
+				ticket.lastMessage,
+				ticket.user?.name,
+				ticket.queue?.name,
+				String(ticket.id || "")
+			].filter(Boolean);
+
+			return searchableValues.some(value =>
+				String(value).toLowerCase().includes(normalizedSearchParam)
+			);
+		};
+
 		const hasFollowUpMatch = ticket => {
 			if (followUp !== "true") return true;
 			return ticket.tags?.some(tag => tag.name === FOLLOW_UP_TAG_NAME);
 		};
 
-		const shouldUpdateTicket = ticket => !searchParam &&
+		const shouldUpdateTicket = ticket =>
+			matchesSearchParam(ticket) &&
 			(!ticket.userId || ticket.userId === user?.id || showAll) &&
 			(!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1) &&
 			hasTagMatch(ticket) &&
@@ -293,6 +314,9 @@ const reducer = (state, action) => {
 
 		const shouldRemoveFromFollowUp = ticket =>
 			followUp === "true" && !hasFollowUpMatch(ticket);
+
+		const shouldRemoveFromSearchResults = ticket =>
+			Boolean(normalizedSearchParam) && !matchesSearchParam(ticket);
 
 		socket.on("connect", () => {
 			if (status) {
@@ -320,6 +344,10 @@ const reducer = (state, action) => {
 			if (data.action === "update" && notBelongsToUserQueues(data.ticket)) {
 				dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
 			}
+
+				if (data.action === "update" && shouldRemoveFromSearchResults(data.ticket)) {
+					dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
+				}
 
 			if (data.action === "update" && shouldRemoveFromFollowUp(data.ticket)) {
 				dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
