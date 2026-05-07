@@ -231,12 +231,12 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   showAllControl: {
-    margin: 0,
-    marginLeft: 0,
     width: "100%",
-    height: 40,
-    minHeight: 40,
-    padding: theme.spacing(0.15, 1),
+    height: 39,
+    minHeight: 39,
+    marginTop: theme.spacing(1),
+    marginBottom: theme.spacing(0.5),
+    padding: theme.spacing(0, 1.5),
     borderRadius: 12,
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.default,
@@ -468,22 +468,24 @@ const TicketsManager = () => {
         </div>
         <div className={classes.ticketOptionsSecondary}>
           {canShowAllTickets && (
-            <div className={clsx(classes.showAllControl, classes.showAllInline)}>
-              <span className={classes.showAllLabel}>{i18n.t("tickets.buttons.showAll")}</span>
-              <Switch
-                size="small"
-                checked={showAllTickets}
-                classes={{
-                  switchBase: classes.showAllSwitchBase,
-                  checked: classes.showAllSwitchChecked,
-                  track: classes.showAllSwitchTrack,
-                }}
-                onChange={() =>
-                  setShowAllTickets((prevState) => !prevState)
-                }
-                name="showAllTickets"
-                color="primary"
-              />
+            <div className={classes.showAllInline}>
+              <div className={classes.showAllControl}>
+                <span className={classes.showAllLabel}>{i18n.t("tickets.buttons.showAll")}</span>
+                <Switch
+                  size="small"
+                  checked={showAllTickets}
+                  classes={{
+                    switchBase: classes.showAllSwitchBase,
+                    checked: classes.showAllSwitchChecked,
+                    track: classes.showAllSwitchTrack,
+                  }}
+                  onChange={() =>
+                    setShowAllTickets((prevState) => !prevState)
+                  }
+                  name="showAllTickets"
+                  color="primary"
+                />
+              </div>
             </div>
           )}
           <TagSelect

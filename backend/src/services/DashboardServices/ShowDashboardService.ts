@@ -114,16 +114,16 @@ const buildTimeline = (
   rangeEnd: Date
 ) => {
   if (period === "today") {
-    const buckets = Array.from({ length: 12 }, (_, index) => ({
-      label: `${String(index + 8).padStart(2, "0")}:00`,
+    const buckets = Array.from({ length: 24 }, (_, index) => ({
+      label: `${String(index).padStart(2, "0")}:00`,
       count: 0
     }));
 
     (timelineSource as TimelineHourMetric[]).forEach(row => {
       const hour = Number(row.bucketHour);
 
-      if (hour >= 8 && hour <= 19) {
-        buckets[hour - 8].count = Number(row.count || 0);
+      if (hour >= 0 && hour <= 23) {
+        buckets[hour].count = Number(row.count || 0);
       }
     });
 

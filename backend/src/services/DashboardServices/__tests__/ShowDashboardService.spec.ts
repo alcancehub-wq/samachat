@@ -198,6 +198,8 @@ describe("ShowDashboardService", () => {
       ])
     );
 
+    expect(result.charts.ticketsTimeline).toHaveLength(24);
+
     expect(ticketFindAllMock).toHaveBeenCalledWith(
       expect.objectContaining({
         attributes: expect.arrayContaining([
