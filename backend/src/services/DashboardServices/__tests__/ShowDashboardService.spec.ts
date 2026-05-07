@@ -110,7 +110,7 @@ describe("ShowDashboardService", () => {
     messageFindAllMock.mockResolvedValue([]);
 
     ticketFindAllMock
-      .mockResolvedValueOnce([{ createdAt: new Date("2026-05-06T10:15:00.000Z") }])
+      .mockResolvedValueOnce([{ bucketHour: 10, count: 1 }])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
@@ -142,5 +142,31 @@ describe("ShowDashboardService", () => {
 
     const firstCallArgs = ticketFindAllMock.mock.calls[0][0];
     expect(hasAssigneeScope(firstCallArgs.where, 9)).toBe(true);
+  });
+
+  it("builds the today timeline from hourly grouped rows", async () => {
+    const result = await ShowDashboardService({
+      userId: 7,
+      profile: "admin",
+      period: "today"
+    });
+
+    expect(result.charts.ticketsTimeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "10:00",
+          count: 1
+        })
+      ])
+    );
+
+    expect(ticketFindAllMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attributes: expect.arrayContaining([
+          expect.arrayContaining([expect.anything(), "bucketHour"]),
+          expect.arrayContaining([expect.anything(), "count"])
+        ])
+      })
+    );
   });
 });

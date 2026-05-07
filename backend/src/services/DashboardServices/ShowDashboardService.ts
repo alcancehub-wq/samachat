@@ -37,6 +37,11 @@ interface QueueMetric {
   total: number;
 }
 
+interface TimelineHourMetric {
+  bucketHour: string | number;
+  count: string | number;
+}
+
 const FIRST_RESPONSE_TARGET_MINUTES = 15;
 
 const combineWhere = (...conditions: Array<WhereOptions | undefined>): WhereOptions => {
@@ -104,7 +109,7 @@ const buildVisibleTicketWhere = (
 
 const buildTimeline = (
   period: DashboardPeriod,
-  tickets: Array<{ createdAt: string | Date }>,
+  timelineSource: Array<{ createdAt: string | Date }> | TimelineHourMetric[],
   rangeStart: Date,
   rangeEnd: Date
 ) => {
@@ -114,12 +119,11 @@ const buildTimeline = (
       count: 0
     }));
 
-    tickets.forEach(ticket => {
-      const createdAt = new Date(ticket.createdAt);
-      const hour = createdAt.getHours();
+    (timelineSource as TimelineHourMetric[]).forEach(row => {
+      const hour = Number(row.bucketHour);
 
       if (hour >= 8 && hour <= 19) {
-        buckets[hour - 8].count += 1;
+        buckets[hour - 8].count = Number(row.count || 0);
       }
     });
 
@@ -135,7 +139,7 @@ const buildTimeline = (
 
   const bucketMap = new Map(buckets.map(bucket => [bucket.label, bucket]));
 
-  tickets.forEach(ticket => {
+  (timelineSource as Array<{ createdAt: string | Date }>).forEach(ticket => {
     const label = format(new Date(ticket.createdAt), "dd/MM");
     const bucket = bucketMap.get(label);
 
@@ -227,11 +231,21 @@ const ShowDashboardService = async ({
     }),
     Contact.count({ where: { isGroup: false } }),
     Ticket.count({ where: ticketRangeWhere }),
-    Ticket.findAll({
-      attributes: ["createdAt"],
-      where: ticketRangeWhere,
-      raw: true
-    }),
+    normalizedPeriod === "today"
+      ? Ticket.findAll({
+          attributes: [
+            [fn("HOUR", col("createdAt")), "bucketHour"],
+            [fn("COUNT", col("Ticket.id")), "count"]
+          ],
+          where: ticketRangeWhere,
+          group: [fn("HOUR", col("createdAt"))],
+          raw: true
+        })
+      : Ticket.findAll({
+          attributes: ["createdAt"],
+          where: ticketRangeWhere,
+          raw: true
+        }),
     Ticket.findAll({
       attributes: ["queueId", "status", [fn("COUNT", col("Ticket.id")), "count"]],
       where: combineWhere(visibleTicketWhere, {
