@@ -727,7 +727,7 @@ const checkNumber = async (
     return "";
   }
 
-  return /^55\d{8,13}$/.test(validNumber.user) ? validNumber.user : "";
+  return validNumber.user.replace(/\D/g, "");
 };
 
 const getProfilePicUrl = async (

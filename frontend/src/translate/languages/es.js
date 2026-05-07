@@ -1157,6 +1157,13 @@ const messages = {
         internalModeLabel: "Interna",
         internalModeEnabled: "Modo de mensaje interno activo",
         internalModeDisabled: "Modo de conversación con el cliente activo",
+        internalComposer: {
+          title: "Escribir anotación interna",
+          helper:
+            "La anotación no es visible para el cliente. Mencione a otros usuarios de su cuenta escribiendo @+email",
+          save: "Guardar anotación",
+          cancel: "Cancelar",
+        },
         audioPermissionDenied:
           "El micrófono está bloqueado en este navegador. Permita el acceso al micrófono para grabar audio.",
         audioUnsupported:

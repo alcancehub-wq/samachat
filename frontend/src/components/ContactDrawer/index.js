@@ -21,7 +21,7 @@ import TicketAIPanel from "../TicketAIPanel";
 
 const CONTACT_NOTES_FIELD = "__contact_notes__";
 
-const drawerWidth = 320;
+const drawerWidth = 300;
 
 const useStyles = makeStyles(theme => ({
 	drawer: {

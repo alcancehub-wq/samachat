@@ -7,6 +7,9 @@ import authConfig from "../config/auth";
 
 let io: SocketIO;
 
+const isLocalOrigin = (origin: string) =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+
 const baseOrigins = [
   "https://samachat.com.br",
   "https://app.samachat.com.br"
@@ -32,7 +35,15 @@ const allowedOrigins = Array.from(
 export const initIO = (httpServer: Server): SocketIO => {
   io = new SocketIO(httpServer, {
     cors: {
-      origin: allowedOrigins,
+      origin: (origin, callback) => {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+
+        const allowed = allowedOrigins.includes(origin) || isLocalOrigin(origin);
+        callback(null, allowed);
+      },
       credentials: true,
       methods: ["OPTIONS", "GET", "POST", "PUT", "PATCH", "DELETE"],
       allowedHeaders: ["Content-Type", "Authorization"]

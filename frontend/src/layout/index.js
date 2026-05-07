@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import clsx from "clsx";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import {
   makeStyles,
   Drawer,
@@ -133,6 +133,10 @@ const useStyles = makeStyles((theme) => ({
       padding: 0,
     },
   },
+  bodyRowFullBleed: {
+    gap: 0,
+    padding: 0,
+  },
   drawerPaper: {
     position: "relative",
     display: "flex",
@@ -260,6 +264,11 @@ const useStyles = makeStyles((theme) => ({
       marginBottom: 0,
     },
   },
+  contentFullBleed: {
+    borderRadius: 0,
+    marginTop: 0,
+    marginBottom: 0,
+  },
   iconButton: {
     color: theme.palette.text.primary,
     borderRadius: theme.shape.borderRadius,
@@ -323,6 +332,7 @@ const useStyles = makeStyles((theme) => ({
 const LoggedInLayout = ({ children }) => {
   const classes = useStyles();
   const history = useHistory();
+  const location = useLocation();
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -333,6 +343,7 @@ const LoggedInLayout = ({ children }) => {
   const { darkMode, toggleTheme } = useThemeContext();
   const [menuSearch, setMenuSearch] = useState("");
   const canViewTickets = userHasPermission(user, "tickets.view");
+  const isTicketsRoute = location.pathname.startsWith("/tickets");
 
   useEffect(() => {
     if (document.body.offsetWidth > 600) {
@@ -347,6 +358,19 @@ const LoggedInLayout = ({ children }) => {
       setDrawerVariant("permanent");
     }
   }, [drawerOpen]);
+
+  useEffect(() => {
+    if (document.body.offsetWidth < 600) {
+      return;
+    }
+
+    if (location.pathname.startsWith("/tickets")) {
+      setDrawerOpen(false);
+      return;
+    }
+
+    setDrawerOpen(true);
+  }, [location.pathname]);
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -407,6 +431,19 @@ const LoggedInLayout = ({ children }) => {
     if (document.body.offsetWidth < 600) {
       setDrawerOpen(false);
     }
+  };
+
+  const handleDrawerItemNavigate = (path) => {
+    if (document.body.offsetWidth < 600) {
+      return;
+    }
+
+    if (path.startsWith("/tickets")) {
+      setDrawerOpen(false);
+      return;
+    }
+
+    setDrawerOpen(true);
   };
 
   if (loading) {
@@ -497,7 +534,7 @@ const LoggedInLayout = ({ children }) => {
           </div>
         </Toolbar>
       </AppBar>
-      <div className={classes.bodyRow}>
+      <div className={clsx(classes.bodyRow, { [classes.bodyRowFullBleed]: isTicketsRoute })}>
       <Drawer
         variant={drawerVariant}
         className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}
@@ -516,6 +553,7 @@ const LoggedInLayout = ({ children }) => {
             searchValue={menuSearch}
             onSearchChange={setMenuSearch}
             isDrawerOpen={drawerOpen}
+            onItemNavigate={handleDrawerItemNavigate}
           />
         </List>
         <div className={classes.drawerFooter}>
@@ -603,7 +641,7 @@ const LoggedInLayout = ({ children }) => {
         onClose={() => setUserModalOpen(false)}
         userId={user?.id}
       />
-        <main className={classes.content}>{children}</main>
+        <main className={clsx(classes.content, { [classes.contentFullBleed]: isTicketsRoute })}>{children}</main>
       </div>
     </div>
   );

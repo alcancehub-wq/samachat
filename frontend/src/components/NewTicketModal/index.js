@@ -169,15 +169,26 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 				onClose={handleCloseContactModal}
 				onSave={handleAddNewContactTicket}
 			></ContactModal>
-			<Dialog open={modalOpen} onClose={handleClose}>
+			<Dialog
+				open={modalOpen}
+				onClose={handleClose}
+				fullWidth
+				maxWidth="sm"
+				PaperProps={{
+					style: {
+						width: "100%",
+						maxWidth: 560,
+					},
+				}}
+			>
 				<DialogTitle id="form-dialog-title">
 					{i18n.t("newTicketModal.title")}
 				</DialogTitle>
-				<DialogContent dividers>
+				<DialogContent dividers style={{ width: "100%" }}>
 					<Autocomplete
 						options={options}
 						loading={loading}
-						style={{ width: 300 }}
+						style={{ width: "100%" }}
 						clearOnBlur
 						autoHighlight
 						freeSolo

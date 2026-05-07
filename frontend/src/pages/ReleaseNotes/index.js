@@ -11,6 +11,20 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.05.06 / Chats, cadastro e operacao local",
+    label: "Aprimoramentos do dia",
+    summary:
+      "Entrega concentrada em usabilidade do modulo de Chats, correcao de cadastro de clientes e estabilizacao do ambiente legado para validacao e deploy seguro.",
+    changes: [
+      "Corrigido o cadastro de clientes quando a validacao do numero do WhatsApp retornava formatos fora do filtro anterior, evitando bloqueio indevido no registro de contatos.",
+      "Ampliado o modal de Novo atendimento para facilitar busca e selecao de clientes em telas operacionais.",
+      "Implementada a anotacao interna em composer separado, com acao de salvar/cancelar e sugestao de usuarios por mencao com @ durante a digitacao.",
+      "Reorganizado o painel lateral de Chats para ficar mais enxuto: busca, filtros, toggle de Todos e abas de Atendendo/Aguardando foram compactados para liberar mais area util na lista e na conversa.",
+      "Ajustado o comportamento do menu lateral recolhido com tooltip por item e fechamento automatico ao entrar em Chats no desktop, preservando navegacao mais limpa.",
+      "Atualizado o ambiente local para servir a versao correta em localhost com backend local, sem alterar dados reais de producao nem a estrutura de conexoes, usuarios e atendimentos existentes.",
+    ],
+  },
+  {
     version: "2026.05.05 / Operacao, atendimento e estabilidade",
     label: "Execucoes do dia",
     summary:

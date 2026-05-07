@@ -17,7 +17,7 @@ import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import toastError from "../../errors/toastError";
 
-const drawerWidth = 320;
+const drawerWidth = 300;
 
 const useStyles = makeStyles((theme) => ({
   root: {

@@ -8,6 +8,17 @@ function getConfig(name, defaultValue = null) {
 }
 
 export function getBackendUrl() {
+  if (typeof window !== "undefined") {
+    const { hostname } = window.location;
+
+    if (
+      (hostname === "localhost" || hostname === "127.0.0.1") &&
+      !import.meta.env.VITE_BACKEND_URL
+    ) {
+      return "http://localhost:8080";
+    }
+  }
+
   return import.meta.env.VITE_BACKEND_URL || "https://app.samachat.com.br";
 }
 

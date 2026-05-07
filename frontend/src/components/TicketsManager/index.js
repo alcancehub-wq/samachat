@@ -1,7 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
+import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import SearchIcon from "@material-ui/icons/Search";
+import IconButton from "@material-ui/core/IconButton";
+import ClearIcon from "@material-ui/icons/Clear";
 import InputBase from "@material-ui/core/InputBase";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
@@ -40,12 +43,12 @@ const useStyles = makeStyles((theme) => ({
     flex: "none",
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
-    padding: theme.spacing(2.5, 3, 1),
+    padding: theme.spacing(1.25, 1.5, 0.75),
     "& .MuiTabs-flexContainer": {
       gap: theme.spacing(0.75),
     },
     [theme.breakpoints.down("sm")]: {
-      padding: theme.spacing(2, 2, 0.75),
+      padding: theme.spacing(1, 1, 0.5),
     },
   },
   settingsIcon: {
@@ -54,18 +57,31 @@ const useStyles = makeStyles((theme) => ({
     padding: 8,
   },
   tab: {
-    minWidth: 112,
-    width: 112,
-    minHeight: 46,
-    borderRadius: theme.shape.borderRadius,
+    minWidth: 0,
+    minHeight: 42,
+    borderRadius: 12,
+    padding: theme.spacing(0.25, 1),
     color: `${theme.palette.text.secondary} !important`,
     fontWeight: 700,
+    textTransform: "none",
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default,
+    "& .MuiTab-wrapper": {
+      flexDirection: "row",
+      gap: theme.spacing(0.75),
+      fontSize: "0.92rem",
+    },
+    "& svg": {
+      fontSize: "1.05rem",
+      marginBottom: "0 !important",
+    },
     "&.MuiTab-textColorPrimary": {
       color: `${theme.palette.text.secondary} !important`,
     },
     "&.Mui-selected": {
       color: `${theme.palette.text.primary} !important`,
       fontWeight: 700,
+      borderColor: "rgba(229, 57, 53, 0.16)",
       backgroundColor: theme.palette.type === "dark" ? theme.custom.softBackground : "rgba(229, 57, 53, 0.08)",
     },
     "&.MuiTab-textColorPrimary.Mui-selected": {
@@ -73,19 +89,38 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   subTabs: {
-    backgroundColor: theme.palette.type === "dark" ? theme.custom.inputBackground : theme.palette.background.paper,
+    backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider}`,
+    padding: theme.spacing(0.75, 1.5, 1),
+    overflow: "visible",
+    "& .MuiTabs-flexContainer": {
+      gap: theme.spacing(0.75),
+    },
+    "& .MuiTabs-scroller": {
+      overflow: "visible !important",
+    },
   },
   subTab: {
     color: `${theme.palette.text.secondary} !important`,
     fontWeight: 700,
-    minHeight: 44,
+    minHeight: 46,
+    minWidth: 0,
+    borderRadius: 12,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default,
+    textTransform: "none",
+    padding: theme.spacing(0.5, 1),
+    "& .MuiTab-wrapper": {
+      minHeight: 30,
+      lineHeight: 1.15,
+    },
     "&.MuiTab-textColorPrimary": {
       color: `${theme.palette.text.secondary} !important`,
     },
     "&.Mui-selected": {
       color: `${theme.palette.text.primary} !important`,
       fontWeight: 700,
+      borderColor: "rgba(229, 57, 53, 0.16)",
       backgroundColor: theme.palette.type === "dark" ? theme.custom.softBackground : "rgba(229, 57, 53, 0.08)",
     },
     "&.MuiTab-textColorPrimary.Mui-selected": {
@@ -94,48 +129,61 @@ const useStyles = makeStyles((theme) => ({
   },
   ticketOptionsBox: {
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "column",
+    alignItems: "stretch",
     background: theme.palette.background.paper,
-    padding: theme.spacing(1.25, 3, 2),
-    gap: theme.spacing(1.25),
+    padding: theme.spacing(1, 1.5, 1.25),
+    gap: theme.spacing(0.9),
     borderBottom: `1px solid ${theme.palette.divider}`,
-    flexWrap: "wrap",
     [theme.breakpoints.down("sm")]: {
-      padding: theme.spacing(0.5, 2, 1.5),
+      padding: theme.spacing(0.85, 1, 1),
     },
   },
   ticketOptionsPrimary: {
     display: "flex",
     alignItems: "center",
-    gap: theme.spacing(1),
+    gap: theme.spacing(0.75),
     flexWrap: "wrap",
+    width: "100%",
   },
   ticketOptionsSecondary: {
     display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(1),
-    flexWrap: "wrap",
-    marginLeft: "auto",
+    alignItems: "stretch",
+    gap: theme.spacing(0.75),
+    flexWrap: "nowrap",
+    width: "100%",
     [theme.breakpoints.down("sm")]: {
-      width: "100%",
-      marginLeft: 0,
+      flexWrap: "wrap",
+      alignItems: "center",
+      gap: theme.spacing(0.5),
     },
   },
+  showAllInline: {
+    flex: "0 0 auto",
+  },
+  filterField: {
+    flex: "1 1 160px",
+    minWidth: 140,
+  },
   serachInputWrapper: {
-    minWidth: 260,
+    minWidth: 220,
     flex: "1 1 280px",
     background: theme.palette.background.default,
     display: "flex",
-    borderRadius: theme.shape.borderRadius,
-    padding: theme.spacing(0.85, 1.25),
+    alignItems: "center",
+    borderRadius: 14,
+    padding: theme.spacing(0.35, 1),
     border: `1px solid ${theme.palette.divider}`,
     boxShadow: "none",
   },
+  searchInputActive: {
+    borderColor: "rgba(255, 25, 25, 0.22)",
+    boxShadow: "0 0 0 3px rgba(255, 25, 25, 0.08)",
+  },
   searchIcon: {
     color: theme.palette.text.secondary,
-    marginLeft: 6,
-    marginRight: 6,
+    marginLeft: 4,
+    marginRight: 8,
     alignSelf: "center",
   },
   searchInput: {
@@ -144,6 +192,10 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.shape.borderRadius,
     color: theme.palette.text.primary,
     backgroundColor: theme.palette.background.default,
+  },
+  clearSearchButton: {
+    padding: 4,
+    marginLeft: theme.spacing(0.25),
   },
   badge: {
     right: "-8px",
@@ -164,10 +216,11 @@ const useStyles = makeStyles((theme) => ({
   },
   newTicketButton: {
     whiteSpace: "nowrap",
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
+    minHeight: 40,
+    paddingLeft: theme.spacing(1.5),
+    paddingRight: theme.spacing(1.5),
     boxShadow: "none",
-    borderRadius: 4,
+    borderRadius: 12,
     textTransform: "none",
     fontWeight: 600,
     backgroundColor: "#FF1919",
@@ -178,14 +231,25 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   showAllControl: {
+    margin: 0,
     marginLeft: 0,
-    padding: theme.spacing(0.35, 1),
-    borderRadius: theme.shape.borderRadius,
+    minHeight: 40,
+    minWidth: 108,
+    padding: theme.spacing(0.15, 0.85),
+    borderRadius: 12,
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.default,
+    boxSizing: "border-box",
+    justifyContent: "space-between",
     "& .MuiFormControlLabel-label": {
       color: theme.palette.text.primary,
       fontWeight: 600,
+      fontSize: "0.92rem",
+      lineHeight: 1,
+    },
+    "& .MuiSwitch-root": {
+      marginLeft: theme.spacing(0.5),
+      marginRight: 0,
     },
   },
   showAllSwitchBase: {
@@ -241,21 +305,13 @@ const TicketsManager = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canShowAllTickets]);
 
-  useEffect(() => {
-    if (tab === "search") {
-      searchInputRef.current?.focus();
-      if (!searchInputValue) {
-        setSearchParam("");
-      }
-    }
-  }, [tab, searchInputValue]);
+  const activeTab = searchParam ? "search" : tab;
 
   useEffect(() => {
     if (!existingTicketSearch) {
       return;
     }
 
-    setTab("search");
     setSearchInputValue(existingTicketSearch);
     setSearchParam(existingTicketSearch.toLowerCase());
   }, [existingTicketSearch]);
@@ -299,7 +355,6 @@ const TicketsManager = () => {
 
     if (searchedTerm === "") {
       setSearchParam(searchedTerm);
-      setTab("open");
       return;
     }
 
@@ -310,6 +365,13 @@ const TicketsManager = () => {
 
   const handleChangeTab = (e, newValue) => {
     setTab(newValue);
+  };
+
+  const handleClearSearch = () => {
+    clearTimeout(searchTimeoutRef.current);
+    setSearchInputValue("");
+    setSearchParam("");
+    searchInputRef.current?.focus();
   };
 
   const handleChangeTabOpen = (e, newValue) => {
@@ -364,17 +426,15 @@ const TicketsManager = () => {
             label={i18n.t("tickets.tabs.closed.title")}
             classes={{ root: classes.tab }}
           />
-          <Tab
-            value={"search"}
-            icon={<SearchIcon />}
-            label={i18n.t("tickets.tabs.search.title")}
-            classes={{ root: classes.tab }}
-          />
         </Tabs>
       </Paper>
       <Paper square elevation={0} className={classes.ticketOptionsBox}>
-        {tab === "search" ? (
-          <div className={classes.serachInputWrapper}>
+        <div className={classes.ticketOptionsPrimary}>
+          <div
+            className={clsx(classes.serachInputWrapper, {
+              [classes.searchInputActive]: Boolean(searchInputValue),
+            })}
+          >
             <SearchIcon className={classes.searchIcon} />
             <InputBase
               className={classes.searchInput}
@@ -384,58 +444,65 @@ const TicketsManager = () => {
               value={searchInputValue}
               onChange={handleSearch}
             />
-          </div>
-        ) : (
-          <>
-            <div className={classes.ticketOptionsPrimary}>
-              <Button
-                variant="contained"
-                className={classes.newTicketButton}
-                onClick={() => setNewTicketModalOpen(true)}
+            {searchInputValue ? (
+              <IconButton
+                size="small"
+                onClick={handleClearSearch}
+                className={classes.clearSearchButton}
               >
-                {i18n.t("ticketsManager.buttons.newTicket")}
-              </Button>
-              {canShowAllTickets && (
-                <FormControlLabel
-                  className={classes.showAllControl}
-                  label={i18n.t("tickets.buttons.showAll")}
-                  labelPlacement="start"
-                  control={
-                    <Switch
-                      size="small"
-                      checked={showAllTickets}
-                      classes={{
-                        switchBase: classes.showAllSwitchBase,
-                        checked: classes.showAllSwitchChecked,
-                        track: classes.showAllSwitchTrack,
-                      }}
-                      onChange={() =>
-                        setShowAllTickets((prevState) => !prevState)
-                      }
-                      name="showAllTickets"
-                      color="primary"
-                    />
+                <ClearIcon fontSize="small" />
+              </IconButton>
+            ) : null}
+          </div>
+          <Button
+            variant="contained"
+            className={classes.newTicketButton}
+            onClick={() => setNewTicketModalOpen(true)}
+          >
+            {i18n.t("ticketsManager.buttons.newTicket")}
+          </Button>
+        </div>
+        <div className={classes.ticketOptionsSecondary}>
+          {canShowAllTickets && (
+            <FormControlLabel
+              className={clsx(classes.showAllControl, classes.showAllInline)}
+              label={i18n.t("tickets.buttons.showAll")}
+              labelPlacement="start"
+              control={
+                <Switch
+                  size="small"
+                  checked={showAllTickets}
+                  classes={{
+                    switchBase: classes.showAllSwitchBase,
+                    checked: classes.showAllSwitchChecked,
+                    track: classes.showAllSwitchTrack,
+                  }}
+                  onChange={() =>
+                    setShowAllTickets((prevState) => !prevState)
                   }
+                  name="showAllTickets"
+                  color="primary"
                 />
-              )}
-            </div>
-            <div className={classes.ticketOptionsSecondary}>
-              <TagSelect
-                selectedTagIds={selectedTagIds}
-                onChange={setSelectedTagIds}
-                label={i18n.t("ticketsManager.tagsFilter")}
-                style={{ minWidth: 180 }}
-              />
-              <TicketsQueueSelect
-                selectedQueueIds={selectedQueueIds}
-                userQueues={user?.queues}
-                onChange={(values) => setSelectedQueueIds(values)}
-              />
-            </div>
-          </>
-        )}
+              }
+            />
+          )}
+          <TagSelect
+            selectedTagIds={selectedTagIds}
+            onChange={setSelectedTagIds}
+            label={i18n.t("ticketsManager.tagsFilter")}
+            style={{ minWidth: 140, flex: "1 1 0" }}
+          />
+          <div className={classes.filterField}>
+            <TicketsQueueSelect
+              selectedQueueIds={selectedQueueIds}
+              userQueues={user?.queues}
+              onChange={(values) => setSelectedQueueIds(values)}
+              style={{ width: "100%", marginTop: 0 }}
+            />
+          </div>
+        </div>
       </Paper>
-      <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
+      <TabPanel value={activeTab} name="open" className={classes.ticketsWrapper}>
         <Tabs
           value={tabOpen}
           onChange={handleChangeTabOpen}
@@ -491,7 +558,7 @@ const TicketsManager = () => {
           />
         </Paper>
       </TabPanel>
-      <TabPanel value={tab} name="closed" className={classes.ticketsWrapper}>
+      <TabPanel value={activeTab} name="closed" className={classes.ticketsWrapper}>
         <TicketsList
           status="closed"
           showAll={true}
@@ -499,7 +566,7 @@ const TicketsManager = () => {
           selectedTagIds={selectedTagIds}
         />
       </TabPanel>
-      <TabPanel value={tab} name="followUp" className={classes.ticketsWrapper}>
+      <TabPanel value={activeTab} name="followUp" className={classes.ticketsWrapper}>
         <TicketsList
           status="closed"
           showAll={true}
@@ -509,7 +576,7 @@ const TicketsManager = () => {
           updateCount={(val) => setFollowUpCount(val)}
         />
       </TabPanel>
-      <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
+      <TabPanel value={activeTab} name="search" className={classes.ticketsWrapper}>
         <TicketsList
           searchParam={searchParam}
           showAll={true}

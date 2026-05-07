@@ -1157,6 +1157,13 @@ const messages = {
         internalModeLabel: "Internal",
         internalModeEnabled: "Internal message mode enabled",
         internalModeDisabled: "Client conversation mode enabled",
+        internalComposer: {
+          title: "Write internal note",
+          helper:
+            "This note is not visible to the client. Mention other users in your account by typing @+email",
+          save: "Save Note",
+          cancel: "Cancel",
+        },
         audioPermissionDenied:
           "The microphone is blocked in this browser. Allow microphone access to record audio.",
         audioUnsupported:

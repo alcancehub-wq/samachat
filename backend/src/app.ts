@@ -19,6 +19,9 @@ Sentry.init({ dsn: process.env.SENTRY_DSN });
 
 const app = express();
 
+const isLocalOrigin = (origin: string) =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+
 const normalizeOrigin = (origin: string) => {
   try {
     return new URL(origin).origin;
@@ -32,6 +35,8 @@ const corsOrigins = Array.from(
     [
       "https://samachat.com.br",
       "https://app.samachat.com.br",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
       process.env.FRONTEND_URL
     ]
       .filter((origin): origin is string => Boolean(origin))
@@ -40,7 +45,17 @@ const corsOrigins = Array.from(
 );
 
 const corsOptions = {
-  origin: corsOrigins,
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    const normalizedOrigin = normalizeOrigin(origin);
+    const allowed = corsOrigins.includes(normalizedOrigin) || isLocalOrigin(normalizedOrigin);
+
+    callback(null, allowed);
+  },
   credentials: true,
   methods: ["OPTIONS", "GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"]

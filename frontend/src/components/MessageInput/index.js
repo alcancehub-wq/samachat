@@ -7,7 +7,9 @@ import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import InputBase from "@material-ui/core/InputBase";
+import TextField from "@material-ui/core/TextField";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import Button from "@material-ui/core/Button";
 import { green } from "@material-ui/core/colors";
 import AttachFileIcon from "@material-ui/icons/AttachFile";
 import IconButton from "@material-ui/core/IconButton";
@@ -225,6 +227,100 @@ const useStyles = makeStyles(theme => ({
       },
     },
   },
+
+  internalComposerWrapper: {
+    width: "100%",
+    padding: "10px 16px 8px",
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    background: theme.custom.softBackground,
+  },
+
+  internalComposerTitle: {
+    color: theme.palette.text.primary,
+    fontSize: "0.95rem",
+    fontWeight: 700,
+    marginBottom: 4,
+  },
+
+  internalComposerHelper: {
+    color: theme.palette.text.secondary,
+    fontSize: "0.8rem",
+    marginBottom: 10,
+  },
+
+  internalComposerInput: {
+    width: "100%",
+    marginBottom: 8,
+    "& .MuiOutlinedInput-root": {
+      alignItems: "flex-start",
+      borderRadius: 8,
+      backgroundColor: theme.palette.background.paper,
+    },
+    "& .MuiOutlinedInput-inputMultiline": {
+      minHeight: 28,
+      lineHeight: 1.4,
+    },
+  },
+
+  internalComposerSuggestions: {
+    marginBottom: 8,
+    borderRadius: 10,
+    border: `1px solid ${theme.palette.divider}`,
+    overflow: "hidden",
+    maxHeight: 180,
+    overflowY: "auto",
+    ...theme.scrollbarStyles,
+  },
+
+  internalComposerSuggestionItem: {
+    width: "100%",
+    padding: theme.spacing(1, 1.25),
+    border: 0,
+    background: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    textAlign: "left",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(0.25),
+    "&:hover": {
+      backgroundColor: theme.palette.action.hover,
+    },
+    "& + &": {
+      borderTop: `1px solid ${theme.palette.divider}`,
+    },
+  },
+
+  internalComposerSuggestionName: {
+    fontWeight: 700,
+    fontSize: "0.9rem",
+  },
+
+  internalComposerSuggestionEmail: {
+    color: theme.palette.text.secondary,
+    fontSize: "0.82rem",
+  },
+
+  internalComposerActions: {
+    display: "flex",
+    gap: theme.spacing(1),
+    justifyContent: "flex-start",
+    [theme.breakpoints.down("xs")]: {
+      flexWrap: "wrap",
+    },
+  },
+
+  internalSaveButton: {
+    borderRadius: 8,
+    textTransform: "none",
+    fontWeight: 700,
+  },
+
+  internalCancelButton: {
+    borderRadius: 8,
+    textTransform: "none",
+    fontWeight: 700,
+  },
 }));
 
 const MessageInput = ({ ticketStatus }) => {
@@ -233,6 +329,10 @@ const MessageInput = ({ ticketStatus }) => {
 
   const [medias, setMedias] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
+  const [internalInputMessage, setInternalInputMessage] = useState("");
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionOptions, setMentionOptions] = useState([]);
+  const [mentionLoading, setMentionLoading] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -240,6 +340,7 @@ const MessageInput = ({ ticketStatus }) => {
   const [quickAnswers, setQuickAnswer] = useState([]);
   const [typeBar, setTypeBar] = useState(false);
   const inputRef = useRef();
+  const internalInputRef = useRef();
   const acceptedPendingTicketRef = useRef(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const { setReplyingMessage, replyingMessage } =
@@ -247,13 +348,19 @@ const MessageInput = ({ ticketStatus }) => {
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    inputRef.current.focus();
-  }, [replyingMessage]);
+    if (isInternalMessage) {
+      internalInputRef.current?.focus();
+      return;
+    }
+
+    inputRef.current?.focus();
+  }, [replyingMessage, isInternalMessage]);
 
   useEffect(() => {
     inputRef.current.focus();
     return () => {
       setInputMessage("");
+      setInternalInputMessage("");
       setShowEmoji(false);
       setMedias([]);
       setIsInternalMessage(false);
@@ -264,6 +371,32 @@ const MessageInput = ({ ticketStatus }) => {
   useEffect(() => {
     acceptedPendingTicketRef.current = false;
   }, [ticketId, ticketStatus]);
+
+  useEffect(() => {
+    if (!isInternalMessage || !mentionQuery.trim()) {
+      setMentionOptions([]);
+      setMentionLoading(false);
+      return undefined;
+    }
+
+    setMentionLoading(true);
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const { data } = await api.get("/users/", {
+          params: { searchParam: mentionQuery.trim() },
+        });
+
+        setMentionOptions(data.users || []);
+      } catch (err) {
+        setMentionOptions([]);
+      } finally {
+        setMentionLoading(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [isInternalMessage, mentionQuery]);
 
   const resetRecordingState = () => {
     isStopping = false;
@@ -318,10 +451,50 @@ const MessageInput = ({ ticketStatus }) => {
       if (nextState) {
         setShowEmoji(false);
         setMedias([]);
+        setTypeBar(false);
+      } else {
+        setInternalInputMessage("");
       }
 
       return nextState;
     });
+  };
+
+  const handleCancelInternalMessage = () => {
+    setInternalInputMessage("");
+    setIsInternalMessage(false);
+    setMentionQuery("");
+    setMentionOptions([]);
+    setShowEmoji(false);
+    setTypeBar(false);
+  };
+
+  const handleChangeInternalInput = event => {
+    const nextValue = event.target.value;
+    const mentionMatch = nextValue.match(/(?:^|\s)@([^\s@]*)$/);
+
+    setInternalInputMessage(nextValue);
+
+    if (mentionMatch) {
+      setMentionQuery(mentionMatch[1]);
+      return;
+    }
+
+    setMentionQuery("");
+    setMentionOptions([]);
+  };
+
+  const handleSelectMention = selectedUser => {
+    if (!selectedUser?.email) {
+      return;
+    }
+
+    setInternalInputMessage(prevState =>
+      prevState.replace(/(^|\s)@([^\s@]*)$/, `$1@${selectedUser.email} `)
+    );
+    setMentionQuery("");
+    setMentionOptions([]);
+    internalInputRef.current?.focus();
   };
 
   const handleUploadMedia = async e => {
@@ -369,22 +542,25 @@ const MessageInput = ({ ticketStatus }) => {
     acceptedPendingTicketRef.current = true;
   };
 
-  const handleSendMessage = async () => {
-    if (inputMessage.trim() === "") return;
+  const handleSendMessage = async (internalMode = isInternalMessage) => {
+    const currentMessage = internalMode ? internalInputMessage : inputMessage;
+
+    if (currentMessage.trim() === "") return;
+
     setLoading(true);
     const shouldSignMessages = user?.signMessages !== false;
-    const trimmedMessage = inputMessage.trim();
+    const trimmedMessage = currentMessage.trim();
 
     const message = {
       read: 1,
       fromMe: true,
       mediaUrl: "",
       body:
-        isInternalMessage || !shouldSignMessages
+        internalMode || !shouldSignMessages
           ? trimmedMessage
           : `*${user?.name}:*\n${trimmedMessage}`,
       quotedMsg: replyingMessage,
-      isInternal: isInternalMessage,
+      isInternal: internalMode,
     };
     try {
       await ensureTicketIsOpen();
@@ -395,8 +571,17 @@ const MessageInput = ({ ticketStatus }) => {
       toastError(err);
     }
 
-    setInputMessage("");
+    if (internalMode) {
+      setInternalInputMessage("");
+      setIsInternalMessage(false);
+      setMentionQuery("");
+      setMentionOptions([]);
+    } else {
+      setInputMessage("");
+    }
+
     setShowEmoji(false);
+    setTypeBar(false);
     setLoading(false);
     setReplyingMessage(null);
   };
@@ -575,6 +760,95 @@ const MessageInput = ({ ticketStatus }) => {
     );
   };
 
+  const renderInternalComposer = () => {
+    if (!isInternalMessage) {
+      return null;
+    }
+
+    return (
+      <div className={classes.internalComposerWrapper}>
+        <div className={classes.internalComposerTitle}>
+          {i18n.t("messagesInput.internalComposer.title")}
+        </div>
+        <div className={classes.internalComposerHelper}>
+          {i18n.t("messagesInput.internalComposer.helper")}
+        </div>
+        <TextField
+          inputRef={internalInputRef}
+          className={classes.internalComposerInput}
+          variant="outlined"
+          multiline
+          minRows={2}
+          maxRows={4}
+          fullWidth
+          autoFocus
+          value={internalInputMessage}
+          placeholder={i18n.t("messagesInput.placeholderInternal")}
+          onChange={handleChangeInternalInput}
+          disabled={loading || recording || ticketStatus !== "open"}
+          onKeyPress={e => {
+            if (loading || e.shiftKey) return;
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleSendMessage(true);
+            }
+          }}
+        />
+        {(mentionLoading || mentionOptions.length > 0) && (
+          <Paper elevation={0} className={classes.internalComposerSuggestions}>
+            {mentionLoading ? (
+              <button
+                type="button"
+                className={classes.internalComposerSuggestionItem}
+                disabled
+              >
+                <span className={classes.internalComposerSuggestionName}>
+                  Buscando usuarios...
+                </span>
+              </button>
+            ) : (
+              mentionOptions.map(option => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={classes.internalComposerSuggestionItem}
+                  onClick={() => handleSelectMention(option)}
+                >
+                  <span className={classes.internalComposerSuggestionName}>
+                    {option.name}
+                  </span>
+                  <span className={classes.internalComposerSuggestionEmail}>
+                    {option.email}
+                  </span>
+                </button>
+              ))
+            )}
+          </Paper>
+        )}
+        <div className={classes.internalComposerActions}>
+          <Button
+            variant="contained"
+            color="primary"
+            className={classes.internalSaveButton}
+            onClick={() => handleSendMessage(true)}
+            disabled={loading || recording || ticketStatus !== "open"}
+          >
+            {i18n.t("messagesInput.internalComposer.save")}
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            className={classes.internalCancelButton}
+            onClick={handleCancelInternalMessage}
+            disabled={loading}
+          >
+            {i18n.t("messagesInput.internalComposer.cancel")}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   if (medias.length > 0)
     return (
       <Paper elevation={0} square className={classes.viewMediaInputWrapper}>
@@ -610,6 +884,7 @@ const MessageInput = ({ ticketStatus }) => {
     return (
       <Paper square elevation={0} className={classes.mainWrapper}>
         {replyingMessage && renderReplyingMessage(replyingMessage)}
+        {renderInternalComposer()}
         <div className={classes.newMessageBox}>
           <Hidden only={["sm", "xs"]}>
             <IconButton
@@ -750,7 +1025,9 @@ const MessageInput = ({ ticketStatus }) => {
           <div className={classes.messageInputWrapper}>
             <InputBase
               inputRef={input => {
-                input && input.focus();
+                if (!isInternalMessage && input) {
+                  input.focus();
+                }
                 input && (inputRef.current = input);
               }}
               className={classes.messageInput}
@@ -758,14 +1035,19 @@ const MessageInput = ({ ticketStatus }) => {
                 ticketStatus !== "open"
                   ? i18n.t("messagesInput.placeholderClosed")
                   : isInternalMessage
-                  ? i18n.t("messagesInput.placeholderInternal")
+                  ? i18n.t("messagesInput.internalComposer.helper")
                   : i18n.t("messagesInput.placeholderOpen")
               }
               multiline
               maxRows={5}
               value={inputMessage}
               onChange={handleChangeInput}
-              disabled={recording || loading || ticketStatus !== "open"}
+              disabled={
+                recording ||
+                loading ||
+                ticketStatus !== "open" ||
+                isInternalMessage
+              }
               onPaste={e => {
                 ticketStatus === "open" && !isInternalMessage && handleInputPaste(e);
               }}
@@ -801,7 +1083,7 @@ const MessageInput = ({ ticketStatus }) => {
               aria-label="sendMessage"
               component="span"
               onClick={handleSendMessage}
-              disabled={loading}
+              disabled={loading || isInternalMessage}
             >
               <SendIcon className={classes.sendMessageIcons} />
             </IconButton>

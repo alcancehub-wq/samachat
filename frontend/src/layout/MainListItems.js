@@ -11,6 +11,7 @@ import Divider from "@material-ui/core/Divider";
 import Collapse from "@material-ui/core/Collapse";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
+import Tooltip from "@material-ui/core/Tooltip";
 import { Badge, Typography } from "@material-ui/core";
 import DashboardOutlinedIcon from "@material-ui/icons/DashboardOutlined";
 import WhatsAppIcon from "@material-ui/icons/WhatsApp";
@@ -155,6 +156,8 @@ function ListItemLink(props) {
     icon,
     primary,
     to,
+    onClick,
+    showTooltip = false,
     className,
     denseClassName,
     iconClassName,
@@ -171,15 +174,23 @@ function ListItemLink(props) {
 
   return (
     <li>
-      <ListItem
-        button
-        component={renderLink}
-        className={className}
-        classes={{ root: denseClassName }}
+      <Tooltip
+        title={showTooltip ? primary : ""}
+        placement="right"
+        arrow
+        disableHoverListener={!showTooltip}
       >
-        {icon ? <ListItemIcon className={iconClassName}>{icon}</ListItemIcon> : null}
-        <ListItemText primary={primary} className={textClassName} />
-      </ListItem>
+        <ListItem
+          button
+          component={renderLink}
+          onClick={onClick}
+          className={className}
+          classes={{ root: denseClassName }}
+        >
+          {icon ? <ListItemIcon className={iconClassName}>{icon}</ListItemIcon> : null}
+          <ListItemText primary={primary} className={textClassName} />
+        </ListItem>
+      </Tooltip>
     </li>
   );
 }
@@ -191,6 +202,7 @@ const MainListItems = (props) => {
     searchValue,
     onSearchChange,
     isDrawerOpen = true,
+    onItemNavigate,
   } = props;
   const classes = useStyles();
   const { whatsApps } = useContext(WhatsAppsContext);
@@ -414,12 +426,14 @@ const MainListItems = (props) => {
       <ListItemLink
         key={key}
         to={menuConfig[key].to}
+        onClick={() => onItemNavigate?.(menuConfig[key].to)}
         primary={label}
         icon={menuConfig[key].icon}
+        showTooltip={!isDrawerOpen}
         className={className}
         denseClassName={classes.listItemRoot}
         iconClassName={clsx(classes.menuItemIcon, !isDrawerOpen && classes.collapsedIcon)}
-        textClassName={clsx(classes.menuItemText, !isDrawerOpen && classes.collapsedText)}
+        textClassName={isDrawerOpen ? classes.menuItemText : classes.collapsedText}
       />
     );
   };
