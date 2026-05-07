@@ -1,5 +1,15 @@
 # Release Notes
 
+## 2026-05-07
+
+### legacy-prod
+
+- Tickets: o usuario com conexao padrao propria, como o CS, nao recebe mais acesso indireto a tickets de outros usuarios so por causa dessa configuracao. A visibilidade volta a respeitar apenas tickets proprios ou pendentes da fila do usuario.
+- Backend: acessos por `ticketId` agora validam permissao antes de abrir ticket, listar mensagens, enviar resposta, atualizar, excluir ou marcar como nao lido.
+- Frontend: a lista em tempo real por socket deixou de reinserir tickets sem responsavel fora da aba `pending`, evitando que conversas alheias reaparecam para usuarios nao admin.
+- Escopo desta promocao: `backend/src/controllers/MessageController.ts`, `backend/src/controllers/TicketController.ts`, `backend/src/services/MessageServices/ListMessagesService.ts`, `backend/src/services/TicketServices/CheckTicketAccess.ts`, `backend/src/services/TicketServices/DeleteTicketService.ts`, `backend/src/services/TicketServices/ShowTicketService.ts`, `backend/src/services/TicketServices/UpdateTicketService.ts`, `backend/src/services/TicketServices/__tests__/ShowTicketService.spec.ts` e `frontend/src/components/TicketsList/index.js`.
+- Validacao local antes da promocao: teste focado `ShowTicketService.spec.ts` aprovado no backend e checagem de erros sem diagnosticos nos arquivos alterados.
+
 ## 2026-05-06
 
 ### legacy-prod

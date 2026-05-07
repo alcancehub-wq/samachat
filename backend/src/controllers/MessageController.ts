@@ -31,7 +31,11 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 
   const { count, messages, ticket, hasMore } = await ListMessagesService({
     pageNumber,
-    ticketId
+    ticketId,
+    accessData: {
+      userId: req.user.id,
+      profile: req.user.profile
+    }
   });
 
   SetTicketMessagesAsRead(ticket);
@@ -44,7 +48,10 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const { body, quotedMsg, isInternal }: MessageData = req.body;
   const medias = req.files as Express.Multer.File[];
 
-  const ticket = await ShowTicketService(ticketId);
+  const ticket = await ShowTicketService(ticketId, {
+    userId: req.user.id,
+    profile: req.user.profile
+  });
 
   if (isInternal) {
     const senderUser = await ShowUserService(req.user.id);

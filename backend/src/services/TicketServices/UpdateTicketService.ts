@@ -6,7 +6,7 @@ import Tag from "../../models/Tag";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import GetDefaultWhatsAppByUser from "../../helpers/GetDefaultWhatsAppByUser";
-import ShowTicketService from "./ShowTicketService";
+import ShowTicketService, { TicketAccessData } from "./ShowTicketService";
 import { FOLLOW_UP_TAG_COLOR, FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag";
 
 interface TicketData {
@@ -22,6 +22,7 @@ interface TicketData {
 interface Request {
   ticketData: TicketData;
   ticketId: string | number;
+  accessData?: TicketAccessData;
 }
 
 interface Response {
@@ -32,7 +33,8 @@ interface Response {
 
 const UpdateTicketService = async ({
   ticketData,
-  ticketId
+  ticketId,
+  accessData
 }: Request): Promise<Response> => {
   const {
     status,
@@ -44,7 +46,7 @@ const UpdateTicketService = async ({
     applyUserDefaultWhatsappOnTransfer
   } = ticketData;
 
-  const ticket = await ShowTicketService(ticketId);
+  const ticket = await ShowTicketService(ticketId, accessData);
   await SetTicketMessagesAsRead(ticket);
 
   const oldStatus = ticket.status;

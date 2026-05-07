@@ -1,11 +1,14 @@
 import AppError from "../../errors/AppError";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
-import ShowTicketService from "../TicketServices/ShowTicketService";
+import ShowTicketService, {
+  TicketAccessData
+} from "../TicketServices/ShowTicketService";
 
 interface Request {
   ticketId: string;
   pageNumber?: string;
+  accessData: TicketAccessData;
 }
 
 interface Response {
@@ -17,9 +20,10 @@ interface Response {
 
 const ListMessagesService = async ({
   pageNumber = "1",
-  ticketId
+  ticketId,
+  accessData
 }: Request): Promise<Response> => {
-  const ticket = await ShowTicketService(ticketId);
+  const ticket = await ShowTicketService(ticketId, accessData);
 
   if (!ticket) {
     throw new AppError("ERR_NO_TICKET_FOUND", 404);

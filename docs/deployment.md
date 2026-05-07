@@ -14,6 +14,7 @@
 ## Easypanel (VPS)
 - The current VPS deployment is managed directly by Easypanel GitHub sources for the legacy root `backend/` and `frontend/` apps.
 - Production backend/frontend should track the dedicated `legacy-prod` branch, with build paths `/backend` and `/frontend`, so unrelated pushes to `main` do not rebuild the live Samachat stack.
+- Before pushing a production promotion to `legacy-prod`, append a concise entry to `docs/release-notes.md` with scope and validation for that release.
 - Push vetted legacy-stack changes to `legacy-prod` when you want Easypanel to build and deploy the live backend/frontend apps automatically.
 - No GitHub deploy hook secret is required for the frontend in that setup.
 - In the legacy root stack, the `backend` container already starts WhatsApp sessions, schedule polling, and campaign workers by default.

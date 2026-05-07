@@ -1,14 +1,16 @@
 import Ticket from "../../models/Ticket";
-import AppError from "../../errors/AppError";
+import ShowTicketService, { TicketAccessData } from "./ShowTicketService";
 
-const DeleteTicketService = async (id: string): Promise<Ticket> => {
-  const ticket = await Ticket.findOne({
-    where: { id }
-  });
+interface Request {
+  id: string;
+  accessData?: TicketAccessData;
+}
 
-  if (!ticket) {
-    throw new AppError("ERR_NO_TICKET_FOUND", 404);
-  }
+const DeleteTicketService = async ({
+  id,
+  accessData
+}: Request): Promise<Ticket> => {
+  const ticket = await ShowTicketService(id, accessData);
 
   await ticket.destroy();
 

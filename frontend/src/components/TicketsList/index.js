@@ -302,9 +302,21 @@ const reducer = (state, action) => {
 			return ticket.tags?.some(tag => tag.name === FOLLOW_UP_TAG_NAME);
 		};
 
+		const canAccessTicketInCurrentList = ticket => {
+			if (showAll) {
+				return true;
+			}
+
+			if (Number(ticket.userId) === Number(user?.id)) {
+				return true;
+			}
+
+			return status === "pending" && !ticket.userId;
+		};
+
 		const shouldUpdateTicket = ticket =>
 			matchesSearchParam(ticket) &&
-			(!ticket.userId || ticket.userId === user?.id || showAll) &&
+			canAccessTicketInCurrentList(ticket) &&
 			(!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1) &&
 			hasTagMatch(ticket) &&
 			hasFollowUpMatch(ticket);

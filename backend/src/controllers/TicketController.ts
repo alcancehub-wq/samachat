@@ -95,7 +95,10 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
 
-  const contact = await ShowTicketService(ticketId);
+  const contact = await ShowTicketService(ticketId, {
+    userId: req.user.id,
+    profile: req.user.profile
+  });
 
   return res.status(200).json(contact);
 };
@@ -109,7 +112,11 @@ export const update = async (
 
   const { ticket } = await UpdateTicketService({
     ticketData,
-    ticketId
+    ticketId,
+    accessData: {
+      userId: req.user.id,
+      profile: req.user.profile
+    }
   });
 
   if (ticket.status === "closed" && !ticketData.followUp) {
@@ -134,7 +141,13 @@ export const remove = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
 
-  const ticket = await DeleteTicketService(ticketId);
+  const ticket = await DeleteTicketService({
+    id: ticketId,
+    accessData: {
+      userId: req.user.id,
+      profile: req.user.profile
+    }
+  });
 
   const io = getIO();
   io.to(ticket.status).to(ticketId).to("notification").emit("ticket", {
@@ -150,6 +163,11 @@ export const markAsUnread = async (
   res: Response
 ): Promise<Response> => {
   const { ticketId } = req.params;
+
+  await ShowTicketService(ticketId, {
+    userId: req.user.id,
+    profile: req.user.profile
+  });
 
   const ticket = await SetTicketMessagesAsUnread(ticketId);
 

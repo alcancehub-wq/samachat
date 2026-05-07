@@ -5,8 +5,17 @@ import User from "../../models/User";
 import Queue from "../../models/Queue";
 import Whatsapp from "../../models/Whatsapp";
 import Tag from "../../models/Tag";
+import CheckTicketAccess from "./CheckTicketAccess";
 
-const ShowTicketService = async (id: string | number): Promise<Ticket> => {
+export interface TicketAccessData {
+  userId: string | number;
+  profile?: string;
+}
+
+const ShowTicketService = async (
+  id: string | number,
+  accessData?: TicketAccessData
+): Promise<Ticket> => {
   const ticket = await Ticket.findByPk(id, {
     include: [
       {
@@ -41,6 +50,14 @@ const ShowTicketService = async (id: string | number): Promise<Ticket> => {
 
   if (!ticket) {
     throw new AppError("ERR_NO_TICKET_FOUND", 404);
+  }
+
+  if (accessData) {
+    await CheckTicketAccess({
+      ticket,
+      userId: accessData.userId,
+      profile: accessData.profile
+    });
   }
 
   return ticket;
