@@ -159,7 +159,8 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   showAllInline: {
-    flex: "0 0 auto",
+    flex: "1 1 140px",
+    minWidth: 140,
   },
   filterField: {
     flex: "1 1 160px",
@@ -233,13 +234,15 @@ const useStyles = makeStyles((theme) => ({
   showAllControl: {
     margin: 0,
     marginLeft: 0,
-    minHeight: 40,
-    minWidth: 108,
-    padding: theme.spacing(0.15, 0.85),
+    width: "100%",
+    minHeight: 56,
+    padding: theme.spacing(0, 1.25),
     borderRadius: 12,
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.default,
     boxSizing: "border-box",
+    display: "flex",
+    alignItems: "center",
     justifyContent: "space-between",
     "& .MuiFormControlLabel-label": {
       color: theme.palette.text.primary,
@@ -247,9 +250,14 @@ const useStyles = makeStyles((theme) => ({
       fontSize: "0.92rem",
       lineHeight: 1,
     },
-    "& .MuiSwitch-root": {
-      marginLeft: theme.spacing(0.5),
+    "&.MuiFormControlLabel-labelPlacementStart": {
+      marginLeft: 0,
       marginRight: 0,
+    },
+    "& .MuiSwitch-root": {
+      marginLeft: theme.spacing(0.75),
+      marginRight: 0,
+      flexShrink: 0,
     },
   },
   showAllSwitchBase: {

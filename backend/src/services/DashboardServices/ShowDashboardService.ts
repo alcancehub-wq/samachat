@@ -170,7 +170,7 @@ const ShowDashboardService = async ({
 
   const user = isAdmin ? null : await ShowUserService(userId);
   const visibleQueueIds = user?.queues?.map(queue => queue.id) || [];
-  const resolvedAssigneeId = isAdmin ? assigneeId : Number(userId);
+  const resolvedAssigneeId = assigneeId;
 
   const visibleTicketWhere = buildVisibleTicketWhere(
     visibleQueueIds,
