@@ -88,6 +88,28 @@ const hasAssigneeScope = (value: unknown, assigneeId: number): boolean => {
   });
 };
 
+const hasQueueNullScope = (value: unknown): boolean => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  if ((value as Record<string, unknown>).queueId === null) {
+    return true;
+  }
+
+  return Reflect.ownKeys(value).some(key => {
+    const nestedValue = (value as Record<PropertyKey, unknown>)[key];
+
+    if (key === Op.and || key === Op.or) {
+      return Array.isArray(nestedValue)
+        ? nestedValue.some(entry => hasQueueNullScope(entry))
+        : hasQueueNullScope(nestedValue);
+    }
+
+    return hasQueueNullScope(nestedValue);
+  });
+};
+
 describe("ShowDashboardService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -142,6 +164,22 @@ describe("ShowDashboardService", () => {
 
     const firstCallArgs = ticketFindAllMock.mock.calls[0][0];
     expect(hasAssigneeScope(firstCallArgs.where, 9)).toBe(true);
+  });
+
+  it("does not restrict non-admin dashboard data to unassigned queues when the user has no queue bindings", async () => {
+    showUserServiceMock.mockResolvedValueOnce({
+      id: 7,
+      queues: []
+    });
+
+    await ShowDashboardService({
+      userId: 7,
+      profile: "user",
+      period: "today"
+    });
+
+    const firstCallArgs = ticketFindAllMock.mock.calls[0][0];
+    expect(hasQueueNullScope(firstCallArgs.where)).toBe(false);
   });
 
   it("builds the today timeline from hourly grouped rows", async () => {

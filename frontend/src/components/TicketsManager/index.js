@@ -12,7 +12,6 @@ import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
 import AccessTimeIcon from "@material-ui/icons/AccessTime";
-import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
 import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsList";
@@ -245,21 +244,17 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    "& .MuiFormControlLabel-label": {
-      color: theme.palette.text.primary,
-      fontWeight: 600,
-      fontSize: "0.92rem",
-      lineHeight: 1,
-    },
-    "&.MuiFormControlLabel-labelPlacementStart": {
-      marginLeft: 0,
-      marginRight: 0,
-    },
     "& .MuiSwitch-root": {
       marginLeft: theme.spacing(0.75),
       marginRight: 0,
       flexShrink: 0,
     },
+  },
+  showAllLabel: {
+    color: theme.palette.text.primary,
+    fontWeight: 600,
+    fontSize: "0.92rem",
+    lineHeight: 1,
   },
   showAllSwitchBase: {
     color: theme.palette.type === "dark" ? "rgba(243, 246, 252, 0.42)" : "rgba(15, 23, 42, 0.28)",
@@ -473,27 +468,23 @@ const TicketsManager = () => {
         </div>
         <div className={classes.ticketOptionsSecondary}>
           {canShowAllTickets && (
-            <FormControlLabel
-              className={clsx(classes.showAllControl, classes.showAllInline)}
-              label={i18n.t("tickets.buttons.showAll")}
-              labelPlacement="start"
-              control={
-                <Switch
-                  size="small"
-                  checked={showAllTickets}
-                  classes={{
-                    switchBase: classes.showAllSwitchBase,
-                    checked: classes.showAllSwitchChecked,
-                    track: classes.showAllSwitchTrack,
-                  }}
-                  onChange={() =>
-                    setShowAllTickets((prevState) => !prevState)
-                  }
-                  name="showAllTickets"
-                  color="primary"
-                />
-              }
-            />
+            <div className={clsx(classes.showAllControl, classes.showAllInline)}>
+              <span className={classes.showAllLabel}>{i18n.t("tickets.buttons.showAll")}</span>
+              <Switch
+                size="small"
+                checked={showAllTickets}
+                classes={{
+                  switchBase: classes.showAllSwitchBase,
+                  checked: classes.showAllSwitchChecked,
+                  track: classes.showAllSwitchTrack,
+                }}
+                onChange={() =>
+                  setShowAllTickets((prevState) => !prevState)
+                }
+                name="showAllTickets"
+                color="primary"
+              />
+            </div>
           )}
           <TagSelect
             selectedTagIds={selectedTagIds}

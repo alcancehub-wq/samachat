@@ -87,7 +87,7 @@ const buildVisibleTicketWhere = (
   selectedQueueId?: number,
   selectedAssigneeId?: number
 ): WhereOptions => {
-  if (selectedQueueId && !isAdmin && !queueIds.includes(selectedQueueId)) {
+  if (selectedQueueId && !isAdmin && queueIds.length > 0 && !queueIds.includes(selectedQueueId)) {
     return { id: -1 };
   }
 
@@ -97,7 +97,7 @@ const buildVisibleTicketWhere = (
     ? {
         [Op.or]: [{ queueId: { [Op.in]: queueIds } }, { queueId: null }]
       }
-    : { queueId: null };
+    : undefined;
 
   const queueScope = selectedQueueId ? { queueId: selectedQueueId } : undefined;
   const assigneeScope = selectedAssigneeId
