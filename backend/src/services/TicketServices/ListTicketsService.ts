@@ -1,4 +1,4 @@
-import { Op, fn, where, col, Includeable, WhereOptions } from "sequelize";
+import { Op, fn, where, col, Includeable, WhereOptions, Order } from "sequelize";
 import { startOfDay, endOfDay, parseISO } from "date-fns";
 
 import Ticket from "../../models/Ticket";
@@ -193,6 +193,9 @@ const ListTicketsService = async ({
 
   const limit = 40;
   const offset = limit * (+pageNumber - 1);
+  const order: Order = status === "pending"
+    ? [["pendingSince", "DESC"], ["updatedAt", "DESC"]]
+    : [["updatedAt", "DESC"]];
 
   const { count, rows: tickets } = await Ticket.findAndCountAll({
     where: whereCondition,
@@ -201,7 +204,7 @@ const ListTicketsService = async ({
     distinct: true,
     limit,
     offset,
-    order: [["updatedAt", "DESC"]]
+    order
   });
 
   const hasMore = count > offset + tickets.length;

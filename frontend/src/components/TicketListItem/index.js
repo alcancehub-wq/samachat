@@ -7,7 +7,6 @@ import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import { green } from "@material-ui/core/colors";
 import ListItem from "@material-ui/core/ListItem";
-import ListItemText from "@material-ui/core/ListItemText";
 import ListItemAvatar from "@material-ui/core/ListItemAvatar";
 import Typography from "@material-ui/core/Typography";
 import Avatar from "@material-ui/core/Avatar";
@@ -76,18 +75,75 @@ const useStyles = makeStyles(theme => ({
 		margin: "0px",
 	},
 
-	contactNameWrapper: {
+	ticketBody: {
+		flex: 1,
+		minWidth: 0,
+		display: "flex",
+		flexDirection: "column",
+		gap: theme.spacing(0.5),
+		paddingTop: theme.spacing(0.15),
+		minHeight: 78,
+	},
+
+	headerRow: {
 		display: "flex",
 		justifyContent: "space-between",
 		alignItems: "flex-start",
 		gap: theme.spacing(1),
+		minWidth: 0,
+	},
+
+	titleRow: {
+		display: "flex",
+		alignItems: "center",
+		gap: theme.spacing(0.75),
+		minWidth: 0,
+		flex: 1,
+	},
+
+	headerActions: {
+		display: "flex",
+		alignItems: "center",
+		gap: theme.spacing(0.35),
+		flexShrink: 0,
+	},
+
+	messageRow: {
+		minWidth: 0,
+	},
+
+	footerRow: {
+		display: "flex",
+		justifyContent: "space-between",
+		alignItems: "center",
+		gap: theme.spacing(0.75),
+		minWidth: 0,
+		marginTop: "auto",
+	},
+
+	footerMeta: {
+		display: "flex",
+		alignItems: "center",
+		gap: theme.spacing(0.75),
+		minWidth: 0,
+		flexWrap: "wrap",
+	},
+
+	footerActions: {
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "flex-end",
+		gap: theme.spacing(0.75),
+		flexShrink: 0,
+		minWidth: 0,
 	},
 
 	lastMessageTime: {
-		justifySelf: "flex-end",
-		fontSize: "0.74rem",
-		fontWeight: 600,
+		fontSize: "0.8rem",
+		fontWeight: 700,
 		whiteSpace: "nowrap",
+		flexShrink: 0,
+		color: theme.palette.text.secondary,
 	},
 
 	closedBadge: {
@@ -98,15 +154,14 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	contactLastMessage: {
-		paddingRight: 16,
+		display: "block",
 		fontSize: "0.83rem",
 		lineHeight: 1.45,
+		maxWidth: "100%",
 	},
 
 	newMessagesCount: {
-		alignSelf: "center",
 		marginRight: 2,
-		marginLeft: "auto",
 	},
 
 	badgeStyle: {
@@ -116,16 +171,13 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	acceptButton: {
-		position: "absolute",
-		right: 16,
-		bottom: 14,
-		left: "auto",
 		borderRadius: 4,
 		textTransform: "none",
 		fontWeight: 600,
 		boxShadow: "none !important",
 		backgroundColor: "#FF1919 !important",
 		color: "#FFFFFF !important",
+		whiteSpace: "nowrap",
 		"&:hover": {
 			backgroundColor: "#E11414 !important",
 			boxShadow: "none !important",
@@ -133,10 +185,8 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	selectCheckbox: {
-		position: "absolute",
-		top: 10,
-		right: 10,
-		zIndex: 2,
+		padding: 6,
+		marginRight: -6,
 		color: theme.palette.type === "dark" ? "rgba(243, 246, 252, 0.42)" : "rgba(15, 23, 42, 0.28)",
 		"&.Mui-checked": {
 			color: "#FF1919",
@@ -155,10 +205,6 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	userTag: {
-		position: "absolute",
-		marginRight: 5,
-		right: 5,
-		bottom: 5,
 		background: theme.palette.background.default,
 		color: theme.palette.text.primary,
 		border: `1px solid ${theme.palette.divider}`,
@@ -167,6 +213,10 @@ const useStyles = makeStyles(theme => ({
 		borderRadius: 999,
 		fontSize: "0.7rem",
 		fontWeight: 600,
+		maxWidth: 140,
+		overflow: "hidden",
+		textOverflow: "ellipsis",
+		whiteSpace: "nowrap",
 	},
 	contactAvatar: {
 		width: 46,
@@ -176,8 +226,10 @@ const useStyles = makeStyles(theme => ({
 	},
 	contactName: {
 		fontWeight: 700,
-		fontSize: "0.95rem",
+		fontSize: "0.98rem",
 		lineHeight: 1.2,
+		minWidth: 0,
+		flex: 1,
 	},
 	closedStatus: {
 		padding: "4px 8px",
@@ -193,8 +245,14 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		flexWrap: "wrap",
 		gap: 6,
-		marginTop: 6,
 		alignItems: "center",
+		marginTop: 6,
+	},
+
+	footerTagList: {
+		marginTop: 0,
+		justifyContent: "flex-end",
+		maxWidth: 260,
 	},
 	tagChip: {
 		background: theme.custom.dangerSoft,
@@ -208,7 +266,6 @@ const useStyles = makeStyles(theme => ({
 	},
 	tagButton: {
 		padding: 6,
-		marginLeft: 6,
 		backgroundColor: theme.custom.softBackground,
 		border: `1px solid ${theme.palette.divider}`,
 	},
@@ -226,6 +283,16 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 	const assigneeTitle = ticket.user?.name
 		? i18n.t("messagesList.header.assignedTo")
 		: i18n.t("ticketsList.connectionTitle");
+	const ticketTimestamp = ticket.status === "pending"
+		? ticket.pendingSince || ticket.updatedAt || ticket.createdAt
+		: ticket.updatedAt;
+	const formattedTicketTimestamp = ticketTimestamp
+		? ticket.status === "pending"
+			? format(parseISO(ticketTimestamp), "dd/MM HH:mm")
+			: isSameDay(parseISO(ticketTimestamp), new Date())
+				? format(parseISO(ticketTimestamp), "HH:mm")
+				: format(parseISO(ticketTimestamp), "dd/MM/yyyy")
+		: null;
 
 	useEffect(() => {
 		return () => {
@@ -275,12 +342,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 				})}
 			>
 				{selectable && (
-					<Checkbox
-						className={classes.selectCheckbox}
-						checked={selectedInBulk}
-						onClick={e => e.stopPropagation()}
-						onChange={() => onToggleSelect && onToggleSelect(ticket.id)}
-					/>
+					<></>
 				)}
 				<Tooltip
 					arrow
@@ -295,10 +357,9 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 				<ListItemAvatar>
 					<Avatar src={ticket?.contact?.profilePicUrl} className={classes.contactAvatar} />
 				</ListItemAvatar>
-				<ListItemText
-					disableTypography
-					primary={
-						<span className={classes.contactNameWrapper}>
+				<div className={classes.ticketBody}>
+					<div className={classes.headerRow}>
+						<div className={classes.titleRow}>
 							<Typography
 								noWrap
 								component="span"
@@ -316,23 +377,8 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 									classes={{ badge: classes.closedStatus }}
 								/>
 							)}
-							{ticket.lastMessage && (
-								<Typography
-									className={classes.lastMessageTime}
-									component="span"
-									variant="body2"
-									color="textSecondary"
-								>
-									{isSameDay(parseISO(ticket.updatedAt), new Date()) ? (
-										<>{format(parseISO(ticket.updatedAt), "HH:mm")}</>
-									) : (
-										<>{format(parseISO(ticket.updatedAt), "dd/MM/yyyy")}</>
-									)}
-								</Typography>
-							)}
-							{assigneeLabel && (
-								<div className={classes.userTag} title={assigneeTitle}>{assigneeLabel}</div>
-							)}
+						</div>
+						<div className={classes.headerActions}>
 							<IconButton
 								size="small"
 								className={classes.tagButton}
@@ -344,10 +390,17 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 							>
 								<LocalOfferIcon fontSize="small" />
 							</IconButton>
-						</span>
-					}
-					secondary={
-						<span className={classes.contactNameWrapper}>
+							{selectable && (
+								<Checkbox
+									className={classes.selectCheckbox}
+									checked={selectedInBulk}
+									onClick={e => e.stopPropagation()}
+									onChange={() => onToggleSelect && onToggleSelect(ticket.id)}
+								/>
+							)}
+						</div>
+					</div>
+					<div className={classes.messageRow}>
 							<Typography
 								className={classes.contactLastMessage}
 								noWrap
@@ -361,8 +414,25 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 									<br />
 								)}
 							</Typography>
-							{ticket.tags && ticket.tags.length > 0 && (
-								<span className={classes.tagList}>
+					</div>
+					<div className={classes.footerRow}>
+						<div className={classes.footerMeta}>
+							{formattedTicketTimestamp && (
+								<Typography
+									className={classes.lastMessageTime}
+									component="span"
+									variant="body2"
+								>
+									{formattedTicketTimestamp}
+								</Typography>
+							)}
+							{assigneeLabel && (
+								<div className={classes.userTag} title={assigneeTitle}>{assigneeLabel}</div>
+							)}
+						</div>
+						<div className={classes.footerActions}>
+							{ticket.status !== "pending" && ticket.tags && ticket.tags.length > 0 && (
+								<span className={clsx(classes.tagList, classes.footerTagList)}>
 									{ticket.tags.slice(0, 2).map(tag => (
 										<span key={tag.id} className={classes.tagChip}>
 											{tag.name}
@@ -375,31 +445,32 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 									)}
 								</span>
 							)}
-
-							<Badge
-								className={classes.newMessagesCount}
-								badgeContent={ticket.unreadMessages}
-								classes={{
-									badge: classes.badgeStyle,
-								}}
-							/>
-						</span>
-					}
-				/>
-				{ticket.status === "pending" && (
-					<ButtonWithSpinner
-						variant="contained"
-						className={classes.acceptButton}
-						size="small"
-						loading={loading}
-						onClick={e => {
-							e.stopPropagation();
-							handleAcepptTicket(ticket.id);
-						}}
-					>
-						{i18n.t("ticketsList.buttons.accept")}
-					</ButtonWithSpinner>
-				)}
+							{ticket.unreadMessages > 0 && (
+								<Badge
+									className={classes.newMessagesCount}
+									badgeContent={ticket.unreadMessages}
+									classes={{
+										badge: classes.badgeStyle,
+									}}
+								/>
+							)}
+							{ticket.status === "pending" && (
+								<ButtonWithSpinner
+									variant="contained"
+									className={classes.acceptButton}
+									size="small"
+									loading={loading}
+									onClick={e => {
+										e.stopPropagation();
+										handleAcepptTicket(ticket.id);
+									}}
+								>
+									{i18n.t("ticketsList.buttons.accept")}
+								</ButtonWithSpinner>
+							)}
+						</div>
+					</div>
+				</div>
 			</ListItem>
 			<Divider variant="inset" component="li" style={{ marginLeft: 32, marginRight: 24, opacity: 0.45 }} />
 		</React.Fragment>

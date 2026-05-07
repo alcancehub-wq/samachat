@@ -49,7 +49,8 @@ const CreateTicketService = async ({
     status,
     isGroup,
     userId,
-    queueId
+		queueId,
+		pendingSince: status === "pending" ? new Date() : undefined
   });
 
   const ticket = await Ticket.findByPk(id, { include: ["contact"] });

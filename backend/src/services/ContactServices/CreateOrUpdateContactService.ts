@@ -1,6 +1,7 @@
 import { getIO } from "../../libs/socket";
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
+import GetProfilePicUrl from "../WbotServices/GetProfilePicUrl";
 import { logger } from "../../utils/logger";
 
 interface ExtraInfo {
@@ -75,12 +76,38 @@ const CreateOrUpdateContactService = async ({
   const resolvedContactByLid =
     contactByLid || legacyContactByBareLid || legacyContactByLid;
 
+  const resolveProfilePicUrl = async (
+    currentProfilePicUrl?: string | null
+  ): Promise<string | undefined> => {
+    const normalizedIncomingProfilePicUrl =
+      typeof profilePicUrl === "string" ? profilePicUrl.trim() : "";
+
+    if (normalizedIncomingProfilePicUrl) {
+      return normalizedIncomingProfilePicUrl;
+    }
+
+    if (currentProfilePicUrl) {
+      return currentProfilePicUrl;
+    }
+
+    if (!isGroup && number) {
+      const fetchedProfilePicUrl = await GetProfilePicUrl(number);
+      return fetchedProfilePicUrl || undefined;
+    }
+
+    return undefined;
+  };
+
   const shouldMerge =
     contactByNumber &&
     resolvedContactByLid &&
     contactByNumber.id !== resolvedContactByLid.id;
 
   if (shouldMerge) {
+    const resolvedProfilePicUrl = await resolveProfilePicUrl(
+      contactByNumber.profilePicUrl || resolvedContactByLid.profilePicUrl
+    );
+
     await Ticket.update(
       { contactId: contactByNumber.id },
       { where: { contactId: resolvedContactByLid.id } }
@@ -90,7 +117,7 @@ const CreateOrUpdateContactService = async ({
 
     await contactByNumber.update({
       lid: resolvedContactByLid.lid || normalizedLid,
-      profilePicUrl
+      profilePicUrl: resolvedProfilePicUrl
     });
 
     logger.info({
@@ -105,9 +132,13 @@ const CreateOrUpdateContactService = async ({
   }
 
   if (contactByNumber) {
+    const resolvedProfilePicUrl = await resolveProfilePicUrl(
+      contactByNumber.profilePicUrl
+    );
+
     await contactByNumber.update({
       lid: normalizedLid || contactByNumber.lid,
-      profilePicUrl
+      profilePicUrl: resolvedProfilePicUrl
     });
 
     emitContact("update", contactByNumber);
@@ -116,6 +147,10 @@ const CreateOrUpdateContactService = async ({
   }
 
   if (resolvedContactByLid) {
+    const resolvedProfilePicUrl = await resolveProfilePicUrl(
+      resolvedContactByLid.profilePicUrl
+    );
+
     await resolvedContactByLid.update({
       lid: normalizedLid || resolvedContactByLid.lid,
       number:
@@ -124,18 +159,20 @@ const CreateOrUpdateContactService = async ({
         resolvedContactByLid.number === bareLid
           ? null
           : resolvedContactByLid.number),
-      profilePicUrl
+      profilePicUrl: resolvedProfilePicUrl
     });
 
     emitContact("update", resolvedContactByLid);
     return resolvedContactByLid;
   }
 
+  const resolvedProfilePicUrl = await resolveProfilePicUrl();
+
   const created = await Contact.create({
     name,
     number,
     lid: normalizedLid,
-    profilePicUrl,
+		profilePicUrl: resolvedProfilePicUrl,
     email,
     isGroup,
     extraInfo

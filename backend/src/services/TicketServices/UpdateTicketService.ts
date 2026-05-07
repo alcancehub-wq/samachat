@@ -77,10 +77,16 @@ const UpdateTicketService = async ({
     await CheckContactOpenTickets(ticket.contact.id, ticket.whatsappId);
   }
 
+  const nextStatus = status || oldStatus;
+
   await ticket.update({
     status,
     queueId,
-    userId
+    userId,
+    pendingSince:
+      nextStatus === "pending" && oldStatus !== "pending"
+        ? new Date()
+        : ticket.pendingSince
   });
 
   if (nextWhatsappId) {
