@@ -43,22 +43,27 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     queueIds
   });
 
-  StartWhatsAppSession(whatsapp, { reason: "create" });
+  const formattedWhatsApp = await ShowWhatsAppService(whatsapp.id);
+  const formattedOldDefaultWhatsapp = oldDefaultWhatsapp
+    ? await ShowWhatsAppService(oldDefaultWhatsapp.id)
+    : null;
+
+  StartWhatsAppSession(formattedWhatsApp, { reason: "create" });
 
   const io = getIO();
   io.emit("whatsapp", {
     action: "update",
-    whatsapp
+    whatsapp: formattedWhatsApp
   });
 
-  if (oldDefaultWhatsapp) {
+  if (formattedOldDefaultWhatsapp) {
     io.emit("whatsapp", {
       action: "update",
-      whatsapp: oldDefaultWhatsapp
+      whatsapp: formattedOldDefaultWhatsapp
     });
   }
 
-  return res.status(200).json(whatsapp);
+  return res.status(200).json(formattedWhatsApp);
 };
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
@@ -81,20 +86,25 @@ export const update = async (
     whatsappId
   });
 
+  const formattedWhatsApp = await ShowWhatsAppService(whatsapp.id);
+  const formattedOldDefaultWhatsapp = oldDefaultWhatsapp
+    ? await ShowWhatsAppService(oldDefaultWhatsapp.id)
+    : null;
+
   const io = getIO();
   io.emit("whatsapp", {
     action: "update",
-    whatsapp
+    whatsapp: formattedWhatsApp
   });
 
-  if (oldDefaultWhatsapp) {
+  if (formattedOldDefaultWhatsapp) {
     io.emit("whatsapp", {
       action: "update",
-      whatsapp: oldDefaultWhatsapp
+      whatsapp: formattedOldDefaultWhatsapp
     });
   }
 
-  return res.status(200).json(whatsapp);
+  return res.status(200).json(formattedWhatsApp);
 };
 
 export const remove = async (

@@ -16,6 +16,7 @@ import {
 import Queue from "./Queue";
 import Ticket from "./Ticket";
 import WhatsappQueue from "./WhatsappQueue";
+import User from "./User";
 
 @Table
 class Whatsapp extends Model<Whatsapp> {
@@ -69,6 +70,9 @@ class Whatsapp extends Model<Whatsapp> {
 
   @HasMany(() => Ticket)
   tickets: Ticket[];
+
+  @HasMany(() => User)
+  users: User[];
 
   @BelongsToMany(() => Queue, () => WhatsappQueue)
   queues: Array<Queue & { WhatsappQueue: WhatsappQueue }>;

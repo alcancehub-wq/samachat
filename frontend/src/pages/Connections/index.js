@@ -215,7 +215,13 @@ const Connections = () => {
 	const canManageSession = hasPermission("connections.session.manage");
 	const canManageOwnSession = whatsApp => {
 		const ownWhatsAppId = Number(user?.whatsappId || user?.whatsapp?.id);
-		return !Number.isNaN(ownWhatsAppId) && ownWhatsAppId === Number(whatsApp.id);
+		const isOwnByAuthPayload =
+			!Number.isNaN(ownWhatsAppId) && ownWhatsAppId === Number(whatsApp.id);
+		const isOwnByLinkedUsers = Array.isArray(whatsApp.users)
+			? whatsApp.users.some(linkedUser => Number(linkedUser?.id) === Number(user?.id))
+			: false;
+
+		return isOwnByAuthPayload || isOwnByLinkedUsers;
 	};
 
 	const handleStartWhatsAppSession = async whatsAppId => {

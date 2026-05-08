@@ -19,6 +19,7 @@ const releases = [
       "Centralizada a resolucao de variaveis dinamicas imediatamente antes do envio real de mensagens, legendas e automacoes, com suporte inicial a {{nome}}, {{telefone}}, {{email}}, {{ticket_id}}, {{responsavel}}, {{fila}}, {{data_atual}} e {{hora_atual}}.",
       "Atualizados Dialogos, Atalhos e Agendamentos para exibir somente a lista real de variaveis suportadas, com insercao rapida no texto.",
       "Corrigido o acesso de sessao para usuarios vinculados a uma conexao propria, incluindo serializacao consistente do whatsapp vinculado na autenticacao e fallback pelo whatsappId no frontend.",
+      "Reforcada a tela de Conexoes para reconhecer a conexao propria tambem pela relacao de usuarios vinculados em cada conexao, restaurando as acoes de sessao mesmo quando o payload de autenticacao vier incompleto.",
       "Ajustada a selecao em lote da aba Aguardando para exibir Excluir selecionados tambem para perfis com permissao tickets.delete, alem da permissao especifica de exclusao pelo menu do ticket.",
       "Corrigido o carregamento de setores nos selects compartilhados para perfis operacionais com permissao sectors.view, evitando listas vazias ao vincular setores em usuarios e conexoes.",
       "Ampliadas as listas dinamicas com filtro por responsavel, preview de contatos encontrados e exclusao manual de contatos antes do disparo da campanha.",

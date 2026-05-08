@@ -1,10 +1,16 @@
 import Whatsapp from "../../models/Whatsapp";
 import AppError from "../../errors/AppError";
 import Queue from "../../models/Queue";
+import User from "../../models/User";
 
 const ShowWhatsAppService = async (id: string | number): Promise<Whatsapp> => {
   const whatsapp = await Whatsapp.findByPk(id, {
     include: [
+      {
+        model: User,
+        as: "users",
+        attributes: ["id", "name", "email"]
+      },
       {
         model: Queue,
         as: "queues",

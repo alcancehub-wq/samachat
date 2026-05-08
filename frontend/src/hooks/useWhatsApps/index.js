@@ -18,7 +18,13 @@ const reducer = (state, action) => {
 		const whatsAppIndex = state.findIndex(s => s.id === whatsApp.id);
 
 		if (whatsAppIndex !== -1) {
-			state[whatsAppIndex] = whatsApp;
+			state[whatsAppIndex] = {
+				...state[whatsAppIndex],
+				...whatsApp,
+				users: Array.isArray(whatsApp.users)
+					? whatsApp.users
+					: state[whatsAppIndex].users,
+			};
 			return [...state];
 		} else {
 			return [whatsApp, ...state];
