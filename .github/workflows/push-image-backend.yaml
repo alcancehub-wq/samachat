@@ -2,10 +2,13 @@ name: Create and publish a Backend Docker image
 
 on:
 
+  workflow_dispatch:
+
   push:
-    branches: [master]
+    branches: [master, legacy-prod]
     paths:
       - "backend/**"
+      - ".github/workflows/push-image-backend.yaml"
 
 env:
   REGISTRY: ghcr.io

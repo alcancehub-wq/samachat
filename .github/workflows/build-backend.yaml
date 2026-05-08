@@ -1,6 +1,8 @@
 name: Test build backend
 
 on:
+  workflow_dispatch:
+
   pull_request:
     paths:
       - "backend/**"
@@ -8,8 +10,10 @@ on:
   push:
     branches:
       - master
+      - legacy-prod
     paths:
       - "backend/**"
+      - ".github/workflows/build-backend.yaml"
 
 jobs:
   build:

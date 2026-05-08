@@ -2,10 +2,13 @@ name: Create and publish a Frontend Docker image
 
 on:
 
+ workflow_dispatch:
+
  push:
-   branches: [master]
+   branches: [master, legacy-prod]
    paths:
      - "frontend/**"
+     - ".github/workflows/push-image-frontend.yaml"
 
 env:
   REGISTRY: ghcr.io

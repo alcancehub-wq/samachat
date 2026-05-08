@@ -1,6 +1,8 @@
 name: Test build frontend
 
 on:
+  workflow_dispatch:
+
   pull_request:
     paths:
       - "frontend/**"
@@ -8,8 +10,10 @@ on:
   push:
     branches:
       - master
+      - legacy-prod
     paths:
       - "frontend/**"
+      - ".github/workflows/build-frontend.yaml"
 
 jobs:
   build:
