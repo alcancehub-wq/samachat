@@ -9,6 +9,7 @@ import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { userHasPermission } from "../../utils/permissions";
 
 const useStyles = makeStyles(theme => ({
 	chips: {
@@ -24,19 +25,32 @@ const QueueSelect = ({ selectedQueueIds, onChange }) => {
 	const classes = useStyles();
 	const [queues, setQueues] = useState([]);
 	const { user } = useContext(AuthContext);
+	const canViewAllQueues = userHasPermission(user, "sectors.view");
 
 	useEffect(() => {
 		(async () => {
 			const fallbackQueues = user?.queues || [];
+			const normalizeQueues = data => {
+				if (Array.isArray(data)) {
+					return data;
+				}
 
-			if (user?.profile?.toLowerCase() !== "admin") {
+				if (Array.isArray(data?.queues)) {
+					return data.queues;
+				}
+
+				return [];
+			};
+
+			if (!canViewAllQueues) {
 				setQueues(fallbackQueues);
 				return;
 			}
 
 			try {
 				const { data } = await api.get("/queue");
-				setQueues(data);
+				const nextQueues = normalizeQueues(data);
+				setQueues(nextQueues.length > 0 ? nextQueues : fallbackQueues);
 			} catch (err) {
 				if (fallbackQueues.length > 0) {
 					setQueues(fallbackQueues);
@@ -46,7 +60,7 @@ const QueueSelect = ({ selectedQueueIds, onChange }) => {
 				toastError(err);
 			}
 		})();
-	}, [user]);
+	}, [canViewAllQueues, user]);
 
 	const handleChange = e => {
 		onChange(e.target.value);

@@ -20,6 +20,7 @@ const releases = [
       "Atualizados Dialogos, Atalhos e Agendamentos para exibir somente a lista real de variaveis suportadas, com insercao rapida no texto.",
       "Corrigido o acesso de sessao para usuarios vinculados a uma conexao propria, incluindo serializacao consistente do whatsapp vinculado na autenticacao e fallback pelo whatsappId no frontend.",
       "Ajustada a selecao em lote da aba Aguardando para exibir Excluir selecionados tambem para perfis com permissao tickets.delete, alem da permissao especifica de exclusao pelo menu do ticket.",
+      "Corrigido o carregamento de setores nos selects compartilhados para perfis operacionais com permissao sectors.view, evitando listas vazias ao vincular setores em usuarios e conexoes.",
       "Ampliadas as listas dinamicas com filtro por responsavel, preview de contatos encontrados e exclusao manual de contatos antes do disparo da campanha.",
     ],
   },
