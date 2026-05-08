@@ -1310,6 +1310,11 @@ const messages = {
           assigneePlaceholder: "Unassigned",
           ticketId: "Ticket",
           contactId: "Contact",
+          ticketContext: "Ticket",
+          contactName: "Customer",
+          monthlyRecurring: "Repeat monthly",
+          recurringMonths: "Additional months",
+          recurringMonthsHelp: "Creates monthly copies from the initial date.",
         },
         buttons: {
           okAdd: "Add",
@@ -1317,6 +1322,7 @@ const messages = {
           cancel: "Cancel",
         },
         success: "Schedule saved successfully.",
+        successMultiple: "{{count}} schedules saved successfully.",
       },
       flows: {
         title: "Flowbuilder",
@@ -1589,6 +1595,7 @@ const messages = {
         transfer: "Transfer",
         followUp: "Follow up",
         markAsUnread: "Mark as unread",
+        scheduleMessage: "Schedule message",
         reopen: "Reopen",
         confirmationModal: {
           title: "Delete ticket #",

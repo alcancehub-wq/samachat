@@ -7,15 +7,26 @@ import Menu from "@material-ui/core/Menu";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import TransferTicketModal from "../TransferTicketModal";
+import ScheduleModal from "../ScheduleModal";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { userHasPermission } from "../../utils/permissions";
 
-const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
+const TicketOptionsMenu = ({
+	ticket,
+	contactId,
+	contactName,
+	menuOpen,
+	handleClose,
+	anchorEl
+}) => {
 	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
+	const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const isMounted = useRef(true);
 	const { user } = useContext(AuthContext);
 	const history = useHistory();
+	const canCreateSchedules = userHasPermission(user, "schedules.create");
 
 	useEffect(() => {
 		return () => {
@@ -99,6 +110,21 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 		}
 	};
 
+	const handleOpenScheduleModal = () => {
+		if (loading || !ticket?.id) {
+			return;
+		}
+
+		handleClose();
+		setScheduleModalOpen(true);
+	};
+
+	const handleCloseScheduleModal = () => {
+		if (isMounted.current) {
+			setScheduleModalOpen(false);
+		}
+	};
+
 	return (
 		<>
 			<Menu
@@ -130,6 +156,11 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 						{i18n.t("ticketOptionsMenu.markAsUnread")}
 					</MenuItem>
 				)}
+				{canCreateSchedules && ticket?.id && (
+					<MenuItem onClick={handleOpenScheduleModal} disabled={loading}>
+						{i18n.t("ticketOptionsMenu.scheduleMessage")}
+					</MenuItem>
+				)}
 				{ticket.status !== "pending" && (
 					<MenuItem onClick={handleReopen} disabled={loading}>
 						{i18n.t("ticketOptionsMenu.reopen")}
@@ -141,6 +172,19 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				onClose={handleCloseTransferTicketModal}
 				ticketid={ticket.id}
 				ticketWhatsappId={ticket.whatsappId}
+			/>
+			<ScheduleModal
+				open={scheduleModalOpen}
+				onClose={handleCloseScheduleModal}
+				initialValues={{
+					assigneeId: ticket?.userId || "",
+					ticketId: ticket?.id || "",
+					contactId: contactId || ticket?.contactId || ticket?.contact?.id || "",
+					contactName: contactName || ticket?.contact?.name || "",
+					ticketLabel: contactName || ticket?.contact?.name || ""
+				}}
+				lockContextIds
+				hideStatusField
 			/>
 		</>
 	);

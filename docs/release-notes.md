@@ -1,5 +1,18 @@
 # Release Notes
 
+## 2026-05-08
+
+### legacy-prod
+
+- Chats/Atendimento: o menu de acoes do ticket passa a exibir `Agendar mensagem` quando o usuario possui permissao `schedules.create`.
+- Agendamentos: o fluxo do ticket reutiliza o modal existente e preenche automaticamente `ticketId`, `contactId` e o responsavel atual do ticket, sem alterar a logica central de mensagens, tickets, WhatsApp, campanhas ou fluxos.
+- Chats/Atendimento: o cabecalho do ticket e o contexto do modal de agendamento deixam de exibir o identificador numerico do ticket e passam a mostrar apenas o nome do cliente.
+- Agendamentos: no atalho dentro do ticket, o status fica fixado em `pending` e os campos de contexto do ticket/contato ficam travados para evitar desvinculo acidental do agendamento.
+- Agendamentos: o modal do ticket ganhou a opcao `Repetir mensalmente`, que reaproveita a rota existente e cria agendamentos mensais individuais a partir da data inicial, sem introduzir nova arquitetura de recorrencia no backend.
+- Auditoria backend: a criacao existente ja aceitava `ticketId` e `contactId`, mas o worker de envio depende de `ticketId`; sem esse vinculo o agendamento falha com `ERR_SCHEDULE_NO_TICKET`.
+- Escopo desta promocao: `frontend/src/components/ScheduleModal/index.js`, `frontend/src/components/Ticket/index.js`, `frontend/src/components/TicketActionButtons/index.js`, `frontend/src/components/TicketInfo/index.js`, `frontend/src/components/TicketOptionsMenu/index.js`, `frontend/src/translate/languages/pt.js`, `frontend/src/translate/languages/en.js` e `frontend/src/translate/languages/es.js`.
+- Validacao local antes da promocao: diagnosticos do editor sem erros nos arquivos alterados e `pnpm --dir frontend build` aprovado; frontend legacy rebuildado em `docker compose -f docker-compose.yaml up -d --build frontend`; localhost validado no ticket `111` com a opcao `Agendar mensagem` visivel no menu de acoes, modal exibindo apenas `Augusto Solidade` no contexto do atendimento, checkbox `Repetir mensalmente` com campo `Meses adicionais`, e criacao de agendamento via ticket refletida na tela de Agendamentos com vinculo ao ticket `#111` e ao contato `Augusto Solidade`. O envio real permaneceu bloqueado por sessao WhatsApp desconectada (`wwebjs sendMessage failed` / `getChat`).
+
 ## 2026-05-07
 
 ### legacy-prod

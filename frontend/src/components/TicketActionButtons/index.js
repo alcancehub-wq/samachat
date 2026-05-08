@@ -45,7 +45,7 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const TicketActionButtons = ({ ticket }) => {
+const TicketActionButtons = ({ ticket, contactId, contactName }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const [anchorEl, setAnchorEl] = useState(null);
@@ -99,6 +99,8 @@ const TicketActionButtons = ({ ticket }) => {
 			</IconButton>
 			<TicketOptionsMenu
 				ticket={ticket}
+				contactId={contactId}
+				contactName={contactName}
 				anchorEl={anchorEl}
 				menuOpen={ticketOptionsMenuOpen}
 				handleClose={handleCloseTicketOptionsMenu}

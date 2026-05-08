@@ -1305,6 +1305,11 @@ const messages = {
           assigneePlaceholder: "Sin responsable",
           ticketId: "Ticket",
           contactId: "Contacto",
+          ticketContext: "Atención",
+          contactName: "Cliente",
+          monthlyRecurring: "Repetir mensualmente",
+          recurringMonths: "Meses adicionales",
+          recurringMonthsHelp: "Crea copias mensuales a partir de la fecha inicial.",
         },
         buttons: {
           okAdd: "Agregar",
@@ -1312,6 +1317,7 @@ const messages = {
           cancel: "Cancelar",
         },
         success: "Agendamiento guardado correctamente.",
+        successMultiple: "{{count}} agendamientos guardados correctamente.",
       },
       flows: {
         title: "Flowbuilder",
@@ -1584,6 +1590,7 @@ const messages = {
         transfer: "Transferir",
         followUp: "Follow up",
         markAsUnread: "Marcar como no leído",
+        scheduleMessage: "Agendar mensaje",
         reopen: "Reabrir",
         confirmationModal: {
           title: "¿Borrar ticket #",

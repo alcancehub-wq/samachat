@@ -168,7 +168,11 @@ const Ticket = () => {
               />
             </div>
             <div className={classes.ticketActionButtons}>
-              <TicketActionButtons ticket={ticket} />
+              <TicketActionButtons
+                ticket={ticket}
+                contactId={contact.id}
+                contactName={contact.name}
+              />
             </div>
           </TicketHeader>
         </div>
