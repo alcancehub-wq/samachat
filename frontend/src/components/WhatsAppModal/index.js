@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import * as Yup from "yup";
 import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
@@ -16,12 +16,19 @@ import {
 	TextField,
 	Switch,
 	FormControlLabel,
+	FormControl,
+	InputLabel,
+	Select,
+	MenuItem,
+	FormHelperText,
 } from "@material-ui/core";
 
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import QueueSelect from "../QueueSelect";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import { userHasPermission } from "../../utils/permissions";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -48,6 +55,17 @@ const useStyles = makeStyles(theme => ({
 		marginTop: -12,
 		marginLeft: -12,
 	},
+
+	signatureSection: {
+		marginTop: theme.spacing(2),
+		display: "flex",
+		flexDirection: "column",
+		gap: theme.spacing(1),
+	},
+
+	signatureHelper: {
+		marginTop: 0,
+	},
 }));
 
 const SessionSchema = Yup.object().shape({
@@ -57,24 +75,39 @@ const SessionSchema = Yup.object().shape({
 		.required("Required"),
 });
 
+const INITIAL_STATE = {
+	name: "",
+	greetingMessage: "",
+	farewellMessage: "",
+	isDefault: false,
+	linkedUserId: "",
+	linkedUserSignMessages: true,
+};
+
 const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 	const classes = useStyles();
-	const initialState = {
-		name: "",
-		greetingMessage: "",
-		farewellMessage: "",
-		isDefault: false,
-	};
-	const [whatsApp, setWhatsApp] = useState(initialState);
+	const [whatsApp, setWhatsApp] = useState(INITIAL_STATE);
 	const [selectedQueueIds, setSelectedQueueIds] = useState([]);
+	const [availableUsers, setAvailableUsers] = useState([]);
+	const [loadingUsers, setLoadingUsers] = useState(false);
+	const { user } = useContext(AuthContext);
+	const canManageLinkedUserSignature = userHasPermission(user, "users.view");
 
 	useEffect(() => {
 		const fetchSession = async () => {
-			if (!whatsAppId) return;
+			if (!open || !whatsAppId) return;
 
 			try {
 				const { data } = await api.get(`whatsapp/${whatsAppId}`);
-				setWhatsApp(data);
+				const linkedUser =
+					Array.isArray(data.users) && data.users.length === 1 ? data.users[0] : null;
+
+				setWhatsApp({
+					...INITIAL_STATE,
+					...data,
+					linkedUserId: linkedUser?.id || "",
+					linkedUserSignMessages: linkedUser?.signMessages !== false,
+				});
 
 				const whatsQueueIds = data.queues?.map(queue => queue.id);
 				setSelectedQueueIds(whatsQueueIds);
@@ -82,11 +115,73 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 				toastError(err);
 			}
 		};
+
+		if (open && !whatsAppId) {
+			setWhatsApp(INITIAL_STATE);
+			setSelectedQueueIds([]);
+		}
+
 		fetchSession();
-	}, [whatsAppId]);
+	}, [open, whatsAppId]);
+
+	useEffect(() => {
+		let isMounted = true;
+
+		const loadUsers = async () => {
+			if (!open || !canManageLinkedUserSignature) {
+				setAvailableUsers([]);
+				return;
+			}
+
+			setLoadingUsers(true);
+
+			try {
+				let pageNumber = 1;
+				let hasMore = true;
+				const nextUsers = [];
+
+				while (hasMore) {
+					const { data } = await api.get("/users", {
+						params: { searchParam: "", pageNumber },
+					});
+
+					nextUsers.push(...(Array.isArray(data.users) ? data.users : []));
+					hasMore = Boolean(data.hasMore);
+					pageNumber += 1;
+				}
+
+				if (isMounted) {
+					const uniqueUsers = nextUsers.filter(
+						(candidate, index, array) =>
+							array.findIndex(userItem => userItem.id === candidate.id) === index
+					);
+					setAvailableUsers(uniqueUsers);
+				}
+			} catch (err) {
+				if (isMounted) {
+					toastError(err);
+				}
+			} finally {
+				if (isMounted) {
+					setLoadingUsers(false);
+				}
+			}
+		};
+
+		loadUsers();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [canManageLinkedUserSignature, open]);
 
 	const handleSaveWhatsApp = async values => {
-		const whatsappData = { ...values, queueIds: selectedQueueIds };
+		const whatsappData = {
+			...values,
+			queueIds: selectedQueueIds,
+			linkedUserId: values.linkedUserId ? Number(values.linkedUserId) : null,
+			linkedUserSignMessages: values.linkedUserSignMessages !== false,
+		};
 
 		try {
 			if (whatsAppId) {
@@ -103,7 +198,8 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 
 	const handleClose = () => {
 		onClose();
-		setWhatsApp(initialState);
+		setWhatsApp(INITIAL_STATE);
+		setSelectedQueueIds([]);
 	};
 
 	return (
@@ -200,6 +296,53 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 									selectedQueueIds={selectedQueueIds}
 									onChange={selectedIds => setSelectedQueueIds(selectedIds)}
 								/>
+								{canManageLinkedUserSignature && (
+									<div className={classes.signatureSection}>
+										<FormControl
+											variant="outlined"
+											margin="dense"
+											fullWidth
+										>
+											<InputLabel>
+												{i18n.t("whatsappModal.form.linkedUser")}
+											</InputLabel>
+											<Field
+												as={Select}
+												name="linkedUserId"
+												value={values.linkedUserId}
+												label={i18n.t("whatsappModal.form.linkedUser")}
+											>
+												<MenuItem value="">&nbsp;</MenuItem>
+												{availableUsers.map(availableUser => (
+													<MenuItem key={availableUser.id} value={availableUser.id}>
+														{availableUser.name}
+													</MenuItem>
+												))}
+											</Field>
+											<FormHelperText>
+												{loadingUsers
+													? i18n.t("whatsappModal.form.loadingLinkedUsers")
+													: i18n.t("whatsappModal.form.linkedUserHelper")}
+											</FormHelperText>
+										</FormControl>
+										<FormControlLabel
+											label={i18n.t("whatsappModal.form.linkedUserSignMessages")}
+											labelPlacement="start"
+											control={
+												<Field
+													as={Switch}
+													color="primary"
+													name="linkedUserSignMessages"
+													checked={values.linkedUserSignMessages !== false}
+													disabled={!values.linkedUserId}
+												/>
+											}
+										/>
+										<FormHelperText className={classes.signatureHelper}>
+											{i18n.t("whatsappModal.form.linkedUserSignMessagesHelper")}
+										</FormHelperText>
+									</div>
+								)}
 							</DialogContent>
 							<DialogActions>
 								<Button

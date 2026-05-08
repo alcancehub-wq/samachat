@@ -228,6 +228,13 @@ const messages = {
         form: {
           name: "Name",
           default: "Default",
+          linkedUser: "Linked user",
+          linkedUserHelper:
+            "Select the primary user for this connection to keep signature and own-session access in the same flow.",
+          loadingLinkedUsers: "Loading users...",
+          linkedUserSignMessages: "Sign messages by default",
+          linkedUserSignMessagesHelper:
+            "When enabled, messages sent by the linked user automatically include the name signature.",
         },
         buttons: {
           okAdd: "Add",

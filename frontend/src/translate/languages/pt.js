@@ -228,7 +228,14 @@ const messages = {
         form: {
           name: "Nome",
           default: "Padrão",
-          farewellMessage: "Mensagem de despedida"
+          farewellMessage: "Mensagem de despedida",
+          linkedUser: "Usuário vinculado",
+          linkedUserHelper:
+            "Selecione o usuário principal desta conexão para manter assinatura e acesso da própria sessão no mesmo fluxo.",
+          loadingLinkedUsers: "Carregando usuários...",
+          linkedUserSignMessages: "Assinar mensagens por padrão",
+          linkedUserSignMessagesHelper:
+            "Quando ativo, as mensagens enviadas pelo usuário vinculado incluem a assinatura com o nome automaticamente."
         },
         buttons: {
           okAdd: "Adicionar",

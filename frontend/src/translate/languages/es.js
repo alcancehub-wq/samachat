@@ -229,6 +229,13 @@ const messages = {
         form: {
           name: "Nombre",
           default: "Por Defecto",
+          linkedUser: "Usuario vinculado",
+          linkedUserHelper:
+            "Selecciona el usuario principal de esta conexión para mantener la firma y el acceso a la propia sesión en el mismo flujo.",
+          loadingLinkedUsers: "Cargando usuarios...",
+          linkedUserSignMessages: "Firmar mensajes por defecto",
+          linkedUserSignMessagesHelper:
+            "Cuando está activo, los mensajes enviados por el usuario vinculado incluyen automáticamente la firma con el nombre.",
         },
         buttons: {
           okAdd: "Agregar",

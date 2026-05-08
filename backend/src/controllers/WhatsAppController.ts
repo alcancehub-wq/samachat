@@ -16,6 +16,8 @@ interface WhatsappData {
   farewellMessage?: string;
   status?: string;
   isDefault?: boolean;
+  linkedUserId?: number | null;
+  linkedUserSignMessages?: boolean;
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -31,7 +33,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     isDefault,
     greetingMessage,
     farewellMessage,
-    queueIds
+    queueIds,
+    linkedUserId,
+    linkedUserSignMessages
   }: WhatsappData = req.body;
 
   const { whatsapp, oldDefaultWhatsapp } = await CreateWhatsAppService({
@@ -40,7 +44,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     isDefault,
     greetingMessage,
     farewellMessage,
-    queueIds
+    queueIds,
+    linkedUserId,
+    linkedUserSignMessages
   });
 
   const formattedWhatsApp = await ShowWhatsAppService(whatsapp.id);

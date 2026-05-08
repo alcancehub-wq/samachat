@@ -5,6 +5,7 @@ import AppError from "../../errors/AppError";
 import Whatsapp from "../../models/Whatsapp";
 import ShowWhatsAppService from "./ShowWhatsAppService";
 import AssociateWhatsappQueue from "./AssociateWhatsappQueue";
+import SyncWhatsAppLinkedUserService from "./SyncWhatsAppLinkedUserService";
 
 interface WhatsappData {
   name?: string;
@@ -14,6 +15,8 @@ interface WhatsappData {
   greetingMessage?: string;
   farewellMessage?: string;
   queueIds?: number[];
+  linkedUserId?: number | null;
+  linkedUserSignMessages?: boolean;
 }
 
 interface Request {
@@ -43,7 +46,9 @@ const UpdateWhatsAppService = async ({
     session,
     greetingMessage,
     farewellMessage,
-    queueIds = []
+    queueIds = [],
+    linkedUserId,
+    linkedUserSignMessages
   } = whatsappData;
 
   try {
@@ -79,6 +84,11 @@ const UpdateWhatsAppService = async ({
   });
 
   await AssociateWhatsappQueue(whatsapp, queueIds);
+  await SyncWhatsAppLinkedUserService({
+    whatsappId: whatsapp.id,
+    linkedUserId,
+    linkedUserSignMessages
+  });
 
   return { whatsapp, oldDefaultWhatsapp };
 };

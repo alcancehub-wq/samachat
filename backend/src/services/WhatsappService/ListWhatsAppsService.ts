@@ -8,7 +8,7 @@ const ListWhatsAppsService = async (): Promise<Whatsapp[]> => {
       {
         model: User,
         as: "users",
-        attributes: ["id", "name", "email"]
+        attributes: ["id", "name", "email", "signMessages"]
       },
       {
         model: Queue,
