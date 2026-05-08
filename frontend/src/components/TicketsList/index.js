@@ -243,6 +243,12 @@ const reducer = (state, action) => {
 	const [bulkAccepting, setBulkAccepting] = useState(false);
 	const [bulkDeleting, setBulkDeleting] = useState(false);
 	const isPendingList = status === "pending";
+	const permissions = user?.permissions || [];
+	const isAdmin = user?.profile?.toLowerCase() === "admin";
+	const canBulkDelete =
+		isAdmin ||
+		permissions.includes("ticket-options:deleteTicket") ||
+		permissions.includes("tickets.delete");
 
 	useEffect(() => {
 		dispatch({ type: "RESET" });
@@ -509,10 +515,7 @@ const reducer = (state, action) => {
 						>
 							{i18n.t("ticketsList.buttons.acceptSelected")}
 						</Button>
-						<Can
-							role={user.profile}
-							perform="ticket-options:deleteTicket"
-							yes={() => (
+						{canBulkDelete && (
 								<Button
 									variant="outlined"
 									className={classes.bulkDeleteButton}
@@ -521,8 +524,7 @@ const reducer = (state, action) => {
 								>
 									{i18n.t("ticketsList.buttons.deleteSelected")}
 								</Button>
-							)}
-						/>
+						)}
 						</div>
 					)}
 				</div>

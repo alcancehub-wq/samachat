@@ -214,7 +214,7 @@ const Connections = () => {
 	const canDeleteConnection = hasPermission("connections.delete");
 	const canManageSession = hasPermission("connections.session.manage");
 	const canManageOwnSession = whatsApp => {
-		const ownWhatsAppId = Number(user?.whatsapp?.id);
+		const ownWhatsAppId = Number(user?.whatsappId || user?.whatsapp?.id);
 		return !Number.isNaN(ownWhatsAppId) && ownWhatsAppId === Number(whatsApp.id);
 	};
 

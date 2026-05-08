@@ -11,6 +11,19 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.05.08 / Mensagens, conexoes e listas",
+    label: "Promocao do dia",
+    summary:
+      "Entrega focada em consolidar variaveis dinamicas no envio real, corrigir o acesso a sessao da conexao propria e melhorar a operacao de listas e chats no legado em producao.",
+    changes: [
+      "Centralizada a resolucao de variaveis dinamicas imediatamente antes do envio real de mensagens, legendas e automacoes, com suporte inicial a {{nome}}, {{telefone}}, {{email}}, {{ticket_id}}, {{responsavel}}, {{fila}}, {{data_atual}} e {{hora_atual}}.",
+      "Atualizados Dialogos, Atalhos e Agendamentos para exibir somente a lista real de variaveis suportadas, com insercao rapida no texto.",
+      "Corrigido o acesso de sessao para usuarios vinculados a uma conexao propria, incluindo serializacao consistente do whatsapp vinculado na autenticacao e fallback pelo whatsappId no frontend.",
+      "Ajustada a selecao em lote da aba Aguardando para exibir Excluir selecionados tambem para perfis com permissao tickets.delete, alem da permissao especifica de exclusao pelo menu do ticket.",
+      "Ampliadas as listas dinamicas com filtro por responsavel, preview de contatos encontrados e exclusao manual de contatos antes do disparo da campanha.",
+    ],
+  },
+  {
     version: "2026.05.06 / Chats, cadastro e operacao local",
     label: "Aprimoramentos do dia",
     summary:

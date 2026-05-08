@@ -14,6 +14,7 @@ interface SerializedUser {
   profile: string;
   signMessages: boolean;
   queues: Queue[];
+  whatsappId?: number | null;
   whatsapp: Whatsapp;
   permissions: string[];
 }
@@ -64,6 +65,7 @@ export const SerializeUser = (user: User): SerializedUser => {
     profile: user.profile,
     signMessages: user.signMessages !== false,
     queues: user.queues,
+    whatsappId: user.whatsappId,
     whatsapp: user.whatsapp,
     permissions: Array.from(permissionSet)
   };
