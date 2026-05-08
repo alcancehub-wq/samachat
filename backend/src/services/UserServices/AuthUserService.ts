@@ -7,6 +7,7 @@ import {
 import { SerializeUser } from "../../helpers/SerializeUser";
 import Queue from "../../models/Queue";
 import QueuePermission from "../../models/QueuePermission";
+import Whatsapp from "../../models/Whatsapp";
 import { logger } from "../../utils/logger";
 
 interface SerializedUser {
@@ -44,6 +45,11 @@ const AuthUserService = async ({
           model: Queue,
           as: "queues",
           include: [QueuePermission]
+        },
+        {
+          model: Whatsapp,
+          as: "whatsapp",
+          attributes: ["id", "name"]
         }
       ]
     });

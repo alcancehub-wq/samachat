@@ -31,7 +31,7 @@ const DialogSelect = ({ selectedDialogId, onChange, label }) => {
 
   return (
     <FormControl fullWidth margin="dense" variant="outlined">
-      <InputLabel>{label || i18n.t("campaignModal.form.dialog")}</InputLabel>
+      <InputLabel shrink>{label || i18n.t("campaignModal.form.dialog")}</InputLabel>
       <Select
         value={selectedDialogId || ""}
         onChange={handleChange}

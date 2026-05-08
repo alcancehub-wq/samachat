@@ -6,12 +6,18 @@ import { toast } from "react-toastify";
 
 import {
   Button,
+  Checkbox,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControl,
+  FormControlLabel,
   InputLabel,
+  List,
+  ListItem,
+  ListItemText,
   MenuItem,
   Select,
   TextField,
@@ -38,6 +44,8 @@ const ContactListModal = ({ open, onClose, listId }) => {
     isDynamic: false,
     isActive: true,
     filters: {
+      userId: "",
+      excludedContactIds: [],
       tagIds: [],
       fields: []
     },
@@ -45,12 +53,49 @@ const ContactListModal = ({ open, onClose, listId }) => {
   };
 
   const [list, setList] = useState(initialState);
+  const [users, setUsers] = useState([]);
+  const [previewContacts, setPreviewContacts] = useState([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     return () => {
       isMounted.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        let pageNumber = 1;
+        let hasMore = true;
+        const allUsers = [];
+
+        while (hasMore) {
+          const { data } = await api.get("/users", {
+            params: { searchParam: "", pageNumber }
+          });
+
+          allUsers.push(...(data.users || []));
+          hasMore = Boolean(data.hasMore);
+          pageNumber += 1;
+
+          if (!data.hasMore) {
+            break;
+          }
+        }
+
+        if (isMounted.current) {
+          setUsers(allUsers);
+        }
+      } catch (err) {
+        toastError(err);
+      }
+    };
+
+    if (open) {
+      loadUsers();
+    }
+  }, [open]);
 
   useEffect(() => {
     const fetchList = async () => {
@@ -67,7 +112,15 @@ const ContactListModal = ({ open, onClose, listId }) => {
             description: data.description || "",
             isDynamic: !!data.isDynamic,
             isActive: data.isActive !== false,
-            filters: data.filters || { tagIds: [], fields: [] },
+            filters: {
+              userId:
+                data.filters?.userId === null || data.filters?.userId === undefined
+                  ? ""
+                  : data.filters.userId,
+              excludedContactIds: data.filters?.excludedContactIds || [],
+              tagIds: data.filters?.tagIds || [],
+              fields: data.filters?.fields || []
+            },
             contactIds: data.contacts ? data.contacts.map(contact => contact.id) : []
           });
         }
@@ -90,7 +143,13 @@ const ContactListModal = ({ open, onClose, listId }) => {
       description: values.description,
       isDynamic: values.isDynamic,
       isActive: values.isActive,
-      filters: values.isDynamic ? values.filters : undefined,
+      filters: values.isDynamic
+        ? {
+            ...values.filters,
+            excludedContactIds: (values.filters.excludedContactIds || []).map(Number),
+            userId: values.filters.userId ? Number(values.filters.userId) : null
+          }
+        : undefined,
       contactIds: values.isDynamic ? [] : values.contactIds
     };
 
@@ -154,7 +213,7 @@ const ContactListModal = ({ open, onClose, listId }) => {
                 rows={3}
               />
               <FormControl fullWidth margin="dense" variant="outlined">
-                <InputLabel>{i18n.t("contactListModal.form.type")}</InputLabel>
+                <InputLabel shrink>{i18n.t("contactListModal.form.type")}</InputLabel>
                 <Select
                   value={values.isDynamic ? "dynamic" : "manual"}
                   onChange={event =>
@@ -173,6 +232,25 @@ const ContactListModal = ({ open, onClose, listId }) => {
 
               {values.isDynamic ? (
                 <>
+                  <FormControl fullWidth margin="dense" variant="outlined">
+                    <InputLabel shrink>{i18n.t("contactListModal.form.assignee")}</InputLabel>
+                    <Select
+                      value={values.filters.userId || ""}
+                      onChange={event =>
+                        setFieldValue("filters.userId", event.target.value)
+                      }
+                      label={i18n.t("contactListModal.form.assignee")}
+                    >
+                      <MenuItem value="">
+                        {i18n.t("contactListModal.form.assigneeAll")}
+                      </MenuItem>
+                      {users.map(user => (
+                        <MenuItem key={user.id} value={user.id}>
+                          {user.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                   <Typography variant="subtitle1" gutterBottom>
                     {i18n.t("contactListModal.form.tags")}
                   </Typography>
@@ -206,7 +284,7 @@ const ContactListModal = ({ open, onClose, listId }) => {
                                 margin="dense"
                                 style={{ minWidth: 140 }}
                               >
-                                <InputLabel>
+                                <InputLabel shrink>
                                   {i18n.t("contactListModal.form.fieldOperator")}
                                 </InputLabel>
                                 <Select
@@ -263,6 +341,22 @@ const ContactListModal = ({ open, onClose, listId }) => {
                       </>
                     )}
                   </FieldArray>
+                  <DynamicContactsPreview
+                    open={open}
+                    filters={values.filters}
+                    previewContacts={previewContacts}
+                    previewLoading={previewLoading}
+                    onPreviewChange={setPreviewContacts}
+                    onLoadingChange={setPreviewLoading}
+                    onToggleExcludedContact={contactId => {
+                      const excludedContactIds = values.filters.excludedContactIds || [];
+                      const nextExcludedIds = excludedContactIds.includes(contactId)
+                        ? excludedContactIds.filter(id => id !== contactId)
+                        : [...excludedContactIds, contactId];
+
+                      setFieldValue("filters.excludedContactIds", nextExcludedIds);
+                    }}
+                  />
                 </>
               ) : (
                 <>
@@ -290,6 +384,115 @@ const ContactListModal = ({ open, onClose, listId }) => {
         )}
       </Formik>
     </Dialog>
+  );
+};
+
+const DynamicContactsPreview = ({
+  open,
+  filters,
+  previewContacts,
+  previewLoading,
+  onPreviewChange,
+  onLoadingChange,
+  onToggleExcludedContact
+}) => {
+  useEffect(() => {
+    const loadPreviewContacts = async () => {
+      if (!open) {
+        return;
+      }
+
+      onLoadingChange(true);
+
+      try {
+        const { data } = await api.post("/contactLists/preview/contacts", {
+          filters: {
+            ...filters,
+            userId: filters.userId ? Number(filters.userId) : null,
+            excludedContactIds: filters.excludedContactIds || [],
+            tagIds: filters.tagIds || [],
+            fields: filters.fields || []
+          }
+        });
+
+        onPreviewChange(data.contacts || []);
+      } catch (err) {
+        toastError(err);
+      } finally {
+        onLoadingChange(false);
+      }
+    };
+
+    loadPreviewContacts();
+  }, [
+    open,
+    filters.userId,
+    JSON.stringify(filters.tagIds || []),
+    JSON.stringify(filters.fields || []),
+    JSON.stringify(filters.excludedContactIds || []),
+    onLoadingChange,
+    onPreviewChange
+  ]);
+
+  return (
+    <>
+      <Typography variant="subtitle1" gutterBottom style={{ marginTop: 16 }}>
+        {i18n.t("contactListModal.form.previewContacts")}
+      </Typography>
+      <Typography color="textSecondary" style={{ marginBottom: 8 }}>
+        {i18n.t("contactListModal.form.previewContactsHint", {
+          count: previewContacts.length
+        })}
+      </Typography>
+      {previewLoading ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <CircularProgress size={18} />
+          <Typography color="textSecondary">
+            {i18n.t("contactListModal.form.previewLoading")}
+          </Typography>
+        </div>
+      ) : previewContacts.length > 0 ? (
+        <List
+          dense
+          style={{
+            maxHeight: 220,
+            overflowY: "auto",
+            border: "1px solid rgba(0, 0, 0, 0.12)",
+            borderRadius: 8,
+            marginBottom: 8
+          }}
+        >
+          {previewContacts.map(contact => {
+            const excludedContactIds = filters.excludedContactIds || [];
+            const isIncluded = !excludedContactIds.includes(contact.id);
+
+            return (
+              <ListItem key={contact.id} divider dense>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      color="primary"
+                      checked={isIncluded}
+                      onChange={() => onToggleExcludedContact(contact.id)}
+                    />
+                  }
+                  label={
+                    <ListItemText
+                      primary={contact.name || contact.number}
+                      secondary={contact.number || ""}
+                    />
+                  }
+                />
+              </ListItem>
+            );
+          })}
+        </List>
+      ) : (
+        <Typography color="textSecondary" style={{ marginBottom: 8 }}>
+          {i18n.t("contactListModal.form.previewEmpty")}
+        </Typography>
+      )}
+    </>
   );
 };
 

@@ -14,10 +14,17 @@ import {
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { AVAILABLE_MESSAGE_VARIABLES } from "../../utils/messageVariables";
 
 const escapeRegExp = value => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
+
+const dialogVariables = AVAILABLE_MESSAGE_VARIABLES.map(variable => ({
+  key: variable.key,
+  label: variable.token,
+  example: ""
+}));
 
 const DialogPreviewModal = ({ open, onClose, dialogId }) => {
   const [dialog, setDialog] = useState(null);
@@ -35,7 +42,7 @@ const DialogPreviewModal = ({ open, onClose, dialogId }) => {
         const { data } = await api.get(`/dialogs/${dialogId}`);
         setDialog(data);
         const initialValues = {};
-        (data.variables || []).forEach(variable => {
+        dialogVariables.forEach(variable => {
           if (variable.key) {
             initialValues[variable.key] = variable.example || "";
           }
@@ -55,7 +62,7 @@ const DialogPreviewModal = ({ open, onClose, dialogId }) => {
     }
 
     let content = dialog.content || "";
-    const variables = dialog.variables || [];
+  const variables = dialogVariables;
 
     variables.forEach(variable => {
       if (!variable.key) {
@@ -84,8 +91,8 @@ const DialogPreviewModal = ({ open, onClose, dialogId }) => {
         <Typography variant="subtitle1" gutterBottom>
           {i18n.t("dialogPreview.variables")}
         </Typography>
-        {dialog && dialog.variables && dialog.variables.length > 0 ? (
-          dialog.variables.map(variable => (
+        {dialog ? (
+          dialogVariables.map(variable => (
             <TextField
               key={variable.key}
               label={variable.label || variable.key}

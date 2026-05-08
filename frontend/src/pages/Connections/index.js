@@ -213,6 +213,10 @@ const Connections = () => {
 	const canEditConnection = hasPermission("connections.update");
 	const canDeleteConnection = hasPermission("connections.delete");
 	const canManageSession = hasPermission("connections.session.manage");
+	const canManageOwnSession = whatsApp => {
+		const ownWhatsAppId = Number(user?.whatsapp?.id);
+		return !Number.isNaN(ownWhatsAppId) && ownWhatsAppId === Number(whatsApp.id);
+	};
 
 	const handleStartWhatsAppSession = async whatsAppId => {
 		try {
@@ -320,7 +324,7 @@ const Connections = () => {
 		const isRestarting = Boolean(restartingIds[whatsApp.id]);
 		const hasQrCode = Boolean(whatsApp.qrcode);
 
-		if (!canManageSession) {
+		if (!canManageSession && !canManageOwnSession(whatsApp)) {
 			return null;
 		}
 

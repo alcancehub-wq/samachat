@@ -23,10 +23,16 @@ interface ContactListData {
   isDynamic?: boolean;
   isActive?: boolean;
   filters?: {
+    userId?: number | null;
+    excludedContactIds?: number[];
     tagIds?: number[];
     fields?: { name: string; operator: "equals" | "contains"; value: string }[];
   };
   contactIds?: number[];
+}
+
+interface PreviewContactsBody {
+  filters?: ContactListData["filters"];
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -118,4 +124,30 @@ export const contacts = async (
   });
 
   return res.status(200).json({ contacts, count, hasMore });
+};
+
+export const previewContacts = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { filters } = req.body as PreviewContactsBody;
+
+  const rawFilters = parseContactListFilters(
+    filters ? JSON.stringify(filters) : null
+  );
+  const parsedFilters = {
+    ...rawFilters,
+    excludedContactIds: []
+  };
+
+  const { contacts, count } = await ListContactListContactsService({
+    listId: 0,
+    pageNumber: "1",
+    searchParam: "",
+    overrideDynamicFilters: parsedFilters,
+    forceDynamic: true,
+    includeAll: true
+  });
+
+  return res.status(200).json({ contacts, count });
 };

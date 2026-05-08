@@ -13,6 +13,13 @@ contactListRoutes.get(
   ContactListController.index
 );
 
+contactListRoutes.post(
+  "/contactLists/preview/contacts",
+  isAuth,
+  checkSectorPermission("contactLists.contacts.view"),
+  ContactListController.previewContacts
+);
+
 contactListRoutes.get(
   "/contactLists/:listId",
   isAuth,

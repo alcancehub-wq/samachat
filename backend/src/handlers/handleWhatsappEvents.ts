@@ -8,6 +8,7 @@ import { getIO } from "../libs/socket";
 import { logger } from "../utils/logger";
 import { debounce } from "../helpers/Debounce";
 import formatBody from "../helpers/Mustache";
+import ResolveMessageVariablesService from "../services/Variables/ResolveMessageVariablesService";
 
 import Contact from "../models/Contact";
 import Ticket from "../models/Ticket";
@@ -223,10 +224,27 @@ const handleQueueLogic = async (
       ticketId: ticket.id
     });
 
-    const body = formatBody(
-      `\u200e${choosenQueue.greetingMessage}`,
-      contactPayload as any
-    );
+    const body = ResolveMessageVariablesService({
+      template: `\u200e${choosenQueue.greetingMessage}`,
+      ticket: {
+        id: ticket.id,
+        contact: {
+          name: contactPayload.name,
+          number: contactPayload.number,
+          email: ""
+        },
+        user: ticket.user,
+        queue: {
+          id: choosenQueue.id,
+          name: choosenQueue.name
+        }
+      },
+      contact: {
+        name: contactPayload.name,
+        number: contactPayload.number,
+        email: ""
+      }
+    }).text;
 
     try {
       await whatsappProvider.sendMessage(
@@ -243,10 +261,24 @@ const handleQueueLogic = async (
       options += `*${index + 1}* - ${queue.name}\n`;
     });
 
-    const body = formatBody(
-      `\u200e${greetingMessage}\n${options}`,
-      contactPayload as any
-    );
+    const body = ResolveMessageVariablesService({
+      template: `\u200e${greetingMessage}\n${options}`,
+      ticket: {
+        id: ticket.id,
+        contact: {
+          name: contactPayload.name,
+          number: contactPayload.number,
+          email: ""
+        },
+        user: ticket.user,
+        queue: ticket.queue
+      },
+      contact: {
+        name: contactPayload.name,
+        number: contactPayload.number,
+        email: ""
+      }
+    }).text;
 
     const debouncedSentMessage = debounce(
       async () => {

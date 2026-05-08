@@ -9,6 +9,7 @@ import Whatsapp from "../../models/Whatsapp";
 import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
 
 import formatBody from "../../helpers/Mustache";
+import ResolveMessageVariablesService from "../Variables/ResolveMessageVariablesService";
 import { StartWhatsAppSession } from "./StartWhatsAppSession";
 import { sleep } from "../../utils/sleep";
 import { logger } from "../../utils/logger";
@@ -234,8 +235,17 @@ const SendWhatsAppMedia = async ({
       : storedLid ||
         (chatIdentifier.includes("@") ? chatIdentifier : `${chatIdentifier}@c.us`);
 
-    const hasBody = body
-      ? formatBody(body as string, ticket.contact)
+    const resolvedBody = body
+      ? ResolveMessageVariablesService({
+          template: body as string,
+          ticket,
+          contact: ticket.contact,
+          user: ticket.user
+        }).text
+      : undefined;
+
+    const hasBody = resolvedBody
+      ? formatBody(resolvedBody, ticket.contact)
       : undefined;
 
     let mediaInput = {
@@ -311,7 +321,7 @@ const SendWhatsAppMedia = async ({
           try {
             chatId = normalizedChatId;
             sentMessage = await sendWithChatId(chatId);
-            await ticket.update({ lastMessage: body || media.filename });
+            await ticket.update({ lastMessage: resolvedBody || media.filename });
             if (normalizedNumber && normalizedNumber !== storedNumber) {
               await ticket.contact.update({ number: normalizedNumber });
             }
@@ -340,7 +350,7 @@ const SendWhatsAppMedia = async ({
       }
     }
 
-    await ticket.update({ lastMessage: body || media.filename });
+    await ticket.update({ lastMessage: resolvedBody || media.filename });
     if (normalizedNumber && normalizedNumber !== storedNumber) {
       await ticket.contact.update({ number: normalizedNumber });
     }

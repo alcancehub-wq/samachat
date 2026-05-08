@@ -666,6 +666,8 @@ const messages = {
           type: "Type",
           manual: "Manual",
           dynamic: "Dynamic",
+          assignee: "Assignee",
+          assigneeAll: "All assignees",
           tags: "Tags",
           tagsPlaceholder: "Select tags",
           fields: "Custom fields",
@@ -677,6 +679,10 @@ const messages = {
           addField: "Add field filter",
           removeField: "Remove",
           noFields: "No custom field filters yet.",
+          previewContacts: "Matched clients",
+          previewContactsHint: "{{count}} client(s) match the current filters. Uncheck anyone who should stay out.",
+          previewLoading: "Loading clients...",
+          previewEmpty: "No clients found for the current filters.",
           contacts: "Contacts",
         },
         buttons: {
@@ -745,6 +751,20 @@ const messages = {
         noVariables: "No variables to fill.",
         buttons: {
           close: "Close",
+        },
+      },
+      messageVariablesHelper: {
+        title: "Available variables",
+        hint: "Click a variable to insert it into the text.",
+        items: {
+          name: "Contact name",
+          phone: "Contact phone",
+          email: "Contact email",
+          ticketId: "Ticket ID",
+          assignee: "Assignee name",
+          queue: "Queue name",
+          currentDate: "Current date",
+          currentTime: "Current time",
         },
       },
       campaigns: {

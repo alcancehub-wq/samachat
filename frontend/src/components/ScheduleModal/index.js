@@ -17,8 +17,11 @@ import {
   Select,
   TextField
 } from "@material-ui/core";
+import { toast } from "react-toastify";
 
 import { i18n } from "../../translate/i18n";
+import MessageVariablesHelper from "../MessageVariablesHelper";
+import { appendMessageVariable } from "../../utils/messageVariables";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 
@@ -285,6 +288,11 @@ const ScheduleModal = ({
                 rows={3}
                 error={touched.body && Boolean(errors.body)}
                 helperText={touched.body && errors.body ? errors.body : ""}
+              />
+              <MessageVariablesHelper
+                onInsertVariable={token => {
+                  setFieldValue("body", appendMessageVariable(values.body, token));
+                }}
               />
               <TextField
                 label={i18n.t("scheduleModal.form.scheduledAt")}

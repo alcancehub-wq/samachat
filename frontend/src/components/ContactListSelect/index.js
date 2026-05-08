@@ -31,7 +31,7 @@ const ContactListSelect = ({ selectedListId, onChange, label }) => {
 
   return (
     <FormControl fullWidth margin="dense" variant="outlined">
-      <InputLabel>{label || i18n.t("campaignModal.form.list")}</InputLabel>
+      <InputLabel shrink>{label || i18n.t("campaignModal.form.list")}</InputLabel>
       <Select
         value={selectedListId || ""}
         onChange={handleChange}

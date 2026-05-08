@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import * as Yup from "yup";
-import { Formik, Form, FieldArray, Field } from "formik";
+import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
 
 import {
@@ -12,11 +12,15 @@ import {
   DialogTitle,
   FormControlLabel,
   Switch,
-  TextField,
-  Typography
+  TextField
 } from "@material-ui/core";
 
 import { i18n } from "../../translate/i18n";
+import MessageVariablesHelper from "../MessageVariablesHelper";
+import {
+  appendMessageVariable,
+  buildDialogSystemVariables
+} from "../../utils/messageVariables";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -34,7 +38,7 @@ const DialogModal = ({ open, onClose, dialogId }) => {
     description: "",
     content: "",
     isActive: true,
-    variables: []
+    variables: buildDialogSystemVariables()
   };
 
   const [dialog, setDialog] = useState(initialState);
@@ -60,7 +64,7 @@ const DialogModal = ({ open, onClose, dialogId }) => {
             description: data.description || "",
             content: data.content || "",
             isActive: data.isActive !== false,
-            variables: data.variables || []
+            variables: buildDialogSystemVariables()
           });
         }
       } catch (err) {
@@ -82,7 +86,7 @@ const DialogModal = ({ open, onClose, dialogId }) => {
       description: values.description,
       content: values.content,
       isActive: values.isActive,
-      variables: values.variables
+      variables: buildDialogSystemVariables()
     };
 
     try {
@@ -175,68 +179,14 @@ const DialogModal = ({ open, onClose, dialogId }) => {
                 multiline
                 rows={6}
               />
-              <Typography variant="subtitle1" gutterBottom style={{ marginTop: 12 }}>
-                {i18n.t("dialogModal.form.variables")}
-              </Typography>
-              <FieldArray name="variables">
-                {({ push, remove }) => (
-                  <>
-                    {values.variables && values.variables.length > 0 ? (
-                      values.variables.map((variable, index) => (
-                        <div
-                          key={`${index}-variable`}
-                          style={{ display: "flex", gap: 8, marginBottom: 8 }}
-                        >
-                          <Field
-                            as={TextField}
-                            label={i18n.t("dialogModal.form.variableKey")}
-                            name={`variables[${index}].key`}
-                            variant="outlined"
-                            margin="dense"
-                            style={{ flex: 1 }}
-                          />
-                          <Field
-                            as={TextField}
-                            label={i18n.t("dialogModal.form.variableLabel")}
-                            name={`variables[${index}].label`}
-                            variant="outlined"
-                            margin="dense"
-                            style={{ flex: 1 }}
-                          />
-                          <Field
-                            as={TextField}
-                            label={i18n.t("dialogModal.form.variableExample")}
-                            name={`variables[${index}].example`}
-                            variant="outlined"
-                            margin="dense"
-                            style={{ flex: 1 }}
-                          />
-                          <Button
-                            variant="outlined"
-                            color="secondary"
-                            onClick={() => remove(index)}
-                            style={{ height: 40, marginTop: 8 }}
-                          >
-                            {i18n.t("dialogModal.form.removeVariable")}
-                          </Button>
-                        </div>
-                      ))
-                    ) : (
-                      <Typography color="textSecondary">
-                        {i18n.t("dialogModal.form.noVariables")}
-                      </Typography>
-                    )}
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      onClick={() => push({ key: "", label: "", example: "" })}
-                      style={{ marginTop: 8 }}
-                    >
-                      {i18n.t("dialogModal.form.addVariable")}
-                    </Button>
-                  </>
-                )}
-              </FieldArray>
+              <MessageVariablesHelper
+                onInsertVariable={token => {
+                  setFieldValue(
+                    "content",
+                    appendMessageVariable(values.content, token)
+                  );
+                }}
+              />
             </DialogContent>
             <DialogActions>
               <Button

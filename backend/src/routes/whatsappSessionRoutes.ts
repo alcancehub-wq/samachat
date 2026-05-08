@@ -1,6 +1,6 @@
 import { Router } from "express";
 import isAuth from "../middleware/isAuth";
-import checkSectorPermission from "../middleware/checkSectorPermission";
+import canManageWhatsAppSession from "../middleware/canManageWhatsAppSession";
 
 import WhatsAppSessionController from "../controllers/WhatsAppSessionController";
 
@@ -9,21 +9,21 @@ const whatsappSessionRoutes = Router();
 whatsappSessionRoutes.post(
   "/whatsappsession/:whatsappId",
   isAuth,
-  checkSectorPermission("connections.session.manage"),
+  canManageWhatsAppSession,
   WhatsAppSessionController.store
 );
 
 whatsappSessionRoutes.put(
   "/whatsappsession/:whatsappId",
   isAuth,
-  checkSectorPermission("connections.session.manage"),
+  canManageWhatsAppSession,
   WhatsAppSessionController.update
 );
 
 whatsappSessionRoutes.delete(
   "/whatsappsession/:whatsappId",
   isAuth,
-  checkSectorPermission("connections.session.manage"),
+  canManageWhatsAppSession,
   WhatsAppSessionController.remove
 );
 

@@ -16,6 +16,8 @@ import {
 } from "@material-ui/core";
 import { green } from "@material-ui/core/colors";
 import { i18n } from "../../translate/i18n";
+import MessageVariablesHelper from "../MessageVariablesHelper";
+import { appendMessageVariable } from "../../utils/messageVariables";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -151,7 +153,7 @@ const QuickAnswersModal = ({
             }, 400);
           }}
         >
-          {({ values, errors, touched, isSubmitting }) => (
+          {({ values, errors, touched, isSubmitting, setFieldValue }) => (
             <Form>
               <DialogContent dividers>
                 <div className={classes.textQuickAnswerContainer}>
@@ -189,6 +191,14 @@ const QuickAnswersModal = ({
                     multiline
                     rows={5}
                     fullWidth
+                  />
+                  <MessageVariablesHelper
+                    onInsertVariable={token => {
+                      setFieldValue(
+                        "message",
+                        appendMessageVariable(values.message, token)
+                      );
+                    }}
                   />
                 </div>
               </DialogContent>

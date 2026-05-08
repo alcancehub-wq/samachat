@@ -7,6 +7,7 @@ import Whatsapp from "../../models/Whatsapp";
 import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
 
 import formatBody from "../../helpers/Mustache";
+import ResolveMessageVariablesService from "../Variables/ResolveMessageVariablesService";
 import { StartWhatsAppSession } from "./StartWhatsAppSession";
 import { sleep } from "../../utils/sleep";
 import { logger } from "../../utils/logger";
@@ -189,7 +190,13 @@ const SendWhatsAppMessage = async ({
     ? `${chatIdentifier}@g.us`
     : storedLid ||
       (chatIdentifier.includes("@") ? chatIdentifier : `${chatIdentifier}@c.us`);
-  const payload = formatBody(body, ticket.contact);
+  const { text: resolvedBody } = ResolveMessageVariablesService({
+    template: body,
+    ticket,
+    contact: ticket.contact,
+    user: ticket.user
+  });
+  const payload = formatBody(resolvedBody, ticket.contact);
 
   const sendWithChatId = async (targetChatId: string): Promise<ProviderMessage> =>
     whatsappProvider.sendMessage(ticket.whatsappId as number, targetChatId, payload, {
@@ -244,7 +251,7 @@ const SendWhatsAppMessage = async ({
           try {
             chatId = normalizedChatId;
             sentMessage = await sendWithChatId(chatId);
-            await ticket.update({ lastMessage: body });
+            await ticket.update({ lastMessage: resolvedBody });
             if (normalizedNumber && normalizedNumber !== storedNumber) {
               await ticket.contact.update({ number: normalizedNumber });
             }
@@ -262,7 +269,7 @@ const SendWhatsAppMessage = async ({
       }
     }
 
-    await ticket.update({ lastMessage: body });
+    await ticket.update({ lastMessage: resolvedBody });
     if (normalizedNumber && normalizedNumber !== storedNumber) {
       await ticket.contact.update({ number: normalizedNumber });
     }

@@ -8,7 +8,10 @@ import Dialog from "../../models/Dialog";
 import Tag from "../../models/Tag";
 import CampaignLog from "../../models/CampaignLog";
 import { parseCampaignTagIds } from "./campaignTags";
-import { parseContactListFilters, applyContactListFilters } from "../ContactListServices/contactListFilters";
+import {
+  parseContactListFilters,
+  findDynamicContactListContacts
+} from "../ContactListServices/contactListFilters";
 import CreateCampaignLogService from "./CreateCampaignLogService";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
@@ -78,30 +81,7 @@ const loadContactsFromList = async (listId: number): Promise<Contact[]> => {
   }
 
   const filters = parseContactListFilters(list.filters);
-
-  const includeTags = {
-    model: Tag,
-    as: "tags",
-    attributes: ["id", "name", "color"],
-    through: { attributes: [] },
-    required: filters.tagIds && filters.tagIds.length > 0,
-    where: filters.tagIds && filters.tagIds.length > 0
-      ? { id: { [Op.in]: filters.tagIds } }
-      : undefined
-  };
-
-  const contacts = await Contact.findAll({
-    include: [
-      includeTags,
-      {
-        model: ContactCustomField,
-        as: "extraInfo"
-      }
-    ],
-    order: [["name", "ASC"]]
-  });
-
-  return applyContactListFilters(contacts, filters);
+  return findDynamicContactListContacts({ filters });
 };
 
 const loadContactsFromTags = async (tagIds: number[]): Promise<Contact[]> => {

@@ -681,6 +681,8 @@ const messages = {
           type: "Tipo",
           manual: "Manual",
           dynamic: "Dinâmica",
+          assignee: "Responsável",
+          assigneeAll: "Todos os responsáveis",
           tags: "Tags",
           tagsPlaceholder: "Selecione tags",
           fields: "Campos customizados",
@@ -692,6 +694,10 @@ const messages = {
           addField: "Adicionar filtro",
           removeField: "Remover",
           noFields: "Nenhum filtro de campo ainda.",
+          previewContacts: "Clientes encontrados",
+          previewContactsHint: "{{count}} cliente(s) correspondem aos filtros atuais. Desmarque quem deve ficar de fora.",
+          previewLoading: "Carregando clientes...",
+          previewEmpty: "Nenhum cliente encontrado com os filtros atuais.",
           contacts: "Contatos",
         },
         buttons: {
@@ -760,6 +766,20 @@ const messages = {
         noVariables: "Nenhuma variável para preencher.",
         buttons: {
           close: "Fechar",
+        },
+      },
+      messageVariablesHelper: {
+        title: "Variáveis disponíveis",
+        hint: "Clique em uma variável para inserir no texto.",
+        items: {
+          name: "Nome do contato",
+          phone: "Telefone do contato",
+          email: "Email do contato",
+          ticketId: "ID do ticket",
+          assignee: "Nome do responsável",
+          queue: "Nome da fila",
+          currentDate: "Data atual",
+          currentTime: "Hora atual",
         },
       },
       campaigns: {
