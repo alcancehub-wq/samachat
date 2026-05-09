@@ -53,6 +53,9 @@ export const SYSTEM_MESSAGE_VARIABLES = [
   "ticket_id",
   "responsavel",
   "fila",
+  "bom_dia",
+  "boa_tarde",
+  "boa_noite",
   "data_atual",
   "hora_atual"
 ] as const;
@@ -65,6 +68,24 @@ const normalizeValue = (value: unknown): string => {
   }
 
   return String(value);
+};
+
+const formatContactFirstName = (value: unknown): string => {
+  const normalizedName = normalizeValue(value).trim();
+
+  if (!normalizedName) {
+    return "";
+  }
+
+  const [firstName = ""] = normalizedName.split(/\s+/);
+
+  if (!firstName) {
+    return "";
+  }
+
+  return `${firstName.charAt(0).toLocaleUpperCase()}${firstName
+    .slice(1)
+    .toLocaleLowerCase()}`;
 };
 
 const collectTemplateVariables = (template: string): string[] => {
@@ -91,15 +112,19 @@ const buildVariableMap = ({
   const resolvedContact = contact || ticket?.contact || null;
   const resolvedUser = user || ticket?.user || null;
   const resolvedQueue = ticket?.queue || null;
+  const resolvedContactFirstName = formatContactFirstName(resolvedContact?.name);
 
   const systemValues: VariableMap = {
-    nome: normalizeValue(resolvedContact?.name),
-    name: normalizeValue(resolvedContact?.name),
+    nome: resolvedContactFirstName,
+    name: resolvedContactFirstName,
     telefone: normalizeValue(resolvedContact?.number),
     email: normalizeValue(resolvedContact?.email),
     ticket_id: normalizeValue(ticket?.id),
     responsavel: normalizeValue(resolvedUser?.name),
     fila: normalizeValue(resolvedQueue?.name),
+    bom_dia: "Bom dia",
+    boa_tarde: "Boa tarde",
+    boa_noite: "Boa noite",
     data_atual: format(currentDate, "dd/MM/yyyy"),
     hora_atual: format(currentDate, "HH:mm")
   };

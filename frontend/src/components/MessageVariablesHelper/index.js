@@ -19,7 +19,7 @@ const useStyles = makeStyles(theme => ({
   panel: {
     border: `1px solid ${theme.palette.divider}`,
     borderRadius: 16,
-    padding: theme.spacing(2),
+    padding: theme.spacing(1.5),
     backgroundColor: "#F5F6F8",
     boxShadow: "0 16px 32px rgba(15, 23, 42, 0.08)"
   },
@@ -37,8 +37,8 @@ const useStyles = makeStyles(theme => ({
     color: theme.palette.text.primary
   },
   hint: {
-    marginTop: theme.spacing(0.5),
-    lineHeight: 1.5,
+    marginTop: theme.spacing(0.25),
+    lineHeight: 1.4,
     color: theme.palette.text.secondary
   },
   counter: {
@@ -49,17 +49,17 @@ const useStyles = makeStyles(theme => ({
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: theme.spacing(1.25),
-    marginTop: theme.spacing(2)
+    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+    gap: theme.spacing(1),
+    marginTop: theme.spacing(1.5)
   },
   card: {
     width: "100%",
-    borderRadius: 14,
+    borderRadius: 12,
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.common.white,
     textAlign: "left",
-    padding: theme.spacing(1.5),
+    padding: theme.spacing(1.25),
     transition: "transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease",
     "&:hover": {
       transform: "translateY(-1px)",
@@ -72,27 +72,28 @@ const useStyles = makeStyles(theme => ({
     flexWrap: "wrap",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: theme.spacing(1)
+    gap: theme.spacing(0.75)
   },
   token: {
     display: "inline-flex",
     alignItems: "center",
-    minHeight: 32,
-    padding: theme.spacing(0.5, 1),
+    minHeight: 28,
+    padding: theme.spacing(0.375, 0.875),
     borderRadius: 999,
     backgroundColor: "rgba(37, 99, 235, 0.1)",
     color: theme.palette.primary.main,
-    fontSize: "0.85rem",
+    fontSize: "0.8rem",
     fontWeight: 700,
     letterSpacing: 0.2
   },
   description: {
-    marginTop: theme.spacing(1),
-    lineHeight: 1.45,
+    marginTop: theme.spacing(0.75),
+    lineHeight: 1.35,
+    fontSize: "0.95rem",
     color: theme.palette.text.secondary
   },
   icon: {
-    fontSize: 20,
+    fontSize: 18,
     color: theme.palette.primary.main,
     opacity: 0.8
   }

@@ -8,6 +8,7 @@ import {
   IconButton,
   makeStyles,
   Paper,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -41,8 +42,21 @@ const useStyles = makeStyles(theme => ({
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis"
+  },
+  activationControl: {
+    display: "inline-flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: theme.spacing(0.25)
+  },
+  activationLabel: {
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    color: theme.palette.text.secondary
   }
 }));
+
+const isCampaignActive = campaign => campaign?.isActive !== false;
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CAMPAIGNS") {
@@ -95,6 +109,7 @@ const Campaigns = () => {
   const [searchParam, setSearchParam] = useState("");
   const [tags, setTags] = useState([]);
   const [selectedCampaignIds, setSelectedCampaignIds] = useState([]);
+  const [updatingCampaignIds, setUpdatingCampaignIds] = useState([]);
 
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -187,6 +202,33 @@ const Campaigns = () => {
     setSelectedCampaign(null);
     setDeleteTargetIds([]);
     setSelectedCampaignIds([]);
+  };
+
+  const handleToggleCampaignActivation = async campaign => {
+    const nextIsActive = !isCampaignActive(campaign);
+
+    setUpdatingCampaignIds(prevState => [...prevState, campaign.id]);
+
+    try {
+      const { data } = await api.put(`/campaigns/${campaign.id}`, {
+        isActive: nextIsActive
+      });
+
+      dispatch({ type: "UPDATE_CAMPAIGN", payload: data });
+      toast.success(
+        i18n.t(
+          nextIsActive
+            ? "campaigns.toasts.activated"
+            : "campaigns.toasts.deactivated"
+        )
+      );
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setUpdatingCampaignIds(prevState =>
+        prevState.filter(campaignId => campaignId !== campaign.id)
+      );
+    }
   };
 
   const handleToggleCampaignSelection = campaignId => {
@@ -347,6 +389,7 @@ const Campaigns = () => {
               <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.list")}</TableCell>
               <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.tags")}</TableCell>
               <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.status")}</TableCell>
+              <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.active")}</TableCell>
               <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.scheduledAt")}</TableCell>
               <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.lastStatusAt")}</TableCell>
               <TableCell align="center" className={classes.tableHeadCell}>{i18n.t("campaigns.table.actions")}</TableCell>
@@ -377,6 +420,24 @@ const Campaigns = () => {
                     {i18n.t(`campaignModal.status.${campaign.status || "draft"}`)}
                   </TableCell>
                   <TableCell align="center" className={classes.tableCell}>
+                    <div className={classes.activationControl}>
+                      <Switch
+                        color="primary"
+                        checked={isCampaignActive(campaign)}
+                        disabled={updatingCampaignIds.includes(campaign.id)}
+                        onChange={() => handleToggleCampaignActivation(campaign)}
+                        inputProps={{
+                          "aria-label": i18n.t("campaigns.table.active")
+                        }}
+                      />
+                      <Typography className={classes.activationLabel}>
+                        {isCampaignActive(campaign)
+                          ? i18n.t("campaigns.activation.active")
+                          : i18n.t("campaigns.activation.inactive")}
+                      </Typography>
+                    </div>
+                  </TableCell>
+                  <TableCell align="center" className={classes.tableCell}>
                     {formatDate(campaign.scheduledAt)}
                   </TableCell>
                   <TableCell align="center" className={classes.tableCell}>
@@ -399,7 +460,7 @@ const Campaigns = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={9} />}
+              {loading && <TableRowSkeleton columns={10} />}
             </>
           </TableBody>
         </Table>

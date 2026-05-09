@@ -11,6 +11,21 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.05.09 / Campanhas, dialogos e listas",
+    label: "Pacote funcional do dia",
+    summary:
+      "Entrega concentrada em completar o fluxo de campanhas do legado com anexos em dialogos, controle de ativacao, publico seguro, assinatura coerente e refinamentos operacionais nas listas.",
+    changes: [
+      "Adicionado suporte a anexar arquivos em dialogos, incluindo reutilizacao do anexo no disparo real da campanha.",
+      "Ajustado {{nome}} para usar somente o primeiro nome capitalizado e adicionadas as variaveis {{bom_dia}}, {{boa_tarde}} e {{boa_noite}}.",
+      "Incluido seletor para ativar ou desativar campanhas sem misturar essa decisao com o status operacional da campanha.",
+      "Corrigido o escopo de audiencia para respeitar o publico salvo, mantendo lista manual ou dinamica como base e aplicando tags da campanha como filtro adicional quando existirem.",
+      "Reforcada a edicao de listas manuais com resumo explicito dos contatos selecionados, evitando manter contatos ocultos na selecao antes de salvar.",
+      "Restaurado no disparo da campanha o respeito a assinatura padrao do usuario vinculado a conexao usada no envio.",
+      "Corrigido o envio de audio anexado para nao forcar mensagem de voz em formatos incompatveis, reduzindo erro de reproducao para quem recebe.",
+    ],
+  },
+  {
     version: "2026.05.09 / Dialogos e conexoes",
     label: "Ajustes finos do dia",
     summary:

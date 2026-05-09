@@ -8,6 +8,9 @@ interface DialogData {
   content?: string;
   variables?: DialogVariable[];
   isActive?: boolean;
+  mediaFileName?: string | null;
+  mediaOriginalName?: string | null;
+  mediaMimeType?: string | null;
 }
 
 interface Request {
@@ -39,10 +42,32 @@ const UpdateDialogService = async ({
     }
   }
 
+  const nextContent =
+    typeof dialogData.content === "string" ? dialogData.content.trim() : dialog.content;
+  const nextMediaFileName =
+    dialogData.mediaFileName !== undefined
+      ? dialogData.mediaFileName
+      : dialog.mediaFileName;
+  const nextMediaOriginalName =
+    dialogData.mediaOriginalName !== undefined
+      ? dialogData.mediaOriginalName
+      : dialog.mediaOriginalName;
+  const nextMediaMimeType =
+    dialogData.mediaMimeType !== undefined
+      ? dialogData.mediaMimeType
+      : dialog.mediaMimeType;
+
+  if (!nextContent && !nextMediaFileName) {
+    throw new AppError("ERR_DIALOG_CONTENT_OR_MEDIA_REQUIRED", 400);
+  }
+
   await dialog.update({
     name: nextName ?? dialog.name,
     description: dialogData.description ?? dialog.description,
-    content: dialogData.content ?? dialog.content,
+    content: nextContent,
+    mediaFileName: nextMediaFileName,
+    mediaOriginalName: nextMediaOriginalName,
+    mediaMimeType: nextMediaMimeType,
     variables: dialogData.variables
       ? stringifyDialogVariables(dialogData.variables)
       : dialog.variables,

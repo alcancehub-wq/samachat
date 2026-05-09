@@ -7,7 +7,9 @@ import ContactListContact from "../../models/ContactListContact";
 import Dialog from "../../models/Dialog";
 import Tag from "../../models/Tag";
 import CampaignLog from "../../models/CampaignLog";
+import User from "../../models/User";
 import { parseCampaignTagIds } from "./campaignTags";
+import { applyCampaignTagScope } from "./campaignAudience";
 import {
   parseContactListFilters,
   findDynamicContactListContacts
@@ -16,6 +18,7 @@ import CreateCampaignLogService from "./CreateCampaignLogService";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
+import SendStoredWhatsAppMedia from "../WbotServices/SendStoredWhatsAppMedia";
 import { logger } from "../../utils/logger";
 
 const DEFAULT_POLL_MS = 8000;
@@ -36,7 +39,8 @@ const claimCampaign = async (campaignId: number): Promise<boolean> => {
     {
       where: {
         id: campaignId,
-        status: "scheduled"
+        status: "scheduled",
+        isActive: true
       }
     }
   );
@@ -110,13 +114,38 @@ const loadContactsFromTags = async (tagIds: number[]): Promise<Contact[]> => {
   return contacts;
 };
 
-const resolveCampaignContacts = async (campaign: Campaign): Promise<Contact[]> => {
-  if (campaign.contactListId) {
-    return loadContactsFromList(campaign.contactListId);
+const buildSignaturePrefix = (
+  user?: Pick<User, "name" | "signMessages"> | null
+): string => {
+  const userName = user?.name?.trim();
+
+  if (!userName || user?.signMessages === false) {
+    return "";
   }
 
+  return `*${userName}:*\n`;
+};
+
+const loadCampaignSignaturePrefix = async (
+  whatsappId: number
+): Promise<string> => {
+  const linkedUser = await User.findOne({
+    where: { whatsappId },
+    attributes: ["name", "signMessages"]
+  });
+
+  return buildSignaturePrefix(linkedUser);
+};
+
+const resolveCampaignContacts = async (campaign: Campaign): Promise<Contact[]> => {
   const tagIds = parseCampaignTagIds(campaign.tagIds);
-  return loadContactsFromTags(tagIds);
+
+  if (campaign.contactListId) {
+    const contactsFromList = await loadContactsFromList(campaign.contactListId);
+    return applyCampaignTagScope(contactsFromList, tagIds);
+  }
+
+  return applyCampaignTagScope(await loadContactsFromTags(tagIds), []);
 };
 
 const markCampaignStatus = async (
@@ -167,6 +196,7 @@ const runCampaignOnce = async (campaign: Campaign): Promise<void> => {
   }
 
   let failedCount = 0;
+  const signaturePrefix = await loadCampaignSignaturePrefix(defaultWhatsapp.id);
 
   for (const contact of contacts) {
     if (await alreadySent(campaign.id, contact.id)) {
@@ -175,7 +205,21 @@ const runCampaignOnce = async (campaign: Campaign): Promise<void> => {
 
     try {
       const ticket = await FindOrCreateTicketService(contact, defaultWhatsapp.id, 0);
-      await SendWhatsAppMessage({ body: dialog.content, ticket });
+      const body = dialog.content?.trim() || undefined;
+      const messageBody = body && signaturePrefix ? `${signaturePrefix}${body}` : body;
+
+      if (dialog.mediaFileName) {
+        await SendStoredWhatsAppMedia({
+          ticket,
+          fileName: dialog.mediaFileName,
+          originalName: dialog.mediaOriginalName,
+          mimetype: dialog.mediaMimeType,
+          body: messageBody
+        });
+      } else {
+        await SendWhatsAppMessage({ body: messageBody || "", ticket });
+      }
+
       await CreateCampaignLogService({
         campaignId: campaign.id,
         contactId: contact.id,
@@ -210,6 +254,7 @@ const runCampaignWorkerOnce = async (): Promise<void> => {
   const campaigns = await Campaign.findAll({
     where: {
       status: "scheduled",
+      isActive: true,
       scheduledAt: {
         [Op.lte]: new Date()
       }

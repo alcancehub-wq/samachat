@@ -4,6 +4,7 @@ import * as Yup from "yup";
 import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
 
+import { makeStyles } from "@material-ui/core/styles";
 import {
   Button,
   Dialog,
@@ -12,9 +13,11 @@ import {
   DialogTitle,
   FormControlLabel,
   Switch,
-  TextField
+  TextField,
+  Typography
 } from "@material-ui/core";
 
+import { getBackendUrl } from "../../config";
 import { i18n } from "../../translate/i18n";
 import MessageVariablesHelper from "../MessageVariablesHelper";
 import {
@@ -25,23 +28,57 @@ import {
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 
+const useStyles = makeStyles(theme => ({
+  mediaSection: {
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(2),
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: 12,
+    backgroundColor: "#fafafa"
+  },
+  mediaActions: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    marginTop: theme.spacing(1)
+  },
+  mediaFileName: {
+    marginTop: theme.spacing(1),
+    fontWeight: 600
+  },
+  mediaHelper: {
+    marginTop: theme.spacing(0.75),
+    color: theme.palette.text.secondary,
+    lineHeight: 1.5
+  },
+  hiddenInput: {
+    display: "none"
+  }
+}));
+
 const DialogSchema = Yup.object().shape({
-  name: Yup.string().min(2, "Too Short!").max(80, "Too Long!").required("Required"),
-  content: Yup.string().min(2, "Too Short!").required("Required")
+  name: Yup.string().min(2, "Too Short!").max(80, "Too Long!").required("Required")
 });
 
 const DialogModal = ({ open, onClose, dialogId }) => {
+  const classes = useStyles();
   const isMounted = useRef(true);
+  const mediaInputRef = useRef(null);
 
   const initialState = {
     name: "",
     description: "",
     content: "",
     isActive: true,
+    mediaFileName: "",
+    mediaOriginalName: "",
+    mediaMimeType: "",
     variables: buildDialogSystemVariables()
   };
 
   const [dialog, setDialog] = useState(initialState);
+  const [selectedMediaFile, setSelectedMediaFile] = useState(null);
+  const [removeMedia, setRemoveMedia] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -64,6 +101,9 @@ const DialogModal = ({ open, onClose, dialogId }) => {
             description: data.description || "",
             content: data.content || "",
             isActive: data.isActive !== false,
+            mediaFileName: data.mediaFileName || "",
+            mediaOriginalName: data.mediaOriginalName || "",
+            mediaMimeType: data.mediaMimeType || "",
             variables: buildDialogSystemVariables()
           });
         }
@@ -78,16 +118,65 @@ const DialogModal = ({ open, onClose, dialogId }) => {
   const handleClose = () => {
     onClose();
     setDialog(initialState);
+    setSelectedMediaFile(null);
+    setRemoveMedia(false);
+  };
+
+  const buildDialogMediaUrl = fileName => {
+    if (!fileName) {
+      return "";
+    }
+
+    return `${getBackendUrl()}/public/${fileName}`;
+  };
+
+  const handleSelectMedia = () => {
+    mediaInputRef.current?.click();
+  };
+
+  const handleMediaChange = event => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setSelectedMediaFile(file);
+    setRemoveMedia(false);
+    event.target.value = "";
+  };
+
+  const handleRemoveMedia = setFieldValue => {
+    setSelectedMediaFile(null);
+    setRemoveMedia(true);
+    setFieldValue("mediaFileName", "");
+    setFieldValue("mediaOriginalName", "");
+    setFieldValue("mediaMimeType", "");
   };
 
   const handleSaveDialog = async values => {
-    const payload = {
-      name: values.name,
-      description: values.description,
-      content: values.content,
-      isActive: values.isActive,
-      variables: buildDialogSystemVariables()
-    };
+    const trimmedContent = (values.content || "").trim();
+    const hasExistingMedia = Boolean(values.mediaFileName) && !removeMedia;
+
+    if (!trimmedContent && !selectedMediaFile && !hasExistingMedia) {
+      toast.error(i18n.t("backendErrors.ERR_DIALOG_CONTENT_OR_MEDIA_REQUIRED"));
+      return;
+    }
+
+    const payload = new FormData();
+    payload.append("name", values.name);
+    payload.append("description", values.description || "");
+    payload.append("content", values.content || "");
+    payload.append("isActive", String(values.isActive));
+    payload.append(
+      "variables",
+      JSON.stringify(buildDialogSystemVariables())
+    );
+    payload.append("removeMedia", String(removeMedia));
+
+    if (selectedMediaFile) {
+      payload.append("media", selectedMediaFile);
+    }
 
     try {
       if (dialogId) {
@@ -123,6 +212,12 @@ const DialogModal = ({ open, onClose, dialogId }) => {
         {({ values, touched, errors, setFieldValue, isSubmitting }) => (
           <Form>
             <DialogContent dividers>
+              <input
+                ref={mediaInputRef}
+                type="file"
+                onChange={handleMediaChange}
+                className={classes.hiddenInput}
+              />
               <Field
                 as={TextField}
                 label={i18n.t("dialogModal.form.name")}
@@ -179,6 +274,47 @@ const DialogModal = ({ open, onClose, dialogId }) => {
                 multiline
                 rows={6}
               />
+              <div className={classes.mediaSection}>
+                <Typography variant="subtitle2">
+                  {i18n.t("dialogModal.form.media")}
+                </Typography>
+                <Typography variant="body2" className={classes.mediaHelper}>
+                  {i18n.t("dialogModal.form.mediaHelper")}
+                </Typography>
+                <div className={classes.mediaActions}>
+                  <Button variant="outlined" color="primary" onClick={handleSelectMedia}>
+                    {selectedMediaFile || values.mediaFileName
+                      ? i18n.t("dialogModal.form.mediaReplace")
+                      : i18n.t("dialogModal.form.mediaUpload")}
+                  </Button>
+                  {(selectedMediaFile || values.mediaFileName) && (
+                    <Button
+                      variant="text"
+                      color="secondary"
+                      onClick={() => handleRemoveMedia(setFieldValue)}
+                    >
+                      {i18n.t("dialogModal.form.mediaRemove")}
+                    </Button>
+                  )}
+                  {!selectedMediaFile && values.mediaFileName && !removeMedia && (
+                    <Button
+                      component="a"
+                      href={buildDialogMediaUrl(values.mediaFileName)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="text"
+                      color="primary"
+                    >
+                      {i18n.t("dialogModal.form.mediaPreview")}
+                    </Button>
+                  )}
+                </div>
+                {(selectedMediaFile || (values.mediaFileName && !removeMedia)) && (
+                  <Typography variant="body2" className={classes.mediaFileName}>
+                    {selectedMediaFile?.name || values.mediaOriginalName || values.mediaFileName}
+                  </Typography>
+                )}
+              </div>
               <MessageVariablesHelper
                 onInsertVariable={token => {
                   setFieldValue(

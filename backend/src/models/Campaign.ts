@@ -37,6 +37,11 @@ class Campaign extends Model<Campaign> {
   @Column
   status: string;
 
+  @AllowNull(false)
+  @Default(true)
+  @Column
+  isActive: boolean;
+
   @Column(DataType.DATE)
   scheduledAt: Date;
 

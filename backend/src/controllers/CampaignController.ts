@@ -28,6 +28,7 @@ interface CampaignData {
   contactListId?: number | null;
   tagIds?: number[];
   status?: CampaignStatus;
+  isActive?: boolean;
   scheduledAt?: string | null;
   reviewedAt?: string | null;
 }
@@ -58,6 +59,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     contactListId: Yup.number().nullable(),
     tagIds: Yup.array().of(Yup.number()),
     status: Yup.string().oneOf([...campaignStatuses]),
+    isActive: Yup.boolean(),
     scheduledAt: Yup.string().nullable(),
     reviewedAt: Yup.string().nullable()
   });
@@ -102,6 +104,7 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
     contactListId: Yup.number().nullable(),
     tagIds: Yup.array().of(Yup.number()),
     status: Yup.string().oneOf([...campaignStatuses]),
+    isActive: Yup.boolean(),
     scheduledAt: Yup.string().nullable(),
     reviewedAt: Yup.string().nullable()
   });

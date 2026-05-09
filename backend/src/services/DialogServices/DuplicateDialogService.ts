@@ -27,6 +27,9 @@ const DuplicateDialogService = async (id: string): Promise<Dialog> => {
     name: duplicateName,
     description: dialog.description,
     content: dialog.content,
+    mediaFileName: dialog.mediaFileName,
+    mediaOriginalName: dialog.mediaOriginalName,
+    mediaMimeType: dialog.mediaMimeType,
     variables: dialog.variables,
     isActive: dialog.isActive
   });

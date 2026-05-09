@@ -19,10 +19,66 @@ type IndexQuery = {
 interface DialogData {
   name: string;
   description?: string;
-  content: string;
+  content?: string;
   variables?: { key: string; label?: string; example?: string }[];
   isActive?: boolean;
+  mediaFileName?: string | null;
+  mediaOriginalName?: string | null;
+  mediaMimeType?: string | null;
 }
+
+const parseBoolean = (value: unknown): boolean | undefined => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    if (value === "true") {
+      return true;
+    }
+
+    if (value === "false") {
+      return false;
+    }
+  }
+
+  return undefined;
+};
+
+const parseVariablesInput = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return parseDialogVariables(value);
+  }
+
+  return undefined;
+};
+
+const normalizeDialogData = (req: Request): DialogData => {
+  const removeMedia = parseBoolean(req.body.removeMedia) === true;
+  const dialogData: DialogData = {
+    name: req.body.name,
+    description: req.body.description,
+    content: req.body.content,
+    variables: parseVariablesInput(req.body.variables),
+    isActive: parseBoolean(req.body.isActive)
+  };
+
+  if (req.file) {
+    dialogData.mediaFileName = req.file.filename;
+    dialogData.mediaOriginalName = req.file.originalname;
+    dialogData.mediaMimeType = req.file.mimetype;
+  } else if (removeMedia) {
+    dialogData.mediaFileName = null;
+    dialogData.mediaOriginalName = null;
+    dialogData.mediaMimeType = null;
+  }
+
+  return dialogData;
+};
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam } = req.query as IndexQuery;
@@ -33,11 +89,11 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const newDialog: DialogData = req.body;
+  const newDialog = normalizeDialogData(req);
 
   const schema = Yup.object().shape({
     name: Yup.string().required(),
-    content: Yup.string().required(),
+    content: Yup.string(),
     description: Yup.string(),
     isActive: Yup.boolean()
   });
@@ -73,7 +129,7 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const update = async (req: Request, res: Response): Promise<Response> => {
-  const dialogData: DialogData = req.body;
+  const dialogData = normalizeDialogData(req);
 
   const schema = Yup.object().shape({
     name: Yup.string(),

@@ -1,10 +1,13 @@
 import express from "express";
+import multer from "multer";
 import isAuth from "../middleware/isAuth";
 import checkSectorPermission from "../middleware/checkSectorPermission";
+import uploadConfig from "../config/upload";
 
 import * as DialogController from "../controllers/DialogController";
 
 const dialogRoutes = express.Router();
+const upload = multer(uploadConfig);
 
 dialogRoutes.get(
   "/dialogs",
@@ -24,6 +27,7 @@ dialogRoutes.post(
   "/dialogs",
   isAuth,
   checkSectorPermission("dialogs.create"),
+  upload.single("media"),
   DialogController.store
 );
 
@@ -31,6 +35,7 @@ dialogRoutes.put(
   "/dialogs/:dialogId",
   isAuth,
   checkSectorPermission("dialogs.update"),
+  upload.single("media"),
   DialogController.update
 );
 

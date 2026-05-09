@@ -49,7 +49,8 @@ const ContactListModal = ({ open, onClose, listId }) => {
       tagIds: [],
       fields: []
     },
-    contactIds: []
+    contactIds: [],
+    selectedContacts: []
   };
 
   const [list, setList] = useState(initialState);
@@ -121,7 +122,8 @@ const ContactListModal = ({ open, onClose, listId }) => {
               tagIds: data.filters?.tagIds || [],
               fields: data.filters?.fields || []
             },
-            contactIds: data.contacts ? data.contacts.map(contact => contact.id) : []
+            contactIds: data.contacts ? data.contacts.map(contact => contact.id) : [],
+            selectedContacts: data.contacts || []
           });
         }
       } catch (err) {
@@ -365,6 +367,7 @@ const ContactListModal = ({ open, onClose, listId }) => {
                   </Typography>
                   <ContactSelect
                     selectedContactIds={values.contactIds || []}
+                    selectedContacts={values.selectedContacts || []}
                     onChange={ids => setFieldValue("contactIds", ids)}
                   />
                 </>

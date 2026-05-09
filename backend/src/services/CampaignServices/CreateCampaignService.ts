@@ -16,6 +16,7 @@ interface Request {
   contactListId?: number | null;
   tagIds?: number[];
   status?: CampaignStatus;
+  isActive?: boolean;
   scheduledAt?: Date | string | null;
   reviewedAt?: Date | string | null;
 }
@@ -27,6 +28,7 @@ const CreateCampaignService = async ({
   contactListId,
   tagIds,
   status,
+  isActive,
   scheduledAt,
   reviewedAt
 }: Request): Promise<Campaign> => {
@@ -76,6 +78,7 @@ const CreateCampaignService = async ({
     contactListId: contactListId || null,
     tagIds: stringifyCampaignTagIds(tagIds),
     status: nextStatus,
+    isActive: typeof isActive === "boolean" ? isActive : true,
     scheduledAt: scheduledAtValue,
     reviewedAt: reviewedAt || null,
     lastStatusAt: new Date()

@@ -86,6 +86,21 @@ const shouldConvertAudioToOgg = (media: Express.Multer.File): boolean => {
   return isAudio && isWebm;
 };
 
+const shouldSendAudioAsVoice = (media: {
+  mimetype?: string;
+  filename?: string;
+}): boolean => {
+  const mimeType = (media.mimetype || "").toLowerCase();
+  const fileName = (media.filename || "").toLowerCase();
+
+  return (
+    mimeType === "audio/ogg" ||
+    mimeType === "audio/opus" ||
+    mimeType === "audio/ogg; codecs=opus" ||
+    /\.(ogg|opus)$/i.test(fileName)
+  );
+};
+
 const convertWebmToOgg = (inputPath: string): Promise<string> => {
   const outputPath = /\.webm$/i.test(inputPath)
     ? inputPath.replace(/\.webm$/i, ".ogg")
@@ -266,7 +281,7 @@ const SendWhatsAppMedia = async ({
 
     const mediaOptions = {
       caption: hasBody,
-      sendAudioAsVoice: mediaInput.mimetype.startsWith("audio/"),
+      sendAudioAsVoice: shouldSendAudioAsVoice(mediaInput),
       sendMediaAsDocument:
         mediaInput.mimetype.startsWith("image/") &&
         !/^.*\.(jpe?g|png|gif)?$/i.exec(mediaInput.filename)

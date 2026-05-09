@@ -31,6 +31,15 @@ class Dialog extends Model<Dialog> {
   @Column(DataType.TEXT)
   content: string;
 
+  @Column(DataType.STRING)
+  mediaFileName: string | null;
+
+  @Column(DataType.STRING)
+  mediaOriginalName: string | null;
+
+  @Column(DataType.STRING)
+  mediaMimeType: string | null;
+
   @Column(DataType.TEXT)
   variables: string;
 

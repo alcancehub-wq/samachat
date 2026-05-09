@@ -30,6 +30,21 @@ export const AVAILABLE_MESSAGE_VARIABLES = [
     descriptionKey: "queue"
   },
   {
+    key: "bom_dia",
+    token: "{{bom_dia}}",
+    descriptionKey: "goodMorning"
+  },
+  {
+    key: "boa_tarde",
+    token: "{{boa_tarde}}",
+    descriptionKey: "goodAfternoon"
+  },
+  {
+    key: "boa_noite",
+    token: "{{boa_noite}}",
+    descriptionKey: "goodEvening"
+  },
+  {
     key: "data_atual",
     token: "{{data_atual}}",
     descriptionKey: "currentDate"

@@ -16,6 +16,7 @@ interface CampaignData {
   contactListId?: number | null;
   tagIds?: number[];
   status?: CampaignStatus;
+  isActive?: boolean;
   scheduledAt?: Date | string | null;
   reviewedAt?: Date | string | null;
 }
@@ -104,6 +105,10 @@ const UpdateCampaignService = async ({
       campaignData.tagIds !== undefined
         ? stringifyCampaignTagIds(campaignData.tagIds)
         : campaign.tagIds,
+    isActive:
+      typeof campaignData.isActive === "boolean"
+        ? campaignData.isActive
+        : campaign.isActive,
     status: nextStatus,
     scheduledAt: scheduledAtValue,
     reviewedAt:
