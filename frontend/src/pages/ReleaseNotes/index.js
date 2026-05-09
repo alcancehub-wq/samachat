@@ -11,6 +11,16 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.05.09 / Dialogos e conexoes",
+    label: "Ajustes finos do dia",
+    summary:
+      "Entrega concentrada em acabamento visual dos popups compartilhados e simplificacao do modal de conexao WhatsApp no legado em producao.",
+    changes: [
+      "Refinado o bloco de variaveis disponiveis em Dialogos, Atalhos e Agendamentos com painel mais premium, cards clicaveis, hierarquia mais clara e fundo solido mais suave.",
+      "Removida do popup Adicionar WhatsApp a opcao Assinar mensagens por padrao, para o modal apenas vincular o usuario sem sobrescrever a preferencia individual de assinatura.",
+    ],
+  },
+  {
     version: "2026.05.08 / Mensagens, conexoes e listas",
     label: "Promocao do dia",
     summary:

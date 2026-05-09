@@ -1,5 +1,14 @@
 # Release Notes
 
+## 2026-05-09
+
+### legacy-prod
+
+- Dialogos/Atalhos/Agendamentos: o helper compartilhado de variaveis disponiveis foi redesenhado para um painel mais premium, com cards clicaveis, hierarquia visual mais clara e fundo solido `#F5F6F8`, mantendo a insercao rapida das variaveis sem mudar a regra funcional.
+- Conexoes/WhatsApp: o popup `Adicionar WhatsApp` deixa de exibir a opcao `Assinar mensagens por padrao`; o modal agora apenas vincula o usuario selecionado e nao sobrescreve mais a preferencia de assinatura do usuario no envio do payload.
+- Escopo desta promocao: `frontend/src/components/MessageVariablesHelper/index.js`, `frontend/src/components/WhatsAppModal/index.js`, `frontend/src/pages/ReleaseNotes/index.js` e `docs/release-notes.md`.
+- Validacao local desta promocao: diagnosticos do editor sem erros nos arquivos alterados, `npm run build` aprovado em `frontend` apos os ajustes visuais e funcionais, e `docker compose -f docker-compose.yaml up -d --build frontend` executado com sucesso; localhost validado com o bundle final `assets/index-d9a76bf9.js` antes da promocao.
+
 ## 2026-05-08
 
 ### legacy-prod

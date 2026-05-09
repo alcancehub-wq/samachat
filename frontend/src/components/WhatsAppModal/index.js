@@ -81,7 +81,6 @@ const INITIAL_STATE = {
 	farewellMessage: "",
 	isDefault: false,
 	linkedUserId: "",
-	linkedUserSignMessages: true,
 };
 
 const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
@@ -106,7 +105,6 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 					...INITIAL_STATE,
 					...data,
 					linkedUserId: linkedUser?.id || "",
-					linkedUserSignMessages: linkedUser?.signMessages !== false,
 				});
 
 				const whatsQueueIds = data.queues?.map(queue => queue.id);
@@ -180,7 +178,6 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 			...values,
 			queueIds: selectedQueueIds,
 			linkedUserId: values.linkedUserId ? Number(values.linkedUserId) : null,
-			linkedUserSignMessages: values.linkedUserSignMessages !== false,
 		};
 
 		try {
@@ -325,22 +322,6 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 													: i18n.t("whatsappModal.form.linkedUserHelper")}
 											</FormHelperText>
 										</FormControl>
-										<FormControlLabel
-											label={i18n.t("whatsappModal.form.linkedUserSignMessages")}
-											labelPlacement="start"
-											control={
-												<Field
-													as={Switch}
-													color="primary"
-													name="linkedUserSignMessages"
-													checked={values.linkedUserSignMessages !== false}
-													disabled={!values.linkedUserId}
-												/>
-											}
-										/>
-										<FormHelperText className={classes.signatureHelper}>
-											{i18n.t("whatsappModal.form.linkedUserSignMessagesHelper")}
-										</FormHelperText>
 									</div>
 								)}
 							</DialogContent>
