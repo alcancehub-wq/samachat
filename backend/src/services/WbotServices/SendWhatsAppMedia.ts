@@ -11,6 +11,11 @@ import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
 import formatBody from "../../helpers/Mustache";
 import ResolveMessageVariablesService from "../Variables/ResolveMessageVariablesService";
 import { StartWhatsAppSession } from "./StartWhatsAppSession";
+import {
+  convertAudioToOgg,
+  shouldNormalizeAudioForWhatsApp,
+  shouldSendAudioAsVoice
+} from "./audioNormalization";
 import { sleep } from "../../utils/sleep";
 import { logger } from "../../utils/logger";
 
@@ -70,71 +75,6 @@ const safeCheckNumber = async (
     );
     return "";
   }
-};
-
-const shouldConvertAudioToOgg = (media: Express.Multer.File): boolean => {
-  const mimeType = (media.mimetype || "").toLowerCase();
-  const fileName = (media.filename || "").toLowerCase();
-  const originalName = (media.originalname || "").toLowerCase();
-
-  const isAudio = mimeType.startsWith("audio/") || /\.webm$/i.test(fileName);
-  const isWebm =
-    mimeType.includes("webm") ||
-    /\.webm$/i.test(fileName) ||
-    /\.webm$/i.test(originalName);
-
-  return isAudio && isWebm;
-};
-
-const shouldSendAudioAsVoice = (media: {
-  mimetype?: string;
-  filename?: string;
-}): boolean => {
-  const mimeType = (media.mimetype || "").toLowerCase();
-  const fileName = (media.filename || "").toLowerCase();
-
-  return (
-    mimeType === "audio/ogg" ||
-    mimeType === "audio/opus" ||
-    mimeType === "audio/ogg; codecs=opus" ||
-    /\.(ogg|opus)$/i.test(fileName)
-  );
-};
-
-const convertWebmToOgg = (inputPath: string): Promise<string> => {
-  const outputPath = /\.webm$/i.test(inputPath)
-    ? inputPath.replace(/\.webm$/i, ".ogg")
-    : `${inputPath}.ogg`;
-
-  return new Promise((resolve, reject) => {
-    const ffmpeg = spawn("ffmpeg", [
-      "-y",
-      "-i",
-      inputPath,
-      "-c:a",
-      "libopus",
-      "-b:a",
-      "64k",
-      outputPath
-    ]);
-
-    let errorOutput = "";
-    ffmpeg.stderr.on("data", data => {
-      errorOutput += data.toString();
-    });
-
-    ffmpeg.on("error", err => {
-      reject(err);
-    });
-
-    ffmpeg.on("close", code => {
-      if (code !== 0) {
-        reject(new Error(errorOutput || `ffmpeg exited with code ${code}`));
-        return;
-      }
-      resolve(outputPath);
-    });
-  });
 };
 
 const triggerWhatsappSessionStart = (whatsapp: Whatsapp): void => {
@@ -270,8 +210,8 @@ const SendWhatsAppMedia = async ({
     };
 
     let convertedPath: string | null = null;
-    if (shouldConvertAudioToOgg(media)) {
-      convertedPath = await convertWebmToOgg(media.path);
+    if (shouldNormalizeAudioForWhatsApp(media)) {
+      convertedPath = await convertAudioToOgg(media.path);
       mediaInput = {
         filename: `${path.parse(media.filename).name}.ogg`,
         mimetype: "audio/ogg",

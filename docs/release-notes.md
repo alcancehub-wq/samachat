@@ -1,5 +1,14 @@
 # Release Notes
 
+## 2026-05-11
+
+### legacy-prod
+
+- Chats/Audio gravado: o envio de audio gravado no compositor passa a normalizar containers `webm`, `ogg` e `opus` para um OGG/Opus compativel com mensagem de voz do WhatsApp antes do disparo, reduzindo o caso em que o atendente consegue reproduzir localmente mas o cliente recebe erro pedindo reenvio do arquivo.
+- Backend/WhatsApp: a deteccao de mensagem de voz deixa de depender de comparacoes exatas de MIME e passa a aceitar variantes como `audio/webm;codecs=opus` e `audio/ogg;codecs=opus`, preservando uploads comuns como `mp3` fora dessa conversao.
+- Escopo desta correcao: `backend/src/services/WbotServices/SendWhatsAppMedia.ts`, `backend/src/services/WbotServices/audioNormalization.ts`, `backend/src/__tests__/unit/WbotServices/audioNormalization.spec.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao: teste focado `./node_modules/.bin/jest src/__tests__/unit/WbotServices/audioNormalization.spec.ts --runInBand --coverage=false` aprovado com 4 testes; diagnosticos do editor sem erros nos arquivos alterados.
+
 ## 2026-05-09
 
 ### legacy-prod
