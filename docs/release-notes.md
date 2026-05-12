@@ -1,5 +1,15 @@
 # Release Notes
 
+## 2026-05-12
+
+### legacy-prod
+
+- Contatos/WhatsApp: a validacao de numero e a busca de avatar ao criar ou editar contato deixam de usar sempre a conexao padrao global e passam a respeitar a conexao explicita da operacao ou o WhatsApp vinculado ao usuario autenticado, eliminando o caso em que administradores conseguiam validar/enviarem para um numero e usuarios vinculados a outra sessao recebiam falso negativo de numero invalido.
+- Conexoes/QR Code: a tela de Conexoes passa a exibir o botao `QR CODE` sempre que a sessao estiver no estado `qrcode`, mesmo antes de a string final do QR chegar no payload da linha, removendo o estado visual "incompleto" em que o status indicava QR pendente mas a acao nao aparecia.
+- Auditoria deste recorte: nao foi necessario desconectar sessoes nem alterar fluxo de reconexao; a causa confirmada no backend era resolucao incorreta da sessao para validacao de contato, e o ponto confirmado no frontend era divergencia entre o estado exibido (`qrcode`) e a regra de renderizacao do botao.
+- Escopo desta correcao: `backend/src/helpers/ResolveWhatsAppContext.ts`, `backend/src/services/WbotServices/CheckNumber.ts`, `backend/src/services/WbotServices/CheckIsValidContact.ts`, `backend/src/services/WbotServices/GetProfilePicUrl.ts`, `backend/src/controllers/ContactController.ts`, `backend/src/controllers/ApiController.ts`, `frontend/src/pages/Connections/index.js` e `docs/release-notes.md`.
+- Validacao local desta correcao: `npm run build -- --noEmit` e `npm run build` aprovados em `backend`; `npm run build` aprovado em `frontend`.
+
 ## 2026-05-11
 
 ### legacy-prod

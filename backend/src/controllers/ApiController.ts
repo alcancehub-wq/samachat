@@ -33,11 +33,13 @@ const createContact = async (
   whatsappId: number | undefined,
   newContact: string
 ) => {
-  await CheckIsValidContact(newContact);
+  await CheckIsValidContact(newContact, { whatsappId });
 
-  const validNumber: any = await CheckContactNumber(newContact);
+  const validNumber: any = await CheckContactNumber(newContact, {
+    whatsappId
+  });
 
-  const profilePicUrl = await GetProfilePicUrl(validNumber);
+  const profilePicUrl = await GetProfilePicUrl(validNumber, { whatsappId });
 
   const number = validNumber;
 

@@ -329,6 +329,7 @@ const Connections = () => {
 	const renderActionButtons = whatsApp => {
 		const isRestarting = Boolean(restartingIds[whatsApp.id]);
 		const hasQrCode = Boolean(whatsApp.qrcode);
+		const isQrPending = whatsApp.status === "qrcode" || hasQrCode;
 
 		if (!canManageSession && !canManageOwnSession(whatsApp)) {
 			return null;
@@ -353,7 +354,7 @@ const Connections = () => {
 							: "connections.buttons.reconnect"
 					)}
 				</Button>
-				{hasQrCode && (
+				{isQrPending && (
 					<Button
 						size="small"
 						variant="contained"

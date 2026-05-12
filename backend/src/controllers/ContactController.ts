@@ -72,6 +72,7 @@ export const getContact = async (
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const newContact: ContactData = req.body;
+  const userId = Number(req.user?.id);
   newContact.number = newContact.number.replace("-", "").replace(" ", "");
 
   const schema = Yup.object().shape({
@@ -87,10 +88,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError(err.message);
   }
 
-  await CheckIsValidContact(newContact.number);
-  const validNumber: any = await CheckContactNumber(newContact.number);
+  await CheckIsValidContact(newContact.number, { userId });
+  const validNumber: any = await CheckContactNumber(newContact.number, {
+    userId
+  });
 
-  const profilePicUrl = await GetProfilePicUrl(validNumber);
+  const profilePicUrl = await GetProfilePicUrl(validNumber, { userId });
 
   let name = newContact.name;
   let number = validNumber;
@@ -130,6 +133,7 @@ export const update = async (
 ): Promise<Response> => {
   const contactData: ContactData = req.body;
   const { contactId } = req.params;
+  const userId = Number(req.user?.id);
   const currentContact = await ShowContactService(contactId);
 
   const normalizedInputNumber =
@@ -165,8 +169,10 @@ export const update = async (
     normalizedInputNumber !== normalizedCurrentNumber;
 
   if (numberChanged) {
-    await CheckIsValidContact(normalizedInputNumber);
-    contactData.number = await CheckContactNumber(normalizedInputNumber);
+    await CheckIsValidContact(normalizedInputNumber, { userId });
+    contactData.number = await CheckContactNumber(normalizedInputNumber, {
+      userId
+    });
   } else {
     contactData.number = currentContact.number;
   }

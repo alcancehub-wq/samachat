@@ -1,9 +1,17 @@
-import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
+import ResolveWhatsAppContext from "../../helpers/ResolveWhatsAppContext";
 import { whatsappProvider } from "../../providers/WhatsApp";
 import { logger } from "../../utils/logger";
 
-const GetProfilePicUrl = async (number: string): Promise<string> => {
-  const defaultWhatsapp = await GetDefaultWhatsApp();
+interface Request {
+  userId?: number;
+  whatsappId?: number;
+}
+
+const GetProfilePicUrl = async (
+  number: string,
+  options: Request = {}
+): Promise<string> => {
+  const defaultWhatsapp = await ResolveWhatsAppContext(options);
 
   try {
     const profilePicUrl = await whatsappProvider.getProfilePicUrl(
