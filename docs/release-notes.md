@@ -26,6 +26,13 @@
 - Escopo desta promocao: `frontend/src/components/ContactDrawer/index.js`, `frontend/src/components/MessageInput/index.js`, `frontend/src/components/MessagesList/index.js`, `frontend/src/components/Ticket/index.js`, `frontend/src/components/TicketActionButtons/index.js`, `frontend/src/components/TicketHeader/index.js`, `frontend/src/components/TicketInfo/index.js`, `frontend/src/components/TicketOptionsMenu/index.js`, `frontend/src/pages/Tickets/index.js` e `docs/release-notes.md`.
 - Validacao local desta promocao: `npm run build` aprovado em `frontend`; rebuild local via `docker compose -f docker-compose.yaml up -d --build frontend` concluido com sucesso; `http://localhost:3000` respondeu `200 OK`; tela mobile validada localmente em `http://localhost:3000/tickets/130` com conversa em largura integral, header/composer no padrao esperado e menus `Acoes do ticket` e `Composer` conferidos visualmente antes da promocao.
 
+### legacy-prod
+
+- Login/Mobile: a tela de login do SamaChat foi refinada para ficar mais agradavel no celular sem perder a identidade visual do produto, com fundo mais trabalhado, hierarquia tipografica mais clara e campos/botao redesenhados mantendo a paleta vermelha e neutra do sistema.
+- Login/Mobile: na etapa final de ajuste, o selo superior foi removido, o subtitulo passou a quebrar em duas linhas no ponto desejado, o bloco principal e os campos ficaram menos arredondados, e o halo visual do icone foi eliminado para um acabamento mais limpo.
+- Escopo desta promocao: `frontend/src/pages/Login/index.js` e `docs/release-notes.md`.
+- Validacao local desta promocao: `npm run build` aprovado em `frontend`; rebuild local via `docker compose -f docker-compose.yaml up -d --build frontend` concluido com sucesso; `http://localhost:3000/login` respondeu `200 OK`; tela de login mobile validada no localhost apos os ajustes visuais finais.
+
 ## 2026-05-09
 
 ### legacy-prod
