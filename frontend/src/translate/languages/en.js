@@ -1585,6 +1585,44 @@ const messages = {
           step3Title: "Define the ending",
           step3Text: "Finish with end, sector change or handoff to a human agent when needed."
         },
+        stats: {
+          nodes: "Nodes",
+          edges: "Connections",
+          triggers: "Entries"
+        },
+        canvas: {
+          title: "Visual canvas",
+          subtitle: "Drag blocks, reorganize the journey, and connect each step directly on the graph.",
+          helper: "Use the side handles to create connections, drag cards to define the layout, and right-click to open quick actions.",
+          ariaLabel: "Flow editing canvas",
+          contextPane: "Add on canvas",
+          contextNode: "Node actions",
+          contextEdge: "Connection actions",
+          quickNodeTitle: "Selected node",
+          quickEdgeTitle: "Selected connection",
+          quickEmptyTitle: "Fast work on canvas",
+          quickSelectedHint: "Adjust the current item without leaving the graph area.",
+          quickEmptyHint: "Select an item or right-click inside the canvas.",
+          quickEmptyBody: "Open the right-click menu to add nodes exactly where you need them, or select a node/connection to edit it here.",
+          clearSelection: "Clear",
+          duplicateNode: "Duplicate node",
+          duplicateNodeHint: "Creates an offset copy of the current node to speed up flow design.",
+          fitView: "Center view",
+          shortcutsHint: "Shortcuts: N add node, F center view, Ctrl+S save, Esc clear",
+          editEdge: "Edit connection",
+          removeNodeHint: "Removes the node and every connection attached to it.",
+          removeEdgeHint: "Deletes only this transition from the flow."
+        },
+        inspector: {
+          title: "Inspector",
+          subtitle: "Select a node or connection to adjust details without leaving the canvas.",
+          empty: "Select a flow item to open the quick controls."
+        },
+        overview: {
+          title: "Flow map",
+          subtitle: "Quickly locate each created step and focus on the right point in the journey.",
+          empty: "Nodes added to the flow will appear here."
+        },
         execution: {
           title: "Execution",
           empty: "No execution recorded.",

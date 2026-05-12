@@ -1608,6 +1608,44 @@ const messages = {
           step3Title: "Defina o encerramento",
           step3Text: "Finalize com fim, troca de setor ou handoff para um atendente humano quando necessário."
         },
+        stats: {
+          nodes: "Nós",
+          edges: "Conexões",
+          triggers: "Entradas"
+        },
+        canvas: {
+          title: "Canvas visual",
+          subtitle: "Arraste os blocos, reorganize a jornada e conecte cada etapa diretamente no grafo.",
+          helper: "Use as alças laterais para criar conexões, arraste os cards para definir o layout e clique com o botão direito para abrir ações rápidas.",
+          ariaLabel: "Canvas de edição do fluxo",
+          contextPane: "Adicionar no canvas",
+          contextNode: "Ações do nó",
+          contextEdge: "Ações da conexão",
+          quickNodeTitle: "Nó selecionado",
+          quickEdgeTitle: "Conexão selecionada",
+          quickEmptyTitle: "Trabalho rápido no canvas",
+          quickSelectedHint: "Edite o item atual sem sair da área do grafo.",
+          quickEmptyHint: "Selecione um item ou clique com o botão direito dentro do canvas.",
+          quickEmptyBody: "Abra o menu com botão direito para adicionar nós no ponto desejado, ou selecione um nó/conexão para editar aqui mesmo.",
+          clearSelection: "Limpar",
+          duplicateNode: "Duplicar nó",
+          duplicateNodeHint: "Cria uma cópia deslocada do nó atual para acelerar o desenho do fluxo.",
+          fitView: "Centralizar",
+          shortcutsHint: "Atalhos: N novo nó, F centralizar, Ctrl+S salvar, Esc limpar",
+          editEdge: "Editar conexão",
+          removeNodeHint: "Remove o nó e as conexões ligadas a ele.",
+          removeEdgeHint: "Exclui somente esta transição do fluxo."
+        },
+        inspector: {
+          title: "Inspector",
+          subtitle: "Selecione um nó ou uma conexão para ajustar detalhes sem sair do canvas.",
+          empty: "Selecione um item do fluxo para abrir os controles rápidos."
+        },
+        overview: {
+          title: "Mapa do fluxo",
+          subtitle: "Localize rapidamente cada etapa criada e foque no ponto certo do atendimento.",
+          empty: "Os nós adicionados ao fluxo aparecerão aqui."
+        },
         execution: {
           title: "Execução",
           empty: "Nenhuma execução registrada.",

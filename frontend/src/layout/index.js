@@ -343,7 +343,9 @@ const LoggedInLayout = ({ children }) => {
   const { darkMode, toggleTheme } = useThemeContext();
   const [menuSearch, setMenuSearch] = useState("");
   const canViewTickets = userHasPermission(user, "tickets.view");
-  const isTicketsRoute = location.pathname.startsWith("/tickets");
+  const isFocusRoute =
+    location.pathname.startsWith("/tickets") ||
+    location.pathname.startsWith("/flowbuilder");
 
   useEffect(() => {
     if (document.body.offsetWidth > 600) {
@@ -364,7 +366,10 @@ const LoggedInLayout = ({ children }) => {
       return;
     }
 
-    if (location.pathname.startsWith("/tickets")) {
+    if (
+      location.pathname.startsWith("/tickets") ||
+      location.pathname.startsWith("/flowbuilder")
+    ) {
       setDrawerOpen(false);
       return;
     }
@@ -438,7 +443,7 @@ const LoggedInLayout = ({ children }) => {
       return;
     }
 
-    if (path.startsWith("/tickets")) {
+    if (path.startsWith("/tickets") || path.startsWith("/flowbuilder")) {
       setDrawerOpen(false);
       return;
     }
@@ -534,7 +539,7 @@ const LoggedInLayout = ({ children }) => {
           </div>
         </Toolbar>
       </AppBar>
-      <div className={clsx(classes.bodyRow, { [classes.bodyRowFullBleed]: isTicketsRoute })}>
+      <div className={clsx(classes.bodyRow, { [classes.bodyRowFullBleed]: isFocusRoute })}>
       <Drawer
         variant={drawerVariant}
         className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}
@@ -641,7 +646,7 @@ const LoggedInLayout = ({ children }) => {
         onClose={() => setUserModalOpen(false)}
         userId={user?.id}
       />
-        <main className={clsx(classes.content, { [classes.contentFullBleed]: isTicketsRoute })}>{children}</main>
+        <main className={clsx(classes.content, { [classes.contentFullBleed]: isFocusRoute })}>{children}</main>
       </div>
     </div>
   );

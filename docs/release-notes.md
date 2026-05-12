@@ -4,6 +4,16 @@
 
 ### legacy-prod
 
+- Fluxos/FlowBuilder: o construtor legado deixou de depender de listas lineares de nós e conexões e passa a operar em um canvas visual com cards arrastáveis, minimapa, zoom, conexões desenhadas no próprio grafo e painel lateral de inspeção para nós e transições.
+- Fluxos/FlowBuilder: a implementação reaproveita o contrato já existente de nós, arestas e coordenadas (`positionX`/`positionY`), preservando o backend atual e migrando a experiência de edição para um padrão mais próximo de ManyChat/Make sem alterar a regra funcional de salvamento, teste e execução.
+- Frontend/Fluxos: o builder ganhou visão resumida do fluxo, atalhos para criação rápida por tipo de nó, menu contextual por clique direito dentro do canvas e um inspector flutuante dentro do próprio grafo para editar conexões e acionar operações rápidas sem depender do painel externo.
+- Layout/Fluxos: a navegação lateral agora recolhe automaticamente ao entrar em rotas `/flowbuilder*` no desktop, reaproveitando o mesmo comportamento dos chats para centralizar melhor o canvas e ampliar a área útil do construtor.
+- Frontend/Fluxos/Acessibilidade: o canvas recebeu uma barra de ações rápida interna, suporte de teclado para operações frequentes (`N`, `F`, `Ctrl+S`, `Esc`) e nós focáveis por teclado com seleção/edição direta, melhorando ergonomia e acessibilidade sem alterar o contrato funcional do fluxo.
+- Escopo desta promocao: `frontend/package.json`, `frontend/src/pages/FlowBuilder/index.js`, `frontend/src/translate/languages/pt.js`, `frontend/src/translate/languages/en.js`, `frontend/src/translate/languages/es.js` e `docs/release-notes.md`.
+- Validacao local desta promocao: `npm install react-flow-renderer@9.7.4 --legacy-peer-deps` e `npm install --legacy-peer-deps` executados em `frontend`; `npm run build` aprovado repetidamente em `frontend` apos a troca para canvas visual e apos o refinamento de clique direito/inspector interno; preview local via `npm run preview -- --host 0.0.0.0 --port 58331` ativo com resposta em `http://localhost:58331/login`; a rota autenticada do FlowBuilder nao foi validada no navegador nesta rodada por ausencia de credenciais de sessao no preview aberto.
+
+### legacy-prod
+
 - Frontend/PWA: o SamaChat passa a expor manifest instalavel com nome `SamaChat`, metadados mobile e icones dedicados `192x192` e `512x512`, habilitando a instalacao minima no Chrome/Android sem alterar regras de negocio.
 - Frontend/PWA: foi adicionado um service worker conservador que cacheia apenas assets estaticos seguros do proprio frontend, sem interceptar navegacoes HTML, chamadas de API ou dados dinamicos do chat.
 - Frontend/PWA: o bootstrap do app agora registra o service worker apenas em build de producao, preservando o comportamento atual de desenvolvimento e evitando impacto no boot da aplicacao em caso de falha de registro.

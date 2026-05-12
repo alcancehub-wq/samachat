@@ -1580,6 +1580,44 @@ const messages = {
           step3Title: "Defina el cierre",
           step3Text: "Termine con fin, cambio de sector o handoff a un agente humano cuando sea necesario."
         },
+        stats: {
+          nodes: "Nodos",
+          edges: "Conexiones",
+          triggers: "Entradas"
+        },
+        canvas: {
+          title: "Canvas visual",
+          subtitle: "Arrastra los bloques, reorganiza la ruta y conecta cada etapa directamente en el grafo.",
+          helper: "Usa las asas laterales para crear conexiones, arrastra las tarjetas para definir el layout y haz clic derecho para abrir acciones rápidas.",
+          ariaLabel: "Canvas de edición del flujo",
+          contextPane: "Agregar en el canvas",
+          contextNode: "Acciones del nodo",
+          contextEdge: "Acciones de la conexión",
+          quickNodeTitle: "Nodo seleccionado",
+          quickEdgeTitle: "Conexión seleccionada",
+          quickEmptyTitle: "Trabajo rápido en el canvas",
+          quickSelectedHint: "Ajusta el elemento actual sin salir del área del grafo.",
+          quickEmptyHint: "Selecciona un elemento o haz clic derecho dentro del canvas.",
+          quickEmptyBody: "Abre el menú con clic derecho para agregar nodos en el punto deseado, o selecciona un nodo/conexión para editarlo aquí mismo.",
+          clearSelection: "Limpiar",
+          duplicateNode: "Duplicar nodo",
+          duplicateNodeHint: "Crea una copia desplazada del nodo actual para acelerar el diseño del flujo.",
+          fitView: "Centrar vista",
+          shortcutsHint: "Atajos: N nuevo nodo, F centrar vista, Ctrl+S guardar, Esc limpiar",
+          editEdge: "Editar conexión",
+          removeNodeHint: "Elimina el nodo y todas las conexiones ligadas a él.",
+          removeEdgeHint: "Borra solamente esta transición del flujo."
+        },
+        inspector: {
+          title: "Inspector",
+          subtitle: "Selecciona un nodo o una conexión para ajustar detalles sin salir del canvas.",
+          empty: "Selecciona un elemento del flujo para abrir los controles rápidos."
+        },
+        overview: {
+          title: "Mapa del flujo",
+          subtitle: "Ubica rápidamente cada etapa creada y enfócate en el punto correcto del recorrido.",
+          empty: "Los nodos agregados al flujo aparecerán aquí."
+        },
         execution: {
           title: "Ejecucion",
           empty: "Ninguna ejecucion registrada.",

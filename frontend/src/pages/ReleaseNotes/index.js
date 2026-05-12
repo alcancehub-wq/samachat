@@ -11,6 +11,19 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.05.11 / FlowBuilder canvas visual",
+    label: "Atualizacao do dia",
+    summary:
+      "Entrega focada em transformar o construtor de fluxos legado em um canvas visual mais proximo de ferramentas como ManyChat e Make, mantendo o contrato atual do backend.",
+    changes: [
+      "Substituido o editor linear por um canvas visual com nos arrastaveis, minimapa, zoom, conexoes desenhadas no proprio grafo e edicao mais direta da jornada.",
+      "Adicionado menu contextual com clique direito dentro do canvas para criar nos no ponto desejado e acessar rapidamente acoes de no e conexao.",
+      "Incluido inspector flutuante dentro do proprio canvas para editar selecoes sem depender de sair da area principal do fluxo.",
+      "Ajustado o layout para aproveitar melhor a largura da tela, com recolhimento automatico do menu lateral nas rotas de FlowBuilder, seguindo o mesmo padrao usado em Chats.",
+      "Melhorada a ergonomia com barra de acoes rapidas no canvas, atalhos de teclado para operacoes frequentes e navegacao mais acessivel por foco e selecao.",
+    ],
+  },
+  {
     version: "2026.05.09 / Campanhas, dialogos e listas",
     label: "Pacote funcional do dia",
     summary:
