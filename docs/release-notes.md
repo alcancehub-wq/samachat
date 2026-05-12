@@ -4,6 +4,14 @@
 
 ### legacy-prod
 
+- Frontend/PWA: o SamaChat passa a expor manifest instalavel com nome `SamaChat`, metadados mobile e icones dedicados `192x192` e `512x512`, habilitando a instalacao minima no Chrome/Android sem alterar regras de negocio.
+- Frontend/PWA: foi adicionado um service worker conservador que cacheia apenas assets estaticos seguros do proprio frontend, sem interceptar navegacoes HTML, chamadas de API ou dados dinamicos do chat.
+- Frontend/PWA: o bootstrap do app agora registra o service worker apenas em build de producao, preservando o comportamento atual de desenvolvimento e evitando impacto no boot da aplicacao em caso de falha de registro.
+- Escopo desta promocao: `frontend/index.html`, `frontend/public/manifest.json`, `frontend/public/android-chrome-512x512.png`, `frontend/public/service-worker.js`, `frontend/src/index.js` e `docs/release-notes.md`.
+- Validacao local desta promocao: `npm run build` aprovado em `frontend`; rebuild local via `docker compose -f docker-compose.yaml up -d --build frontend` concluido com sucesso; `http://localhost:3000/login` respondeu `200 OK`; no localhost o navegador confirmou `manifest` em `/manifest.json`, `theme-color` `#FF1919` e `service worker` registrado com escopo `http://localhost:3000/`.
+
+### legacy-prod
+
 - Chats/Audio gravado: o envio de audio gravado no compositor passa a normalizar containers `webm`, `ogg` e `opus` para um OGG/Opus compativel com mensagem de voz do WhatsApp antes do disparo, reduzindo o caso em que o atendente consegue reproduzir localmente mas o cliente recebe erro pedindo reenvio do arquivo.
 - Backend/WhatsApp: a deteccao de mensagem de voz deixa de depender de comparacoes exatas de MIME e passa a aceitar variantes como `audio/webm;codecs=opus` e `audio/ogg;codecs=opus`, preservando uploads comuns como `mp3` fora dessa conversao.
 - Escopo desta correcao: `backend/src/services/WbotServices/SendWhatsAppMedia.ts`, `backend/src/services/WbotServices/audioNormalization.ts`, `backend/src/__tests__/unit/WbotServices/audioNormalization.spec.ts` e `docs/release-notes.md`.
