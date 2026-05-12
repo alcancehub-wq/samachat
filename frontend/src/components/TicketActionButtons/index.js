@@ -21,6 +21,12 @@ const useStyles = makeStyles(theme => ({
 		"& > *": {
 			margin: theme.spacing(1),
 		},
+		[theme.breakpoints.down("sm")]: {
+			marginRight: 0,
+			"& > *": {
+				margin: 0,
+			},
+		},
 	},
 	primaryActionButton: {
 		borderRadius: 4,
@@ -42,6 +48,9 @@ const useStyles = makeStyles(theme => ({
 	},
 	menuButton: {
 		color: theme.palette.text.secondary,
+		[theme.breakpoints.down("sm")]: {
+			padding: 8,
+		},
 	},
 }));
 

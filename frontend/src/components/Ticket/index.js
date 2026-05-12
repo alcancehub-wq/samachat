@@ -23,32 +23,17 @@ const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
     flex: 1,
+    width: "100%",
+    minWidth: 0,
     minHeight: 0,
     position: "relative",
     overflow: "hidden",
   },
 
-  ticketInfo: {
-    maxWidth: "50%",
-    flexBasis: "50%",
-    [theme.breakpoints.down("sm")]: {
-      maxWidth: "80%",
-      flexBasis: "80%",
-    },
-  },
-  ticketActionButtons: {
-    maxWidth: "50%",
-    flexBasis: "50%",
-    display: "flex",
-    [theme.breakpoints.down("sm")]: {
-      maxWidth: "100%",
-      flexBasis: "100%",
-      marginBottom: "5px",
-    },
-  },
-
   mainWrapper: {
     flex: 1,
+    width: "100%",
+    minWidth: 0,
     minHeight: 0,
     display: "flex",
     flexDirection: "column",
@@ -62,6 +47,11 @@ const useStyles = makeStyles((theme) => ({
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
+    [theme.breakpoints.down("sm")]: {
+      marginRight: 0,
+      border: 0,
+      borderRadius: 0,
+    },
   },
 
   mainWrapperShift: {
@@ -76,6 +66,32 @@ const useStyles = makeStyles((theme) => ({
   headerWrapper: {
     padding: theme.spacing(1.5, 1.5, 0),
     boxSizing: "border-box",
+    [theme.breakpoints.down("sm")]: {
+      padding: 0,
+    },
+  },
+  ticketInfo: {
+    maxWidth: "50%",
+    flexBasis: "50%",
+    [theme.breakpoints.down("sm")]: {
+      maxWidth: "none",
+      flexBasis: "auto",
+      flex: 1,
+      minWidth: 0,
+    },
+  },
+  ticketActionButtons: {
+    maxWidth: "50%",
+    flexBasis: "50%",
+    display: "flex",
+    [theme.breakpoints.down("sm")]: {
+      maxWidth: "none",
+      flexBasis: "auto",
+      marginBottom: 0,
+      marginLeft: "auto",
+      flex: "none",
+      alignItems: "center",
+    },
   },
 }));
 

@@ -20,18 +20,30 @@ const useStyles = makeStyles((theme) => ({
 		height: 48,
 		border: `1px solid ${theme.palette.divider}`,
 		boxShadow: "0 6px 14px rgba(15, 23, 42, 0.08)",
+		[theme.breakpoints.down("sm")]: {
+			width: 40,
+			height: 40,
+			boxShadow: "none",
+		},
 	},
 	title: {
 		fontWeight: 700,
 		fontSize: "1.02rem",
 		lineHeight: 1.25,
 		color: theme.palette.text.primary,
+		[theme.breakpoints.down("sm")]: {
+			fontSize: "0.98rem",
+		},
 	},
 	subtitle: {
 		marginTop: theme.spacing(0.25),
 		fontSize: "0.84rem",
 		lineHeight: 1.45,
 		color: theme.palette.text.secondary,
+		[theme.breakpoints.down("sm")]: {
+			fontSize: "0.76rem",
+			marginTop: 0,
+		},
 	},
 }));
 

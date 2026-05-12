@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
 import CloseIcon from "@material-ui/icons/Close";
@@ -10,6 +10,7 @@ import InputLabel from "@material-ui/core/InputLabel";
 import Avatar from "@material-ui/core/Avatar";
 import Button from "@material-ui/core/Button";
 import Paper from "@material-ui/core/Paper";
+import useMediaQuery from "@material-ui/core/useMediaQuery";
 
 import { i18n } from "../../translate/i18n";
 
@@ -28,6 +29,10 @@ const useStyles = makeStyles(theme => ({
 		width: drawerWidth,
 		flexShrink: 0,
 		height: "100%",
+		[theme.breakpoints.down("sm")]: {
+			width: 0,
+			flexShrink: 1,
+		},
 	},
 	drawerPaper: {
 		width: drawerWidth,
@@ -45,6 +50,14 @@ const useStyles = makeStyles(theme => ({
 		borderBottom: `1px solid ${theme.palette.divider}`,
 		borderTopRightRadius: 4,
 		borderBottomRightRadius: 4,
+		[theme.breakpoints.down("sm")]: {
+			width: "min(88vw, 340px)",
+			maxWidth: "100%",
+			borderTop: 0,
+			borderBottom: 0,
+			borderTopRightRadius: 0,
+			borderBottomRightRadius: 0,
+		},
 	},
 	header: {
 		display: "flex",
@@ -138,6 +151,8 @@ const ContactDrawer = ({
 	ticket
 }) => {
 	const classes = useStyles();
+	const theme = useTheme();
+	const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
 	const [modalOpen, setModalOpen] = useState(false);
 	const contactNotes = useMemo(
@@ -156,15 +171,23 @@ const ContactDrawer = ({
 	return (
 		<Drawer
 			className={classes.drawer}
-			variant="persistent"
+			variant={isMobile ? "temporary" : "persistent"}
 			anchor="right"
 			open={open}
-			PaperProps={{ style: { position: "absolute" } }}
-			BackdropProps={{ style: { position: "absolute" } }}
-			ModalProps={{
-				container: document.getElementById("drawer-container"),
-				style: { position: "absolute" },
-			}}
+			PaperProps={
+				isMobile ? undefined : { style: { position: "absolute" } }
+			}
+			BackdropProps={
+				isMobile ? undefined : { style: { position: "absolute" } }
+			}
+			ModalProps={
+				isMobile
+					? { keepMounted: true }
+					: {
+						container: document.getElementById("drawer-container"),
+						style: { position: "absolute" },
+					}
+			}
 			classes={{
 				paper: classes.drawerPaper,
 			}}

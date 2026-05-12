@@ -18,6 +18,14 @@
 - Escopo desta correcao complementar: `frontend/src/components/TicketsManager/index.js`, `frontend/src/layout/index.js` e `docs/release-notes.md`.
 - Validacao local desta correcao: `npm run build` aprovado em `frontend`, rebuild local via `docker compose -f docker-compose.yaml up -d --build frontend` concluido com sucesso e `http://localhost:3000` validado antes da promocao.
 
+### legacy-prod
+
+- Chats/Mobile/Conversa: a tela de atendimento aberta no celular foi refinada para seguir a hierarquia visual do WhatsApp sem descaracterizar o SamaChat, com header mais compacto, avatar/tipografia ajustados, composer arredondado e acoes principais preservadas.
+- Chats/Mobile/Conversa: a causa do layout quebrado foi removida na raiz; o drawer lateral do contato deixa de reservar largura quando fechado no mobile, fazendo a conversa voltar a ocupar toda a largura disponivel do viewport.
+- Chats/Mobile/Conversa: o composer mobile continua com as funcoes padrao do SamaChat, incluindo `Emoji`, `Arquivo`, `Mensagem interna`, envio de texto e gravacao de audio, agora com menus mais compactos e menu de acoes do ticket com icones por item.
+- Escopo desta promocao: `frontend/src/components/ContactDrawer/index.js`, `frontend/src/components/MessageInput/index.js`, `frontend/src/components/MessagesList/index.js`, `frontend/src/components/Ticket/index.js`, `frontend/src/components/TicketActionButtons/index.js`, `frontend/src/components/TicketHeader/index.js`, `frontend/src/components/TicketInfo/index.js`, `frontend/src/components/TicketOptionsMenu/index.js`, `frontend/src/pages/Tickets/index.js` e `docs/release-notes.md`.
+- Validacao local desta promocao: `npm run build` aprovado em `frontend`; rebuild local via `docker compose -f docker-compose.yaml up -d --build frontend` concluido com sucesso; `http://localhost:3000` respondeu `200 OK`; tela mobile validada localmente em `http://localhost:3000/tickets/130` com conversa em largura integral, header/composer no padrao esperado e menus `Acoes do ticket` e `Composer` conferidos visualmente antes da promocao.
+
 ## 2026-05-09
 
 ### legacy-prod

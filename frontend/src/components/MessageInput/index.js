@@ -4,7 +4,8 @@ import { useParams } from "react-router-dom";
 import { Picker } from "emoji-mart";
 import clsx from "clsx";
 
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
+import useMediaQuery from "@material-ui/core/useMediaQuery";
 import Paper from "@material-ui/core/Paper";
 import InputBase from "@material-ui/core/InputBase";
 import TextField from "@material-ui/core/TextField";
@@ -73,6 +74,9 @@ const useStyles = makeStyles(theme => ({
       position: "fixed",
       bottom: 0,
       width: "100%",
+      left: 0,
+      background: theme.custom.softBackground,
+      borderTop: `1px solid ${theme.palette.divider}`,
     },
   },
 
@@ -82,6 +86,12 @@ const useStyles = makeStyles(theme => ({
     display: "flex",
     padding: "7px",
     alignItems: "center",
+    [theme.breakpoints.down("sm")]: {
+      background: theme.custom.softBackground,
+      padding: "8px 10px calc(8px + env(safe-area-inset-bottom, 0px))",
+      gap: 8,
+      alignItems: "flex-end",
+    },
   },
 
   messageInputWrapper: {
@@ -92,6 +102,17 @@ const useStyles = makeStyles(theme => ({
     borderRadius: 20,
     flex: 1,
     position: "relative",
+    [theme.breakpoints.down("sm")]: {
+      minHeight: 48,
+      marginRight: 0,
+      padding: "6px 10px",
+      borderRadius: 24,
+      background: theme.palette.background.paper,
+      border: `1px solid ${theme.palette.divider}`,
+      boxShadow: "0 4px 16px rgba(15, 23, 42, 0.08)",
+      alignItems: "center",
+      gap: 4,
+    },
   },
 
   modeToggleButtonActive: {
@@ -103,10 +124,63 @@ const useStyles = makeStyles(theme => ({
     paddingLeft: 10,
     flex: 1,
     border: "none",
+    [theme.breakpoints.down("sm")]: {
+      paddingLeft: 6,
+      fontSize: "0.95rem",
+    },
   },
 
   sendMessageIcons: {
     color: theme.palette.text.secondary,
+  },
+  mobileAttachButton: {
+    [theme.breakpoints.down("sm")]: {
+      color: theme.palette.text.secondary,
+      padding: 8,
+      alignSelf: "center",
+    },
+  },
+  mobilePrimaryAction: {
+    [theme.breakpoints.down("sm")]: {
+      width: 48,
+      height: 48,
+      backgroundColor: theme.palette.primary.main,
+      color: "#FFFFFF",
+      boxShadow: "0 10px 20px rgba(255, 25, 25, 0.24)",
+      "&:hover": {
+        backgroundColor: theme.palette.primary.dark,
+      },
+      "& svg": {
+        color: "#FFFFFF",
+      },
+    },
+  },
+  mobileMenuPaper: {
+    borderRadius: 14,
+    minWidth: 188,
+    "& .MuiList-padding": {
+      paddingTop: 4,
+      paddingBottom: 4,
+    },
+  },
+  mobileMenuItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(0.75),
+    minWidth: 0,
+    paddingTop: theme.spacing(0.75),
+    paddingBottom: theme.spacing(0.75),
+    paddingLeft: theme.spacing(1.25),
+    paddingRight: theme.spacing(1.25),
+    minHeight: 40,
+    "& .MuiIconButton-root": {
+      padding: 4,
+    },
+  },
+  mobileMenuLabel: {
+    fontSize: "0.9rem",
+    lineHeight: 1.15,
+    color: theme.palette.text.primary,
   },
 
   uploadInput: {
@@ -148,6 +222,9 @@ const useStyles = makeStyles(theme => ({
     display: "flex",
     alignItems: "center",
     alignContent: "middle",
+    [theme.breakpoints.down("sm")]: {
+      gap: 6,
+    },
   },
 
   cancelAudioIcon: {
@@ -325,6 +402,8 @@ const useStyles = makeStyles(theme => ({
 
 const MessageInput = ({ ticketStatus }) => {
   const classes = useStyles();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { ticketId } = useParams();
 
   const [medias, setMedias] = useState([]);
@@ -730,6 +809,8 @@ const MessageInput = ({ ticketStatus }) => {
     setAnchorEl(null);
   };
 
+  const mobilePlaceholder = "Mensagem";
+
   const renderReplyingMessage = message => {
     return (
       <div className={classes.replyginMsgWrapper}>
@@ -946,8 +1027,9 @@ const MessageInput = ({ ticketStatus }) => {
               aria-controls="simple-menu"
               aria-haspopup="true"
               onClick={handleOpenMenuClick}
+              className={classes.mobileAttachButton}
             >
-              <MoreVert></MoreVert>
+              <AttachFileIcon />
             </IconButton>
             <Menu
               id="simple-menu"
@@ -955,8 +1037,9 @@ const MessageInput = ({ ticketStatus }) => {
               anchorEl={anchorEl}
               open={Boolean(anchorEl)}
               onClose={handleMenuItemClick}
+              classes={{ paper: classes.mobileMenuPaper }}
             >
-              <MenuItem onClick={handleMenuItemClick}>
+              <MenuItem onClick={handleMenuItemClick} className={classes.mobileMenuItem}>
                 <IconButton
                   aria-label="emojiPicker"
                   component="span"
@@ -970,8 +1053,9 @@ const MessageInput = ({ ticketStatus }) => {
                 >
                   <MoodIcon className={classes.sendMessageIcons} />
                 </IconButton>
+                <span className={classes.mobileMenuLabel}>Emoji</span>
               </MenuItem>
-              <MenuItem onClick={handleMenuItemClick}>
+              <MenuItem onClick={handleMenuItemClick} className={classes.mobileMenuItem}>
                 <input
                   multiple
                   type="file"
@@ -999,29 +1083,52 @@ const MessageInput = ({ ticketStatus }) => {
                     <AttachFileIcon className={classes.sendMessageIcons} />
                   </IconButton>
                 </label>
+                <span className={classes.mobileMenuLabel}>Arquivo</span>
+              </MenuItem>
+              <MenuItem onClick={handleMenuItemClick} className={classes.mobileMenuItem}>
+                <IconButton
+                  aria-label="toggleInternalMessage"
+                  component="span"
+                  className={clsx({
+                    [classes.modeToggleButtonActive]: isInternalMessage,
+                  })}
+                  disabled={loading || recording || ticketStatus !== "open"}
+                  onClick={handleToggleInternalMessage}
+                >
+                  {isInternalMessage ? (
+                    <SpeakerNotesOutlinedIcon />
+                  ) : (
+                    <ChatBubbleOutlineIcon className={classes.sendMessageIcons} />
+                  )}
+                </IconButton>
+                <span className={classes.mobileMenuLabel}>
+                  {isInternalMessage ? "Mensagem externa" : "Mensagem interna"}
+                </span>
               </MenuItem>
             </Menu>
           </Hidden>
-          <IconButton
-            aria-label="toggleInternalMessage"
-            component="span"
-            className={clsx({
-              [classes.modeToggleButtonActive]: isInternalMessage,
-            })}
-            disabled={loading || recording || ticketStatus !== "open"}
-            onClick={handleToggleInternalMessage}
-            title={
-              isInternalMessage
-                ? i18n.t("messagesInput.internalModeEnabled")
-                : i18n.t("messagesInput.internalModeDisabled")
-            }
-          >
-            {isInternalMessage ? (
-              <SpeakerNotesOutlinedIcon />
-            ) : (
-              <ChatBubbleOutlineIcon className={classes.sendMessageIcons} />
-            )}
-          </IconButton>
+          <Hidden only={["sm", "xs"]}>
+            <IconButton
+              aria-label="toggleInternalMessage"
+              component="span"
+              className={clsx({
+                [classes.modeToggleButtonActive]: isInternalMessage,
+              })}
+              disabled={loading || recording || ticketStatus !== "open"}
+              onClick={handleToggleInternalMessage}
+              title={
+                isInternalMessage
+                  ? i18n.t("messagesInput.internalModeEnabled")
+                  : i18n.t("messagesInput.internalModeDisabled")
+              }
+            >
+              {isInternalMessage ? (
+                <SpeakerNotesOutlinedIcon />
+              ) : (
+                <ChatBubbleOutlineIcon className={classes.sendMessageIcons} />
+              )}
+            </IconButton>
+          </Hidden>
           <div className={classes.messageInputWrapper}>
             <InputBase
               inputRef={input => {
@@ -1036,10 +1143,12 @@ const MessageInput = ({ ticketStatus }) => {
                   ? i18n.t("messagesInput.placeholderClosed")
                   : isInternalMessage
                   ? i18n.t("messagesInput.internalComposer.helper")
+                  : isMobile
+                  ? mobilePlaceholder
                   : i18n.t("messagesInput.placeholderOpen")
               }
               multiline
-              maxRows={5}
+              maxRows={isMobile ? 3 : 5}
               value={inputMessage}
               onChange={handleChangeInput}
               disabled={
@@ -1084,6 +1193,7 @@ const MessageInput = ({ ticketStatus }) => {
               component="span"
               onClick={handleSendMessage}
               disabled={loading || isInternalMessage}
+              className={clsx({ [classes.mobilePrimaryAction]: isMobile })}
             >
               <SendIcon className={classes.sendMessageIcons} />
             </IconButton>
@@ -1111,6 +1221,7 @@ const MessageInput = ({ ticketStatus }) => {
                 component="span"
                 onClick={handleUploadAudio}
                 disabled={loading}
+                className={clsx({ [classes.mobilePrimaryAction]: isMobile })}
               >
                 <CheckCircleOutlineIcon className={classes.sendAudioIcon} />
               </IconButton>
@@ -1121,6 +1232,7 @@ const MessageInput = ({ ticketStatus }) => {
               component="span"
               disabled={loading || ticketStatus !== "open" || isInternalMessage}
               onClick={handleStartRecording}
+              className={clsx({ [classes.mobilePrimaryAction]: isMobile })}
             >
               <MicIcon className={classes.sendMessageIcons} />
             </IconButton>

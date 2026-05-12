@@ -17,9 +17,12 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1.5, 1.75),
     gap: theme.spacing(1.5),
     [theme.breakpoints.down("sm")]: {
-      flexWrap: "wrap",
-      padding: theme.spacing(1, 1),
-      gap: theme.spacing(1),
+      flexWrap: "nowrap",
+      padding: theme.spacing(0.75, 1),
+      gap: theme.spacing(0.75),
+      borderRadius: 0,
+      borderBottom: `1px solid ${theme.palette.divider}`,
+      boxShadow: "none",
     },
   },
   backButton: {
@@ -36,10 +39,20 @@ const useStyles = makeStyles((theme) => ({
       backgroundColor: "rgba(229, 57, 53, 0.08)",
       boxShadow: "none",
     },
+    [theme.breakpoints.down("sm")]: {
+      minWidth: 36,
+      width: 36,
+      height: 36,
+      border: 0,
+      backgroundColor: "transparent",
+    },
   },
   backIcon: {
     fontSize: "1rem",
     color: theme.palette.text.primary,
+    [theme.breakpoints.down("sm")]: {
+      fontSize: "0.92rem",
+    },
   },
   content: {
     display: "flex",
@@ -49,8 +62,9 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(1.5),
     [theme.breakpoints.down("sm")]: {
       width: "100%",
-      flexWrap: "wrap",
-      gap: theme.spacing(1),
+      flexWrap: "nowrap",
+      gap: theme.spacing(0.75),
+      alignItems: "center",
     },
   },
 }));

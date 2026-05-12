@@ -3,6 +3,12 @@ import { useHistory } from "react-router-dom";
 
 import MenuItem from "@material-ui/core/MenuItem";
 import Menu from "@material-ui/core/Menu";
+import { makeStyles } from "@material-ui/core/styles";
+import SwapHorizIcon from "@material-ui/icons/SwapHoriz";
+import LowPriorityIcon from "@material-ui/icons/LowPriority";
+import MarkunreadOutlinedIcon from "@material-ui/icons/MarkunreadOutlined";
+import EventNoteOutlinedIcon from "@material-ui/icons/EventNoteOutlined";
+import ReplayIcon from "@material-ui/icons/Replay";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -12,6 +18,30 @@ import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { userHasPermission } from "../../utils/permissions";
 
+const useStyles = makeStyles(theme => ({
+	menuPaper: {
+		borderRadius: 14,
+		minWidth: 220,
+	},
+	menuItem: {
+		display: "flex",
+		alignItems: "center",
+		gap: theme.spacing(1.25),
+		padding: theme.spacing(1, 1.5),
+		minHeight: 42,
+	},
+	menuIcon: {
+		color: theme.palette.text.secondary,
+		fontSize: "1.15rem",
+		flex: "none",
+	},
+	menuLabel: {
+		fontSize: "0.95rem",
+		lineHeight: 1.2,
+		color: theme.palette.text.primary,
+	},
+}));
+
 const TicketOptionsMenu = ({
 	ticket,
 	contactId,
@@ -20,6 +50,7 @@ const TicketOptionsMenu = ({
 	handleClose,
 	anchorEl
 }) => {
+	const classes = useStyles();
 	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
 	const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
@@ -125,6 +156,13 @@ const TicketOptionsMenu = ({
 		}
 	};
 
+	const renderMenuItem = (IconComponent, label, onClick) => (
+		<MenuItem onClick={onClick} disabled={loading} className={classes.menuItem}>
+			<IconComponent className={classes.menuIcon} />
+			<span className={classes.menuLabel}>{label}</span>
+		</MenuItem>
+	);
+
 	return (
 		<>
 			<Menu
@@ -142,29 +180,40 @@ const TicketOptionsMenu = ({
 				}}
 				open={menuOpen}
 				onClose={handleClose}
+				classes={{ paper: classes.menuPaper }}
 			>
-				<MenuItem onClick={handleOpenTransferModal} disabled={loading}>
-					{i18n.t("ticketOptionsMenu.transfer")}
-				</MenuItem>
+				{renderMenuItem(
+					SwapHorizIcon,
+					i18n.t("ticketOptionsMenu.transfer"),
+					handleOpenTransferModal
+				)}
 				{ticket.status === "open" && (
-					<MenuItem onClick={handleMoveToFollowUp} disabled={loading}>
-						{i18n.t("ticketOptionsMenu.followUp")}
-					</MenuItem>
+					renderMenuItem(
+						LowPriorityIcon,
+						i18n.t("ticketOptionsMenu.followUp"),
+						handleMoveToFollowUp
+					)
 				)}
 				{ticket.unreadMessages === 0 && (
-					<MenuItem onClick={handleMarkAsUnread} disabled={loading}>
-						{i18n.t("ticketOptionsMenu.markAsUnread")}
-					</MenuItem>
+					renderMenuItem(
+						MarkunreadOutlinedIcon,
+						i18n.t("ticketOptionsMenu.markAsUnread"),
+						handleMarkAsUnread
+					)
 				)}
 				{canCreateSchedules && ticket?.id && (
-					<MenuItem onClick={handleOpenScheduleModal} disabled={loading}>
-						{i18n.t("ticketOptionsMenu.scheduleMessage")}
-					</MenuItem>
+					renderMenuItem(
+						EventNoteOutlinedIcon,
+						i18n.t("ticketOptionsMenu.scheduleMessage"),
+						handleOpenScheduleModal
+					)
 				)}
 				{ticket.status !== "pending" && (
-					<MenuItem onClick={handleReopen} disabled={loading}>
-						{i18n.t("ticketOptionsMenu.reopen")}
-					</MenuItem>
+					renderMenuItem(
+						ReplayIcon,
+						i18n.t("ticketOptionsMenu.reopen"),
+						handleReopen
+					)
 				)}
 			</Menu>
 			<TransferTicketModal

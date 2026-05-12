@@ -41,7 +41,12 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,
+    width: "100%",
+    minWidth: 0,
     paddingTop: 8,
+    [theme.breakpoints.down("sm")]: {
+      paddingTop: 0,
+    },
   },
 
   messagesList: {
@@ -51,9 +56,12 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,
+    width: "100%",
+    minWidth: 0,
     padding: "12px 20px 20px 20px",
     overflowY: "scroll",
     [theme.breakpoints.down("sm")]: {
+      padding: "10px 12px 96px",
       paddingBottom: "90px",
     },
     ...theme.scrollbarStyles,
@@ -97,6 +105,10 @@ const useStyles = makeStyles((theme) => ({
     paddingBottom: 0,
     border: `1px solid ${theme.palette.divider}`,
     boxShadow: "none",
+    [theme.breakpoints.down("sm")]: {
+      marginRight: 48,
+      maxWidth: "82%",
+    },
   },
 
   quotedContainerLeft: {
@@ -152,6 +164,10 @@ const useStyles = makeStyles((theme) => ({
     paddingBottom: 0,
     border: "1px solid rgba(53, 205, 150, 0.20)",
     boxShadow: "none",
+    [theme.breakpoints.down("sm")]: {
+      marginLeft: 48,
+      maxWidth: "82%",
+    },
   },
 
   internalMessageRight: {
