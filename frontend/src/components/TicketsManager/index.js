@@ -55,8 +55,7 @@ const useStyles = makeStyles((theme) => ({
       gap: theme.spacing(0.75),
     },
     [theme.breakpoints.down("sm")]: {
-      padding: theme.spacing(1, 1, 0.35),
-      borderBottom: 0,
+      display: "none",
     },
   },
   settingsIcon: {
@@ -144,7 +143,11 @@ const useStyles = makeStyles((theme) => ({
       padding: theme.spacing(0, 1, 0.75),
       borderBottom: 0,
       "& .MuiTabs-scroller": {
-        overflow: "auto !important",
+        overflow: "hidden !important",
+      },
+      "& .MuiTabs-flexContainer": {
+        gap: theme.spacing(0.5),
+        width: "100%",
       },
     },
   },
@@ -175,10 +178,12 @@ const useStyles = makeStyles((theme) => ({
       color: `${theme.palette.text.primary} !important`,
     },
     [theme.breakpoints.down("sm")]: {
-      minHeight: 36,
-      minWidth: "fit-content",
+      minHeight: 42,
+      minWidth: 0,
+      flex: 1,
+      maxWidth: "none",
       borderRadius: 999,
-      padding: theme.spacing(0.35, 1.1),
+      padding: theme.spacing(0.45, 1.1),
       "& .MuiTab-wrapper": {
         minHeight: 0,
       },
@@ -218,31 +223,26 @@ const useStyles = makeStyles((theme) => ({
     width: "100%",
     [theme.breakpoints.down("sm")]: {
       flexWrap: "nowrap",
-      alignItems: "center",
+      alignItems: "stretch",
       gap: theme.spacing(0.5),
-      overflowX: "auto",
+      overflowX: "hidden",
       paddingBottom: theme.spacing(0.25),
-      scrollbarWidth: "none",
-      "-ms-overflow-style": "none",
-      "&::-webkit-scrollbar": {
-        display: "none",
-      },
     },
   },
   showAllInline: {
     flex: "1 1 140px",
     minWidth: 140,
     [theme.breakpoints.down("sm")]: {
-      flex: "0 0 auto",
-      minWidth: 118,
+      flex: 1,
+      minWidth: 0,
     },
   },
   filterField: {
     flex: "1 1 160px",
     minWidth: 140,
     [theme.breakpoints.down("sm")]: {
-      flex: "0 0 142px",
-      minWidth: 142,
+      flex: 1,
+      minWidth: 0,
     },
   },
   serachInputWrapper: {
@@ -364,11 +364,12 @@ const useStyles = makeStyles((theme) => ({
     [theme.breakpoints.down("sm")]: {
       height: 42,
       minHeight: 42,
+      width: "100%",
       marginTop: 0,
       marginBottom: 0,
       borderRadius: 999,
       padding: theme.spacing(0, 1.1),
-      minWidth: 118,
+      minWidth: 0,
     },
   },
   showAllLabel: {
@@ -395,9 +396,12 @@ const useStyles = makeStyles((theme) => ({
   },
   selectSurface: {
     [theme.breakpoints.down("sm")]: {
-      minWidth: 142,
+      minWidth: 0,
+      flex: 1,
+      width: "100%",
       "& .MuiFormControl-root": {
         margin: "0 !important",
+        width: "100%",
       },
       "& .MuiInputLabel-outlined": {
         transform: "translate(14px, 14px) scale(1)",
@@ -675,8 +679,8 @@ const TicketsManager = () => {
           value={tabOpen}
           onChange={handleChangeTabOpen}
           textColor="inherit"
-          variant={isMobile ? "scrollable" : "fullWidth"}
-          scrollButtons={isMobile ? "auto" : "off"}
+          variant="fullWidth"
+          scrollButtons="off"
           className={classes.subTabs}
           TabIndicatorProps={{ style: { display: "none" } }}
         >

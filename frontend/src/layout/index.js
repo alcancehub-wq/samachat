@@ -286,7 +286,7 @@ const useStyles = makeStyles((theme) => ({
   searchField: {
     width: 380,
     [theme.breakpoints.down("sm")]: {
-      width: 170,
+      display: "none",
     },
   },
   searchInput: {

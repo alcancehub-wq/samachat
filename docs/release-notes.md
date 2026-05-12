@@ -13,8 +13,10 @@
 
 - Chats/Mobile: a lista de atendimentos no celular foi reestruturada para ficar muito mais proxima do padrao do WhatsApp, com shell full-bleed, busca arredondada, chips horizontais para categorias/status, filtros mais compactos e CTA flutuante para novo atendimento.
 - Chats/Mobile: os cards de conversa ficaram mais planos e densos no mobile, com avatar e timestamp mais proximos do padrao de lista do WhatsApp, menos ruido visual de bordas e tags, e melhor prioridade para nome, ultima mensagem e contador de nao lidas.
+- Chats/Mobile: na etapa final de refinamento, os chips `Atendendo` e `Aguardando` passam a preencher toda a largura da linha, os filtros `Todos`, `Tags` e `Setores` ficam nivelados com a mesma altura/largura visual, e os atalhos superiores `Atendimentos`, `Follow up`, `Resolvidos` e a busca do app bar ficam ocultos no mobile para aproximar a hierarquia do WhatsApp.
 - Escopo desta correcao: `frontend/src/components/TicketsManager/index.js`, `frontend/src/components/TicketsList/index.js`, `frontend/src/components/TicketListItem/index.js`, `frontend/src/components/TagSelect/index.js`, `frontend/src/pages/Tickets/index.js` e `docs/release-notes.md`.
-- Validacao local desta correcao: `npm run build` aprovado em `frontend` e diagnosticos do editor sem erros nos arquivos alterados.
+- Escopo desta correcao complementar: `frontend/src/components/TicketsManager/index.js`, `frontend/src/layout/index.js` e `docs/release-notes.md`.
+- Validacao local desta correcao: `npm run build` aprovado em `frontend`, rebuild local via `docker compose -f docker-compose.yaml up -d --build frontend` concluido com sucesso e `http://localhost:3000` validado antes da promocao.
 
 ## 2026-05-09
 
