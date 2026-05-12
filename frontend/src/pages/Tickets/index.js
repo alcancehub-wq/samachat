@@ -19,7 +19,8 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(0.5, 0.5, 0),
     boxSizing: "border-box",
     [theme.breakpoints.down("sm")]: {
-      padding: theme.spacing(0.5, 0.5, 0),
+      padding: 0,
+      backgroundColor: theme.palette.background.paper,
     },
   },
 
@@ -33,6 +34,12 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
     position: "relative",
     backgroundImage: theme.custom.panelGradientSoft,
+    [theme.breakpoints.down("sm")]: {
+      border: 0,
+      borderRadius: 0,
+      backgroundColor: theme.palette.background.paper,
+      backgroundImage: "none",
+    },
   },
 
   contactsWrapper: {
@@ -43,6 +50,9 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 0,
     backgroundColor: theme.palette.background.paper,
     borderRight: `1px solid ${theme.palette.divider}`,
+    [theme.breakpoints.down("sm")]: {
+      borderRight: 0,
+    },
   },
   contactsWrapperSmall: {
     display: "flex",

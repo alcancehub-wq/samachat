@@ -44,6 +44,21 @@ const useStyles = makeStyles(theme => ({
 			backgroundColor: theme.custom.dangerSoft,
 			borderColor: theme.palette.type === "dark" ? "rgba(255, 90, 95, 0.26)" : "rgba(229, 57, 53, 0.18)",
 		},
+		[theme.breakpoints.down("sm")]: {
+			margin: 0,
+			padding: theme.spacing(1.25, 1.25, 1.1, 1.5),
+			borderRadius: 0,
+			border: 0,
+			backgroundColor: "transparent",
+			"&:hover": {
+				backgroundColor: "rgba(255, 25, 25, 0.03)",
+				borderColor: "transparent",
+			},
+			"&.Mui-selected": {
+				backgroundColor: theme.custom.dangerSoft,
+				borderColor: "transparent",
+			},
+		},
 	},
 
 	pendingTicket: {
@@ -83,6 +98,10 @@ const useStyles = makeStyles(theme => ({
 		gap: theme.spacing(0.5),
 		paddingTop: theme.spacing(0.15),
 		minHeight: 78,
+		[theme.breakpoints.down("sm")]: {
+			minHeight: 72,
+			gap: theme.spacing(0.3),
+		},
 	},
 
 	headerRow: {
@@ -91,6 +110,10 @@ const useStyles = makeStyles(theme => ({
 		alignItems: "flex-start",
 		gap: theme.spacing(1),
 		minWidth: 0,
+		[theme.breakpoints.down("sm")]: {
+			alignItems: "center",
+			gap: theme.spacing(0.75),
+		},
 	},
 
 	titleRow: {
@@ -106,6 +129,9 @@ const useStyles = makeStyles(theme => ({
 		alignItems: "center",
 		gap: theme.spacing(0.35),
 		flexShrink: 0,
+		[theme.breakpoints.down("sm")]: {
+			gap: theme.spacing(0.15),
+		},
 	},
 
 	messageRow: {
@@ -119,6 +145,10 @@ const useStyles = makeStyles(theme => ({
 		gap: theme.spacing(0.75),
 		minWidth: 0,
 		marginTop: "auto",
+		[theme.breakpoints.down("sm")]: {
+			gap: theme.spacing(0.5),
+			alignItems: "flex-end",
+		},
 	},
 
 	footerMeta: {
@@ -144,6 +174,10 @@ const useStyles = makeStyles(theme => ({
 		whiteSpace: "nowrap",
 		flexShrink: 0,
 		color: theme.palette.text.secondary,
+		[theme.breakpoints.down("sm")]: {
+			fontSize: "0.74rem",
+			marginRight: theme.spacing(0.25),
+		},
 	},
 
 	closedBadge: {
@@ -158,6 +192,10 @@ const useStyles = makeStyles(theme => ({
 		fontSize: "0.83rem",
 		lineHeight: 1.45,
 		maxWidth: "100%",
+		[theme.breakpoints.down("sm")]: {
+			fontSize: "0.86rem",
+			lineHeight: 1.35,
+		},
 	},
 
 	newMessagesCount: {
@@ -182,6 +220,11 @@ const useStyles = makeStyles(theme => ({
 			backgroundColor: "#E11414 !important",
 			boxShadow: "none !important",
 		},
+		[theme.breakpoints.down("sm")]: {
+			borderRadius: 999,
+			paddingLeft: theme.spacing(1.4),
+			paddingRight: theme.spacing(1.4),
+		},
 	},
 
 	selectCheckbox: {
@@ -202,6 +245,11 @@ const useStyles = makeStyles(theme => ({
 		left: "0%",
 		borderTopLeftRadius: theme.shape.borderRadius + 2,
 		borderBottomLeftRadius: theme.shape.borderRadius + 2,
+		[theme.breakpoints.down("sm")]: {
+			width: 4,
+			borderTopLeftRadius: 0,
+			borderBottomLeftRadius: 0,
+		},
 	},
 
 	userTag: {
@@ -217,12 +265,21 @@ const useStyles = makeStyles(theme => ({
 		overflow: "hidden",
 		textOverflow: "ellipsis",
 		whiteSpace: "nowrap",
+		[theme.breakpoints.down("sm")]: {
+			maxWidth: 132,
+			padding: "2px 7px",
+			fontSize: "0.66rem",
+		},
 	},
 	contactAvatar: {
 		width: 46,
 		height: 46,
 		border: `1px solid ${theme.palette.divider}`,
 		boxShadow: "none",
+		[theme.breakpoints.down("sm")]: {
+			width: 50,
+			height: 50,
+		},
 	},
 	contactName: {
 		fontWeight: 700,
@@ -230,6 +287,9 @@ const useStyles = makeStyles(theme => ({
 		lineHeight: 1.2,
 		minWidth: 0,
 		flex: 1,
+		[theme.breakpoints.down("sm")]: {
+			fontSize: "0.95rem",
+		},
 	},
 	closedStatus: {
 		padding: "4px 8px",
@@ -253,6 +313,9 @@ const useStyles = makeStyles(theme => ({
 		marginTop: 0,
 		justifyContent: "flex-end",
 		maxWidth: 260,
+		[theme.breakpoints.down("sm")]: {
+			display: "none",
+		},
 	},
 	tagChip: {
 		background: theme.custom.dangerSoft,
@@ -268,6 +331,19 @@ const useStyles = makeStyles(theme => ({
 		padding: 6,
 		backgroundColor: theme.custom.softBackground,
 		border: `1px solid ${theme.palette.divider}`,
+		[theme.breakpoints.down("sm")]: {
+			display: "none",
+		},
+	},
+	ticketDivider: {
+		marginLeft: 32,
+		marginRight: 24,
+		opacity: 0.45,
+		[theme.breakpoints.down("sm")]: {
+			marginLeft: 78,
+			marginRight: 0,
+			opacity: 0.28,
+		},
 	},
 }));
 
@@ -379,6 +455,15 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 							)}
 						</div>
 						<div className={classes.headerActions}>
+								{formattedTicketTimestamp && (
+									<Typography
+										className={classes.lastMessageTime}
+										component="span"
+										variant="body2"
+									>
+										{formattedTicketTimestamp}
+									</Typography>
+								)}
 							<IconButton
 								size="small"
 								className={classes.tagButton}
@@ -417,15 +502,6 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 					</div>
 					<div className={classes.footerRow}>
 						<div className={classes.footerMeta}>
-							{formattedTicketTimestamp && (
-								<Typography
-									className={classes.lastMessageTime}
-									component="span"
-									variant="body2"
-								>
-									{formattedTicketTimestamp}
-								</Typography>
-							)}
 							{assigneeLabel && (
 								<div className={classes.userTag} title={assigneeTitle}>{assigneeLabel}</div>
 							)}
@@ -472,7 +548,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 					</div>
 				</div>
 			</ListItem>
-			<Divider variant="inset" component="li" style={{ marginLeft: 32, marginRight: 24, opacity: 0.45 }} />
+			<Divider variant="inset" component="li" className={classes.ticketDivider} />
 		</React.Fragment>
 	);
 };

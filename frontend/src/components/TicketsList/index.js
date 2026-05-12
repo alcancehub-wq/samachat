@@ -29,6 +29,11 @@ const useStyles = makeStyles(theme => ({
 		overflow: "hidden",
 		borderTopRightRadius: 0,
 		borderBottomRightRadius: 0,
+		[theme.breakpoints.down("sm")]: {
+			backgroundColor: theme.palette.background.paper,
+			borderRadius: 0,
+			boxShadow: "none",
+		},
 	},
 
 	ticketsList: {
@@ -36,6 +41,10 @@ const useStyles = makeStyles(theme => ({
 		overflowY: "scroll",
 		...theme.scrollbarStyles,
 		borderTop: `1px solid ${theme.palette.divider}`,
+		[theme.breakpoints.down("sm")]: {
+			borderTop: 0,
+			paddingBottom: theme.spacing(10),
+		},
 	},
 
 	ticketsListHeader: {
@@ -90,6 +99,13 @@ const useStyles = makeStyles(theme => ({
 		borderBottom: `1px solid ${theme.palette.divider}`,
 		backgroundColor: theme.palette.background.paper,
 		flexWrap: "wrap",
+		[theme.breakpoints.down("sm")]: {
+			position: "sticky",
+			top: 0,
+			zIndex: 3,
+			padding: theme.spacing(0.85, 1),
+			gap: theme.spacing(0.75),
+		},
 	},
 
 	selectAllControl: {
@@ -123,6 +139,9 @@ const useStyles = makeStyles(theme => ({
 			backgroundColor: "rgba(255, 25, 25, 0.18) !important",
 			color: "rgba(255, 255, 255, 0.72) !important",
 		},
+		[theme.breakpoints.down("sm")]: {
+			borderRadius: 999,
+		},
 	},
 
 	bulkDeleteButton: {
@@ -137,6 +156,9 @@ const useStyles = makeStyles(theme => ({
 			backgroundColor: `${theme.custom.neutralButtonBackgroundHover} !important`,
 			borderColor: `${theme.custom.panelBorderStrong} !important`,
 			boxShadow: "none !important",
+		},
+		[theme.breakpoints.down("sm")]: {
+			borderRadius: 999,
 		},
 	},
 

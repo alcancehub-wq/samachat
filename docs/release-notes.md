@@ -9,6 +9,13 @@
 - Escopo desta correcao: `backend/src/services/WbotServices/SendWhatsAppMedia.ts`, `backend/src/services/WbotServices/audioNormalization.ts`, `backend/src/__tests__/unit/WbotServices/audioNormalization.spec.ts` e `docs/release-notes.md`.
 - Validacao local desta correcao: teste focado `./node_modules/.bin/jest src/__tests__/unit/WbotServices/audioNormalization.spec.ts --runInBand --coverage=false` aprovado com 4 testes; diagnosticos do editor sem erros nos arquivos alterados.
 
+### legacy-prod
+
+- Chats/Mobile: a lista de atendimentos no celular foi reestruturada para ficar muito mais proxima do padrao do WhatsApp, com shell full-bleed, busca arredondada, chips horizontais para categorias/status, filtros mais compactos e CTA flutuante para novo atendimento.
+- Chats/Mobile: os cards de conversa ficaram mais planos e densos no mobile, com avatar e timestamp mais proximos do padrao de lista do WhatsApp, menos ruido visual de bordas e tags, e melhor prioridade para nome, ultima mensagem e contador de nao lidas.
+- Escopo desta correcao: `frontend/src/components/TicketsManager/index.js`, `frontend/src/components/TicketsList/index.js`, `frontend/src/components/TicketListItem/index.js`, `frontend/src/components/TagSelect/index.js`, `frontend/src/pages/Tickets/index.js` e `docs/release-notes.md`.
+- Validacao local desta correcao: `npm run build` aprovado em `frontend` e diagnosticos do editor sem erros nos arquivos alterados.
+
 ## 2026-05-09
 
 ### legacy-prod

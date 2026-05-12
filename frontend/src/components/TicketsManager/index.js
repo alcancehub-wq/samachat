@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
+import useMediaQuery from "@material-ui/core/useMediaQuery";
 import Paper from "@material-ui/core/Paper";
 import SearchIcon from "@material-ui/icons/Search";
 import IconButton from "@material-ui/core/IconButton";
@@ -12,6 +13,7 @@ import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
 import AccessTimeIcon from "@material-ui/icons/AccessTime";
+import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
 import Switch from "@material-ui/core/Switch";
 import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsList";
@@ -37,6 +39,12 @@ const useStyles = makeStyles((theme) => ({
     backgroundImage: theme.palette.type === "dark"
       ? theme.custom.panelGradientSoft
       : "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(250,251,252,0.96) 100%)",
+    [theme.breakpoints.down("sm")]: {
+      backgroundColor: theme.palette.background.paper,
+      backgroundImage: "none",
+      border: 0,
+      borderRadius: 0,
+    },
   },
   tabsHeader: {
     flex: "none",
@@ -47,7 +55,8 @@ const useStyles = makeStyles((theme) => ({
       gap: theme.spacing(0.75),
     },
     [theme.breakpoints.down("sm")]: {
-      padding: theme.spacing(1, 1, 0.5),
+      padding: theme.spacing(1, 1, 0.35),
+      borderBottom: 0,
     },
   },
   settingsIcon: {
@@ -86,6 +95,39 @@ const useStyles = makeStyles((theme) => ({
     "&.MuiTab-textColorPrimary.Mui-selected": {
       color: `${theme.palette.text.primary} !important`,
     },
+    [theme.breakpoints.down("sm")]: {
+      minHeight: 36,
+      minWidth: "fit-content",
+      padding: theme.spacing(0.35, 1.15),
+      borderRadius: 999,
+      "& .MuiTab-wrapper": {
+        gap: theme.spacing(0.5),
+        fontSize: "0.84rem",
+      },
+      "& svg": {
+        display: "none",
+      },
+    },
+  },
+  tabLabel: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: theme.spacing(0.6),
+    whiteSpace: "nowrap",
+  },
+  tabCount: {
+    minWidth: 18,
+    height: 18,
+    padding: theme.spacing(0, 0.55),
+    borderRadius: 999,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "0.72rem",
+    fontWeight: 700,
+    color: "#FFFFFF",
+    backgroundColor: "#FF1919",
+    lineHeight: 1,
   },
   subTabs: {
     backgroundColor: theme.palette.background.paper,
@@ -97,6 +139,13 @@ const useStyles = makeStyles((theme) => ({
     },
     "& .MuiTabs-scroller": {
       overflow: "visible !important",
+    },
+    [theme.breakpoints.down("sm")]: {
+      padding: theme.spacing(0, 1, 0.75),
+      borderBottom: 0,
+      "& .MuiTabs-scroller": {
+        overflow: "auto !important",
+      },
     },
   },
   subTab: {
@@ -125,6 +174,15 @@ const useStyles = makeStyles((theme) => ({
     "&.MuiTab-textColorPrimary.Mui-selected": {
       color: `${theme.palette.text.primary} !important`,
     },
+    [theme.breakpoints.down("sm")]: {
+      minHeight: 36,
+      minWidth: "fit-content",
+      borderRadius: 999,
+      padding: theme.spacing(0.35, 1.1),
+      "& .MuiTab-wrapper": {
+        minHeight: 0,
+      },
+    },
   },
   ticketOptionsBox: {
     display: "flex",
@@ -135,7 +193,9 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(0.9),
     borderBottom: `1px solid ${theme.palette.divider}`,
     [theme.breakpoints.down("sm")]: {
-      padding: theme.spacing(0.85, 1, 1),
+      padding: theme.spacing(0.35, 1, 0.85),
+      gap: theme.spacing(0.75),
+      borderBottom: 0,
     },
   },
   ticketOptionsPrimary: {
@@ -144,6 +204,11 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(0.75),
     flexWrap: "wrap",
     width: "100%",
+    [theme.breakpoints.down("sm")]: {
+      flexDirection: "column",
+      alignItems: "stretch",
+      gap: theme.spacing(0.75),
+    },
   },
   ticketOptionsSecondary: {
     display: "flex",
@@ -152,18 +217,33 @@ const useStyles = makeStyles((theme) => ({
     flexWrap: "nowrap",
     width: "100%",
     [theme.breakpoints.down("sm")]: {
-      flexWrap: "wrap",
+      flexWrap: "nowrap",
       alignItems: "center",
       gap: theme.spacing(0.5),
+      overflowX: "auto",
+      paddingBottom: theme.spacing(0.25),
+      scrollbarWidth: "none",
+      "-ms-overflow-style": "none",
+      "&::-webkit-scrollbar": {
+        display: "none",
+      },
     },
   },
   showAllInline: {
     flex: "1 1 140px",
     minWidth: 140,
+    [theme.breakpoints.down("sm")]: {
+      flex: "0 0 auto",
+      minWidth: 118,
+    },
   },
   filterField: {
     flex: "1 1 160px",
     minWidth: 140,
+    [theme.breakpoints.down("sm")]: {
+      flex: "0 0 142px",
+      minWidth: 142,
+    },
   },
   serachInputWrapper: {
     minWidth: 220,
@@ -175,6 +255,13 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(0.35, 1),
     border: `1px solid ${theme.palette.divider}`,
     boxShadow: "none",
+    [theme.breakpoints.down("sm")]: {
+      minWidth: 0,
+      width: "100%",
+      flex: "1 1 auto",
+      borderRadius: 999,
+      padding: theme.spacing(0.45, 1.1),
+    },
   },
   searchInputActive: {
     borderColor: "rgba(255, 25, 25, 0.22)",
@@ -215,6 +302,9 @@ const useStyles = makeStyles((theme) => ({
     display: "none !important",
   },
   newTicketButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: theme.spacing(0.8),
     whiteSpace: "nowrap",
     minHeight: 40,
     paddingLeft: theme.spacing(1.5),
@@ -229,6 +319,28 @@ const useStyles = makeStyles((theme) => ({
       backgroundColor: "#E11414",
       boxShadow: "none",
     },
+    [theme.breakpoints.down("sm")]: {
+      position: "fixed",
+      right: theme.spacing(2),
+      bottom: theme.spacing(2.5),
+      zIndex: 20,
+      width: 58,
+      minWidth: 58,
+      height: 58,
+      minHeight: 58,
+      padding: 0,
+      borderRadius: 18,
+      boxShadow: "0 14px 28px rgba(255, 25, 25, 0.24)",
+    },
+  },
+  newTicketButtonText: {
+    [theme.breakpoints.down("sm")]: {
+      display: "none",
+    },
+  },
+  newTicketButtonIcon: {
+    fontSize: "1.15rem",
+    flexShrink: 0,
   },
   showAllControl: {
     width: "100%",
@@ -248,6 +360,15 @@ const useStyles = makeStyles((theme) => ({
       marginLeft: theme.spacing(0.75),
       marginRight: 0,
       flexShrink: 0,
+    },
+    [theme.breakpoints.down("sm")]: {
+      height: 42,
+      minHeight: 42,
+      marginTop: 0,
+      marginBottom: 0,
+      borderRadius: 999,
+      padding: theme.spacing(0, 1.1),
+      minWidth: 118,
     },
   },
   showAllLabel: {
@@ -272,10 +393,37 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.type === "dark" ? "rgba(148, 163, 184, 0.28)" : "rgba(15, 23, 42, 0.18)",
     opacity: 1,
   },
+  selectSurface: {
+    [theme.breakpoints.down("sm")]: {
+      minWidth: 142,
+      "& .MuiFormControl-root": {
+        margin: "0 !important",
+      },
+      "& .MuiInputLabel-outlined": {
+        transform: "translate(14px, 14px) scale(1)",
+        fontSize: "0.84rem",
+      },
+      "& .MuiInputLabel-shrink": {
+        transform: "translate(14px, -6px) scale(0.75)",
+      },
+      "& .MuiOutlinedInput-root": {
+        minHeight: 42,
+        borderRadius: 999,
+        backgroundColor: theme.palette.background.default,
+      },
+      "& .MuiSelect-outlined": {
+        paddingTop: 11,
+        paddingBottom: 11,
+        fontSize: "0.84rem",
+      },
+    },
+  },
 }));
 
 const TicketsManager = () => {
   const classes = useStyles();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [searchParam, setSearchParam] = useState("");
   const [searchInputValue, setSearchInputValue] = useState("");
   const [tab, setTab] = useState("open");
@@ -388,6 +536,15 @@ const TicketsManager = () => {
     }
   };
 
+  const renderTabLabel = (label, count) => (
+    <span className={classes.tabLabel}>
+      <span>{label}</span>
+      {typeof count === "number" && count > 0 ? (
+        <span className={classes.tabCount}>{count}</span>
+      ) : null}
+    </span>
+  );
+
   return (
     <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
       <NewTicketModal
@@ -398,36 +555,41 @@ const TicketsManager = () => {
         <Tabs
           value={tab}
           onChange={handleChangeTab}
-          variant="fullWidth"
+          variant={isMobile ? "scrollable" : "fullWidth"}
+          scrollButtons={isMobile ? "auto" : "off"}
           textColor="inherit"
           aria-label="icon label tabs example"
           TabIndicatorProps={{ style: { display: "none" } }}
         >
           <Tab
             value={"open"}
-            icon={<MoveToInboxIcon />}
-            label={i18n.t("tickets.tabs.open.title")}
+            icon={isMobile ? undefined : <MoveToInboxIcon />}
+            label={renderTabLabel(i18n.t("tickets.tabs.open.title"))}
             classes={{ root: classes.tab }}
           />
           <Tab
             value={"followUp"}
-            icon={<AccessTimeIcon />}
+            icon={isMobile ? undefined : <AccessTimeIcon />}
             label={
-              <Badge
-                className={classes.badge}
-                badgeContent={followUpCount}
-                color="primary"
-                classes={{ badge: classes.openBadge }}
-              >
-                {i18n.t("tickets.tabs.followUp.title")}
-              </Badge>
+              isMobile ? (
+                renderTabLabel(i18n.t("tickets.tabs.followUp.title"), followUpCount)
+              ) : (
+                <Badge
+                  className={classes.badge}
+                  badgeContent={followUpCount}
+                  color="primary"
+                  classes={{ badge: classes.openBadge }}
+                >
+                  {i18n.t("tickets.tabs.followUp.title")}
+                </Badge>
+              )
             }
             classes={{ root: classes.tab }}
           />
           <Tab
             value={"closed"}
-            icon={<CheckBoxIcon />}
-            label={i18n.t("tickets.tabs.closed.title")}
+            icon={isMobile ? undefined : <CheckBoxIcon />}
+            label={renderTabLabel(i18n.t("tickets.tabs.closed.title"))}
             classes={{ root: classes.tab }}
           />
         </Tabs>
@@ -463,7 +625,10 @@ const TicketsManager = () => {
             className={classes.newTicketButton}
             onClick={() => setNewTicketModalOpen(true)}
           >
-            {i18n.t("ticketsManager.buttons.newTicket")}
+            <ChatBubbleOutlineIcon className={classes.newTicketButtonIcon} />
+            <span className={classes.newTicketButtonText}>
+              {i18n.t("ticketsManager.buttons.newTicket")}
+            </span>
           </Button>
         </div>
         <div className={classes.ticketOptionsSecondary}>
@@ -493,8 +658,9 @@ const TicketsManager = () => {
             onChange={setSelectedTagIds}
             label={i18n.t("ticketsManager.tagsFilter")}
             style={{ minWidth: 140, flex: "1 1 0" }}
+            className={classes.selectSurface}
           />
-          <div className={classes.filterField}>
+          <div className={clsx(classes.filterField, classes.selectSurface)}>
             <TicketsQueueSelect
               selectedQueueIds={selectedQueueIds}
               userQueues={user?.queues}
@@ -509,34 +675,43 @@ const TicketsManager = () => {
           value={tabOpen}
           onChange={handleChangeTabOpen}
           textColor="inherit"
-          variant="fullWidth"
+          variant={isMobile ? "scrollable" : "fullWidth"}
+          scrollButtons={isMobile ? "auto" : "off"}
           className={classes.subTabs}
           TabIndicatorProps={{ style: { display: "none" } }}
         >
           <Tab
             label={
-              <Badge
-                className={classes.badge}
-                badgeContent={openCount}
-                color="primary"
-                classes={{ badge: classes.openBadge }}
-              >
-                {i18n.t("ticketsList.assignedHeader")}
-              </Badge>
+              isMobile ? (
+                renderTabLabel(i18n.t("ticketsList.assignedHeader"), openCount)
+              ) : (
+                <Badge
+                  className={classes.badge}
+                  badgeContent={openCount}
+                  color="primary"
+                  classes={{ badge: classes.openBadge }}
+                >
+                  {i18n.t("ticketsList.assignedHeader")}
+                </Badge>
+              )
             }
             value={"open"}
             className={classes.subTab}
           />
           <Tab
             label={
-              <Badge
-                className={classes.badge}
-                badgeContent={pendingCount}
-                color="secondary"
-                classes={{ badge: classes.pendingBadge }}
-              >
-                {i18n.t("ticketsList.pendingHeader")}
-              </Badge>
+              isMobile ? (
+                renderTabLabel(i18n.t("ticketsList.pendingHeader"), pendingCount)
+              ) : (
+                <Badge
+                  className={classes.badge}
+                  badgeContent={pendingCount}
+                  color="secondary"
+                  classes={{ badge: classes.pendingBadge }}
+                >
+                  {i18n.t("ticketsList.pendingHeader")}
+                </Badge>
+              )
             }
             value={"pending"}
             className={classes.subTab}

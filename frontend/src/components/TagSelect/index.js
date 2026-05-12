@@ -21,7 +21,7 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-const TagSelect = ({ selectedTagIds = [], onChange, label, style }) => {
+const TagSelect = ({ selectedTagIds = [], onChange, label, style, className }) => {
   const classes = useStyles();
   const [tags, setTags] = useState([]);
   const { user } = useContext(AuthContext);
@@ -56,7 +56,7 @@ const TagSelect = ({ selectedTagIds = [], onChange, label, style }) => {
   };
 
   return (
-    <div style={style}>
+    <div style={style} className={className}>
       <FormControl fullWidth margin="dense" variant="outlined">
         <InputLabel>{label || i18n.t("tags.inputLabel")}</InputLabel>
         <Select
