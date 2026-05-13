@@ -12,6 +12,7 @@ import {
 import { getIO } from "../../../libs/socket";
 import Whatsapp from "../../../models/Whatsapp";
 import AppError from "../../../errors/AppError";
+import BuildContactNumberCandidates from "../../../helpers/BuildContactNumberCandidates";
 import { logger } from "../../../utils/logger";
 import { WhatsappProvider } from "../whatsappProvider";
 import {
@@ -721,13 +722,19 @@ const checkNumber = async (
   number: string
 ): Promise<string> => {
   const wbot = getWbot(sessionId);
-  const validNumber = await wbot.getNumberId(`${number}@c.us`);
 
-  if (!validNumber?.user) {
-    return "";
+  const sessionPhoneNumber = extractSessionPhoneNumber(wbot);
+  const candidates = BuildContactNumberCandidates(number, sessionPhoneNumber);
+
+  for (const candidate of candidates) {
+    const validNumber = await wbot.getNumberId(`${candidate}@c.us`);
+
+    if (validNumber?.user) {
+      return validNumber.user.replace(/\D/g, "");
+    }
   }
 
-  return validNumber.user.replace(/\D/g, "");
+  return "";
 };
 
 const getProfilePicUrl = async (

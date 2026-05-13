@@ -1,5 +1,15 @@
 # Release Notes
 
+## 2026-05-13
+
+### legacy-prod
+
+- Contatos/WhatsApp: o cadastro e a validacao de contatos passam a aceitar corretamente numeros com DDD brasileiro e numeros com DDI completo no provider `wwebjs`, evitando falso negativo de `Este nao e um numero de WhatsApp valido` quando o usuario informa um numero local brasileiro sem o prefixo `55` ou cola o numero internacional formatado.
+- Backend/Contatos: o fluxo de criacao rapida e o cadastro manual agora limpam toda a formatacao nao numerica antes da validacao, reduzindo falhas por parenteses, espacos, hifens e outros separadores comuns na digitacao.
+- Implementacao: o provider passou a testar candidatos normalizados de numero a partir do contexto da sessao, com heuristica restrita para numeros locais brasileiros plausiveis, preservando numeros internacionais completos sem prefixacao indevida.
+- Escopo desta correcao: `backend/src/helpers/BuildContactNumberCandidates.ts`, `backend/src/__tests__/unit/Helpers/BuildContactNumberCandidates.spec.ts`, `backend/src/providers/WhatsApp/Implementations/wwebjs.ts`, `backend/src/controllers/ContactController.ts`, `backend/src/controllers/ApiController.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao: `npx jest src/__tests__/unit/Helpers/BuildContactNumberCandidates.spec.ts --coverage=false --runInBand` aprovado em `backend`; `npm run build` aprovado em `backend`.
+
 ## 2026-05-12
 
 ### legacy-prod

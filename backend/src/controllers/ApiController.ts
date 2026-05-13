@@ -79,7 +79,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const { body, quotedMsg }: MessageData = req.body;
   const medias = req.files as Express.Multer.File[];
 
-  newContact.number = newContact.number.replace("-", "").replace(" ", "");
+  newContact.number = newContact.number.replace(/\D/g, "");
 
   const schema = Yup.object().shape({
     number: Yup.string()
