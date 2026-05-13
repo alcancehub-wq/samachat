@@ -10,6 +10,11 @@
 - Escopo desta correcao: `backend/src/helpers/BuildContactNumberCandidates.ts`, `backend/src/__tests__/unit/Helpers/BuildContactNumberCandidates.spec.ts`, `backend/src/providers/WhatsApp/Implementations/wwebjs.ts`, `backend/src/controllers/ContactController.ts`, `backend/src/controllers/ApiController.ts` e `docs/release-notes.md`.
 - Validacao local desta correcao: `npx jest src/__tests__/unit/Helpers/BuildContactNumberCandidates.spec.ts --coverage=false --runInBand` aprovado em `backend`; `npm run build` aprovado em `backend`.
 
+- Contatos/WhatsApp: refinamento complementar no provider `wwebjs` evita persistir identificadores `lid` ou numeros locais incompletos quando a verificacao do WhatsApp resolve um contato via `getNumberId()` sem retornar um `c.us` telefonico.
+- Backend/Contatos: para sessoes brasileiras, a validacao agora prioriza o candidato canonico com `55 + DDD + numero` antes do numero local, garantindo que o cadastro com DDD sem `55` normalize para o formato internacional estavel em vez de salvar um telefone local incompleto.
+- Escopo desta correcao complementar: `backend/src/helpers/BuildContactNumberCandidates.ts`, `backend/src/helpers/NormalizeValidatedContactNumber.ts`, `backend/src/__tests__/unit/Helpers/BuildContactNumberCandidates.spec.ts`, `backend/src/__tests__/unit/Helpers/NormalizeValidatedContactNumber.spec.ts`, `backend/src/providers/WhatsApp/Implementations/wwebjs.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao complementar: `npx jest src/__tests__/unit/Helpers/BuildContactNumberCandidates.spec.ts src/__tests__/unit/Helpers/NormalizeValidatedContactNumber.spec.ts --coverage=false --runInBand` aprovado e `npm run build` aprovado em `backend`; localhost autenticado em `http://localhost:3000/contacts` validado com tentativa de cadastro `11939196383` retornando `Ja existe um contato com este numero.` e tentativa com `555581294028` retornando a mesma duplicidade, comprovando que DDD e DDI deixaram de cair em `numero invalido`.
+
 ## 2026-05-12
 
 ### legacy-prod

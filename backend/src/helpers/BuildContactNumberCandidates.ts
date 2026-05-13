@@ -40,7 +40,7 @@ const BuildContactNumberCandidates = (
     return [];
   }
 
-  const candidates = new Set<string>([normalizedValue]);
+  const candidates: string[] = [];
   const sessionCountryCode = extractSessionCountryCode(sessionPhoneNumber);
 
   if (
@@ -48,10 +48,14 @@ const BuildContactNumberCandidates = (
     !normalizedValue.startsWith(sessionCountryCode) &&
     looksLikeBrazilianLocalNumber(normalizedValue)
   ) {
-    candidates.add(`${sessionCountryCode}${normalizedValue}`);
+    candidates.push(`${sessionCountryCode}${normalizedValue}`);
   }
 
-  return Array.from(candidates);
+  if (!candidates.includes(normalizedValue)) {
+    candidates.push(normalizedValue);
+  }
+
+  return candidates;
 };
 
 export default BuildContactNumberCandidates;

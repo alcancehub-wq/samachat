@@ -13,6 +13,7 @@ import { getIO } from "../../../libs/socket";
 import Whatsapp from "../../../models/Whatsapp";
 import AppError from "../../../errors/AppError";
 import BuildContactNumberCandidates from "../../../helpers/BuildContactNumberCandidates";
+import NormalizeValidatedContactNumber from "../../../helpers/NormalizeValidatedContactNumber";
 import { logger } from "../../../utils/logger";
 import { WhatsappProvider } from "../whatsappProvider";
 import {
@@ -728,9 +729,17 @@ const checkNumber = async (
 
   for (const candidate of candidates) {
     const validNumber = await wbot.getNumberId(`${candidate}@c.us`);
+    const normalizedNumber = NormalizeValidatedContactNumber(
+      candidate,
+      validNumber as {
+        user?: string | null;
+        server?: string | null;
+        _serialized?: string | null;
+      }
+    );
 
-    if (validNumber?.user) {
-      return validNumber.user.replace(/\D/g, "");
+    if (normalizedNumber) {
+      return normalizedNumber;
     }
   }
 
