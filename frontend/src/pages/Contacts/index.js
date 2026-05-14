@@ -313,6 +313,10 @@ const Contacts = () => {
   useEffect(() => {
     const socket = openSocket();
 
+    socket.on("connect", () => {
+      socket.emit("joinContacts", { whatsappId: user?.whatsappId || null });
+    });
+
     socket.on("contact", (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_CONTACTS", payload: data.contact });
@@ -326,7 +330,7 @@ const Contacts = () => {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [user?.whatsappId]);
 
   const handleSearch = (event) => {
     setSearchParam(event.target.value.toLowerCase());

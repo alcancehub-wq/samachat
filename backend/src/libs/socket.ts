@@ -4,6 +4,11 @@ import { verify } from "jsonwebtoken";
 import AppError from "../errors/AppError";
 import { logger } from "../utils/logger";
 import authConfig from "../config/auth";
+import {
+  getScopedContactRoom,
+  getScopedNotificationRoom,
+  getScopedTicketsRoom
+} from "../helpers/socketRooms";
 
 let io: SocketIO;
 
@@ -68,14 +73,26 @@ export const initIO = (httpServer: Server): SocketIO => {
       socket.join(ticketId);
     });
 
-    socket.on("joinNotification", () => {
+    socket.on("joinNotification", (payload?: { whatsappId?: number | null }) => {
       logger.info("A client joined notification channel");
-      socket.join("notification");
+      socket.join(getScopedNotificationRoom(payload?.whatsappId));
     });
 
-    socket.on("joinTickets", (status: string) => {
-      logger.info(`A client joined to ${status} tickets channel.`);
-      socket.join(status);
+    socket.on(
+      "joinTickets",
+      (payload: string | { status: string; whatsappId?: number | null }) => {
+        const status = typeof payload === "string" ? payload : payload?.status;
+        const whatsappId =
+          typeof payload === "string" ? undefined : payload?.whatsappId;
+
+        logger.info(`A client joined to ${status} tickets channel.`);
+        socket.join(getScopedTicketsRoom(status, whatsappId));
+      }
+    );
+
+    socket.on("joinContacts", (payload?: { whatsappId?: number | null }) => {
+      logger.info("A client joined contact channel");
+      socket.join(getScopedContactRoom(payload?.whatsappId));
     });
 
     socket.on("disconnect", () => {

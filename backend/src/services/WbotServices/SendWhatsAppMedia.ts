@@ -15,7 +15,8 @@ import { StartWhatsAppSession } from "./StartWhatsAppSession";
 import {
   convertAudioToOgg,
   shouldNormalizeAudioForWhatsApp,
-  shouldSendAudioAsVoice
+  shouldSendAudioAsVoice,
+  WHATSAPP_VOICE_MIMETYPE
 } from "./audioNormalization";
 import { sleep } from "../../utils/sleep";
 import { logger } from "../../utils/logger";
@@ -216,14 +217,17 @@ const SendWhatsAppMedia = async ({
       convertedPath = await convertAudioToOgg(media.path);
       mediaInput = {
         filename: `${path.parse(media.filename).name}.ogg`,
-        mimetype: "audio/ogg",
+        mimetype: WHATSAPP_VOICE_MIMETYPE,
         path: convertedPath
       };
     }
 
+    const sendAsVoice = shouldSendAudioAsVoice(mediaInput);
+
     const mediaOptions = {
-      caption: hasBody,
-      sendAudioAsVoice: shouldSendAudioAsVoice(mediaInput),
+      // Voice notes are more stable without a caption payload.
+      caption: sendAsVoice ? undefined : hasBody,
+      sendAudioAsVoice: sendAsVoice,
       sendMediaAsDocument:
         mediaInput.mimetype.startsWith("image/") &&
         !/^.*\.(jpe?g|png|gif)?$/i.exec(mediaInput.filename)

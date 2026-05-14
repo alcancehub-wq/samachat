@@ -3,6 +3,7 @@ import SetTicketMessagesAsRead from "../../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../../libs/socket";
 import Ticket from "../../models/Ticket";
 import Tag from "../../models/Tag";
+import { getScopedNotificationRoom, getScopedTicketsRoom } from "../../helpers/socketRooms";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import GetDefaultWhatsAppByUser from "../../helpers/GetDefaultWhatsAppByUser";
@@ -141,14 +142,18 @@ const UpdateTicketService = async ({
   const io = getIO();
 
   if (ticket.status !== oldStatus || ticket.user?.id !== oldUserId) {
-    io.to(oldStatus).emit("ticket", {
-      action: "delete",
-      ticketId: ticket.id
-    });
+    io.to(oldStatus)
+      .to(getScopedTicketsRoom(oldStatus, ticket.whatsappId))
+      .emit("ticket", {
+        action: "delete",
+        ticketId: ticket.id
+      });
   }
 
   io.to(ticket.status)
+    .to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
     .to("notification")
+    .to(getScopedNotificationRoom(ticket.whatsappId))
     .to(ticketId.toString())
     .emit("ticket", {
       action: "update",

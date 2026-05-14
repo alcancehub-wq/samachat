@@ -1,6 +1,8 @@
 import { getIO } from "../../libs/socket";
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
+import EmitContactEvent from "../../helpers/EmitContactEvent";
+import ResolveContactName from "../../helpers/ResolveContactName";
 import GetProfilePicUrl from "../WbotServices/GetProfilePicUrl";
 import { logger } from "../../utils/logger";
 
@@ -17,6 +19,7 @@ interface Request {
   email?: string;
   profilePicUrl?: string;
   extraInfo?: ExtraInfo[];
+  whatsappId?: number;
 }
 
 const looksLikePhoneNumber = (value?: string | null): value is string => {
@@ -35,12 +38,6 @@ const normalizeLid = (value?: string | null): string | undefined => {
   return value.includes("@") ? value : `${value}@lid`;
 };
 
-const emitContact = (action: "update" | "create", contact: Contact) => {
-  const io = getIO();
-
-  io.emit("contact", { action, contact });
-};
-
 const CreateOrUpdateContactService = async ({
   name,
   number: rawNumber,
@@ -48,7 +45,8 @@ const CreateOrUpdateContactService = async ({
   profilePicUrl,
   isGroup,
   email = "",
-  extraInfo = []
+  extraInfo = [],
+  whatsappId
 }: Request): Promise<Contact> => {
   const sanitizedRawNumber = rawNumber || "";
   const normalizedLid = normalizeLid(lid);
@@ -103,6 +101,13 @@ const CreateOrUpdateContactService = async ({
     resolvedContactByLid &&
     contactByNumber.id !== resolvedContactByLid.id;
 
+  const resolvedName = ResolveContactName({
+    currentName: contactByNumber?.name || resolvedContactByLid?.name,
+    incomingName: name,
+    number,
+    lid: normalizedLid
+  });
+
   if (shouldMerge) {
     const resolvedProfilePicUrl = await resolveProfilePicUrl(
       contactByNumber.profilePicUrl || resolvedContactByLid.profilePicUrl
@@ -116,6 +121,7 @@ const CreateOrUpdateContactService = async ({
     await resolvedContactByLid.destroy();
 
     await contactByNumber.update({
+      name: resolvedName,
       lid: resolvedContactByLid.lid || normalizedLid,
       profilePicUrl: resolvedProfilePicUrl
     });
@@ -126,7 +132,7 @@ const CreateOrUpdateContactService = async ({
       mergedContactId: resolvedContactByLid.id
     });
 
-    emitContact("update", contactByNumber);
+    EmitContactEvent({ action: "update", contact: contactByNumber, whatsappId });
 
     return contactByNumber;
   }
@@ -137,11 +143,17 @@ const CreateOrUpdateContactService = async ({
     );
 
     await contactByNumber.update({
+      name: ResolveContactName({
+        currentName: contactByNumber.name,
+        incomingName: name,
+        number,
+        lid: normalizedLid || contactByNumber.lid
+      }),
       lid: normalizedLid || contactByNumber.lid,
       profilePicUrl: resolvedProfilePicUrl
     });
 
-    emitContact("update", contactByNumber);
+    EmitContactEvent({ action: "update", contact: contactByNumber, whatsappId });
 
     return contactByNumber;
   }
@@ -152,6 +164,12 @@ const CreateOrUpdateContactService = async ({
     );
 
     await resolvedContactByLid.update({
+      name: ResolveContactName({
+        currentName: resolvedContactByLid.name,
+        incomingName: name,
+        number: number || resolvedContactByLid.number,
+        lid: normalizedLid || resolvedContactByLid.lid
+      }),
       lid: normalizedLid || resolvedContactByLid.lid,
       number:
         number ||
@@ -162,14 +180,18 @@ const CreateOrUpdateContactService = async ({
       profilePicUrl: resolvedProfilePicUrl
     });
 
-    emitContact("update", resolvedContactByLid);
+    EmitContactEvent({ action: "update", contact: resolvedContactByLid, whatsappId });
     return resolvedContactByLid;
   }
 
   const resolvedProfilePicUrl = await resolveProfilePicUrl();
 
   const created = await Contact.create({
-    name,
+    name: ResolveContactName({
+      incomingName: name,
+      number,
+      lid: normalizedLid
+    }),
     number,
     lid: normalizedLid,
 		profilePicUrl: resolvedProfilePicUrl,
@@ -178,7 +200,7 @@ const CreateOrUpdateContactService = async ({
     extraInfo
   });
 
-  emitContact("create", created);
+  EmitContactEvent({ action: "create", contact: created, whatsappId });
   return created;
 };
 

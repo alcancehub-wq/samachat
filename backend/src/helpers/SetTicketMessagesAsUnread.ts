@@ -1,6 +1,7 @@
 import { getIO } from "../libs/socket";
 import Ticket from "../models/Ticket";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
+import { getScopedNotificationRoom, getScopedTicketsRoom } from "./socketRooms";
 
 const SetTicketMessagesAsUnread = async (
   ticketId: string | number
@@ -13,10 +14,14 @@ const SetTicketMessagesAsUnread = async (
   const ticket = await ShowTicketService(ticketId);
 
   const io = getIO();
-  io.to(ticket.status).to("notification").emit("ticket", {
-    action: "update",
-    ticket
-  });
+  io.to(ticket.status)
+    .to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
+    .to("notification")
+    .to(getScopedNotificationRoom(ticket.whatsappId))
+    .emit("ticket", {
+      action: "update",
+      ticket
+    });
 
   return ticket;
 };

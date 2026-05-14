@@ -1,4 +1,5 @@
 import { getIO } from "../../libs/socket";
+import { getScopedNotificationRoom, getScopedTicketsRoom } from "../../helpers/socketRooms";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
@@ -77,10 +78,16 @@ const CreateMessageService = async ({
 
     if (broadcastToStatus) {
       broadcaster = broadcaster.to(message.ticket.status);
+      broadcaster = broadcaster.to(
+        getScopedTicketsRoom(message.ticket.status, message.ticket.whatsappId)
+      );
     }
 
     if (broadcastToNotification) {
       broadcaster = broadcaster.to("notification");
+      broadcaster = broadcaster.to(
+        getScopedNotificationRoom(message.ticket.whatsappId)
+      );
     }
 
     broadcaster.emit("appMessage", payload);

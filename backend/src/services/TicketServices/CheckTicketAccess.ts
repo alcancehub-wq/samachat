@@ -20,10 +20,20 @@ const CheckTicketAccess = async ({
   }
 
   if (Number(ticket.userId) === Number(userId)) {
-    return;
+    const ownerUser = await ShowUserService(userId);
+    if (
+      !ownerUser.whatsappId ||
+      Number(ticket.whatsappId) === Number(ownerUser.whatsappId)
+    ) {
+      return;
+    }
   }
 
   const user = await ShowUserService(userId);
+  if (user.whatsappId && Number(ticket.whatsappId) !== Number(user.whatsappId)) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
   const userQueueIds = user.queues?.map(queue => queue.id) || [];
   const canAccessPendingTicket =
     ticket.status === "pending" &&

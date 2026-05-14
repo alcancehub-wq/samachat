@@ -1,11 +1,15 @@
 import { Sequelize, Op } from "sequelize";
 import Contact from "../../models/Contact";
 import Tag from "../../models/Tag";
+import Ticket from "../../models/Ticket";
+import GetUserScopedWhatsappId from "../../helpers/GetUserScopedWhatsappId";
 
 interface Request {
   searchParam?: string;
   pageNumber?: string;
   tagIds?: number[];
+  userId?: string | number;
+  profile?: string;
 }
 
 interface Response {
@@ -17,8 +21,11 @@ interface Response {
 const ListContactsService = async ({
   searchParam = "",
   pageNumber = "1",
-  tagIds = []
+  tagIds = [],
+  userId,
+  profile
 }: Request): Promise<Response> => {
+  const scopedWhatsappId = await GetUserScopedWhatsappId(userId, profile);
   const whereCondition = {
     [Op.or]: [
       {
@@ -43,11 +50,22 @@ const ListContactsService = async ({
     where: tagIds.length > 0 ? { id: { [Op.in]: tagIds } } : undefined
   };
 
+  const includeTickets = scopedWhatsappId
+    ? {
+        model: Ticket,
+        attributes: [],
+        required: true,
+        where: {
+          whatsappId: scopedWhatsappId
+        }
+      }
+    : undefined;
+
   const { count, rows: contacts } = await Contact.findAndCountAll({
     where: whereCondition,
     limit,
     offset,
-    include: [includeTags],
+    include: [includeTags, ...(includeTickets ? [includeTickets] : [])],
     distinct: true,
     order: [["name", "ASC"]]
   });

@@ -39,12 +39,6 @@ import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessa
 import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
 
-let mediaRecorder = null;
-let mediaStream = null;
-let audioChunks = [];
-let audioMimeType = "audio/ogg";
-let isStopping = false;
-
 const audioToastIds = {
   permissionDenied: "messageInput-audio-permission-denied",
   unsupported: "messageInput-audio-unsupported",
@@ -56,11 +50,10 @@ const showAudioToast = (message, toastId) => {
   toast.error(message, { toastId });
 };
 
-const stopMediaStream = () => {
-  if (!mediaStream) return;
+const stopMediaStream = stream => {
+  if (!stream) return;
 
-  mediaStream.getTracks().forEach(track => track.stop());
-  mediaStream = null;
+  stream.getTracks().forEach(track => track.stop());
 };
 
 const useStyles = makeStyles(theme => ({
@@ -421,6 +414,12 @@ const MessageInput = ({ ticketStatus }) => {
   const inputRef = useRef();
   const internalInputRef = useRef();
   const acceptedPendingTicketRef = useRef(false);
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const audioMimeTypeRef = useRef("audio/ogg");
+  const isStoppingRef = useRef(false);
+  const isCancellingAudioRef = useRef(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
@@ -438,6 +437,10 @@ const MessageInput = ({ ticketStatus }) => {
   useEffect(() => {
     inputRef.current.focus();
     return () => {
+      stopMediaStream(mediaStreamRef.current);
+      mediaRecorderRef.current = null;
+      mediaStreamRef.current = null;
+      audioChunksRef.current = [];
       setInputMessage("");
       setInternalInputMessage("");
       setShowEmoji(false);
@@ -478,11 +481,14 @@ const MessageInput = ({ ticketStatus }) => {
   }, [isInternalMessage, mentionQuery]);
 
   const resetRecordingState = () => {
-    isStopping = false;
-    audioChunks = [];
+    isStoppingRef.current = false;
+    isCancellingAudioRef.current = false;
+    audioChunksRef.current = [];
+    mediaRecorderRef.current = null;
     setLoading(false);
     setRecording(false);
-    stopMediaStream();
+    stopMediaStream(mediaStreamRef.current);
+    mediaStreamRef.current = null;
   };
 
   const handleChangeInput = e => {
@@ -621,7 +627,7 @@ const MessageInput = ({ ticketStatus }) => {
     acceptedPendingTicketRef.current = true;
   };
 
-  const handleSendMessage = async (internalMode = isInternalMessage) => {
+  const handleSendMessage = async ({ internalMode = isInternalMessage } = {}) => {
     const currentMessage = internalMode ? internalInputMessage : inputMessage;
 
     if (currentMessage.trim() === "") return;
@@ -688,35 +694,47 @@ const MessageInput = ({ ticketStatus }) => {
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStream = stream;
+      mediaStreamRef.current = stream;
 
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
-        : "audio/ogg;codecs=opus";
-      mediaRecorder = new MediaRecorder(stream, { mimeType });
-      audioChunks = [];
-      audioMimeType = mimeType.includes("ogg") ? "audio/ogg" : "audio/webm";
+        : MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")
+        ? "audio/ogg;codecs=opus"
+        : "";
 
-      mediaRecorder.ondataavailable = event => {
+      mediaRecorderRef.current = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      audioMimeTypeRef.current = mimeType.includes("ogg") ? "audio/ogg" : "audio/webm";
+      isCancellingAudioRef.current = false;
+
+      mediaRecorderRef.current.ondataavailable = event => {
         console.log("chunk", event.data.size);
         if (event.data.size > 0) {
-          audioChunks.push(event.data);
+          audioChunksRef.current.push(event.data);
         }
       };
 
-      mediaRecorder.onstop = async () => {
+      mediaRecorderRef.current.onstop = async () => {
         try {
-          if (!audioChunks || audioChunks.length === 0) {
+          if (isCancellingAudioRef.current) {
+            return;
+          }
+
+          if (!audioChunksRef.current || audioChunksRef.current.length === 0) {
             console.error("Sem chunks — abortando envio");
             return;
           }
 
-          const audioBlob = new Blob(audioChunks, { type: audioMimeType });
-          const extension = audioMimeType.endsWith("ogg") ? "ogg" : "webm";
+          const audioBlob = new Blob(audioChunksRef.current, {
+            type: audioMimeTypeRef.current,
+          });
+          const extension = audioMimeTypeRef.current.endsWith("ogg") ? "ogg" : "webm";
           const file = new File(
             [audioBlob],
             `recorded_${Date.now()}.${extension}`,
-            { type: audioMimeType }
+            { type: audioMimeTypeRef.current }
           );
 
           setLoading(true);
@@ -734,12 +752,13 @@ const MessageInput = ({ ticketStatus }) => {
         }
       };
 
-      mediaRecorder.start(1000);
+      mediaRecorderRef.current.start(1000);
       setRecording(true);
     } catch (err) {
       console.error("Erro ao iniciar gravação:", err);
       setLoading(false);
-      stopMediaStream();
+      stopMediaStream(mediaStreamRef.current);
+      mediaStreamRef.current = null;
 
       if (
         err?.name === "NotAllowedError" ||
@@ -780,25 +799,24 @@ const MessageInput = ({ ticketStatus }) => {
   };
 
   const handleUploadAudio = () => {
-    if (!mediaRecorder || isStopping) return;
-    if (mediaRecorder.state !== "recording") return;
-    isStopping = true;
+    if (!mediaRecorderRef.current || isStoppingRef.current) return;
+    if (mediaRecorderRef.current.state !== "recording") return;
+    isStoppingRef.current = true;
     setLoading(true);
-    mediaRecorder.requestData();
-    mediaRecorder.stop();
+    mediaRecorderRef.current.requestData();
+    mediaRecorderRef.current.stop();
   };
 
   const handleCancelAudio = () => {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
+    isCancellingAudioRef.current = true;
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
     } else {
-      stopMediaStream();
+      stopMediaStream(mediaStreamRef.current);
     }
 
-    isStopping = false;
-    audioChunks = [];
-    setLoading(false);
-    setRecording(false);
+    resetRecordingState();
   };
 
   const handleOpenMenuClick = event => {
@@ -871,7 +889,8 @@ const MessageInput = ({ ticketStatus }) => {
             if (loading || e.shiftKey) return;
             if (e.key === "Enter") {
               e.preventDefault();
-              handleSendMessage(true);
+              e.preventDefault();
+              handleSendMessage({ internalMode: true });
             }
           }}
         />
@@ -911,7 +930,7 @@ const MessageInput = ({ ticketStatus }) => {
             variant="contained"
             color="primary"
             className={classes.internalSaveButton}
-            onClick={() => handleSendMessage(true)}
+            onClick={() => handleSendMessage({ internalMode: true })}
             disabled={loading || recording || ticketStatus !== "open"}
           >
             {i18n.t("messagesInput.internalComposer.save")}
@@ -1163,6 +1182,7 @@ const MessageInput = ({ ticketStatus }) => {
               onKeyPress={e => {
                 if (loading || e.shiftKey) return;
                 else if (e.key === "Enter") {
+                  e.preventDefault();
                   handleSendMessage();
                 }
               }}
@@ -1192,7 +1212,7 @@ const MessageInput = ({ ticketStatus }) => {
               aria-label="sendMessage"
               component="span"
               onClick={handleSendMessage}
-              disabled={loading || isInternalMessage}
+              disabled={loading || recording || isInternalMessage || ticketStatus !== "open"}
               className={clsx({ [classes.mobilePrimaryAction]: isMobile })}
             >
               <SendIcon className={classes.sendMessageIcons} />

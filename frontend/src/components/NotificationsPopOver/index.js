@@ -130,6 +130,10 @@ const NotificationsPopOver = () => {
 			return false;
 		}
 
+		if (user?.whatsappId && Number(ticket.whatsappId) !== Number(user.whatsappId)) {
+			return false;
+		}
+
 		if (
 			!canShowAllTickets &&
 			ticket.queueId &&
@@ -188,7 +192,9 @@ const NotificationsPopOver = () => {
 	useEffect(() => {
 		const socket = openSocket();
 
-		socket.on("connect", () => socket.emit("joinNotification"));
+		socket.on("connect", () =>
+			socket.emit("joinNotification", { whatsappId: user?.whatsappId || null })
+		);
 
 		socket.on("ticket", data => {
 			if (data.action === "updateUnread" || data.action === "delete") {

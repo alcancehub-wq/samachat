@@ -331,6 +331,10 @@ const reducer = (state, action) => {
 		};
 
 		const canAccessTicketInCurrentList = ticket => {
+			if (user?.whatsappId && Number(ticket.whatsappId) !== Number(user.whatsappId)) {
+				return false;
+			}
+
 			if (showAll) {
 				return true;
 			}
@@ -360,9 +364,14 @@ const reducer = (state, action) => {
 
 		socket.on("connect", () => {
 			if (status) {
-				socket.emit("joinTickets", status);
+				socket.emit("joinTickets", {
+					status,
+					whatsappId: user?.whatsappId || null,
+				});
 			} else {
-				socket.emit("joinNotification");
+				socket.emit("joinNotification", {
+					whatsappId: user?.whatsappId || null,
+				});
 			}
 		});
 

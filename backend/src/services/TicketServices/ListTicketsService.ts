@@ -9,6 +9,7 @@ import Whatsapp from "../../models/Whatsapp";
 import Tag from "../../models/Tag";
 import User from "../../models/User";
 import { FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag";
+import GetUserScopedWhatsappId from "../../helpers/GetUserScopedWhatsappId";
 
 interface Request {
   searchParam?: string;
@@ -74,7 +75,11 @@ const ListTicketsService = async ({
   followUp
 }: Request): Promise<Response> => {
   const isAdmin = String(profile || "").toLowerCase() === "admin";
+  const scopedWhatsappId = await GetUserScopedWhatsappId(userId, profile);
   const queueVisibilityScope = buildQueueVisibilityScope(queueIds);
+  const whatsappVisibilityScope = scopedWhatsappId
+    ? ({ whatsappId: scopedWhatsappId } as WhereOptions)
+    : undefined;
   const assignedVisibilityScope: WhereOptions | undefined = isAdmin
     ? undefined
     : status === "pending"
@@ -85,7 +90,8 @@ const ListTicketsService = async ({
   const canShowAllTickets = isAdmin && showAll === "true";
   let whereCondition: WhereOptions = combineWhere(
     canShowAllTickets ? undefined : assignedVisibilityScope,
-    queueVisibilityScope
+    queueVisibilityScope,
+    whatsappVisibilityScope
   );
   let includeCondition: Includeable[];
 
@@ -181,6 +187,7 @@ const ListTicketsService = async ({
     whereCondition = combineWhere(
       canShowAllTickets ? undefined : assignedVisibilityScope,
       queueVisibilityScope,
+      whatsappVisibilityScope,
       { unreadMessages: { [Op.gt]: 0 } }
     );
   }

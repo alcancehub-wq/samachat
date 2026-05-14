@@ -314,7 +314,8 @@ export const handleMessage = async (
       number: contactPayload.number,
       lid: contactPayload.lid,
       profilePicUrl: contactPayload.profilePicUrl,
-      isGroup: contactPayload.isGroup
+      isGroup: contactPayload.isGroup,
+      whatsappId: contextPayload.whatsappId
     });
 
     let groupContact: Contact | undefined;
@@ -324,7 +325,8 @@ export const handleMessage = async (
         number: contextPayload.groupContact.number,
         lid: contextPayload.groupContact.lid,
         profilePicUrl: contextPayload.groupContact.profilePicUrl,
-        isGroup: contextPayload.groupContact.isGroup
+        isGroup: contextPayload.groupContact.isGroup,
+        whatsappId: contextPayload.whatsappId
       });
     }
 

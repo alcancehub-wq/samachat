@@ -693,13 +693,13 @@ const sendMedia = async (
 ): Promise<ProviderMessage> => {
   const wbot = getWbot(sessionId);
 
-  const messageMedia = media.path
-    ? MessageMedia.fromFilePath(media.path)
-    : new MessageMedia(
-        media.mimetype,
-        media.data?.toString("base64") || "",
-        media.filename
-      );
+  const messageMedia = new MessageMedia(
+    media.mimetype,
+    media.path
+      ? fs.readFileSync(media.path, { encoding: "base64" })
+      : media.data?.toString("base64") || "",
+    media.filename
+  );
 
   const mediaOptions: MessageSendOptions = {
     caption: options?.caption,

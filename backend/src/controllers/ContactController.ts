@@ -1,6 +1,5 @@
 import * as Yup from "yup";
 import { Request, Response } from "express";
-import { getIO } from "../libs/socket";
 
 import ListContactsService from "../services/ContactServices/ListContactsService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
@@ -13,6 +12,8 @@ import CheckIsValidContact from "../services/WbotServices/CheckIsValidContact";
 import GetProfilePicUrl from "../services/WbotServices/GetProfilePicUrl";
 import AppError from "../errors/AppError";
 import GetContactService from "../services/ContactServices/GetContactService";
+import EmitContactEvent from "../helpers/EmitContactEvent";
+import GetUserScopedWhatsappId from "../helpers/GetUserScopedWhatsappId";
 
 type IndexQuery = {
   searchParam: string;
@@ -50,7 +51,9 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const { contacts, count, hasMore } = await ListContactsService({
     searchParam,
     pageNumber,
-    tagIds
+    tagIds,
+    userId: req.user.id,
+    profile: req.user.profile
   });
 
   return res.json({ contacts, count, hasMore });
@@ -110,11 +113,11 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     tagIds
   });
 
-  const io = getIO();
-  io.emit("contact", {
-    action: "create",
-    contact
-  });
+  const scopedWhatsappId = await GetUserScopedWhatsappId(
+    req.user.id,
+    req.user.profile
+  );
+  EmitContactEvent({ action: "create", contact, whatsappId: scopedWhatsappId });
 
   return res.status(200).json(contact);
 };
@@ -179,11 +182,11 @@ export const update = async (
 
   const contact = await UpdateContactService({ contactData, contactId });
 
-  const io = getIO();
-  io.emit("contact", {
-    action: "update",
-    contact
-  });
+  const scopedWhatsappId = await GetUserScopedWhatsappId(
+    req.user.id,
+    req.user.profile
+  );
+  EmitContactEvent({ action: "update", contact, whatsappId: scopedWhatsappId });
 
   return res.status(200).json(contact);
 };
@@ -196,10 +199,14 @@ export const remove = async (
 
   await DeleteContactService(contactId);
 
-  const io = getIO();
-  io.emit("contact", {
+  const scopedWhatsappId = await GetUserScopedWhatsappId(
+    req.user.id,
+    req.user.profile
+  );
+  EmitContactEvent({
     action: "delete",
-    contactId
+    contactId,
+    whatsappId: scopedWhatsappId
   });
 
   return res.status(200).json({ message: "Contact deleted" });
