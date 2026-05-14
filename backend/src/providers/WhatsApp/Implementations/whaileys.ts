@@ -37,6 +37,7 @@ import Whatsapp from "../../../models/Whatsapp";
 import { getIO } from "../../../libs/socket";
 import { logger } from "../../../utils/logger";
 import AppError from "../../../errors/AppError";
+import NormalizeProviderCheckNumber from "../../../helpers/NormalizeProviderCheckNumber";
 import StoreWppSessionKeys from "../../../services/WppKeyServices/StoreWppSessionKeys";
 import GetWppSessionKeys from "../../../services/WppKeyServices/GetWppSessionKeys";
 import { getRedisClient } from "../../../libs/redisStore";
@@ -1445,7 +1446,7 @@ const checkNumber = async (
     throw new AppError("ERR_NUMBER_NOT_ON_WHATSAPP", 404);
   }
 
-  return result.jid;
+  return NormalizeProviderCheckNumber(result.jid) || cleanNumber;
 };
 
 const getProfilePicUrl = async (

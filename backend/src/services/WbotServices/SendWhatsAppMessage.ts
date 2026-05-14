@@ -1,6 +1,7 @@
 import AppError from "../../errors/AppError";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
+import NormalizeProviderCheckNumber from "../../helpers/NormalizeProviderCheckNumber";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
@@ -60,7 +61,8 @@ const safeCheckNumber = async (
   }
 
   try {
-    return await whatsappProvider.checkNumber(whatsappId, number);
+    const checkedNumber = await whatsappProvider.checkNumber(whatsappId, number);
+    return NormalizeProviderCheckNumber(checkedNumber);
   } catch (err) {
     logger.warn(
       { err, whatsappId, number },

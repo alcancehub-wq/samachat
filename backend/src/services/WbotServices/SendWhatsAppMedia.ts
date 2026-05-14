@@ -4,6 +4,7 @@ import { spawn } from "child_process";
 import AppError from "../../errors/AppError";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
+import NormalizeProviderCheckNumber from "../../helpers/NormalizeProviderCheckNumber";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
 import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
@@ -67,7 +68,8 @@ const safeCheckNumber = async (
   }
 
   try {
-    return await whatsappProvider.checkNumber(whatsappId, number);
+    const checkedNumber = await whatsappProvider.checkNumber(whatsappId, number);
+    return NormalizeProviderCheckNumber(checkedNumber);
   } catch (err) {
     logger.warn(
       { err, whatsappId, number },

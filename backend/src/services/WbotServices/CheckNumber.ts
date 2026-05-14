@@ -1,4 +1,5 @@
 import ResolveWhatsAppContext from "../../helpers/ResolveWhatsAppContext";
+import NormalizeProviderCheckNumber from "../../helpers/NormalizeProviderCheckNumber";
 import { whatsappProvider } from "../../providers/WhatsApp";
 
 interface Request {
@@ -16,7 +17,7 @@ const CheckContactNumber = async (
     defaultWhatsapp.id,
     number
   );
-  return validNumber;
+  return NormalizeProviderCheckNumber(validNumber);
 };
 
 export default CheckContactNumber;

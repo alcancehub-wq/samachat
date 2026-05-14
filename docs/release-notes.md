@@ -1,5 +1,15 @@
 # Release Notes
 
+## 2026-05-14
+
+### legacy-prod
+
+- Chats/WhatsApp: contatos validos deixam de falhar como `Este nao e um numero de WhatsApp valido` ao abrir o atendimento e enviar mensagem quando o provider retorna o resultado de lookup em formato JID em vez de numero canonico.
+- Backend/WhatsApp: a normalizacao do retorno de `checkNumber()` foi centralizada para extrair apenas o telefone canonico em digitos, removendo divergencias entre `wwebjs` e `whaileys` e preservando o contrato esperado pelos fluxos de contato, ticket e envio.
+- Backend/Envio: os envios de texto e midia passaram a sanitizar novamente o numero resolvido antes do retry de destino, evitando montar chat ids invalidos a partir de JIDs como `@s.whatsapp.net` ou identificadores com sufixo de device.
+- Escopo desta correcao: `backend/src/helpers/NormalizeProviderCheckNumber.ts`, `backend/src/__tests__/unit/Helpers/NormalizeProviderCheckNumber.spec.ts`, `backend/src/providers/WhatsApp/Implementations/whaileys.ts`, `backend/src/services/WbotServices/CheckNumber.ts`, `backend/src/services/WbotServices/SendWhatsAppMessage.ts`, `backend/src/services/WbotServices/SendWhatsAppMedia.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao: `npx jest NormalizeProviderCheckNumber.spec.ts` aprovado em `backend`; `npm run build` aprovado em `backend`; localhost autenticado em `http://localhost:3000` validado no contato `554191470679` (`Mãezinha Vera`), com abertura do ticket `#118` e envio bem-sucedido da mensagem de teste `teste tecnico 14/05` sem retorno de `ERR_WAPP_INVALID_CONTACT`.
+
 ## 2026-05-13
 
 ### legacy-prod
