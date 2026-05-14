@@ -19,6 +19,72 @@ Sentry.init({ dsn: process.env.SENTRY_DSN });
 
 const app = express();
 
+const inferPublicContentType = (filePath: string): string => {
+  const ext = path.extname(filePath).toLowerCase();
+
+  switch (ext) {
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".png":
+      return "image/png";
+    case ".gif":
+      return "image/gif";
+    case ".webp":
+      return "image/webp";
+    case ".svg":
+      return "image/svg+xml";
+    case ".pdf":
+      return "application/pdf";
+    case ".txt":
+      return "text/plain; charset=utf-8";
+    case ".csv":
+      return "text/csv; charset=utf-8";
+    case ".json":
+      return "application/json; charset=utf-8";
+    case ".doc":
+      return "application/msword";
+    case ".docx":
+      return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    case ".xls":
+      return "application/vnd.ms-excel";
+    case ".xlsx":
+      return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    case ".ppt":
+      return "application/vnd.ms-powerpoint";
+    case ".pptx":
+      return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    case ".zip":
+      return "application/zip";
+    case ".rar":
+      return "application/vnd.rar";
+    case ".7z":
+      return "application/x-7z-compressed";
+    case ".ogg":
+      return "audio/ogg";
+    case ".mp3":
+      return "audio/mpeg";
+    case ".wav":
+      return "audio/wav";
+    case ".webm":
+      return "audio/webm";
+    case ".mp4":
+      return "video/mp4";
+    case ".mov":
+      return "video/quicktime";
+    default:
+      return "application/octet-stream";
+  }
+};
+
+const resolveDownloadName = (req: Request, filePath: string): string => {
+  const requestedName = typeof req.query.filename === "string"
+    ? req.query.filename.trim()
+    : "";
+
+  return path.basename(requestedName || filePath);
+};
+
 const isLocalOrigin = (origin: string) =>
   /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
 
@@ -90,19 +156,17 @@ app.get("/public/*", (req: Request, res: Response, next: NextFunction) => {
       return next();
     }
 
-    const ext = path.extname(normalizedPath).toLowerCase();
-    const contentType =
-      ext === ".ogg"
-        ? "audio/ogg"
-        : ext === ".mp3"
-        ? "audio/mpeg"
-        : ext === ".webm"
-        ? "audio/webm"
-        : "application/octet-stream";
+    const contentType = inferPublicContentType(normalizedPath);
+    const downloadName = resolveDownloadName(req, normalizedPath);
+    const encodedDownloadName = encodeURIComponent(downloadName);
 
     const range = req.headers.range;
     if (!range) {
       res.setHeader("Content-Type", contentType);
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename="${downloadName}"; filename*=UTF-8''${encodedDownloadName}`
+      );
       res.setHeader("Content-Length", stats.size.toString());
       res.setHeader("Accept-Ranges", "bytes");
       fs.createReadStream(normalizedPath).pipe(res);
@@ -123,6 +187,10 @@ app.get("/public/*", (req: Request, res: Response, next: NextFunction) => {
     res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Content-Length", chunkSize.toString());
     res.setHeader("Content-Type", contentType);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${downloadName}"; filename*=UTF-8''${encodedDownloadName}`
+    );
 
     fs.createReadStream(normalizedPath, { start, end }).pipe(res);
   });

@@ -19,6 +19,7 @@ import {
   DoneAll,
   ExpandMore,
   GetApp,
+  Launch,
 } from "@material-ui/icons";
 
 import MarkdownWrapper from "../MarkdownWrapper";
@@ -308,6 +309,7 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "center",
     backgroundColor: "inherit",
     padding: 10,
+    gap: 8,
   },
 }));
 
@@ -500,7 +502,21 @@ const MessagesList = ({ ticketId, isGroup }) => {
       return resolved.replace(/:(\d+):\1\b/, ":$1");
     };
 
+    const appendFilenameToMediaUrl = (url, filename) => {
+      if (!url) return url;
+
+      const trimmedName = filename?.trim();
+      if (!trimmedName) return url;
+
+      const separator = url.includes("?") ? "&" : "?";
+      return `${url}${separator}filename=${encodeURIComponent(trimmedName)}`;
+    };
+
     const mediaUrl = normalizeMediaUrl(message.mediaUrl);
+    const attachmentName = message.body?.trim()
+      ? message.body.trim()
+      : mediaUrl?.split("/").pop() || "arquivo";
+    const mediaOpenUrl = appendFilenameToMediaUrl(mediaUrl, attachmentName);
 
     if (message.mediaType === "location" && message.body.split('|').length >= 2) {
       let locationParts = message.body.split('|')
@@ -568,11 +584,22 @@ const MessagesList = ({ ticketId, isGroup }) => {
         <>
           <div className={classes.downloadMedia}>
             <Button
+              startIcon={<Launch />}
+              color="primary"
+              variant="contained"
+              target="_blank"
+              rel="noopener noreferrer"
+              href={mediaOpenUrl}
+            >
+              Abrir arquivo
+            </Button>
+            <Button
               startIcon={<GetApp />}
               color="primary"
               variant="outlined"
-              target="_blank"
-              href={mediaUrl}
+              component="a"
+              href={mediaOpenUrl}
+              download={attachmentName || true}
             >
               Download
             </Button>

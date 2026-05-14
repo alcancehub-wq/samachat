@@ -4,6 +4,11 @@
 
 ### legacy-prod
 
+- Chats/Arquivos recebidos: anexos recebidos no atendimento deixam de ser servidos genericamente como `application/octet-stream` na rota publica do legado; o backend agora infere `Content-Type` para formatos comuns e responde com `Content-Disposition: inline`, permitindo que o navegador abra PDF, imagem, audio e video quando houver suporte em vez de forcar apenas download opaco.
+- Chats/Anexos no ticket: o renderer legado de mensagens passa a exibir a acao `Abrir arquivo` para anexos genericos, preservando tambem o `Download`, com o nome do arquivo propagado no link para melhorar a leitura e a experiencia de visualizacao.
+- Escopo desta promocao complementar: `backend/src/app.ts`, `frontend/src/components/MessagesList/index.js` e `docs/release-notes.md`.
+- Validacao local desta promocao complementar: `npm run build` aprovado em `backend` e `frontend`; rebuild local via `docker compose -f docker-compose.yaml up -d --build backend frontend` concluido com sucesso; cabecalhos reais validados em `http://localhost:8080/public/101014812-1.eBAV5.pdf?filename=101014812-1.pdf` com `Content-Type: application/pdf` e `Content-Disposition: inline`.
+
 - Chats/Contatos inbound: contatos criados a partir de mensagens recebidas passam a preservar ou promover o nome significativo vindo do WhatsApp, substituindo placeholders fracos baseados apenas em numero ou identificador `lid` quando houver nome melhor disponivel.
 - Chats/Visibilidade por conexao: usuarios nao admin deixam de listar, receber por socket ou abrir tickets, contatos e notificacoes de outras conexoes; o recorte passa a respeitar o `whatsappId` vinculado ao usuario tanto nas consultas quanto nos eventos em tempo real.
 - Chats/Composer responsivo: o botao `Enviar`, o atalho de `Enter` e o estado do gravador foram estabilizados no compositor, evitando que eventos de clique sejam interpretados como flag de mensagem interna e reduzindo falhas intermitentes no envio pelo layout responsivo.
