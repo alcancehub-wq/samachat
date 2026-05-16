@@ -82,11 +82,7 @@ const ListTicketsService = async ({
     : undefined;
   const assignedVisibilityScope: WhereOptions | undefined = isAdmin
     ? undefined
-    : status === "pending"
-      ? ({
-          [Op.or]: [{ userId }, { status: "pending" }]
-        } as WhereOptions)
-      : ({ userId } as WhereOptions);
+    : ({ userId } as WhereOptions);
   const canShowAllTickets = isAdmin && showAll === "true";
   let whereCondition: WhereOptions = combineWhere(
     canShowAllTickets ? undefined : assignedVisibilityScope,

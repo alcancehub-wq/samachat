@@ -77,14 +77,12 @@ const CreateMessageService = async ({
     let broadcaster = io;
 
     if (broadcastToStatus) {
-      broadcaster = broadcaster.to(message.ticket.status);
       broadcaster = broadcaster.to(
         getScopedTicketsRoom(message.ticket.status, message.ticket.whatsappId)
       );
     }
 
     if (broadcastToNotification) {
-      broadcaster = broadcaster.to("notification");
       broadcaster = broadcaster.to(
         getScopedNotificationRoom(message.ticket.whatsappId)
       );

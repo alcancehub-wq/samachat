@@ -52,6 +52,7 @@ const UpdateTicketService = async ({
 
   const oldStatus = ticket.status;
   const oldUserId = ticket.user?.id;
+  const oldWhatsappId = ticket.whatsappId;
 
   let nextWhatsappId = whatsappId;
   const hasExplicitWhatsappSelection =
@@ -142,17 +143,14 @@ const UpdateTicketService = async ({
   const io = getIO();
 
   if (ticket.status !== oldStatus || ticket.user?.id !== oldUserId) {
-    io.to(oldStatus)
-      .to(getScopedTicketsRoom(oldStatus, ticket.whatsappId))
+    io.to(getScopedTicketsRoom(oldStatus, oldWhatsappId))
       .emit("ticket", {
         action: "delete",
         ticketId: ticket.id
       });
   }
 
-  io.to(ticket.status)
-    .to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
-    .to("notification")
+  io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
     .to(getScopedNotificationRoom(ticket.whatsappId))
     .to(ticketId.toString())
     .emit("ticket", {

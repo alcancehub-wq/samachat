@@ -742,7 +742,7 @@ const TicketsManager = () => {
       <TabPanel value={activeTab} name="closed" className={classes.ticketsWrapper}>
         <TicketsList
           status="closed"
-          showAll={true}
+          showAll={canShowAllTickets}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}
         />
@@ -750,7 +750,7 @@ const TicketsManager = () => {
       <TabPanel value={activeTab} name="followUp" className={classes.ticketsWrapper}>
         <TicketsList
           status="closed"
-          showAll={true}
+          showAll={canShowAllTickets}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}
           followUp="true"
@@ -760,7 +760,7 @@ const TicketsManager = () => {
       <TabPanel value={activeTab} name="search" className={classes.ticketsWrapper}>
         <TicketsList
           searchParam={searchParam}
-          showAll={true}
+          showAll={canShowAllTickets}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}
         />

@@ -26,6 +26,11 @@ describe("ShowTicketService access control", () => {
     };
 
     ticketFindByPkMock.mockResolvedValue(ticket);
+    showUserServiceMock.mockResolvedValue({
+      id: 7,
+      whatsappId: null,
+      queues: []
+    });
 
     await expect(
       ShowTicketService(101, {
@@ -34,10 +39,10 @@ describe("ShowTicketService access control", () => {
       })
     ).resolves.toBe(ticket);
 
-    expect(showUserServiceMock).not.toHaveBeenCalled();
+		expect(showUserServiceMock).toHaveBeenCalledWith(7);
   });
 
-  it("allows queue members to load pending tickets from their own queues", async () => {
+  it("blocks queue members from loading pending tickets assigned to nobody", async () => {
     ticketFindByPkMock.mockResolvedValue({
       id: 102,
       userId: null,
@@ -54,11 +59,7 @@ describe("ShowTicketService access control", () => {
         userId: 7,
         profile: "user"
       })
-    ).resolves.toEqual(
-      expect.objectContaining({
-        id: 102
-      })
-    );
+    ).rejects.toEqual(new AppError("ERR_NO_PERMISSION", 403));
   });
 
   it("blocks non-admin users from loading other users tickets", async () => {

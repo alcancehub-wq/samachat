@@ -267,6 +267,7 @@ const reducer = (state, action) => {
 	const isPendingList = status === "pending";
 	const permissions = user?.permissions || [];
 	const isAdmin = user?.profile?.toLowerCase() === "admin";
+	const canShowAllTickets = isAdmin && Boolean(showAll);
 	const canBulkDelete =
 		isAdmin ||
 		permissions.includes("ticket-options:deleteTicket") ||
@@ -282,7 +283,7 @@ const reducer = (state, action) => {
 		pageNumber,
 		searchParam,
 		status,
-		showAll,
+		showAll: canShowAllTickets,
 		queueIds: JSON.stringify(selectedQueueIds),
 		tagIds: JSON.stringify(selectedTagIds || []),
 		followUp,
@@ -335,7 +336,7 @@ const reducer = (state, action) => {
 				return false;
 			}
 
-			if (showAll) {
+			if (canShowAllTickets) {
 				return true;
 			}
 
@@ -343,7 +344,7 @@ const reducer = (state, action) => {
 				return true;
 			}
 
-			return status === "pending" && !ticket.userId;
+			return false;
 		};
 
 		const shouldUpdateTicket = ticket =>
@@ -428,7 +429,7 @@ const reducer = (state, action) => {
 		return () => {
 			socket.disconnect();
 		};
-	}, [followUp, status, searchParam, showAll, user, selectedQueueIds, selectedTagIds]);
+	}, [canShowAllTickets, followUp, status, searchParam, user, selectedQueueIds, selectedTagIds]);
 
 	useEffect(() => {
     if (typeof updateCount === "function") {

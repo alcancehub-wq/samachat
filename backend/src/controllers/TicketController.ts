@@ -84,7 +84,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const ticket = await CreateTicketService({ contactId, status, userId });
 
   const io = getIO();
-  io.to(ticket.status).emit("ticket", {
+  io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
+    .to(getScopedNotificationRoom(ticket.whatsappId))
+    .emit("ticket", {
     action: "update",
     ticket
   });
@@ -150,10 +152,8 @@ export const remove = async (
   });
 
   const io = getIO();
-  io.to(ticket.status)
-    .to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
+  io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
     .to(ticketId)
-    .to("notification")
     .to(getScopedNotificationRoom(ticket.whatsappId))
     .emit("ticket", {
       action: "delete",

@@ -14,9 +14,7 @@ const SetTicketMessagesAsUnread = async (
   const ticket = await ShowTicketService(ticketId);
 
   const io = getIO();
-  io.to(ticket.status)
-    .to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
-    .to("notification")
+  io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
     .to(getScopedNotificationRoom(ticket.whatsappId))
     .emit("ticket", {
       action: "update",
