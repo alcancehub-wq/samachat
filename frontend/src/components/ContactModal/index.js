@@ -262,7 +262,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 											? errors.number
 											: i18n.t("contactModal.form.numberHelper")
 									}
-									placeholder="5513912344321"
+										placeholder={i18n.t("contactModal.form.numberPlaceholder")}
 									variant="outlined"
 									margin="dense"
 								/>

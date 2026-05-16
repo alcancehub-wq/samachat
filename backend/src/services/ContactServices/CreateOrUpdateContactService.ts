@@ -2,6 +2,7 @@ import { getIO } from "../../libs/socket";
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
 import EmitContactEvent from "../../helpers/EmitContactEvent";
+import IsPlausiblePhoneNumber from "../../helpers/IsPlausiblePhoneNumber";
 import ResolveContactName from "../../helpers/ResolveContactName";
 import GetProfilePicUrl from "../WbotServices/GetProfilePicUrl";
 import { logger } from "../../utils/logger";
@@ -21,14 +22,6 @@ interface Request {
   extraInfo?: ExtraInfo[];
   whatsappId?: number;
 }
-
-const looksLikePhoneNumber = (value?: string | null): value is string => {
-  if (!value) {
-    return false;
-  }
-
-  return /^55\d{8,13}$/.test(value);
-};
 
 const normalizeLid = (value?: string | null): string | undefined => {
   if (!value) {
@@ -56,7 +49,7 @@ const CreateOrUpdateContactService = async ({
     : sanitizedRawNumber.replace(/[^0-9]/g, "");
   const number = isGroup
     ? digitsOnlyNumber
-    : looksLikePhoneNumber(digitsOnlyNumber)
+    : IsPlausiblePhoneNumber(digitsOnlyNumber)
     ? digitsOnlyNumber
     : "";
 
@@ -89,7 +82,7 @@ const CreateOrUpdateContactService = async ({
     }
 
     if (!isGroup && number) {
-      const fetchedProfilePicUrl = await GetProfilePicUrl(number);
+      const fetchedProfilePicUrl = await GetProfilePicUrl(number, { whatsappId });
       return fetchedProfilePicUrl || undefined;
     }
 

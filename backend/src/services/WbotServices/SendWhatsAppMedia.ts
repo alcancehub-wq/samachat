@@ -4,6 +4,7 @@ import { spawn } from "child_process";
 import AppError from "../../errors/AppError";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
+import IsPlausiblePhoneNumber from "../../helpers/IsPlausiblePhoneNumber";
 import NormalizeProviderCheckNumber from "../../helpers/NormalizeProviderCheckNumber";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
@@ -44,14 +45,6 @@ const isNoLidError = (err: unknown): boolean => {
   return false;
 };
 
-const looksLikePhoneNumber = (value?: string | null): value is string => {
-  if (!value) {
-    return false;
-  }
-
-  return /^55\d{8,13}$/.test(value);
-};
-
 const normalizeLid = (value?: string | null): string => {
   if (!value) {
     return "";
@@ -64,7 +57,7 @@ const safeCheckNumber = async (
   whatsappId: number,
   number: string
 ): Promise<string> => {
-  if (!looksLikePhoneNumber(number)) {
+  if (!IsPlausiblePhoneNumber(number)) {
     return "";
   }
 

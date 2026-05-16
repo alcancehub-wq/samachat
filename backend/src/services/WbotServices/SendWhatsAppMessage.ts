@@ -1,6 +1,7 @@
 import AppError from "../../errors/AppError";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
+import IsPlausiblePhoneNumber from "../../helpers/IsPlausiblePhoneNumber";
 import NormalizeProviderCheckNumber from "../../helpers/NormalizeProviderCheckNumber";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
@@ -22,14 +23,6 @@ interface Request {
 const INITIAL_READY_TIMEOUT_MS = 5000;
 const RECOVERY_READY_TIMEOUT_MS = 15000;
 const startingSessions = new Set<number>();
-
-const looksLikePhoneNumber = (value?: string | null): value is string => {
-  if (!value) {
-    return false;
-  }
-
-  return /^55\d{8,13}$/.test(value);
-};
 
 const normalizeLid = (value?: string | null): string => {
   if (!value) {
@@ -56,7 +49,7 @@ const safeCheckNumber = async (
   whatsappId: number,
   number: string
 ): Promise<string> => {
-  if (!looksLikePhoneNumber(number)) {
+  if (!IsPlausiblePhoneNumber(number)) {
     return "";
   }
 

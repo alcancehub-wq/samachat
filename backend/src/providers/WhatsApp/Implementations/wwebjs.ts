@@ -13,6 +13,7 @@ import { getIO } from "../../../libs/socket";
 import Whatsapp from "../../../models/Whatsapp";
 import AppError from "../../../errors/AppError";
 import BuildContactNumberCandidates from "../../../helpers/BuildContactNumberCandidates";
+import IsPlausiblePhoneNumber from "../../../helpers/IsPlausiblePhoneNumber";
 import NormalizeValidatedContactNumber from "../../../helpers/NormalizeValidatedContactNumber";
 import { logger } from "../../../utils/logger";
 import { WhatsappProvider } from "../whatsappProvider";
@@ -328,14 +329,6 @@ const convertToContactPayload = async (
 ): Promise<ContactPayload> => {
   const profilePicUrl = await msgContact.getProfilePicUrl();
 
-  const looksLikePhoneNumber = (value?: string | null): value is string => {
-    if (!value) {
-      return false;
-    }
-
-    return /^55\d{8,13}$/.test(value);
-  };
-
   const normalizeLid = (value?: string | null): string | undefined => {
     if (!value) {
       return undefined;
@@ -348,14 +341,14 @@ const convertToContactPayload = async (
     contact: WbotContact
   ): { number: string; lid?: string } => {
     const direct = contact?.id?.user;
-    if (looksLikePhoneNumber(direct)) {
+    if (IsPlausiblePhoneNumber(direct)) {
       return { number: direct };
     }
 
     const serialized = contact?.id?._serialized;
     if (serialized) {
       const raw = serialized.split("@")[0];
-      if (looksLikePhoneNumber(raw)) {
+      if (IsPlausiblePhoneNumber(raw)) {
         return { number: raw };
       }
 
