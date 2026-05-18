@@ -1,5 +1,14 @@
 # Release Notes
 
+## 2026-05-18
+
+### legacy-prod
+
+- Chats/Audio recebido: o refresh disparado apos enviar mensagem no legado deixa de esvaziar imediatamente a lista de mensagens; com isso, quando o atendente envia um texto enquanto um audio recebido esta tocando, o player nao e desmontado e a reproducao nao volta ao inicio apenas por conta do recarregamento da conversa.
+- Frontend/Chats: o listener `refreshMessages` passa a sincronizar a lista atual por `id` e ordem de `createdAt`, em vez de resetar toda a thread antes do refetch, preservando o comportamento de atualizacao sem interromper audios ja em execucao.
+- Escopo desta correcao: `frontend/src/components/MessagesList/index.js` e `docs/release-notes.md`.
+- Validacao local desta correcao: `npm run build` aprovado em `frontend`; `npm start` em `frontend` servindo o `dist` local em `http://localhost:3000`; `http://localhost:3000/login` respondeu `200 OK` e carregou o bundle novo desta rodada.
+
 ## 2026-05-14
 
 ### legacy-prod

@@ -330,6 +330,33 @@ const reducer = (state, action) => {
     return [...newMessages, ...state];
   }
 
+  if (action.type === "SYNC_MESSAGES") {
+    const mergedMessages = new Map();
+
+    state.forEach(message => {
+      mergedMessages.set(message.id, message);
+    });
+
+    action.payload.forEach(message => {
+      mergedMessages.set(message.id, message);
+    });
+
+    return Array.from(mergedMessages.values()).sort((messageA, messageB) => {
+      const messageATime = messageA.createdAt
+        ? new Date(messageA.createdAt).getTime()
+        : 0;
+      const messageBTime = messageB.createdAt
+        ? new Date(messageB.createdAt).getTime()
+        : 0;
+
+      if (messageATime !== messageBTime) {
+        return messageATime - messageBTime;
+      }
+
+      return String(messageA.id).localeCompare(String(messageB.id));
+    });
+  }
+
   if (action.type === "ADD_MESSAGE") {
     const newMessage = action.payload;
     const messageIndex = state.findIndex((m) => m.id === newMessage.id);
@@ -373,12 +400,14 @@ const MessagesList = ({ ticketId, isGroup }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const messageOptionsMenuOpen = Boolean(anchorEl);
   const currentTicketId = useRef(ticketId);
+  const shouldSyncMessagesRef = useRef(false);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
     setPageNumber(1);
 
     currentTicketId.current = ticketId;
+    shouldSyncMessagesRef.current = false;
   }, [ticketId]);
 
   useEffect(() => {
@@ -391,7 +420,11 @@ const MessagesList = ({ ticketId, isGroup }) => {
           });
 
           if (currentTicketId.current === ticketId) {
-            dispatch({ type: "LOAD_MESSAGES", payload: data.messages });
+            dispatch({
+              type: shouldSyncMessagesRef.current ? "SYNC_MESSAGES" : "LOAD_MESSAGES",
+              payload: data.messages,
+            });
+            shouldSyncMessagesRef.current = false;
             setHasMore(data.hasMore);
             setLoading(false);
           }
@@ -413,7 +446,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
 
   useEffect(() => {
     const handleRefreshMessages = () => {
-      dispatch({ type: "RESET" });
+      shouldSyncMessagesRef.current = true;
       setPageNumber(1);
       setReloadCount(prevCount => prevCount + 1);
     };
