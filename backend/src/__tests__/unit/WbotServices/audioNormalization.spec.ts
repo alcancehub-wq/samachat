@@ -41,8 +41,8 @@ describe("audioNormalization", () => {
     ).toBe(true);
   });
 
-  it("should keep the normalized WhatsApp voice-note mimetype on generic ogg", () => {
-    expect(WHATSAPP_VOICE_MIMETYPE).toBe("audio/ogg");
+  it("should keep the normalized WhatsApp voice-note mimetype on explicit ogg opus", () => {
+    expect(WHATSAPP_VOICE_MIMETYPE).toBe("audio/ogg;codecs=opus");
     expect(
       shouldSendAudioAsVoice({
         mimetype: WHATSAPP_VOICE_MIMETYPE,
