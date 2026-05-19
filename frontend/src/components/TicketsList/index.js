@@ -20,6 +20,49 @@ import toastError from "../../errors/toastError";
 
 const FOLLOW_UP_TAG_NAME = "Follow up";
 
+const getTicketTimestamp = value => {
+	if (!value) {
+		return 0;
+	}
+
+	const parsedValue = new Date(value).getTime();
+	return Number.isNaN(parsedValue) ? 0 : parsedValue;
+};
+
+const sortTicketsByRecentActivity = tickets => {
+	return [...tickets].sort((leftTicket, rightTicket) => {
+		const pendingSinceDiff =
+			getTicketTimestamp(rightTicket.pendingSince) - getTicketTimestamp(leftTicket.pendingSince);
+
+		if (pendingSinceDiff !== 0) {
+			return pendingSinceDiff;
+		}
+
+		const updatedAtDiff =
+			getTicketTimestamp(rightTicket.updatedAt || rightTicket.createdAt) -
+			getTicketTimestamp(leftTicket.updatedAt || leftTicket.createdAt);
+
+		if (updatedAtDiff !== 0) {
+			return updatedAtDiff;
+		}
+
+		return Number(rightTicket.id || 0) - Number(leftTicket.id || 0);
+	});
+};
+
+const upsertTicketInState = (state, ticket) => {
+	const nextState = [...state];
+	const ticketIndex = nextState.findIndex(currentTicket => currentTicket.id === ticket.id);
+
+	if (ticketIndex !== -1) {
+		nextState[ticketIndex] = ticket;
+	} else {
+		nextState.push(ticket);
+	}
+
+	return sortTicketsByRecentActivity(nextState);
+};
+
 const useStyles = makeStyles(theme => ({
 	ticketsListWrapper: {
 		position: "relative",
@@ -176,20 +219,13 @@ const useStyles = makeStyles(theme => ({
 const reducer = (state, action) => {
 	if (action.type === "LOAD_TICKETS") {
 		const newTickets = action.payload;
+		let nextState = [...state];
 
 		newTickets.forEach(ticket => {
-			const ticketIndex = state.findIndex(t => t.id === ticket.id);
-			if (ticketIndex !== -1) {
-				state[ticketIndex] = ticket;
-				if (ticket.unreadMessages > 0) {
-					state.unshift(state.splice(ticketIndex, 1)[0]);
-				}
-			} else {
-				state.push(ticket);
-			}
+			nextState = upsertTicketInState(nextState, ticket);
 		});
 
-		return [...state];
+		return nextState;
 	}
 
 	if (action.type === "RESET_UNREAD") {
@@ -206,28 +242,13 @@ const reducer = (state, action) => {
 	if (action.type === "UPDATE_TICKET") {
 		const ticket = action.payload;
 
-		const ticketIndex = state.findIndex(t => t.id === ticket.id);
-		if (ticketIndex !== -1) {
-			state[ticketIndex] = ticket;
-		} else {
-			state.unshift(ticket);
-		}
-
-		return [...state];
+		return upsertTicketInState(state, ticket);
 	}
 
 	if (action.type === "UPDATE_TICKET_UNREAD_MESSAGES") {
 		const ticket = action.payload;
 
-		const ticketIndex = state.findIndex(t => t.id === ticket.id);
-		if (ticketIndex !== -1) {
-			state[ticketIndex] = ticket;
-			state.unshift(state.splice(ticketIndex, 1)[0]);
-		} else {
-			state.unshift(ticket);
-		}
-
-		return [...state];
+		return upsertTicketInState(state, ticket);
 	}
 
 	if (action.type === "UPDATE_TICKET_CONTACT") {
@@ -300,6 +321,34 @@ const reducer = (state, action) => {
 	useEffect(() => {
 		const socket = openSocket();
 		const normalizedSearchParam = String(searchParam || "").trim().toLowerCase();
+		let isEffectMounted = true;
+
+		const syncRecentTickets = async () => {
+			try {
+				const { data } = await api.get("/tickets", {
+					params: {
+						searchParam,
+						pageNumber: "1",
+						status,
+						showAll: canShowAllTickets,
+						queueIds: JSON.stringify(selectedQueueIds),
+						tagIds: JSON.stringify(selectedTagIds || []),
+						followUp,
+					},
+				});
+
+				if (!isEffectMounted) {
+					return;
+				}
+
+				dispatch({
+					type: "LOAD_TICKETS",
+					payload: data.tickets,
+				});
+			} catch (_error) {
+				// Ignore background sync failures; the next socket event or manual navigation can retry.
+			}
+		};
 
 		const hasTagMatch = ticket => {
 			if (!selectedTagIds || selectedTagIds.length === 0) return true;
@@ -374,6 +423,8 @@ const reducer = (state, action) => {
 					whatsappId: user?.whatsappId || null,
 				});
 			}
+
+			void syncRecentTickets();
 		});
 
 		socket.on("ticket", data => {
@@ -427,6 +478,7 @@ const reducer = (state, action) => {
 		});
 
 		return () => {
+			isEffectMounted = false;
 			socket.disconnect();
 		};
 	}, [canShowAllTickets, followUp, status, searchParam, user, selectedQueueIds, selectedTagIds]);

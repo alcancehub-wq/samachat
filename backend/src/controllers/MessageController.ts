@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 
+import { getScopedNotificationRoom, getScopedTicketsRoom } from "../helpers/socketRooms";
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
 import Message from "../models/Message";
@@ -23,6 +24,19 @@ type MessageData = {
   read: boolean;
   quotedMsg?: Message;
   isInternal?: boolean;
+};
+
+const emitTicketUpdate = async (ticket: Awaited<ReturnType<typeof ShowTicketService>>): Promise<void> => {
+  await ticket.reload({ include: ["contact", "queue", "whatsapp", "user", "tags"] });
+
+  const io = getIO();
+  io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
+    .to(getScopedNotificationRoom(ticket.whatsappId))
+    .to(ticket.id.toString())
+    .emit("ticket", {
+      action: "update",
+      ticket
+    });
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -55,6 +69,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   if (isInternal) {
     const senderUser = await ShowUserService(req.user.id);
+    await ticket.update({ lastMessage: body.trim() });
+
     const message = await CreateMessageService({
       messageData: {
         id: uuidv4(),
@@ -71,7 +87,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       broadcastToNotification: false
     });
 
-    await ticket.update({ lastMessage: body.trim() });
+    await emitTicketUpdate(ticket);
 
     return res.status(201).json(message);
   }
@@ -87,6 +103,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   } else {
     await SendWhatsAppMessage({ body, ticket, quotedMsg });
   }
+
+  await emitTicketUpdate(ticket);
 
   return res.send();
 };

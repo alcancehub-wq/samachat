@@ -700,11 +700,8 @@ const sendMedia = async (
     quotedMessageId: options?.quotedMessageId
   };
 
-  if (
-    messageMedia.mimetype.startsWith("image/") &&
-    !/^.*\.(jpe?g|png|gif)?$/i.exec(media.filename)
-  ) {
-    mediaOptions.sendMediaAsDocument = options?.sendMediaAsDocument || true;
+  if (options?.sendMediaAsDocument !== undefined) {
+    mediaOptions.sendMediaAsDocument = options.sendMediaAsDocument;
   }
 
   const sentMessage = await wbot.sendMessage(to, messageMedia, mediaOptions);

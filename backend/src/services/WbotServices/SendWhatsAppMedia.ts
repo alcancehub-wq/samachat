@@ -15,10 +15,13 @@ import ResolveMessageVariablesService from "../Variables/ResolveMessageVariables
 import { StartWhatsAppSession } from "./StartWhatsAppSession";
 import {
   convertAudioToOgg,
+  convertAudioToMp3,
   shouldNormalizeAudioForWhatsApp,
   shouldSendAudioAsVoice,
+  WHATSAPP_COMPATIBLE_AUDIO_MIMETYPE,
   WHATSAPP_VOICE_MIMETYPE
 } from "./audioNormalization";
+import { shouldSendMediaAsDocument } from "./mediaDelivery";
 import { sleep } from "../../utils/sleep";
 import { logger } from "../../utils/logger";
 
@@ -207,12 +210,26 @@ const SendWhatsAppMedia = async ({
 
     let convertedPath: string | null = null;
     if (shouldNormalizeAudioForWhatsApp(media)) {
-      convertedPath = await convertAudioToOgg(media.path);
-      mediaInput = {
-        filename: `${path.parse(media.filename).name}.ogg`,
-        mimetype: WHATSAPP_VOICE_MIMETYPE,
-        path: convertedPath
-      };
+      try {
+        convertedPath = await convertAudioToOgg(media.path);
+        mediaInput = {
+          filename: `${path.parse(media.filename).name}.ogg`,
+          mimetype: WHATSAPP_VOICE_MIMETYPE,
+          path: convertedPath
+        };
+      } catch (voiceConversionError) {
+        logger.warn(
+          { err: voiceConversionError, path: media.path, filename: media.filename },
+          "Voice-note normalization failed, falling back to mp3 audio"
+        );
+
+        convertedPath = await convertAudioToMp3(media.path);
+        mediaInput = {
+          filename: `${path.parse(media.filename).name}.mp3`,
+          mimetype: WHATSAPP_COMPATIBLE_AUDIO_MIMETYPE,
+          path: convertedPath
+        };
+      }
     }
 
     const sendAsVoice = shouldSendAudioAsVoice(mediaInput);
@@ -221,9 +238,9 @@ const SendWhatsAppMedia = async ({
       // Voice notes are more stable without a caption payload.
       caption: sendAsVoice ? undefined : hasBody,
       sendAudioAsVoice: sendAsVoice,
-      sendMediaAsDocument:
-        mediaInput.mimetype.startsWith("image/") &&
-        !/^.*\.(jpe?g|png|gif)?$/i.exec(mediaInput.filename)
+      sendMediaAsDocument: shouldSendMediaAsDocument(mediaInput, {
+        sendAsVoice
+      })
     };
 
     const sendWithChatId = async (targetChatId: string): Promise<ProviderMessage> =>

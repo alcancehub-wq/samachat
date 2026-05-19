@@ -1333,6 +1333,19 @@ const sendMedia = async (
     : undefined;
 
   const buildPayload = () => {
+    if (options?.sendMediaAsDocument) {
+      return {
+        message: {
+          document: mediaBuffer,
+          caption: options?.caption,
+          mimetype: media.mimetype,
+          fileName: media.filename,
+          contextInfo
+        },
+        type: "document" as MessageType
+      };
+    }
+
     const base = {
       caption: options?.caption,
       mimetype: media.mimetype,

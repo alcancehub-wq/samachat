@@ -1,5 +1,19 @@
 # Release Notes
 
+## 2026-05-19
+
+### legacy-prod
+
+- Chats/Tempo real: o cliente Socket.IO do legado deixa de iniciar a conexao em modo `websocket` direto e passa a negociar com `polling` antes do upgrade, reduzindo o caso em que a conversa so voltava a atualizar apos `F5` quando o websocket puro falhava ou ficava instavel no ambiente do usuario.
+- Chats/Tempo real: o legado passa a renovar o JWT tambem em background e no proprio ciclo de reconexao do Socket.IO, evitando que a lista de tickets pare de refletir novas mensagens quando a sessao web continua aberta por mais tempo e o socket precisa renegociar autenticacao.
+- Chats/Tempo real: o envio do atendente deixa de depender apenas do eco assincromo do provider para refletir a ultima mensagem na listagem; o backend agora republica imediatamente o `ticket` atualizado apos envio de texto, midia e mensagem interna, e a lista do legado passa a reordenar tickets existentes pela atividade mais recente em vez de preservar a ordem antiga localmente.
+- Chats/Tempo real: quando o Socket.IO reconecta, a lista do legado sincroniza novamente a primeira pagina dos tickets com os filtros atuais, cobrindo a janela em que algum `appMessage`/`ticket` possa ter sido perdido durante churn de reconexao e reduzindo ainda mais a necessidade de `F5`.
+- Chats/Audio gravado: o frontend deixa de fragmentar a gravacao do `MediaRecorder` em `timeslices` com `requestData()` no momento do envio e passa a gerar um blob final unico com o MIME real do recorder, reduzindo o caso em que o backend recebia `.webm` invalidos ou corrompidos ao finalizar a gravacao.
+- Chats/Audio enviado: audios gravados pelo navegador em containers `webm`/`ogg`/`opus` voltam a ser normalizados no backend para `ogg/opus` e enviados como mensagem de voz do WhatsApp, restaurando a aparencia nativa do audio gravado no destinatario; quando essa conversao falhar, o backend ainda cai com seguranca para `mp3` para nao quebrar a entrega.
+- Chats/Midia enviada: a regra de entrega foi mantida isolada em helper unico no backend; anexos genericos continuam como documento, imagens/videos permanecem nativos e audios compatibilizados seguem como voz do WhatsApp quando possivel, com fallback controlado para audio comum.
+- Escopo desta correcao: `frontend/src/services/socket-io.js`, `frontend/src/hooks/useAuth.js/index.js`, `frontend/src/components/TicketsList/index.js`, `frontend/src/components/MessageInput/index.js`, `backend/src/controllers/MessageController.ts`, `backend/src/services/WbotServices/SendWhatsAppMedia.ts`, `backend/src/services/WbotServices/audioNormalization.ts`, `backend/src/services/WbotServices/mediaDelivery.ts`, `backend/src/providers/WhatsApp/Implementations/wwebjs.ts`, `backend/src/providers/WhatsApp/Implementations/whaileys.ts`, `backend/src/__tests__/unit/WbotServices/audioNormalization.spec.ts`, `backend/src/__tests__/unit/WbotServices/mediaDelivery.spec.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao: `npm run build` aprovado repetidamente em `frontend`; `./node_modules/.bin/jest.cmd D:/Samacon/whaticket/backend/src/__tests__/unit/WbotServices/audioNormalization.spec.ts D:/Samacon/whaticket/backend/src/__tests__/unit/WbotServices/mediaDelivery.spec.ts --runInBand` aprovado em `backend` com 8 testes; `npm run build` aprovado em `backend`; logs do backend confirmaram rejeicoes `jwt expired` seguidas de `Client Connected` apos reinicio controlado do container; `localhost:8080` e `http://localhost:3000` confirmados respondendo com o bundle novo do frontend.
+
 ## 2026-05-18
 
 ### legacy-prod

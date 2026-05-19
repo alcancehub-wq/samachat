@@ -6,7 +6,8 @@ type AudioMediaDescriptor = {
   originalname?: string;
 };
 
-export const WHATSAPP_VOICE_MIMETYPE = "audio/ogg; codecs=opus";
+export const WHATSAPP_COMPATIBLE_AUDIO_MIMETYPE = "audio/mpeg";
+export const WHATSAPP_VOICE_MIMETYPE = "audio/ogg;codecs=opus";
 
 const VOICE_AUDIO_EXTENSION_PATTERN = /\.(ogg|opus|webm)$/i;
 
@@ -74,6 +75,45 @@ export const convertAudioToOgg = (inputPath: string): Promise<string> => {
       "voip",
       "-f",
       "ogg",
+      outputPath
+    ]);
+
+    let errorOutput = "";
+    ffmpeg.stderr.on("data", data => {
+      errorOutput += data.toString();
+    });
+
+    ffmpeg.on("error", err => {
+      reject(err);
+    });
+
+    ffmpeg.on("close", code => {
+      if (code !== 0) {
+        reject(new Error(errorOutput || `ffmpeg exited with code ${code}`));
+        return;
+      }
+      resolve(outputPath);
+    });
+  });
+};
+
+export const convertAudioToMp3 = (inputPath: string): Promise<string> => {
+  const outputPath = `${inputPath.replace(/\.[^.]+$/, "")}.mp3`;
+
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn("ffmpeg", [
+      "-y",
+      "-i",
+      inputPath,
+      "-vn",
+      "-acodec",
+      "libmp3lame",
+      "-ar",
+      "44100",
+      "-ac",
+      "1",
+      "-b:a",
+      "128k",
       outputPath
     ]);
 

@@ -125,6 +125,43 @@ const useAuth = () => {
 	}, []);
 
 	useEffect(() => {
+		if (!isAuth || !getStoredToken()) {
+			return undefined;
+		}
+
+		const refreshSessionSilently = async () => {
+			try {
+				await refreshAuthToken();
+			} catch (_err) {
+				clearAuthState();
+			}
+		};
+
+		const handleWindowFocus = () => {
+			void refreshSessionSilently();
+		};
+
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === "visible") {
+				void refreshSessionSilently();
+			}
+		};
+
+		const refreshInterval = window.setInterval(() => {
+			void refreshSessionSilently();
+		}, 10 * 60 * 1000);
+
+		window.addEventListener("focus", handleWindowFocus);
+		document.addEventListener("visibilitychange", handleVisibilityChange);
+
+		return () => {
+			window.clearInterval(refreshInterval);
+			window.removeEventListener("focus", handleWindowFocus);
+			document.removeEventListener("visibilitychange", handleVisibilityChange);
+		};
+	}, [isAuth]);
+
+	useEffect(() => {
 		const socket = openSocket();
 
 		socket.on("user", data => {

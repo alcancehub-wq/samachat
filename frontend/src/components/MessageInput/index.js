@@ -696,17 +696,18 @@ const MessageInput = ({ ticketStatus }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")
+      const mimeType = MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")
         ? "audio/ogg;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
         : "";
 
       mediaRecorderRef.current = mimeType
         ? new MediaRecorder(stream, { mimeType })
         : new MediaRecorder(stream);
       audioChunksRef.current = [];
-      audioMimeTypeRef.current = mimeType.includes("ogg") ? "audio/ogg" : "audio/webm";
+      audioMimeTypeRef.current =
+        mediaRecorderRef.current.mimeType || mimeType || "audio/webm";
       isCancellingAudioRef.current = false;
 
       mediaRecorderRef.current.ondataavailable = event => {
@@ -727,14 +728,16 @@ const MessageInput = ({ ticketStatus }) => {
             return;
           }
 
+          const resolvedMimeType =
+            mediaRecorderRef.current?.mimeType || audioMimeTypeRef.current || "audio/webm";
           const audioBlob = new Blob(audioChunksRef.current, {
-            type: audioMimeTypeRef.current,
+            type: resolvedMimeType,
           });
-          const extension = audioMimeTypeRef.current.endsWith("ogg") ? "ogg" : "webm";
+          const extension = resolvedMimeType.includes("ogg") ? "ogg" : "webm";
           const file = new File(
             [audioBlob],
             `recorded_${Date.now()}.${extension}`,
-            { type: audioMimeTypeRef.current }
+            { type: resolvedMimeType }
           );
 
           setLoading(true);
@@ -752,7 +755,7 @@ const MessageInput = ({ ticketStatus }) => {
         }
       };
 
-      mediaRecorderRef.current.start(1000);
+      mediaRecorderRef.current.start();
       setRecording(true);
     } catch (err) {
       console.error("Erro ao iniciar gravação:", err);
@@ -803,7 +806,6 @@ const MessageInput = ({ ticketStatus }) => {
     if (mediaRecorderRef.current.state !== "recording") return;
     isStoppingRef.current = true;
     setLoading(true);
-    mediaRecorderRef.current.requestData();
     mediaRecorderRef.current.stop();
   };
 
