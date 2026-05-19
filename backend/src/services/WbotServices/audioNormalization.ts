@@ -7,7 +7,7 @@ type AudioMediaDescriptor = {
 };
 
 export const WHATSAPP_COMPATIBLE_AUDIO_MIMETYPE = "audio/mpeg";
-export const WHATSAPP_VOICE_MIMETYPE = "audio/ogg;codecs=opus";
+export const WHATSAPP_VOICE_MIMETYPE = "audio/ogg";
 
 const VOICE_AUDIO_EXTENSION_PATTERN = /\.(ogg|opus|webm)$/i;
 
@@ -60,21 +60,13 @@ export const convertAudioToOgg = (inputPath: string): Promise<string> => {
       "-c:a",
       "libopus",
       "-b:a",
-      "32k",
-      "-vbr",
-      "on",
-      "-compression_level",
-      "10",
+      "64k",
       "-ar",
       "48000",
       "-ac",
       "1",
-      "-frame_duration",
-      "60",
       "-application",
       "voip",
-      "-f",
-      "ogg",
       outputPath
     ]);
 

@@ -1,4 +1,5 @@
 import {
+  WHATSAPP_VOICE_MIMETYPE,
   shouldNormalizeAudioForWhatsApp,
   shouldSendAudioAsVoice
 } from "../../../services/WbotServices/audioNormalization";
@@ -35,6 +36,16 @@ describe("audioNormalization", () => {
     expect(
       shouldSendAudioAsVoice({
         mimetype: "audio/ogg;codecs=opus",
+        filename: "recorded_123.ogg"
+      })
+    ).toBe(true);
+  });
+
+  it("should keep the normalized WhatsApp voice-note mimetype on generic ogg", () => {
+    expect(WHATSAPP_VOICE_MIMETYPE).toBe("audio/ogg");
+    expect(
+      shouldSendAudioAsVoice({
+        mimetype: WHATSAPP_VOICE_MIMETYPE,
         filename: "recorded_123.ogg"
       })
     ).toBe(true);
