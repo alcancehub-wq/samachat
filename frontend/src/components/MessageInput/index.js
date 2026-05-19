@@ -816,9 +816,8 @@ const MessageInput = ({ ticketStatus }) => {
       mediaRecorderRef.current.stop();
     } else {
       stopMediaStream(mediaStreamRef.current);
+      resetRecordingState();
     }
-
-    resetRecordingState();
   };
 
   const handleOpenMenuClick = event => {
