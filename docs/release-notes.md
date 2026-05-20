@@ -1,5 +1,13 @@
 # Release Notes
 
+## 2026-05-20
+
+### legacy-prod
+
+- Chats/Roteamento: mensagens deixam de reaproveitar ticket aberto ou pendente de outra conexao quando o mesmo contato existe em multiplos WhatsApps; o backend agora exige `whatsappId` ja na primeira busca do `FindOrCreateTicketService`, evitando que a conversa de uma pessoa com outros atendimentos apareca no chat ativo errado.
+- Escopo desta correcao: `backend/src/services/TicketServices/FindOrCreateTicketService.ts`, `backend/src/services/TicketServices/__tests__/FindOrCreateTicketService.spec.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao: `npx jest src/services/TicketServices/__tests__/FindOrCreateTicketService.spec.ts src/services/TicketServices/__tests__/ShowTicketService.spec.ts --runInBand --coverage=false` aprovado em `backend`; `npm run build` aprovado em `backend`; backend local rebuildado via `docker compose -f docker-compose.yaml up -d --build backend` sem desconectar manualmente a sessao; `localhost:8080` confirmado respondendo e o container local conferido com o filtro `whatsappId` presente no `dist/services/TicketServices/FindOrCreateTicketService.js`.
+
 ## 2026-05-19
 
 ### legacy-prod

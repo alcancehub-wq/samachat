@@ -17,7 +17,8 @@ const FindOrCreateTicketService = async (
       status: {
         [Op.or]: ["open", "pending"]
       },
-      contactId: ticketContactId
+      contactId: ticketContactId,
+      whatsappId
     },
     order: [["updatedAt", "DESC"]]
   });
