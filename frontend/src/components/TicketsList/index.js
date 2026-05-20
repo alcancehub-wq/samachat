@@ -31,19 +31,19 @@ const getTicketTimestamp = value => {
 
 const sortTicketsByRecentActivity = tickets => {
 	return [...tickets].sort((leftTicket, rightTicket) => {
-		const pendingSinceDiff =
-			getTicketTimestamp(rightTicket.pendingSince) - getTicketTimestamp(leftTicket.pendingSince);
-
-		if (pendingSinceDiff !== 0) {
-			return pendingSinceDiff;
-		}
-
 		const updatedAtDiff =
 			getTicketTimestamp(rightTicket.updatedAt || rightTicket.createdAt) -
 			getTicketTimestamp(leftTicket.updatedAt || leftTicket.createdAt);
 
 		if (updatedAtDiff !== 0) {
 			return updatedAtDiff;
+		}
+
+		const pendingSinceDiff =
+			getTicketTimestamp(rightTicket.pendingSince) - getTicketTimestamp(leftTicket.pendingSince);
+
+		if (pendingSinceDiff !== 0) {
+			return pendingSinceDiff;
 		}
 
 		return Number(rightTicket.id || 0) - Number(leftTicket.id || 0);

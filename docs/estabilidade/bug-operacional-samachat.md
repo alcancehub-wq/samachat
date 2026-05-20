@@ -2,7 +2,7 @@
 
 Data da auditoria: 2026-05-20
 Escopo: legado `backend/src` + `frontend/src`
-Objetivo: registrar os 9 bugs reportados, os arquivos candidatos, a hipotese inicial, a evidencia ja encontrada, o risco operacional e a prioridade antes de qualquer correcao.
+Objetivo: registrar os 10 bugs reportados, os arquivos candidatos, a hipotese inicial, a evidencia ja encontrada, o risco operacional e a prioridade antes de qualquer correcao.
 
 ## Bug 1 - Contato fora do pais / DDI / DDD
 
@@ -44,6 +44,10 @@ Objetivo: registrar os 9 bugs reportados, os arquivos candidatos, a hipotese ini
 	- mensagens externas passam por `SendWhatsAppMessage` ou `SendWhatsAppMedia`, que atualizam `ticket.lastMessage` e retornam sem persistir a `Message`.
 	- a persistencia externa acontece apenas em `handleWhatsappEvents.handleMessage()`.
 	- o controller ainda emite `ticket:update` apos o envio externo, mesmo sem `Message` garantida.
+	- reproducao local em serie curta em 2026-05-20:
+		- cenario A, ticket `109`: 5/5 `POST /messages/109` com `200`, 5/5 `Messages` persistidas e 5/5 `Ticket.lastMessage` atualizados; a automacao so confirmou a renderizacao das 5 mensagens apos recarga.
+		- cenario B, ticket `145`: 5/5 `POST /messages/145` com `200`, 5/5 `Messages` persistidas, 5/5 `Ticket.lastMessage` atualizados e 5/5 mensagens visiveis sem `F5`.
+	- o resultado acima nao confirmou falha sistemica de persistencia, mas mostrou comportamento intermitente entre envio/persistencia/realtime na UI.
 - Risco operacional:
 	- cenario silencioso onde o celular recebe a mensagem, a lista lateral muda, mas o historico do ticket fica sem a linha da mensagem.
 
@@ -187,6 +191,44 @@ Objetivo: registrar os 9 bugs reportados, os arquivos candidatos, a hipotese ini
 - Risco operacional:
 	- o time fala em "RESOLVIDO" como status, mas o banco e a UI operam com `closed` + tag; isso pode quebrar relatorios, filtros e expectativa de negocio se nao for tratado explicitamente.
 
+## Bug 10 - Ticket com nova atividade nao sobe para o topo da lista lateral
+
+- Prioridade: P2
+- Arquivos candidatos:
+	- `frontend/src/components/TicketsList/index.js`
+	- `frontend/src/components/TicketListItem/index.js`
+	- `frontend/src/hooks/useTickets/index.js`
+	- `backend/src/services/TicketServices/ListTicketsService.ts`
+	- `backend/src/services/TicketServices/UpdateTicketService.ts`
+- Hipotese inicial:
+	- a lista lateral atualiza preview e horario, mas a ordenacao final continua presa a um criterio anterior ao `updatedAt` recente; o candidato principal e o `pendingSince` ter precedencia indevida mesmo em ticket `open`.
+- Evidencia encontrada:
+	- reproducao local em 2026-05-20:
+		- ticket `109` (`Julia lopes Samacon`) recebeu 5 novas mensagens, atualizou `lastMessage` e `updatedAt` ate `2026-05-20 16:29:34`, mas permaneceu abaixo de `Ana Samacon`, `Mateus Samacon`, `Laysa` e `Augusto Solidade` na lista lateral.
+		- ticket `145` (`Mateus Samacon`) recebeu 5 novas mensagens, atualizou `lastMessage` e `updatedAt` ate `2026-05-20 16:34:30`, mas continuou abaixo de `Ana Samacon` na lista lateral.
+	- a UI confirmou preview novo e horario novo nos dois tickets, sem mover nenhum deles para a primeira linha.
+	- `frontend/src/components/TicketsList/index.js` usa `sortTicketsByRecentActivity()` e prioriza `pendingSince` antes de `updatedAt` para todos os tickets.
+	- leitura no banco no mesmo momento mostrou:
+		- ticket `146`: `pendingSince = 2026-05-19 12:36:47`, `updatedAt = 2026-05-20 11:36:51`
+		- ticket `145`: `pendingSince = 2026-05-19 12:34:02`, `updatedAt = 2026-05-20 16:34:30`
+		- ticket `142`: `pendingSince = 2026-05-19 11:33:45`, `updatedAt = 2026-05-20 09:57:15`
+		- ticket `140`: `pendingSince = 2026-05-19 09:01:32`, `updatedAt = 2026-05-20 09:49:18`
+		- ticket `109`: `pendingSince = 2026-05-06 21:19:41`, `updatedAt = 2026-05-20 16:29:34`
+	- a ordem observada em tela bateu mais com `pendingSince` do que com `updatedAt`, confirmando a suspeita local.
+	- pos-correcao local em 2026-05-20:
+		- envio `TESTE_BUG10_FIX_109_BUILD` no ticket `109`: `POST /messages/109` com `200`, `Message` criada, `Ticket.lastMessage` atualizado e ticket movido para a primeira linha da lista lateral.
+		- envio `TESTE_BUG10_FIX_145_BUILD` no ticket `145`: `POST /messages/145` com `200`, `Message` criada, `Ticket.lastMessage` atualizado e ticket movido para a primeira linha da lista lateral.
+		- a aba `Aguardando` continuou com contador `2` e itens pendentes visiveis.
+- Causa raiz confirmada:
+	- `pendingSince` era avaliado antes de `updatedAt` em `frontend/src/components/TicketsList/index.js`, entao um ticket aberto com nova atividade podia continuar abaixo de outro ticket menos recente se o outro tivesse `pendingSince` maior.
+- Arquivo alterado na correcao:
+	- `frontend/src/components/TicketsList/index.js`
+- Regra nova de ordenacao:
+	- `updatedAt || createdAt` passou a ser o criterio principal de atividade.
+	- `pendingSince` permanece apenas como desempate.
+- Risco operacional:
+	- operador perde a conversa mais recente no meio da lista, responde fora de ordem, depende de busca manual ou `F5` e quebra a expectativa operacional estilo WhatsApp de ver o chat ativo no topo.
+
 ## Suspeitas principais de causa raiz por prioridade
 
 - P1
@@ -195,6 +237,7 @@ Objetivo: registrar os 9 bugs reportados, os arquivos candidatos, a hipotese ini
 - P2
 	- visibilidade de contato depende de ticket e `whatsappId`, o que mascara registros existentes.
 	- inexistencia de um papel global intermediario alem de `admin`.
+	- ordenacao da lista lateral prioriza `pendingSince` antes de `updatedAt`, o que pode impedir que tickets abertos com nova atividade subam para o topo.
 - P3
 	- fluxo de aceitar ticket navega mesmo em falha e pode mascarar erro operacional.
 - P4

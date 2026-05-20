@@ -102,6 +102,11 @@ Regra: nenhuma correcao pode ser considerada pronta se quebrar item anterior des
 - [ ] 44. Validar comportamento apos trocar de chat e voltar, sem perder mensagem recente.
 - [ ] 45. Validar se o service worker registrado nao manteve bundle antigo apos novo build/deploy.
 - [ ] 46. Em producao, apos deploy, confirmar versao do bundle carregado e limpar cache/PWA apenas se necessario.
+- [ ] 47. Repetir 5 envios sequenciais de texto no mesmo ticket aberto e validar se todas as mensagens aparecem sem `F5`.
+- [ ] 48. Repetir 5 envios sequenciais em outro ticket aberto e validar se todas as mensagens aparecem sem `F5`.
+- [ ] 49. Confirmar que qualquer ticket com nova atividade sobe para a primeira linha da lista lateral, respeitando filtros e permissoes.
+- [ ] 50. Confirmar que `lastMessage`, horario e criterio de ordenacao usam o mesmo evento/mesmo timestamp operacional.
+- [ ] 51. Se o frontend local estiver servido por `dist`, rodar `npm run build` antes da validacao visual para garantir que o browser esta consumindo o bundle novo.
 
 ## Evidencias a registrar em cada rodada
 

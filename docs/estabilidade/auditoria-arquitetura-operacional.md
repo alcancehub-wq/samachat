@@ -279,6 +279,41 @@ Modo: somente leitura no codigo funcional; este documento resume o mapa real enc
 - `frontend/src/hooks/useAuth.js/index.js`
 	- refresh silencioso em foco/visibilidade e a cada 10 minutos.
 
+### Ordenacao da lista lateral
+
+- `frontend/src/components/TicketsList/index.js`
+	- `sortTicketsByRecentActivity()` ordena por:
+		- `updatedAt || createdAt` desc
+		- depois `pendingSince` desc
+		- por fim `id` desc
+	- `UPDATE_TICKET` e `UPDATE_TICKET_UNREAD_MESSAGES` passam por `upsertTicketInState()` e reaplicam esse sort local.
+- Implicacao operacional confirmada em reproducao local:
+	- ticket `109` atualizou `lastMessage` para `TESTE_BUG2_SERIE_A_05` e `updatedAt` para `2026-05-20 16:29:34`, mas continuou abaixo de tickets com `updatedAt` mais antigo.
+	- ticket `145` atualizou `lastMessage` para `TESTE_BUG2_SERIE_B_05` e `updatedAt` para `2026-05-20 16:34:30`, mas continuou abaixo de `Ana Samacon` na lista lateral.
+	- a consulta no banco mostrou que a ordem em tela acompanhava melhor `pendingSince` do que `updatedAt`, o que explica o BUG 10 de ordenacao.
+	- correcao aplicada na rodada do BUG 10: inverter a prioridade do sort para promover tickets com `updatedAt` mais recente, mantendo `pendingSince` apenas como desempate.
+	- validacao pos-fix:
+		- ticket `109` subiu para o topo apos `TESTE_BUG10_FIX_109_BUILD`.
+		- ticket `145` subiu para o topo apos `TESTE_BUG10_FIX_145_BUILD`.
+		- a aba `Aguardando` permaneceu funcional com contador `2` e itens pendentes visiveis.
+
+### Reproducao local do Bug 2 em serie curta
+
+- Data: 2026-05-20
+- Cenario A: ticket `109`
+	- 5/5 `POST /messages/109` com `200`
+	- 5/5 `Messages` persistidas no banco
+	- 5/5 `Ticket.lastMessage` e `Ticket.updatedAt` atualizados
+	- a automacao so confirmou as 5 mensagens apos recarga da tela
+- Cenario B: ticket `145`
+	- 5/5 `POST /messages/145` com `200`
+	- 5/5 `Messages` persistidas no banco
+	- 5/5 mensagens visiveis sem `F5` e tambem apos recarga
+- Leitura operacional atual:
+	- a serie curta nao reproduziu perda de persistencia no banco.
+	- houve indicio de comportamento intermitente no eixo realtime/UI no cenario A.
+	- o problema de ordenacao da lista lateral foi reproduzido nos dois cenarios.
+
 ### Cache / PWA / build antigo
 
 - `frontend/src/index.js`
@@ -296,6 +331,8 @@ Modo: somente leitura no codigo funcional; este documento resume o mapa real enc
 	- o envio externo nao persiste no controller; depende do eco do provider para chamar `handleMessage()`.
 - Mensagem recebida chega no WhatsApp mas nao no SamaChat:
 	- pode falhar no listener do provider, na criacao/merge de contato, na atribuicao do ticket, ou no socket do frontend.
+- Ticket com nova atividade nao sobe para o topo:
+	- o frontend reaplica sort com prioridade em `pendingSince`, o que pode manter tickets abertos atras de itens menos recentes por `updatedAt`.
 - Contato "ja existe" mas ninguem encontra:
 	- duplicidade e validada por `number`, mas a localizacao do contato na UI depende de ticket e `whatsappId` escopado.
 - Mensagem aparece para usuario errado:
