@@ -108,6 +108,23 @@ Regra: nenhuma correcao pode ser considerada pronta se quebrar item anterior des
 - [ ] 50. Confirmar que `lastMessage`, horario e criterio de ordenacao usam o mesmo evento/mesmo timestamp operacional.
 - [ ] 51. Se o frontend local estiver servido por `dist`, rodar `npm run build` antes da validacao visual para garantir que o browser esta consumindo o bundle novo.
 
+### Registro da rodada local de 2026-05-20 para o item 42
+
+- Ticket validado: `109`
+- Mensagem de teste: `TESTE_SOCKET_PASSIVO_109_01`
+- Resultado observado:
+	- teste com duas abas concluido.
+	- `ABA A` enviou a mensagem e recebeu `POST /messages/109` com `200`.
+	- `ABA A` fez `GET /messages/109?pageNumber=1` apos o envio.
+	- a `Message` foi persistida no banco e `Ticket.lastMessage` foi atualizado.
+	- `ABA B`, passiva, exibiu a mensagem sem `F5` e sem troca de chat.
+	- nao houve `GET /messages/109` capturado na `ABA B`.
+	- `Socket.IO` estava ativo via fallback polling.
+	- nao houve prova de upgrade `WebSocket` bem-sucedido.
+	- realtime local funcional via polling nesta rodada.
+	- Bug 2 nao reproduzido como falha de persistencia.
+	- intermitencia anterior classificada, por ora, como possivel timing de refresh/renderizacao ou cenario especifico ainda nao reproduzido.
+
 ## Evidencias a registrar em cada rodada
 
 - [ ] Branch e commit testados.

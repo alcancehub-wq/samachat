@@ -47,7 +47,19 @@ Objetivo: registrar os 10 bugs reportados, os arquivos candidatos, a hipotese in
 	- reproducao local em serie curta em 2026-05-20:
 		- cenario A, ticket `109`: 5/5 `POST /messages/109` com `200`, 5/5 `Messages` persistidas e 5/5 `Ticket.lastMessage` atualizados; a automacao so confirmou a renderizacao das 5 mensagens apos recarga.
 		- cenario B, ticket `145`: 5/5 `POST /messages/145` com `200`, 5/5 `Messages` persistidas, 5/5 `Ticket.lastMessage` atualizados e 5/5 mensagens visiveis sem `F5`.
+	- teste passivo em duas abas em 2026-05-20, ticket `109`:
+		- `ABA A` enviou `TESTE_SOCKET_PASSIVO_109_01`.
+		- `POST /messages/109` retornou `200`.
+		- `ABA A` fez `GET /messages/109?pageNumber=1` apos o envio.
+		- a `Message` foi persistida no banco e `Ticket.lastMessage` foi atualizado.
+		- `ABA B`, passiva, exibiu a mensagem sem `F5` e sem troca de chat.
+		- nao houve `GET /messages/109` capturado na `ABA B`.
+		- `Socket.IO` permaneceu ativo via fallback de polling, sem prova de upgrade `WebSocket` bem-sucedido.
 	- o resultado acima nao confirmou falha sistemica de persistencia, mas mostrou comportamento intermitente entre envio/persistencia/realtime na UI.
+	- leitura consolidada apos a rodada passiva:
+		- o Bug 2 nao foi reproduzido como falha de persistencia.
+		- o realtime local ficou funcional via polling nesta rodada.
+		- a intermitencia anterior fica classificada, por ora, como possivel timing de refresh/renderizacao ou cenario especifico ainda nao reproduzido.
 - Risco operacional:
 	- cenario silencioso onde o celular recebe a mensagem, a lista lateral muda, mas o historico do ticket fica sem a linha da mensagem.
 

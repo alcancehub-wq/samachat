@@ -314,6 +314,24 @@ Modo: somente leitura no codigo funcional; este documento resume o mapa real enc
 	- houve indicio de comportamento intermitente no eixo realtime/UI no cenario A.
 	- o problema de ordenacao da lista lateral foi reproduzido nos dois cenarios.
 
+### Teste passivo em duas abas no ticket 109
+
+- Data: 2026-05-20
+- Escopo: duas abas simultaneas no ticket `109`, com `ABA A` ativa para envio e `ABA B` passiva apenas observando.
+- Evidencia registrada:
+	- `ABA A` enviou `TESTE_SOCKET_PASSIVO_109_01`.
+	- `POST /messages/109` retornou `200`.
+	- `ABA A` fez `GET /messages/109?pageNumber=1` apos o envio.
+	- a `Message` foi persistida no banco e `Ticket.lastMessage` foi atualizado.
+	- `ABA B`, passiva, exibiu a mensagem sem `F5` e sem troca de chat.
+	- nao houve `GET /messages/109` capturado na `ABA B` durante a janela instrumentada.
+	- o `Socket.IO` permaneceu ativo via fallback de polling.
+	- nao houve prova de upgrade `WebSocket` bem-sucedido nesta rodada.
+- Leitura operacional consolidada:
+	- o realtime local ficou funcional via polling nesta rodada.
+	- o Bug 2 nao foi reproduzido como falha de persistencia.
+	- a intermitencia anterior fica classificada, por ora, como possivel timing de refresh/renderizacao ou cenario especifico ainda nao reproduzido.
+
 ### Cache / PWA / build antigo
 
 - `frontend/src/index.js`
