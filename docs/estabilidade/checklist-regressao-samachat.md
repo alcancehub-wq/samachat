@@ -32,14 +32,14 @@ Regra: nenhuma correcao pode ser considerada pronta se quebrar item anterior des
 - [ ] 1. Enviar mensagem texto do SamaChat para contato brasileiro.
 - [ ] 2. Confirmar mensagem aparece no celular.
 - [ ] 3. Confirmar mensagem fica registrada no historico do SamaChat.
-- [ ] 4. Confirmar `lastMessage` e horario mudam na lista lateral sem F5.
+- [x] 4. Confirmar `lastMessage` e horario mudam na lista lateral sem F5.
 - [ ] 5. Confirmar `ack` evolui no historico sem precisar trocar de tela.
 
 ### Mensagem recebida
 
 - [ ] 6. Receber mensagem texto do celular para o SamaChat.
-- [ ] 7. Confirmar a mensagem aparece no chat aberto sem F5.
-- [ ] 8. Confirmar a conversa aparece ou sobe na lista lateral sem F5.
+- [x] 7. Confirmar a mensagem aparece no chat aberto sem F5.
+- [x] 8. Confirmar a conversa aparece ou sobe na lista lateral sem F5.
 - [ ] 9. Confirmar contador de nao lidas/notificacao atualiza em tempo real.
 - [ ] 10. Confirmar abertura do ticket por numero novo nao exige salvar contato manualmente.
 
@@ -67,7 +67,7 @@ Regra: nenhuma correcao pode ser considerada pronta se quebrar item anterior des
 
 ### Ticket pendente / aceite / ownership
 
-- [ ] 24. Receber mensagem nova para gerar ticket em `pending`.
+- [x] 24. Receber mensagem nova para gerar ticket em `pending`.
 - [ ] 25. Aceitar o ticket como operador correto.
 - [ ] 26. Confirmar mudanca para `open` sem F5.
 - [ ] 27. Confirmar `userId`/responsavel exibido no card e no header do ticket.
@@ -104,9 +104,33 @@ Regra: nenhuma correcao pode ser considerada pronta se quebrar item anterior des
 - [ ] 46. Em producao, apos deploy, confirmar versao do bundle carregado e limpar cache/PWA apenas se necessario.
 - [ ] 47. Repetir 5 envios sequenciais de texto no mesmo ticket aberto e validar se todas as mensagens aparecem sem `F5`.
 - [ ] 48. Repetir 5 envios sequenciais em outro ticket aberto e validar se todas as mensagens aparecem sem `F5`.
-- [ ] 49. Confirmar que qualquer ticket com nova atividade sobe para a primeira linha da lista lateral, respeitando filtros e permissoes.
+- [x] 49. Confirmar que qualquer ticket com nova atividade sobe para a primeira linha da lista lateral, respeitando filtros e permissoes.
 - [ ] 50. Confirmar que `lastMessage`, horario e criterio de ordenacao usam o mesmo evento/mesmo timestamp operacional.
-- [ ] 51. Se o frontend local estiver servido por `dist`, rodar `npm run build` antes da validacao visual para garantir que o browser esta consumindo o bundle novo.
+- [x] 51. Se o frontend local estiver servido por `dist`, rodar `npm run build` antes da validacao visual para garantir que o browser esta consumindo o bundle novo.
+
+### Registro da rodada local de 2026-05-20 para itens 4, 7, 8, 24, 49 e 51
+
+- Build executado antes da validacao visual:
+	- `backend`: `npm run build` aprovado.
+	- `frontend`: `npm run build` aprovado.
+	- nenhum dos dois pacotes tem script `lint` declarado.
+- Correcao sob teste:
+	- `backend/src/services/MessageServices/CreateMessageService.ts` passou a emitir `appMessage` para rooms `all` e `whatsapp:<id>`.
+	- `frontend/src/components/TicketsManager/index.js` passou a enviar `showAll` tambem para `TicketsList status="pending"`.
+- Cenario A - ticket aberto existente:
+	- contato/ticket: `Mor`, ticket `151`.
+	- inbound validado: `TESTE_LISTA_SOCKET_FIX_OPEN_01` (`fromMe = 0`).
+	- resultado: preview, horario visual (`18:50`) e topo da lista `open` atualizaram sem `F5`.
+- Cenario B - pending observado na lista lateral:
+	- contato/ticket: `Papai Rei`, ticket `153`.
+	- inbound real observado: `TESTE_LISTA_SOCKET_FIX__INBOUND_01` (`fromMe = 0`).
+	- resultado: aba `Aguardando` subiu de `2` para `3`, o card entrou no topo sem `F5` e permaneceu com `status = pending` / `userId = NULL` no momento da prova.
+- Cenario C - chat aberto passivo:
+	- ticket validado: `109`.
+	- inbound real observado: `Teste` (`fromMe = 0`) em `2026-05-20 20:35:50`.
+	- resultado: o chat aberto exibiu a nova mensagem sem `F5`.
+- Observacao operacional:
+	- durante a rodada, a sessao do browser expirou e precisou ser reidratada localmente para concluir a validacao; isso nao alterou o resultado funcional do fix da lista lateral.
 
 ### Registro da rodada local de 2026-05-20 para o item 42
 

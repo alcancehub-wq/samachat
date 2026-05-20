@@ -85,6 +85,18 @@ Objetivo: registrar os 10 bugs reportados, os arquivos candidatos, a hipotese in
 - Risco operacional:
 	- a mensagem existir no provider e/ou no banco, mas a UI nao refletir sem recarga por falha de socket, token expirado, cache antigo ou filtro de visibilidade.
 
+- Causa raiz confirmada em 2026-05-20 para a lista lateral `/tickets`:
+	- `CreateMessageService` emitia `appMessage` apenas para rooms de status/notificacao escopadas por `whatsappId` quando o ticket tinha conexao definida.
+	- os admins locais entram nas rooms globais `tickets:${status}:all` / `notification:all` quando `user.whatsappId` e `NULL`, entao o inbound persistia no banco sem chegar na lista lateral.
+	- na aba `pending`, `TicketsManager` nao passava `showAll` para `TicketsList`; o admin via o card no carregamento HTTP, mas o filtro de socket descartava pendentes sem `userId` nas atualizacoes em tempo real.
+- Correcao aplicada em 2026-05-20:
+	- `backend/src/services/MessageServices/CreateMessageService.ts` passou a broadcastar `appMessage` para `all + whatsapp:<id>` nas rooms de status/notificacao.
+	- `frontend/src/components/TicketsManager/index.js` passou a propagar `showAllTickets` tambem para a lista `pending`.
+- Validacao apos correcao:
+	- cenario A: ticket `151` (`Mor`) recebeu `TESTE_LISTA_SOCKET_FIX_OPEN_01` com `fromMe = 0`; preview, horario e topo da lista `open` atualizaram sem `F5`.
+	- cenario B: ticket `153` (`Papai Rei`) apareceu no topo de `Aguardando` sem `F5` apos inbound real `TESTE_LISTA_SOCKET_FIX__INBOUND_01`, com `status = pending` e `userId = NULL` no momento da observacao.
+	- cenario C: ticket `109` continuou recebendo inbound real no chat aberto sem `F5`; a mensagem `Teste` entrou com `fromMe = 0` em `20:35:50`.
+
 ## Bug 4 - Criar contato diz que ja existe, mas ninguem encontra
 
 - Prioridade: P2

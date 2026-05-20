@@ -75,20 +75,29 @@ const CreateMessageService = async ({
 
   if (broadcastToStatus || broadcastToNotification) {
     let broadcaster = io;
+    const roomTargets = new Set<string>();
 
     if (broadcastToStatus) {
-      broadcaster = broadcaster.to(
+      roomTargets.add(getScopedTicketsRoom(message.ticket.status));
+      roomTargets.add(
         getScopedTicketsRoom(message.ticket.status, message.ticket.whatsappId)
       );
     }
 
     if (broadcastToNotification) {
-      broadcaster = broadcaster.to(
+      roomTargets.add(getScopedNotificationRoom());
+      roomTargets.add(
         getScopedNotificationRoom(message.ticket.whatsappId)
       );
     }
 
-    broadcaster.emit("appMessage", payload);
+    roomTargets.forEach(room => {
+      broadcaster = broadcaster.to(room);
+    });
+
+    if (roomTargets.size > 0) {
+      broadcaster.emit("appMessage", payload);
+    }
   }
 
   return message;

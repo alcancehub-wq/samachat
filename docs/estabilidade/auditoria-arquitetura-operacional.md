@@ -154,6 +154,22 @@ Modo: somente leitura no codigo funcional; este documento resume o mapa real enc
 - A mensagem recebida depende de tres saltos: provider -> `handleMessage` -> `CreateMessageService` -> listeners do frontend.
 - Se o socket falhar, o historico pode existir no banco e ainda assim a UI aparentar precisar de F5.
 
+### Causa raiz confirmada da lista lateral `/tickets` em 2026-05-20
+
+- Backend:
+	- os usuarios admin locais auditados estavam com `Users.whatsappId = NULL`, entao a tela `/tickets` entrava em `joinTickets({ status, whatsappId: null })` e `joinNotification({ whatsappId: null })`, caindo nas rooms `tickets:${status}:all` e `notification:all`.
+	- antes do fix, `backend/src/services/MessageServices/CreateMessageService.ts` emitia `appMessage` para as rooms escopadas por `whatsappId` quando o ticket tinha conexao definida; na pratica, o inbound real era persistido no banco, mas a lista lateral nao recebia o evento nas abas globais do admin.
+- Frontend:
+	- `frontend/src/components/TicketsManager/index.js` montava a lista `pending` sem `showAll={showAllTickets}`.
+	- como `frontend/src/components/TicketsList/index.js` filtra o socket por `canAccessTicketInCurrentList(ticket)`, os cards `pending` sem `userId` podiam ser carregados pela consulta HTTP inicial do admin, mas eram descartados nas atualizacoes em tempo real.
+- Correcao aplicada:
+	- `CreateMessageService.ts` passou a emitir `appMessage` para rooms `all` e `whatsapp:<id>` de status/notificacao.
+	- `TicketsManager/index.js` passou a propagar `showAllTickets` tambem para `TicketsList status="pending"`.
+- Validacao local apos o fix:
+	- cenario A (`Mor`, ticket `151`): inbound `TESTE_LISTA_SOCKET_FIX_OPEN_01` entrou com `fromMe = 0`; `lastMessage`, horario visual e topo da lista `open` atualizaram sem `F5`.
+	- cenario B (`Papai Rei`, ticket `153`): inbound real entrou como `TESTE_LISTA_SOCKET_FIX__INBOUND_01`, o card apareceu no topo da aba `Aguardando`, o contador subiu de `2` para `3` e o preview/horario atualizaram sem `F5`.
+	- cenario C (`ticket 109`): a conversa aberta continuou recebendo inbound real sem `F5`; a mensagem `Teste` entrou com `fromMe = 0` em `2026-05-20 20:35:50` e apareceu no chat ja aberto.
+
 ## Mapa de Contact / Ticket / Message / User / Queue
 
 ### Normalizacao e DDI/DDD
@@ -278,6 +294,9 @@ Modo: somente leitura no codigo funcional; este documento resume o mapa real enc
 	- refresh de token em `connect_error` via `/auth/refresh_token`.
 - `frontend/src/hooks/useAuth.js/index.js`
 	- refresh silencioso em foco/visibilidade e a cada 10 minutos.
+- Confirmacao complementar da rodada:
+	- `EmitContactEvent.ts` ja seguia o padrao `all + whatsapp:<id>` para `contact`.
+	- a divergencia confirmada estava concentrada em `CreateMessageService.ts` para `appMessage`, combinada com a falta de `showAll` na lista `pending`.
 
 ### Ordenacao da lista lateral
 
