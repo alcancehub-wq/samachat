@@ -42,15 +42,18 @@ describe("ShowTicketService access control", () => {
 		expect(showUserServiceMock).toHaveBeenCalledWith(7);
   });
 
-  it("blocks queue members from loading pending tickets assigned to nobody", async () => {
-    ticketFindByPkMock.mockResolvedValue({
+  it("allows queue members to preview pending tickets assigned to nobody", async () => {
+    const ticket = {
       id: 102,
       userId: null,
       queueId: 11,
       status: "pending"
-    });
+    };
+
+    ticketFindByPkMock.mockResolvedValue(ticket);
     showUserServiceMock.mockResolvedValue({
       id: 7,
+      whatsappId: null,
       queues: [{ id: 11 }]
     });
 
@@ -59,18 +62,19 @@ describe("ShowTicketService access control", () => {
         userId: 7,
         profile: "user"
       })
-    ).rejects.toEqual(new AppError("ERR_NO_PERMISSION", 403));
+    ).resolves.toBe(ticket);
   });
 
-  it("blocks non-admin users from loading other users tickets", async () => {
+  it("blocks non-admin users from loading pending tickets assigned to another user", async () => {
     ticketFindByPkMock.mockResolvedValue({
       id: 103,
       userId: 9,
       queueId: 11,
-      status: "open"
+      status: "pending"
     });
     showUserServiceMock.mockResolvedValue({
       id: 7,
+      whatsappId: null,
       queues: [{ id: 11 }]
     });
 
@@ -82,9 +86,30 @@ describe("ShowTicketService access control", () => {
     ).rejects.toEqual(new AppError("ERR_NO_PERMISSION", 403));
   });
 
+  it("blocks non-admin users from loading other users open tickets", async () => {
+    ticketFindByPkMock.mockResolvedValue({
+      id: 104,
+      userId: 9,
+      queueId: 11,
+      status: "open"
+    });
+    showUserServiceMock.mockResolvedValue({
+      id: 7,
+      whatsappId: null,
+      queues: [{ id: 11 }]
+    });
+
+    await expect(
+      ShowTicketService(104, {
+        userId: 7,
+        profile: "user"
+      })
+    ).rejects.toEqual(new AppError("ERR_NO_PERMISSION", 403));
+  });
+
   it("still allows admins to load any ticket", async () => {
     const ticket = {
-      id: 104,
+      id: 105,
       userId: 9,
       queueId: 11,
       status: "open"

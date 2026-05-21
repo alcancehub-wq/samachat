@@ -408,8 +408,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 			<ListItem
 				dense
 				button
-				onClick={e => {
-					if (ticket.status === "pending") return;
+				onClick={() => {
 					handleSelectTicket(ticket.id);
 				}}
 				selected={(ticketId && +ticketId === ticket.id) || selectedInBulk}
