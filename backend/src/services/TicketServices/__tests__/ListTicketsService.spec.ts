@@ -52,10 +52,21 @@ const ticketFindAndCountAllMock = (Ticket as unknown as {
 
 const getUserScopedWhatsappIdMock = GetUserScopedWhatsappId as jest.Mock;
 
-const extractConditions = (whereCondition: Record<PropertyKey, unknown>): unknown[] => {
-  const andConditions = whereCondition?.[Op.and as unknown as keyof typeof whereCondition];
+const getOperatorConditions = (
+  whereCondition: Record<PropertyKey, unknown>,
+  operator: symbol
+): unknown[] => {
+  const operatorConditions = whereCondition?.[
+    operator as unknown as keyof typeof whereCondition
+  ];
 
-  if (!Array.isArray(andConditions)) {
+  return Array.isArray(operatorConditions) ? operatorConditions : [];
+};
+
+const extractConditions = (whereCondition: Record<PropertyKey, unknown>): unknown[] => {
+  const andConditions = getOperatorConditions(whereCondition, Op.and);
+
+  if (!andConditions.length) {
     return [whereCondition];
   }
 
@@ -70,6 +81,43 @@ const extractConditions = (whereCondition: Record<PropertyKey, unknown>): unknow
   }, []);
 };
 
+const extractVisibilityBranches = (
+  whereCondition: Record<PropertyKey, unknown>
+): unknown[][] => {
+  const visibilityCondition = extractConditions(whereCondition).find(condition => {
+    if (!condition || typeof condition !== "object") {
+      return false;
+    }
+
+    return getOperatorConditions(
+      condition as Record<PropertyKey, unknown>,
+      Op.or
+    ).length > 0;
+  });
+
+  if (!visibilityCondition || typeof visibilityCondition !== "object") {
+    return [];
+  }
+
+  return getOperatorConditions(
+    visibilityCondition as Record<PropertyKey, unknown>,
+    Op.or
+  ).map(condition => {
+    if (condition && typeof condition === "object") {
+      return extractConditions(condition as Record<PropertyKey, unknown>);
+    }
+
+    return [condition];
+  });
+};
+
+const queueVisibilityMatcher = (queueIds: number[]) =>
+  expect.objectContaining({
+    queueId: {
+      [Op.or]: [queueIds, null]
+    }
+  });
+
 describe("ListTicketsService visibility", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -77,7 +125,7 @@ describe("ListTicketsService visibility", () => {
     getUserScopedWhatsappIdMock.mockResolvedValue(null);
   });
 
-  it("shares pending tickets by selected queue for non-admin users", async () => {
+  it("shows only own and unassigned pending tickets in authorized queues for non-admin users", async () => {
     await ListTicketsService({
       userId: "21",
       profile: "user",
@@ -87,19 +135,76 @@ describe("ListTicketsService visibility", () => {
 
     const whereCondition = ticketFindAndCountAllMock.mock.calls[0][0].where;
     const conditions = extractConditions(whereCondition);
+    const visibilityBranches = extractVisibilityBranches(whereCondition);
 
     expect(conditions).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ status: "pending" }),
-        expect.objectContaining({
-          queueId: {
-            [Op.or]: [[6], null]
-          }
-        })
+        expect.objectContaining({ status: "pending" })
       ])
     );
+    expect(visibilityBranches).toHaveLength(2);
+    expect(visibilityBranches[0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: "21" }),
+        queueVisibilityMatcher([6])
+      ])
+    );
+    expect(visibilityBranches[1]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: null }),
+        queueVisibilityMatcher([6])
+      ])
+    );
+  });
+
+  it("keeps pending tickets owner-only when the non-admin user has no shared scope", async () => {
+    await ListTicketsService({
+      userId: "21",
+      profile: "user",
+      status: "pending",
+      queueIds: []
+    });
+
+    const whereCondition = ticketFindAndCountAllMock.mock.calls[0][0].where;
+    const conditions = extractConditions(whereCondition);
+
+    expect(conditions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: "21" }),
+        expect.objectContaining({ status: "pending" })
+      ])
+    );
+    expect(extractVisibilityBranches(whereCondition)).toHaveLength(0);
     expect(conditions).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ userId: "21" })])
+      expect.arrayContaining([
+        expect.objectContaining({ userId: null })
+      ])
+    );
+  });
+
+  it("does not share pending tickets assigned to another user", async () => {
+    await ListTicketsService({
+      userId: "21",
+      profile: "user",
+      status: "pending",
+      queueIds: [6]
+    });
+
+    const whereCondition = ticketFindAndCountAllMock.mock.calls[0][0].where;
+    const visibilityBranches = extractVisibilityBranches(whereCondition);
+
+    expect(visibilityBranches[0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: "21" })
+      ])
+    );
+    expect(visibilityBranches[1]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: null })
+      ])
+    );
+    expect(visibilityBranches[1]).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ userId: "77" })])
     );
   });
 
@@ -118,38 +223,12 @@ describe("ListTicketsService visibility", () => {
       expect.arrayContaining([
         expect.objectContaining({ userId: "21" }),
         expect.objectContaining({ status: "open" }),
-        expect.objectContaining({
-          queueId: {
-            [Op.or]: [[6], null]
-          }
-        })
+        queueVisibilityMatcher([6])
       ])
     );
   });
 
-  it("blocks pending sharing when the non-admin user has no queue or whatsapp scope", async () => {
-    await ListTicketsService({
-      userId: "21",
-      profile: "user",
-      status: "pending",
-      queueIds: []
-    });
-
-    const whereCondition = ticketFindAndCountAllMock.mock.calls[0][0].where;
-    const conditions = extractConditions(whereCondition);
-
-    expect(conditions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: -1 }),
-        expect.objectContaining({ status: "pending" })
-      ])
-    );
-    expect(conditions).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ userId: "21" })])
-    );
-  });
-
-  it("allows pending sharing by scoped whatsapp even without queue ids", async () => {
+  it("shares only unassigned pending tickets by scoped whatsapp for non-admin users", async () => {
     getUserScopedWhatsappIdMock.mockResolvedValue(38);
 
     await ListTicketsService({
@@ -161,15 +240,46 @@ describe("ListTicketsService visibility", () => {
 
     const whereCondition = ticketFindAndCountAllMock.mock.calls[0][0].where;
     const conditions = extractConditions(whereCondition);
+    const visibilityBranches = extractVisibilityBranches(whereCondition);
 
     expect(conditions).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ whatsappId: 38 }),
         expect.objectContaining({ status: "pending" })
       ])
     );
+    expect(visibilityBranches[0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: "21" }),
+        expect.objectContaining({ whatsappId: 38 })
+      ])
+    );
+    expect(visibilityBranches[1]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: null }),
+        expect.objectContaining({ whatsappId: 38 })
+      ])
+    );
+  });
+
+  it("keeps admin pending visibility broader than owner-only", async () => {
+    await ListTicketsService({
+      userId: "1",
+      profile: "admin",
+      status: "pending",
+      queueIds: [6]
+    });
+
+    const whereCondition = ticketFindAndCountAllMock.mock.calls[0][0].where;
+    const conditions = extractConditions(whereCondition);
+
+    expect(conditions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ status: "pending" }),
+        queueVisibilityMatcher([6])
+      ])
+    );
     expect(conditions).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ userId: "21" })])
+      expect.arrayContaining([expect.objectContaining({ userId: "1" })])
     );
   });
 });

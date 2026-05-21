@@ -419,21 +419,28 @@ const reducer = (state, action) => {
 				return true;
 			}
 
+			const isCurrentUsersTicket = String(ticket.userId || "") === String(user?.id || "");
+			const hasAssignedUser = ticket.userId !== null && ticket.userId !== undefined && ticket.userId !== "";
+
 			if (status === "pending") {
+				if (isCurrentUsersTicket) {
+					return true;
+				}
+
+				if (hasAssignedUser) {
+					return false;
+				}
+
 				const hasSharedPendingScope = selectedQueueIds.length > 0 || Boolean(user?.whatsappId);
 
 				if (!hasSharedPendingScope) {
 					return false;
 				}
 
-				if (ticket.queueId && selectedQueueIds.length > 0) {
-					return selectedQueueIds.indexOf(ticket.queueId) > -1;
-				}
-
 				return true;
 			}
 
-			if (Number(ticket.userId) === Number(user?.id)) {
+			if (isCurrentUsersTicket) {
 				return true;
 			}
 

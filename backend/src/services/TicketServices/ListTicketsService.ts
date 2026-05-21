@@ -61,15 +61,56 @@ const buildQueueVisibilityScope = (queueIds: number[]): WhereOptions | undefined
   };
 };
 
+const buildPendingOwnerScope = (
+  assignedVisibilityScope: WhereOptions | undefined,
+  queueVisibilityScope: WhereOptions | undefined,
+  whatsappVisibilityScope: WhereOptions | undefined
+): WhereOptions =>
+  combineWhere(
+    assignedVisibilityScope,
+    queueVisibilityScope,
+    whatsappVisibilityScope
+  );
+
+const buildPendingUnassignedScope = (
+  queueVisibilityScope: WhereOptions | undefined,
+  whatsappVisibilityScope: WhereOptions | undefined
+): WhereOptions | undefined => {
+  if (!queueVisibilityScope && !whatsappVisibilityScope) {
+    return undefined;
+  }
+
+  return combineWhere(
+    {
+      userId: null
+    },
+    queueVisibilityScope,
+    whatsappVisibilityScope
+  );
+};
+
 const buildPendingVisibilityScope = (
+  assignedVisibilityScope: WhereOptions | undefined,
   queueVisibilityScope: WhereOptions | undefined,
   whatsappVisibilityScope: WhereOptions | undefined
 ): WhereOptions => {
-  if (queueVisibilityScope || whatsappVisibilityScope) {
-    return combineWhere(queueVisibilityScope, whatsappVisibilityScope);
+  const ownerScope = buildPendingOwnerScope(
+    assignedVisibilityScope,
+    queueVisibilityScope,
+    whatsappVisibilityScope
+  );
+  const unassignedScope = buildPendingUnassignedScope(
+    queueVisibilityScope,
+    whatsappVisibilityScope
+  );
+
+  if (!unassignedScope) {
+    return ownerScope;
   }
 
-  return { id: -1 };
+  return {
+    [Op.or]: [ownerScope, unassignedScope]
+  };
 };
 
 const buildVisibilityScope = ({
@@ -91,6 +132,7 @@ const buildVisibilityScope = ({
 
   if (status === "pending") {
     return buildPendingVisibilityScope(
+      assignedVisibilityScope,
       queueVisibilityScope,
       whatsappVisibilityScope
     );
