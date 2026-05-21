@@ -42,18 +42,43 @@ describe("ShowTicketService access control", () => {
 		expect(showUserServiceMock).toHaveBeenCalledWith(7);
   });
 
-  it("allows queue members to preview pending tickets assigned to nobody", async () => {
+  it("allows the assigned user to load the ticket even when it belongs to another whatsapp connection", async () => {
+    const ticket = {
+      id: 108,
+      userId: 7,
+      queueId: 11,
+      whatsappId: 55,
+      status: "open"
+    };
+
+    ticketFindByPkMock.mockResolvedValue(ticket);
+    showUserServiceMock.mockResolvedValue({
+      id: 7,
+      whatsappId: 38,
+      queues: [{ id: 11 }]
+    });
+
+    await expect(
+      ShowTicketService(108, {
+        userId: 7,
+        profile: "user"
+      })
+    ).resolves.toBe(ticket);
+  });
+
+  it("allows previewing an unassigned pending ticket only when whatsapp ownership matches", async () => {
     const ticket = {
       id: 102,
       userId: null,
       queueId: 11,
+      whatsappId: 38,
       status: "pending"
     };
 
     ticketFindByPkMock.mockResolvedValue(ticket);
     showUserServiceMock.mockResolvedValue({
       id: 7,
-      whatsappId: null,
+      whatsappId: 38,
       queues: [{ id: 11 }]
     });
 
@@ -65,16 +90,17 @@ describe("ShowTicketService access control", () => {
     ).resolves.toBe(ticket);
   });
 
-  it("blocks pending preview when the queue is not authorized for the user", async () => {
+  it("blocks pending preview for another user's whatsapp even when the queue is shared", async () => {
     ticketFindByPkMock.mockResolvedValue({
       id: 106,
       userId: null,
-      queueId: 12,
+      queueId: 11,
+      whatsappId: 39,
       status: "pending"
     });
     showUserServiceMock.mockResolvedValue({
       id: 7,
-      whatsappId: null,
+      whatsappId: 38,
       queues: [{ id: 11 }]
     });
 
@@ -86,11 +112,11 @@ describe("ShowTicketService access control", () => {
     ).rejects.toEqual(new AppError("ERR_NO_PERMISSION", 403));
   });
 
-  it("blocks pending preview with queueId null when there is no explicit whatsapp scope", async () => {
+  it("blocks pending preview when the user has no explicit whatsapp ownership", async () => {
     ticketFindByPkMock.mockResolvedValue({
       id: 107,
       userId: null,
-      queueId: null,
+      queueId: 11,
       whatsappId: 33,
       status: "pending"
     });

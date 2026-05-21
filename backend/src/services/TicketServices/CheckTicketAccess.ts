@@ -12,31 +12,17 @@ const getUserScopedWhatsappId = (user: any): number | null => {
   return user?.whatsappId || user?.whatsapp?.id || null;
 };
 
-const getUserQueueIds = (user: any): number[] => {
-  const queues = Array.isArray(user?.queues) ? user.queues : [];
-
-  return queues
-    .map((queue: { id: string | number }) => Number(queue.id))
-    .filter((queueId: number) => Number.isInteger(queueId) && queueId > 0);
-};
-
 const canPreviewPendingTicket = (ticket: Ticket, user: any): boolean => {
   if (ticket.status !== "pending" || ticket.userId !== null) {
     return false;
   }
 
   const userWhatsappId = getUserScopedWhatsappId(user);
-  const userQueueIds = getUserQueueIds(user);
-  const hasQueueAccess =
-    ticket.queueId !== null &&
-    ticket.queueId !== undefined &&
-    userQueueIds.includes(Number(ticket.queueId));
-  const hasDirectWhatsappAccess =
-    ticket.queueId === null &&
-    Boolean(userWhatsappId) &&
-    Number(ticket.whatsappId) === Number(userWhatsappId);
+  if (!userWhatsappId) {
+    return false;
+  }
 
-  return hasQueueAccess || hasDirectWhatsappAccess;
+  return Number(ticket.whatsappId) === Number(userWhatsappId);
 };
 
 const CheckTicketAccess = async ({
@@ -51,19 +37,9 @@ const CheckTicketAccess = async ({
   }
 
   const user = await ShowUserService(userId);
-  const userWhatsappId = getUserScopedWhatsappId(user);
 
   if (Number(ticket.userId) === Number(userId)) {
-    if (
-      !userWhatsappId ||
-      Number(ticket.whatsappId) === Number(userWhatsappId)
-    ) {
-      return;
-    }
-  }
-
-  if (userWhatsappId && Number(ticket.whatsappId) !== Number(userWhatsappId)) {
-    throw new AppError("ERR_NO_PERMISSION", 403);
+    return;
   }
 
   if (canPreviewPendingTicket(ticket, user)) {

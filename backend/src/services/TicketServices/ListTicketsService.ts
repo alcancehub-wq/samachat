@@ -123,32 +123,6 @@ const getScopedWhatsappId = (
   return user.whatsappId || user.whatsapp?.id || null;
 };
 
-const buildPendingOwnerScope = (
-  assignedVisibilityScope: WhereOptions | undefined,
-  whatsappVisibilityScope: WhereOptions | undefined
-): WhereOptions =>
-  combineWhere(
-    assignedVisibilityScope,
-    whatsappVisibilityScope
-  );
-
-const buildPendingUnassignedQueueScope = (
-  queueVisibilityScope: WhereOptions | undefined,
-  whatsappVisibilityScope: WhereOptions | undefined
-): WhereOptions | undefined => {
-  if (!queueVisibilityScope) {
-    return undefined;
-  }
-
-  return combineWhere(
-    {
-      userId: null
-    },
-    queueVisibilityScope,
-    whatsappVisibilityScope
-  );
-};
-
 const buildPendingUnassignedWhatsappScope = (
   scopedWhatsappId: number | null
 ): WhereOptions | undefined => {
@@ -158,7 +132,6 @@ const buildPendingUnassignedWhatsappScope = (
 
   return {
     userId: null,
-    queueId: null,
     whatsappId: scopedWhatsappId
   };
 };
@@ -185,46 +158,49 @@ const buildVisibilityScope = ({
   isAdmin,
   status,
   assignedVisibilityScope,
-  queueVisibilityScope,
-  whatsappVisibilityScope,
   scopedWhatsappId
 }: {
   isAdmin: boolean;
   status?: string;
   assignedVisibilityScope?: WhereOptions;
-  queueVisibilityScope?: WhereOptions;
-  whatsappVisibilityScope?: WhereOptions;
   scopedWhatsappId?: number | null;
 }): WhereOptions => {
   if (isAdmin) {
-    return combineWhere(queueVisibilityScope, whatsappVisibilityScope);
+    return {};
   }
 
   if (status === "pending") {
-    const ownerScope = buildPendingOwnerScope(
-      assignedVisibilityScope,
-      whatsappVisibilityScope
-    );
-    const unassignedQueueScope = buildPendingUnassignedQueueScope(
-      queueVisibilityScope,
-      whatsappVisibilityScope
-    );
     const unassignedWhatsappScope = buildPendingUnassignedWhatsappScope(
       scopedWhatsappId || null
     );
 
     return buildPendingVisibilityScope(
-      ownerScope,
-      unassignedQueueScope,
+      assignedVisibilityScope,
       unassignedWhatsappScope
     );
   }
 
-  return combineWhere(
-    assignedVisibilityScope,
-    queueVisibilityScope,
-    whatsappVisibilityScope
-  );
+  return assignedVisibilityScope || {};
+};
+
+const buildRequestedQueueFilterScope = ({
+  isAdmin,
+  requestedQueueIds,
+  hasRequestedQueueFilter
+}: {
+  isAdmin: boolean;
+  requestedQueueIds: number[];
+  hasRequestedQueueFilter: boolean;
+}): WhereOptions | undefined => {
+  if (!hasRequestedQueueFilter) {
+    return undefined;
+  }
+
+  if (isAdmin) {
+    return buildAdminQueueVisibilityScope(requestedQueueIds);
+  }
+
+  return buildAuthorizedQueueVisibilityScope(requestedQueueIds) || { id: null };
 };
 
 const ListTicketsService = async ({
@@ -243,16 +219,11 @@ const ListTicketsService = async ({
   const isAdmin = String(profile || "").toLowerCase() === "admin";
   const user = isAdmin ? null : await ShowUserService(userId);
   const authorizedQueueIds = user ? extractAuthorizedQueueIds(user) : [];
+  const normalizedRequestedQueueIds = normalizeQueueIds(queueIds);
   const effectiveQueueIds = isAdmin
-    ? normalizeQueueIds(queueIds)
+    ? normalizedRequestedQueueIds
     : resolveEffectiveQueueIds(queueIds, authorizedQueueIds);
   const scopedWhatsappId = getScopedWhatsappId(user);
-  const queueVisibilityScope = isAdmin
-    ? buildAdminQueueVisibilityScope(effectiveQueueIds)
-    : buildAuthorizedQueueVisibilityScope(effectiveQueueIds);
-  const whatsappVisibilityScope = scopedWhatsappId
-    ? ({ whatsappId: scopedWhatsappId } as WhereOptions)
-    : undefined;
   const assignedVisibilityScope: WhereOptions | undefined = isAdmin
     ? undefined
     : ({ userId } as WhereOptions);
@@ -260,11 +231,17 @@ const ListTicketsService = async ({
     isAdmin,
     status,
     assignedVisibilityScope,
-    queueVisibilityScope,
-    whatsappVisibilityScope,
     scopedWhatsappId
   });
-  let whereCondition: WhereOptions = visibilityScope;
+  const requestedQueueFilterScope = buildRequestedQueueFilterScope({
+    isAdmin,
+    requestedQueueIds: effectiveQueueIds,
+    hasRequestedQueueFilter: normalizedRequestedQueueIds.length > 0
+  });
+  let whereCondition: WhereOptions = combineWhere(
+    visibilityScope,
+    requestedQueueFilterScope
+  );
   let includeCondition: Includeable[];
 
   includeCondition = [
