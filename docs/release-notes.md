@@ -2,6 +2,59 @@
 
 ## 2026-05-20
 
+### Pre-promocao controlada - fix/samachat-estabilidade-operacional
+
+- Branch de preparo: `fix/samachat-estabilidade-operacional`.
+- Esta secao consolida o pacote validado localmente antes de qualquer `push`/deploy; nao representa promocao concluida em producao.
+- Commits incluidos neste pacote:
+	- `dfd0c6a` `docs: add samachat operational stability audit`
+	- `ab14c1a` `fix: reorder tickets by recent activity`
+	- `157b7a4` `docs: record samachat realtime passive tab validation`
+	- `e81422e` `fix: update ticket lists from inbound realtime events`
+	- `82093fb` `fix: keep tickets in the correct status tab`
+- Correcoes incluidas:
+	- tickets com nova atividade voltam a subir para o topo da lista lateral;
+	- inbound real volta a atualizar a lista lateral sem `F5` quando o listener/socket recebem o evento;
+	- tickets `pending`/`open` passam a respeitar a aba correta no frontend legado;
+	- a aba `Aguardando` nao deve mais exibir tickets `open`;
+	- chat aberto continua apto a receber mensagem em tempo real;
+	- a auditoria operacional e o checklist/registro de regressao foram consolidados em `docs/estabilidade`.
+- Validacoes locais realizadas neste pacote:
+	- envio pelo SamaChat local quando o cenario exigiu emissao controlada;
+	- persistencia em `Message`;
+	- atualizacao de `Ticket.lastMessage`;
+	- lista lateral com preview, horario e topo atualizando sem `F5` nos cenarios validados;
+	- inbound real com `fromMe = 0` nos cenarios concluidos;
+	- criacao/localizacao de `Contact`;
+	- criacao/localizacao de `Ticket`;
+	- ticket `pending` aparecendo em `Aguardando`;
+	- ticket `open` aparecendo em `Atendendo`;
+	- aceite local migrando `pending` para `open` sem `F5`;
+	- `npm run build` aprovado em `frontend`;
+	- `npm run build` aprovado em `backend` quando o recorte incluiu alteracoes de backend.
+- Limitacoes conhecidas antes da promocao:
+	- a validacao final em producao ainda nao foi executada apos os commits deste pacote;
+	- a regressao final de inbound nao foi concluida porque a mensagem `TESTE_REGRESSAO_INBOUND_ABAS_01` nao entrou no listener local durante a ultima rodada;
+	- o caso da Kesia nao se confirmou como erro de `Aceitar`; em producao o achado real foi UI de `Aguardando` exibindo tickets `open`;
+	- em producao foi observado `GET /tickets?status=pending` vazio com cards `open` ainda visiveis em `Aguardando`; a correcao ficou aplicada apenas localmente e depende de promocao controlada para validacao real.
+- Checklist de promocao controlada:
+	- confirmar branch de promocao real antes de qualquer acao;
+	- confirmar que o deploy legado continua apontando para `legacy-prod`;
+	- confirmar se a promocao sera por merge ou `cherry-pick` dos commits validados;
+	- confirmar build de backend para os commits que tocaram `backend/`;
+	- confirmar build de frontend com o bundle final do legado;
+	- confirmar explicitamente que nao existe migration pendente neste pacote;
+	- confirmar plano de rollback antes do push;
+	- promover o pacote controladamente para a branch/stack correta;
+	- limpar/renovar cache do frontend apenas se o ambiente de deploy exigir;
+	- validar em producao com perfil admin/Kesia:
+		- `Aguardando` nao mostra ticket `open`;
+		- `Atendendo` mostra ticket `open`;
+		- inbound aparece sem `F5`;
+		- ticket com atividade sobe para o topo;
+		- ticket `pending` aceita e vira `open`;
+		- audio Android/iPhone nao regrediu.
+
 ### legacy-prod
 
 - Chats/Roteamento: mensagens deixam de reaproveitar ticket aberto ou pendente de outra conexao quando o mesmo contato existe em multiplos WhatsApps; o backend agora exige `whatsappId` ja na primeira busca do `FindOrCreateTicketService`, evitando que a conversa de uma pessoa com outros atendimentos apareca no chat ativo errado.
