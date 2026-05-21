@@ -8,6 +8,7 @@ import { getIO } from "../libs/socket";
 import { logger } from "../utils/logger";
 import { debounce } from "../helpers/Debounce";
 import formatBody from "../helpers/Mustache";
+import ResolveMediaMessageBody from "../helpers/ResolveMediaMessageBody";
 import ResolveMessageVariablesService from "../services/Variables/ResolveMessageVariablesService";
 
 import Contact from "../models/Contact";
@@ -358,10 +359,17 @@ export const handleMessage = async (
       ack: processedMessage.ack !== undefined ? processedMessage.ack : 0
     };
 
+    let resolvedMessageBody = processedMessage.body || "";
+
     if (mediaPayload && processedMessage.hasMedia) {
       const filename = await saveMediaFile(mediaPayload);
+      resolvedMessageBody = ResolveMediaMessageBody({
+        body: processedMessage.body,
+        originalFilename: mediaPayload.filename,
+        storedFilename: filename
+      });
       messageData.mediaUrl = filename;
-      messageData.body = processedMessage.body || filename;
+      messageData.body = resolvedMessageBody;
       const [mediaType] = mediaPayload.mimetype.split("/");
       messageData.mediaType = mediaType;
     }
@@ -372,7 +380,10 @@ export const handleMessage = async (
         ? processedMessage.body
         : "Localization";
     } else {
-      lastMessageText = processedMessage.body || mediaPayload?.filename || "";
+      lastMessageText =
+        mediaPayload && processedMessage.hasMedia
+          ? resolvedMessageBody
+          : processedMessage.body || mediaPayload?.filename || "";
     }
 
     await ticket.update({ lastMessage: lastMessageText });
