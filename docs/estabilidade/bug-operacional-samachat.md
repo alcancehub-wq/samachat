@@ -97,6 +97,24 @@ Objetivo: registrar os 10 bugs reportados, os arquivos candidatos, a hipotese in
 	- cenario B: ticket `153` (`Papai Rei`) apareceu no topo de `Aguardando` sem `F5` apos inbound real `TESTE_LISTA_SOCKET_FIX__INBOUND_01`, com `status = pending` e `userId = NULL` no momento da observacao.
 	- cenario C: ticket `109` continuou recebendo inbound real no chat aberto sem `F5`; a mensagem `Teste` entrou com `fromMe = 0` em `20:35:50`.
 
+## Bug 11 - Aba `Aguardando` renderiza tickets `open`
+
+- Prioridade: P1
+- Reclassificacao da investigacao da Kesia em 2026-05-21:
+	- o cenario de producao nao reproduziu falha de `Aceitar`; a mensagem procurada caiu no ticket `113`, que ja estava `open` para a propria `Kesia`.
+	- a divergencia real observada foi: `GET /tickets?status=pending` retornava vazio, mas a UI da aba `Aguardando` continuava exibindo cards que pertenciam a `status = open`.
+- Causa raiz confirmada localmente:
+	- `frontend/src/components/TicketsManager/index.js` escondia a sublista inativa de `open/pending` apenas com `{ width: 0, height: 0 }`, mantendo a lista errada montada e legivel por baixo da aba selecionada.
+	- `frontend/src/components/TicketsList/index.js` fazia merge do carregamento/sync da pagina 1 e aceitava updates sem filtro defensivo de `ticket.status`, o que permitia estado stale sobreviver na aba errada.
+- Correcao aplicada em 2026-05-21:
+	- `TicketsManager.applyPanelStyle()` passou a usar `display: none` para a sublista inativa.
+	- `TicketsList` passou a filtrar tickets pelo `status` real da aba, substituir o estado da pagina 1/sincronizacao (`SET_TICKETS`) e renderizar apenas `visibleTickets`.
+- Validacao local:
+	- a aba `Aguardando` ficou restrita aos tickets `pending` (`155`, `152`, `150`) e nao mostrou mais tickets `open`.
+	- a aba `Atendendo` continuou listando os tickets `open`, incluindo `154` (`Bruna Santos`) apos o aceite local.
+	- o aceite local da `Bruna Santos` moveu o ticket `154` de `pending` para `open` sem `F5`, com input liberado em `/tickets/154`.
+	- o inbound realtime previo nao foi rerodado nesta rodada; a base de confianca continua sendo a validacao do fix de `appMessage/showAll` executada em 2026-05-20.
+
 ## Bug 4 - Criar contato diz que ja existe, mas ninguem encontra
 
 - Prioridade: P2

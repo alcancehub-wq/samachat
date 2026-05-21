@@ -50,6 +50,18 @@ const sortTicketsByRecentActivity = tickets => {
 	});
 };
 
+const matchesTicketStatus = (ticket, status) => {
+	if (!status) {
+		return true;
+	}
+
+	return ticket?.status === status;
+};
+
+const filterTicketsByStatus = (tickets, status) => {
+	return tickets.filter(ticket => matchesTicketStatus(ticket, status));
+};
+
 const upsertTicketInState = (state, ticket) => {
 	const nextState = [...state];
 	const ticketIndex = nextState.findIndex(currentTicket => currentTicket.id === ticket.id);
@@ -228,6 +240,10 @@ const reducer = (state, action) => {
 		return nextState;
 	}
 
+	if (action.type === "SET_TICKETS") {
+		return sortTicketsByRecentActivity(action.payload);
+	}
+
 	if (action.type === "RESET_UNREAD") {
 		const ticketId = action.payload;
 
@@ -289,6 +305,10 @@ const reducer = (state, action) => {
 	const permissions = user?.permissions || [];
 	const isAdmin = user?.profile?.toLowerCase() === "admin";
 	const canShowAllTickets = isAdmin && Boolean(showAll);
+	const visibleTickets = filterTicketsByStatus(ticketsList, status);
+	const visibleSelectedTicketIds = selectedTicketIds.filter(ticketId =>
+		visibleTickets.some(ticket => ticket.id === ticketId)
+	);
 	const canBulkDelete =
 		isAdmin ||
 		permissions.includes("ticket-options:deleteTicket") ||
@@ -313,10 +333,10 @@ const reducer = (state, action) => {
 	useEffect(() => {
 		if (!status && !searchParam) return;
 		dispatch({
-			type: "LOAD_TICKETS",
-			payload: tickets,
+			type: pageNumber === 1 ? "SET_TICKETS" : "LOAD_TICKETS",
+			payload: filterTicketsByStatus(tickets, status),
 		});
-	}, [tickets]);
+	}, [pageNumber, searchParam, status, tickets]);
 
 	useEffect(() => {
 		const socket = openSocket();
@@ -342,8 +362,8 @@ const reducer = (state, action) => {
 				}
 
 				dispatch({
-					type: "LOAD_TICKETS",
-					payload: data.tickets,
+					type: "SET_TICKETS",
+					payload: filterTicketsByStatus(data.tickets, status),
 				});
 			} catch (_error) {
 				// Ignore background sync failures; the next socket event or manual navigation can retry.
@@ -380,6 +400,8 @@ const reducer = (state, action) => {
 			return ticket.tags?.some(tag => tag.name === FOLLOW_UP_TAG_NAME);
 		};
 
+		const hasStatusMatch = ticket => matchesTicketStatus(ticket, status);
+
 		const canAccessTicketInCurrentList = ticket => {
 			if (user?.whatsappId && Number(ticket.whatsappId) !== Number(user.whatsappId)) {
 				return false;
@@ -397,20 +419,12 @@ const reducer = (state, action) => {
 		};
 
 		const shouldUpdateTicket = ticket =>
+			hasStatusMatch(ticket) &&
 			matchesSearchParam(ticket) &&
 			canAccessTicketInCurrentList(ticket) &&
 			(!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1) &&
 			hasTagMatch(ticket) &&
 			hasFollowUpMatch(ticket);
-
-		const notBelongsToUserQueues = ticket =>
-			ticket.queueId && selectedQueueIds.indexOf(ticket.queueId) === -1;
-
-		const shouldRemoveFromFollowUp = ticket =>
-			followUp === "true" && !hasFollowUpMatch(ticket);
-
-		const shouldRemoveFromSearchResults = ticket =>
-			Boolean(normalizedSearchParam) && !matchesSearchParam(ticket);
 
 		socket.on("connect", () => {
 			if (status) {
@@ -435,23 +449,15 @@ const reducer = (state, action) => {
 				});
 			}
 
-			if (data.action === "update" && shouldUpdateTicket(data.ticket)) {
-				dispatch({
-					type: "UPDATE_TICKET",
-					payload: data.ticket,
-				});
-			}
-
-			if (data.action === "update" && notBelongsToUserQueues(data.ticket)) {
-				dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
-			}
-
-				if (data.action === "update" && shouldRemoveFromSearchResults(data.ticket)) {
+			if (data.action === "update") {
+				if (shouldUpdateTicket(data.ticket)) {
+					dispatch({
+						type: "UPDATE_TICKET",
+						payload: data.ticket,
+					});
+				} else {
 					dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
 				}
-
-			if (data.action === "update" && shouldRemoveFromFollowUp(data.ticket)) {
-				dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
 			}
 
 			if (data.action === "delete") {
@@ -465,6 +471,8 @@ const reducer = (state, action) => {
 					type: "UPDATE_TICKET_UNREAD_MESSAGES",
 					payload: data.ticket,
 				});
+			} else if (data.action === "create") {
+				dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
 			}
 		});
 
@@ -486,16 +494,16 @@ const reducer = (state, action) => {
 	useEffect(() => {
     if (typeof updateCount === "function") {
 			const nextCount = status === "open"
-				? ticketsList.reduce(
+				? visibleTickets.reduce(
 					(total, ticket) => total + (Number(ticket.unreadMessages) > 0 ? 1 : 0),
 					0
 				)
-				: ticketsList.length;
+				: visibleTickets.length;
 
 			updateCount(nextCount);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, ticketsList]);
+  }, [status, visibleTickets]);
 
 	const loadMore = () => {
 		setPageNumber(prevState => prevState + 1);
@@ -510,21 +518,21 @@ const reducer = (state, action) => {
 	};
 
 	const handleToggleSelectAll = () => {
-		if (selectedTicketIds.length === ticketsList.length) {
+		if (visibleSelectedTicketIds.length > 0 && visibleSelectedTicketIds.length === visibleTickets.length) {
 			setSelectedTicketIds([]);
 			return;
 		}
 
-		setSelectedTicketIds(ticketsList.map(ticket => ticket.id));
+		setSelectedTicketIds(visibleTickets.map(ticket => ticket.id));
 	};
 
 	const handleBulkAccept = async () => {
-		if (selectedTicketIds.length === 0) return;
+		if (visibleSelectedTicketIds.length === 0) return;
 
 		setBulkAccepting(true);
 		try {
 			await Promise.all(
-				selectedTicketIds.map(ticketId =>
+				visibleSelectedTicketIds.map(ticketId =>
 					api.put(`/tickets/${ticketId}`, {
 						status: "open",
 						userId: user?.id,
@@ -532,7 +540,7 @@ const reducer = (state, action) => {
 				)
 			);
 
-			selectedTicketIds.forEach(ticketId => {
+			visibleSelectedTicketIds.forEach(ticketId => {
 				dispatch({ type: "DELETE_TICKET", payload: ticketId });
 			});
 			setSelectedTicketIds([]);
@@ -544,15 +552,15 @@ const reducer = (state, action) => {
 	};
 
 	const handleBulkDelete = async () => {
-		if (selectedTicketIds.length === 0) return;
+		if (visibleSelectedTicketIds.length === 0) return;
 
 		setBulkDeleting(true);
 		try {
 			await Promise.all(
-				selectedTicketIds.map(ticketId => api.delete(`/tickets/${ticketId}`))
+				visibleSelectedTicketIds.map(ticketId => api.delete(`/tickets/${ticketId}`))
 			);
 
-			selectedTicketIds.forEach(ticketId => {
+			visibleSelectedTicketIds.forEach(ticketId => {
 				dispatch({ type: "DELETE_TICKET", payload: ticketId });
 			});
 			setSelectedTicketIds([]);
@@ -576,25 +584,25 @@ const reducer = (state, action) => {
 
 	return (
     <Paper className={classes.ticketsListWrapper} style={style}>
-			{isPendingList && ticketsList.length > 0 && (
+			{isPendingList && visibleTickets.length > 0 && (
 				<div className={classes.pendingActionsBar}>
 					<label className={classes.selectAllControl}>
 						<Checkbox
 							className={classes.selectAllCheckbox}
-							checked={selectedTicketIds.length > 0 && selectedTicketIds.length === ticketsList.length}
-							indeterminate={selectedTicketIds.length > 0 && selectedTicketIds.length < ticketsList.length}
+							checked={visibleSelectedTicketIds.length > 0 && visibleSelectedTicketIds.length === visibleTickets.length}
+							indeterminate={visibleSelectedTicketIds.length > 0 && visibleSelectedTicketIds.length < visibleTickets.length}
 							onChange={handleToggleSelectAll}
 						/>
 						<Typography variant="body2" component="span">
 							{i18n.t("ticketsList.buttons.selectAll")}
 						</Typography>
 					</label>
-					{selectedTicketIds.length > 0 && (
+					{visibleSelectedTicketIds.length > 0 && (
 						<div className={classes.pendingActions}>
 						<Button
 							variant="contained"
 							className={classes.bulkAcceptButton}
-							disabled={selectedTicketIds.length === 0 || bulkAccepting || bulkDeleting}
+							disabled={visibleSelectedTicketIds.length === 0 || bulkAccepting || bulkDeleting}
 							onClick={handleBulkAccept}
 						>
 							{i18n.t("ticketsList.buttons.acceptSelected")}
@@ -603,7 +611,7 @@ const reducer = (state, action) => {
 								<Button
 									variant="outlined"
 									className={classes.bulkDeleteButton}
-									disabled={selectedTicketIds.length === 0 || bulkAccepting || bulkDeleting}
+									disabled={visibleSelectedTicketIds.length === 0 || bulkAccepting || bulkDeleting}
 									onClick={handleBulkDelete}
 								>
 									{i18n.t("ticketsList.buttons.deleteSelected")}
@@ -621,7 +629,7 @@ const reducer = (state, action) => {
 				onScroll={handleScroll}
 			>
 				<List style={{ paddingTop: 0 }}>
-					{ticketsList.length === 0 && !loading ? (
+					{visibleTickets.length === 0 && !loading ? (
 						<div className={classes.noTicketsDiv}>
 							<span className={classes.noTicketsTitle}>
 								{i18n.t("ticketsList.noTicketsTitle")}
@@ -632,12 +640,12 @@ const reducer = (state, action) => {
 						</div>
 					) : (
 						<>
-							{ticketsList.map(ticket => (
+							{visibleTickets.map(ticket => (
 								<TicketListItem
 									ticket={ticket}
 									key={ticket.id}
 									selectable={isPendingList}
-									selectedInBulk={selectedTicketIds.includes(ticket.id)}
+									selectedInBulk={visibleSelectedTicketIds.includes(ticket.id)}
 									onToggleSelect={handleToggleTicketSelection}
 								/>
 							))}

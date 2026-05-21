@@ -536,7 +536,7 @@ const TicketsManager = () => {
 
   const applyPanelStyle = (status) => {
     if (tabOpen !== status) {
-      return { width: 0, height: 0 };
+      return { display: "none" };
     }
   };
 

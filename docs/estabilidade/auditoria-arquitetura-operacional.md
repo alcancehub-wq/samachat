@@ -170,6 +170,28 @@ Modo: somente leitura no codigo funcional; este documento resume o mapa real enc
 	- cenario B (`Papai Rei`, ticket `153`): inbound real entrou como `TESTE_LISTA_SOCKET_FIX__INBOUND_01`, o card apareceu no topo da aba `Aguardando`, o contador subiu de `2` para `3` e o preview/horario atualizaram sem `F5`.
 	- cenario C (`ticket 109`): a conversa aberta continuou recebendo inbound real sem `F5`; a mensagem `Teste` entrou com `fromMe = 0` em `2026-05-20 20:35:50` e apareceu no chat ja aberto.
 
+### Causa raiz confirmada da aba `Aguardando` exibindo tickets `open` em 2026-05-21
+
+- Prova operacional em producao:
+	- no usuario `Kesia` (`id = 21`), a API `GET /tickets?pageNumber=1&status=pending&showAll=false&queueIds=[6]&tagIds=[]` respondeu `tickets = []` / `count = 0`.
+	- na mesma sessao, a UI de `Aguardando` continuou exibindo visualmente os mesmos cards de `Atendendo`, enquanto a busca por `5511911921134` abriu o ticket `113` com `status = open`, `userId = 21`, `queueId = 6` e `whatsappId = 38`.
+	- o cenario de producao nao confirmou falha de `Aceitar`; confirmou divergencia frontend/UI x API na lista lateral.
+- Causa raiz local:
+	- `frontend/src/components/TicketsManager/index.js` mantinha as sublistas `open` e `pending` montadas ao mesmo tempo e escondia a sublista inativa apenas com `{ width: 0, height: 0 }`.
+	- como a sublista inativa continuava montada, a aba `Aguardando` podia deixar cards de `open` renderizados/legiveis por baixo, mesmo quando a API `pending` ja estava vazia.
+	- `frontend/src/components/TicketsList/index.js` ainda fazia merge do carregamento da pagina 1/sincronizacao e aceitava updates sem filtro defensivo por `ticket.status`, o que deixava estado stale sobreviver a sincronizacoes vazias.
+- Correcao aplicada localmente:
+	- `TicketsManager.applyPanelStyle()` passou a usar `display: none` para a sublista inativa.
+	- `TicketsList` passou a:
+		- aplicar filtro defensivo por status real (`open`, `pending`, `closed`) antes de aceitar ticket no estado da aba;
+		- substituir o estado da lista no carregamento/sync da pagina 1 (`SET_TICKETS`) em vez de apenas fazer merge cego;
+		- renderizar, contar e selecionar apenas `visibleTickets`, impedindo card stale na aba errada.
+- Validacao local da correcao:
+	- cenario A: nao aplicavel nesta rodada, porque a API local `pending` respondeu `count = 3`; mesmo assim a aba `Aguardando` passou a exibir somente os tickets `pending` (`155`, `152`, `150`) e a aba `Atendendo` exibiu apenas tickets `open`.
+	- cenario B: o ticket `154` (`Bruna Santos`) nao apareceu mais em `Aguardando` depois do aceite e ficou presente em `Atendendo` com `status = open`.
+	- cenario C: aceite local da `Bruna Santos` pela UI moveu o ticket `154` de `pending` para `open` sem `F5`; a rota abriu `/tickets/154`, o input ficou liberado e `GET http://localhost:8080/tickets/154` retornou `status = open`, `userId = 1`, `queueId = NULL`, `whatsappId = 13`.
+	- cenario D: o inbound realtime anterior nao foi rerodado nesta rodada porque nenhum novo inbound foi disparado apos o patch; o baseline funcional continua sendo a validacao de 2026-05-20, sem mudanca de backend nesta correcao.
+
 ## Mapa de Contact / Ticket / Message / User / Queue
 
 ### Normalizacao e DDI/DDD

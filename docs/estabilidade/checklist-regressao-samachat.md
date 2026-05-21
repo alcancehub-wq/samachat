@@ -129,6 +129,12 @@ Regra: nenhuma correcao pode ser considerada pronta se quebrar item anterior des
 	- ticket validado: `109`.
 	- inbound real observado: `Teste` (`fromMe = 0`) em `2026-05-20 20:35:50`.
 	- resultado: o chat aberto exibiu a nova mensagem sem `F5`.
+- Cenario D - separacao defensiva entre `open` e `pending` em 2026-05-21:
+	- correcao local: `frontend/src/components/TicketsManager/index.js` passou a esconder a sublista inativa com `display: none`; `frontend/src/components/TicketsList/index.js` passou a filtrar e renderizar somente tickets com `status` compativel, alem de substituir o estado da pagina 1/sync.
+	- resultado do cenario A: nao aplicavel nesta rodada, porque a API local `pending` respondeu `count = 3`; ainda assim a aba `Aguardando` mostrou apenas os tickets `pending` (`155`, `152`, `150`), sem cards `open` misturados.
+	- resultado do cenario B: a aba `Atendendo` mostrou apenas os tickets `open`; `Bruna Santos` so apareceu ali depois do aceite local.
+	- resultado do cenario C: aceite da `Bruna Santos` moveu o ticket `154` de `pending` para `open` sem `F5`, abriu `/tickets/154` e liberou o input; `GET http://localhost:8080/tickets/154` confirmou `status = open`, `userId = 1`, `queueId = NULL`, `whatsappId = 13`.
+	- resultado do cenario D: o inbound realtime anterior nao foi rerodado nesta rodada; permanece valido o baseline de 2026-05-20 para preview, horario e topo sem `F5`.
 - Observacao operacional:
 	- durante a rodada, a sessao do browser expirou e precisou ser reidratada localmente para concluir a validacao; isso nao alterou o resultado funcional do fix da lista lateral.
 
