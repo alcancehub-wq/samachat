@@ -495,6 +495,7 @@ const messages = {
         pendingHeader: "Sector",
         assignedHeader: "Trabajando en",
         noTicketsTitle: "¡Nada acá!",
+        connectionLabel: "Conexión",
         connectionTitle: "Conexión que se está utilizando actualmente.",
         noTicketsMessage:
           "No se encontraron atenciones con este estado o término de búsqueda",

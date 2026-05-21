@@ -499,6 +499,7 @@ const messages = {
         assignedHeader: "Working on",
         noTicketsTitle: "Nothing here!",
         noTicketsMessage: "No attendances found with this status or search term.",
+        connectionLabel: "Connection",
         connectionTitle: "Connection that is currently being used.",
         buttons: {
           accept: "Accept",
