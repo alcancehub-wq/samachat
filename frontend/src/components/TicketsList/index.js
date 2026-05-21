@@ -402,12 +402,34 @@ const reducer = (state, action) => {
 
 		const hasStatusMatch = ticket => matchesTicketStatus(ticket, status);
 
+		const hasQueueScopeMatch = ticket => {
+			if (selectedQueueIds.length === 0) {
+				return true;
+			}
+
+			return !ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1;
+		};
+
 		const canAccessTicketInCurrentList = ticket => {
 			if (user?.whatsappId && Number(ticket.whatsappId) !== Number(user.whatsappId)) {
 				return false;
 			}
 
 			if (canShowAllTickets) {
+				return true;
+			}
+
+			if (status === "pending") {
+				const hasSharedPendingScope = selectedQueueIds.length > 0 || Boolean(user?.whatsappId);
+
+				if (!hasSharedPendingScope) {
+					return false;
+				}
+
+				if (ticket.queueId && selectedQueueIds.length > 0) {
+					return selectedQueueIds.indexOf(ticket.queueId) > -1;
+				}
+
 				return true;
 			}
 
@@ -422,7 +444,7 @@ const reducer = (state, action) => {
 			hasStatusMatch(ticket) &&
 			matchesSearchParam(ticket) &&
 			canAccessTicketInCurrentList(ticket) &&
-			(!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1) &&
+			hasQueueScopeMatch(ticket) &&
 			hasTagMatch(ticket) &&
 			hasFollowUpMatch(ticket);
 

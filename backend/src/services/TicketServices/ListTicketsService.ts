@@ -61,6 +61,48 @@ const buildQueueVisibilityScope = (queueIds: number[]): WhereOptions | undefined
   };
 };
 
+const buildPendingVisibilityScope = (
+  queueVisibilityScope: WhereOptions | undefined,
+  whatsappVisibilityScope: WhereOptions | undefined
+): WhereOptions => {
+  if (queueVisibilityScope || whatsappVisibilityScope) {
+    return combineWhere(queueVisibilityScope, whatsappVisibilityScope);
+  }
+
+  return { id: -1 };
+};
+
+const buildVisibilityScope = ({
+  isAdmin,
+  status,
+  assignedVisibilityScope,
+  queueVisibilityScope,
+  whatsappVisibilityScope
+}: {
+  isAdmin: boolean;
+  status?: string;
+  assignedVisibilityScope?: WhereOptions;
+  queueVisibilityScope?: WhereOptions;
+  whatsappVisibilityScope?: WhereOptions;
+}): WhereOptions => {
+  if (isAdmin) {
+    return combineWhere(queueVisibilityScope, whatsappVisibilityScope);
+  }
+
+  if (status === "pending") {
+    return buildPendingVisibilityScope(
+      queueVisibilityScope,
+      whatsappVisibilityScope
+    );
+  }
+
+  return combineWhere(
+    assignedVisibilityScope,
+    queueVisibilityScope,
+    whatsappVisibilityScope
+  );
+};
+
 const ListTicketsService = async ({
   searchParam = "",
   pageNumber = "1",
@@ -83,12 +125,14 @@ const ListTicketsService = async ({
   const assignedVisibilityScope: WhereOptions | undefined = isAdmin
     ? undefined
     : ({ userId } as WhereOptions);
-  const canShowAllTickets = isAdmin && showAll === "true";
-  let whereCondition: WhereOptions = combineWhere(
-    canShowAllTickets ? undefined : assignedVisibilityScope,
+  const visibilityScope = buildVisibilityScope({
+    isAdmin,
+    status,
+    assignedVisibilityScope,
     queueVisibilityScope,
     whatsappVisibilityScope
-  );
+  });
+  let whereCondition: WhereOptions = visibilityScope;
   let includeCondition: Includeable[];
 
   includeCondition = [
@@ -181,9 +225,7 @@ const ListTicketsService = async ({
 
   if (withUnreadMessages === "true") {
     whereCondition = combineWhere(
-      canShowAllTickets ? undefined : assignedVisibilityScope,
-      queueVisibilityScope,
-      whatsappVisibilityScope,
+      visibilityScope,
       { unreadMessages: { [Op.gt]: 0 } }
     );
   }
