@@ -8,21 +8,35 @@ interface Request {
   profile?: string;
 }
 
+const getUserScopedWhatsappId = (user: any): number | null => {
+  return user?.whatsappId || user?.whatsapp?.id || null;
+};
+
+const getUserQueueIds = (user: any): number[] => {
+  const queues = Array.isArray(user?.queues) ? user.queues : [];
+
+  return queues
+    .map((queue: { id: string | number }) => Number(queue.id))
+    .filter((queueId: number) => Number.isInteger(queueId) && queueId > 0);
+};
+
 const canPreviewPendingTicket = (ticket: Ticket, user: any): boolean => {
   if (ticket.status !== "pending" || ticket.userId !== null) {
     return false;
   }
 
-  const userWhatsappId = user.whatsappId || user.whatsapp?.id || null;
-  const userQueues = Array.isArray(user.queues) ? user.queues : [];
-  const hasQueueAccess = ticket.queueId
-    ? userQueues.some(
-        (queue: { id: string | number }) =>
-          Number(queue.id) === Number(ticket.queueId)
-      )
-    : userQueues.length > 0;
+  const userWhatsappId = getUserScopedWhatsappId(user);
+  const userQueueIds = getUserQueueIds(user);
+  const hasQueueAccess =
+    ticket.queueId !== null &&
+    ticket.queueId !== undefined &&
+    userQueueIds.includes(Number(ticket.queueId));
+  const hasDirectWhatsappAccess =
+    ticket.queueId === null &&
+    Boolean(userWhatsappId) &&
+    Number(ticket.whatsappId) === Number(userWhatsappId);
 
-  return hasQueueAccess || Boolean(userWhatsappId);
+  return hasQueueAccess || hasDirectWhatsappAccess;
 };
 
 const CheckTicketAccess = async ({
@@ -37,7 +51,7 @@ const CheckTicketAccess = async ({
   }
 
   const user = await ShowUserService(userId);
-  const userWhatsappId = user.whatsappId || user.whatsapp?.id || null;
+  const userWhatsappId = getUserScopedWhatsappId(user);
 
   if (Number(ticket.userId) === Number(userId)) {
     if (
