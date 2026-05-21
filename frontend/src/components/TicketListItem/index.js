@@ -355,10 +355,15 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 	const isMounted = useRef(true);
 	const { user } = useContext(AuthContext);
 	const [tagsModalOpen, setTagsModalOpen] = useState(false);
-	const assigneeLabel = ticket.user?.name || ticket.whatsapp?.name;
-	const assigneeTitle = ticket.user?.name
+	const hasAssignedUser = Boolean(ticket.user?.name);
+	const assigneeTitle = hasAssignedUser
 		? i18n.t("messagesList.header.assignedTo")
 		: i18n.t("ticketsList.connectionTitle");
+	const assigneeLabel = hasAssignedUser
+		? ticket.user.name
+		: ticket.whatsapp?.name
+			? `${assigneeTitle}: ${ticket.whatsapp.name}`
+			: "";
 	const ticketTimestamp = ticket.status === "pending"
 		? ticket.pendingSince || ticket.updatedAt || ticket.createdAt
 		: ticket.updatedAt;
