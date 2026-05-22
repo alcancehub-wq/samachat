@@ -34,6 +34,43 @@ interface Request {
 const INITIAL_READY_TIMEOUT_MS = 5000;
 const RECOVERY_READY_TIMEOUT_MS = 15000;
 const startingSessions = new Set<number>();
+const AUDIO_UPLOAD_EXTENSION_PATTERN = /\.(ogg|opus|webm|mp3|wav|m4a|aac)$/i;
+
+const getConfiguredProviderName = (): string =>
+  process.env.WHATSAPP_PROVIDER || "wwebjs";
+
+const getFileSizeOrNull = (filePath?: string): number | null => {
+  if (!filePath) {
+    return null;
+  }
+
+  try {
+    return fs.statSync(filePath).size;
+  } catch (err) {
+    logger.warn({ err, filePath }, "Failed to read media file size for audit log");
+    return null;
+  }
+};
+
+const getFileExtension = (fileName?: string): string => {
+  if (!fileName) {
+    return "";
+  }
+
+  return path.extname(fileName).toLowerCase();
+};
+
+const shouldAuditAudioContract = (media: Express.Multer.File): boolean => {
+  const mimeType = (media.mimetype || "").toLowerCase();
+  const originalName = media.originalname || "";
+  const storedName = media.filename || "";
+
+  return (
+    mimeType.startsWith("audio/") ||
+    AUDIO_UPLOAD_EXTENSION_PATTERN.test(originalName) ||
+    AUDIO_UPLOAD_EXTENSION_PATTERN.test(storedName)
+  );
+};
 
 const isNoLidError = (err: unknown): boolean => {
   if (err instanceof Error && /No LID for user/i.test(err.message)) {
@@ -161,6 +198,8 @@ const SendWhatsAppMedia = async ({
   try {
     const whatsapp = await ensureWhatsappSession(ticket);
     await ensureWhatsappReady(ticket, whatsapp);
+    const shouldAuditAudio = shouldAuditAudioContract(media);
+    const providerName = getConfiguredProviderName();
 
     const storedNumber = ticket.contact.number || "";
     const storedLid = normalizeLid(ticket.contact.lid || "");
@@ -209,9 +248,27 @@ const SendWhatsAppMedia = async ({
     };
 
     let convertedPath: string | null = null;
+    let normalizedToOggOpus = false;
+    let usedMp3Fallback = false;
+
+    if (shouldAuditAudio) {
+      logger.info(
+        {
+          ticketId: ticket.id,
+          whatsappId: whatsapp.id,
+          originalName: media.originalname,
+          originalMimetype: media.mimetype,
+          originalSize: media.size || getFileSizeOrNull(media.path),
+          originalExtension: getFileExtension(media.originalname || media.filename)
+        },
+        "Audio contract audit: before normalization"
+      );
+    }
+
     if (shouldNormalizeAudioForWhatsApp(media)) {
       try {
         convertedPath = await convertAudioToOgg(media.path);
+        normalizedToOggOpus = true;
         mediaInput = {
           filename: `${path.parse(media.filename).name}.ogg`,
           mimetype: WHATSAPP_VOICE_MIMETYPE,
@@ -224,12 +281,29 @@ const SendWhatsAppMedia = async ({
         );
 
         convertedPath = await convertAudioToMp3(media.path);
+        usedMp3Fallback = true;
         mediaInput = {
           filename: `${path.parse(media.filename).name}.mp3`,
           mimetype: WHATSAPP_COMPATIBLE_AUDIO_MIMETYPE,
           path: convertedPath
         };
       }
+    }
+
+    if (shouldAuditAudio) {
+      logger.info(
+        {
+          ticketId: ticket.id,
+          whatsappId: whatsapp.id,
+          finalFilename: mediaInput.filename,
+          finalMimetype: mediaInput.mimetype,
+          finalSize: getFileSizeOrNull(mediaInput.path),
+          finalExtension: getFileExtension(mediaInput.filename),
+          normalizedToOggOpus,
+          usedMp3Fallback
+        },
+        "Audio contract audit: after normalization"
+      );
     }
 
     const sendAsVoice = shouldSendAudioAsVoice(mediaInput);
@@ -243,8 +317,61 @@ const SendWhatsAppMedia = async ({
       })
     };
 
-    const sendWithChatId = async (targetChatId: string): Promise<ProviderMessage> =>
-      whatsappProvider.sendMedia(whatsapp.id, targetChatId, mediaInput, mediaOptions);
+    const sendWithChatId = async (targetChatId: string): Promise<ProviderMessage> => {
+      if (shouldAuditAudio) {
+        logger.info(
+          {
+            ticketId: ticket.id,
+            whatsappId: whatsapp.id,
+            provider: providerName,
+            sendAudioAsVoice: mediaOptions.sendAudioAsVoice,
+            sendMediaAsDocument: mediaOptions.sendMediaAsDocument,
+            deliveredMimetype: mediaInput.mimetype,
+            deliveredFilename: mediaInput.filename
+          },
+          "Audio contract audit: provider send request"
+        );
+      }
+
+      try {
+        const providerMessage = await whatsappProvider.sendMedia(
+          whatsapp.id,
+          targetChatId,
+          mediaInput,
+          mediaOptions
+        );
+
+        if (shouldAuditAudio) {
+          logger.info(
+            {
+              ticketId: ticket.id,
+              whatsappId: whatsapp.id,
+              provider: providerName,
+              messageId: providerMessage.id || null,
+              ack: providerMessage.ack ?? null
+            },
+            "Audio contract audit: provider send success"
+          );
+        }
+
+        return providerMessage;
+      } catch (err) {
+        if (shouldAuditAudio) {
+          logger.warn(
+            {
+              ticketId: ticket.id,
+              whatsappId: whatsapp.id,
+              provider: providerName,
+              errorName: err instanceof Error ? err.name : null,
+              errorMessage: err instanceof Error ? err.message : String(err)
+            },
+            "Audio contract audit: provider send failure"
+          );
+        }
+
+        throw err;
+      }
+    };
 
     let sentMessage: ProviderMessage;
     try {
