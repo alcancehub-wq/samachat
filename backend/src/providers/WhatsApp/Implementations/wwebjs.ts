@@ -685,14 +685,14 @@ const sendMedia = async (
   options?: SendMediaOptions
 ): Promise<ProviderMessage> => {
   const wbot = getWbot(sessionId);
+  const mediaData = media.path
+    ? fs.readFileSync(media.path, { encoding: "base64" })
+    : media.data?.toString("base64") || "";
 
-  const messageMedia = new MessageMedia(
-    media.mimetype,
-    media.path
-      ? fs.readFileSync(media.path, { encoding: "base64" })
-      : media.data?.toString("base64") || "",
-    media.filename
-  );
+  const messageMedia =
+    media.filename !== undefined && media.filename !== null
+      ? new MessageMedia(media.mimetype, mediaData, media.filename)
+      : new MessageMedia(media.mimetype, mediaData);
 
   const mediaOptions: MessageSendOptions = {
     caption: options?.caption,

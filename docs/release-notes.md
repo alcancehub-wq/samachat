@@ -1,5 +1,14 @@
 # Release Notes
 
+## 2026-05-24
+
+### legacy-prod
+
+- Chats/Audio gravado iPhone: correcao final local do envio de audio gravado do compositor; o backend agora preserva a aparencia de audio gravado no WhatsApp e o contato em iPhone volta a conseguir abrir/reproduzir o envio validado nesta rodada.
+- Validacao desta rodada: a confirmacao foi feita apenas em localhost, sem push, sem deploy e sem tocar producao; o contato confirmou que o audio deixou de chegar como arquivo indisponivel e passou a abrir como audio gravado.
+- Observacao de auditoria: o teste automatizado local desta rodada usou tom sintetico no navegador, entao o timbre de voz humana ainda pode ser validado depois em gravacao falada real.
+- Escopo desta correcao: `backend/src/services/WbotServices/audioNormalization.ts`, `backend/src/services/WbotServices/SendWhatsAppMedia.ts`, `backend/src/providers/WhatsApp/Implementations/wwebjs.ts` e `docs/release-notes.md`.
+
 ## 2026-05-20
 
 ### Pre-promocao controlada - fix/samachat-estabilidade-operacional

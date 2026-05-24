@@ -280,38 +280,28 @@ const SendWhatsAppMedia = async ({
     }
 
     if (shouldNormalizeAudioForWhatsApp(media)) {
-      if (composerRecordedAudio) {
+      try {
+        convertedPath = await convertAudioToOgg(media.path);
+        normalizedToOggOpus = true;
+        mediaInput = {
+          filename: `${path.parse(media.filename).name}.ogg`,
+          mimetype: WHATSAPP_VOICE_MIMETYPE,
+          path: convertedPath
+        };
+      } catch (voiceConversionError) {
+        logger.warn(
+          { err: voiceConversionError, path: media.path, filename: media.filename },
+          "Voice-note normalization failed, falling back to mp3 audio"
+        );
+
         convertedPath = await convertAudioToMp3(media.path);
         normalizedToMp3CommonAudio = true;
+        usedMp3Fallback = true;
         mediaInput = {
           filename: `${path.parse(media.filename).name}.mp3`,
           mimetype: WHATSAPP_COMPATIBLE_AUDIO_MIMETYPE,
           path: convertedPath
         };
-      } else {
-        try {
-          convertedPath = await convertAudioToOgg(media.path);
-          normalizedToOggOpus = true;
-          mediaInput = {
-            filename: `${path.parse(media.filename).name}.ogg`,
-            mimetype: WHATSAPP_VOICE_MIMETYPE,
-            path: convertedPath
-          };
-        } catch (voiceConversionError) {
-          logger.warn(
-            { err: voiceConversionError, path: media.path, filename: media.filename },
-            "Voice-note normalization failed, falling back to mp3 audio"
-          );
-
-          convertedPath = await convertAudioToMp3(media.path);
-          normalizedToMp3CommonAudio = true;
-          usedMp3Fallback = true;
-          mediaInput = {
-            filename: `${path.parse(media.filename).name}.mp3`,
-            mimetype: WHATSAPP_COMPATIBLE_AUDIO_MIMETYPE,
-            path: convertedPath
-          };
-        }
       }
     }
 
@@ -333,12 +323,10 @@ const SendWhatsAppMedia = async ({
     }
 
     const sendAsVoice = shouldSendAudioAsVoice(mediaInput);
-    const effectiveSendAsVoice = composerRecordedAudio ? false : sendAsVoice;
-    const effectiveSendMediaAsDocument = composerRecordedAudio
-      ? false
-      : shouldSendMediaAsDocument(mediaInput, {
-          sendAsVoice: effectiveSendAsVoice
-        });
+    const effectiveSendAsVoice = sendAsVoice;
+    const effectiveSendMediaAsDocument = shouldSendMediaAsDocument(mediaInput, {
+      sendAsVoice: effectiveSendAsVoice
+    });
 
     const mediaOptions = {
       // PTT voice notes are more stable without a caption payload.
@@ -346,6 +334,12 @@ const SendWhatsAppMedia = async ({
       sendAudioAsVoice: effectiveSendAsVoice,
       sendMediaAsDocument: effectiveSendMediaAsDocument
     };
+    const providerMediaInput = composerRecordedAudio
+      ? {
+          ...mediaInput,
+          filename: ""
+        }
+      : mediaInput;
 
     const sendWithChatId = async (targetChatId: string): Promise<ProviderMessage> => {
       if (shouldAuditAudio) {
@@ -358,7 +352,7 @@ const SendWhatsAppMedia = async ({
             sendAudioAsVoice: mediaOptions.sendAudioAsVoice,
             sendMediaAsDocument: mediaOptions.sendMediaAsDocument,
             deliveredMimetype: mediaInput.mimetype,
-            deliveredFilename: mediaInput.filename
+            deliveredFilename: providerMediaInput.filename || null
           },
           "Audio contract audit: provider send request"
         );
@@ -368,7 +362,7 @@ const SendWhatsAppMedia = async ({
         const providerMessage = await whatsappProvider.sendMedia(
           whatsapp.id,
           targetChatId,
-          mediaInput,
+          providerMediaInput,
           mediaOptions
         );
 
