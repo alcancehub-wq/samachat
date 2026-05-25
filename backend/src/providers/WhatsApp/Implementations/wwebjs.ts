@@ -35,6 +35,11 @@ import {
   WhatsappContextPayload
 } from "../../../handlers/handleWhatsappEvents";
 import { enqueueWhatsAppSessionStart } from "../../../services/WbotServices/WhatsAppSessionStartQueue";
+import { deriveWwebjsGroupContext } from "./wwebjsGroupContext";
+import type {
+  WbotGroupContextChat,
+  WbotGroupContextSource
+} from "./wwebjsGroupContext";
 
 interface Session extends Client {
   id?: number;
@@ -509,23 +514,32 @@ const getMessageData = async (
   mediaPayload: MediaPayload | undefined;
 }> => {
   let msgContact: WbotContact;
+  let contactPayload: ContactPayload;
   let groupContact: ContactPayload | undefined;
 
   const chat = await msg.getChat();
-  const isGroupMessage = Boolean(
-    chat.isGroup || msg.from?.endsWith("@g.us") || msg.to?.endsWith("@g.us")
+  const groupContext = deriveWwebjsGroupContext(
+    msg as WbotGroupContextSource,
+    chat as WbotGroupContextChat
   );
 
-  if (chat.isGroup) {
-    msgContact = await msg.getContact();
-
-    try {
-      const groupChatId = chat.id?._serialized || msg.to;
-      const groupWbotContact = await wbot.getContactById(groupChatId);
-      groupContact = await convertToContactPayload(groupWbotContact);
-    } catch (err) {
-      logger.warn(err, "Unable to resolve group contact");
+  if (groupContext.isGroupMessage) {
+    if (groupContext.groupChatId) {
+      try {
+        const groupWbotContact = await wbot.getContactById(groupContext.groupChatId);
+        groupContact = await convertToContactPayload(groupWbotContact);
+      } catch (err) {
+        logger.warn(
+          { err, groupChatId: groupContext.groupChatId },
+          "Unable to resolve group contact"
+        );
+      }
     }
+
+    const resolvedGroupContact =
+      groupContact || groupContext.fallbackContactPayload!;
+    groupContact = resolvedGroupContact;
+    contactPayload = resolvedGroupContact;
   } else {
     if (msg.fromMe) {
       try {
@@ -537,11 +551,12 @@ const getMessageData = async (
     } else {
       msgContact = await msg.getContact();
     }
+
+    contactPayload = await convertToContactPayload(msgContact);
   }
 
   const unreadMessages = msg.fromMe ? 0 : chat.unreadCount;
 
-  const contactPayload = await convertToContactPayload(msgContact);
   const messagePayload = await convertToMessagePayload(msg);
   const mediaPayload = await convertToMediaPayload(msg);
 
@@ -549,7 +564,7 @@ const getMessageData = async (
     whatsappId: wbot.id!,
     unreadMessages,
     groupContact,
-    isGroupMessage
+    isGroupMessage: groupContext.isGroupMessage
   };
 
   return {
