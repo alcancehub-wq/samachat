@@ -11,6 +11,10 @@ import {
   isAdminScheduleAccess,
   loadScheduleTicketForAccess
 } from "./scheduleAccess";
+import {
+  assertScheduledAtIsFuture,
+  parseScheduledAt
+} from "./normalizeScheduledAt";
 
 interface ScheduleData {
   body?: string;
@@ -40,12 +44,11 @@ const normalizeDate = (value?: Date | string | null): Date | null | undefined =>
     return null;
   }
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
+  try {
+    return parseScheduledAt(value);
+  } catch (error) {
     return undefined;
   }
-
-  return parsed;
 };
 
 const UpdateScheduleService = async ({
@@ -138,6 +141,7 @@ const UpdateScheduleService = async ({
       throw new AppError("ERR_SCHEDULE_DATE_REQUIRED");
     }
 
+    assertScheduledAtIsFuture(parsed);
     scheduledAt = parsed;
   }
 

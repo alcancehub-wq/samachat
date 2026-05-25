@@ -10,6 +10,8 @@ import ShowTicketService from "../../TicketServices/ShowTicketService";
 import SendWhatsAppMessage from "../../WbotServices/SendWhatsAppMessage";
 import { ERR_SCHEDULE_TICKET_CLOSED } from "../assertScheduleTicketIsActive";
 
+const FIXED_NOW = new Date("2026-05-23T12:00:00.000Z");
+
 jest.mock("../../../models/Schedule", () => ({
   findOne: jest.fn(),
   create: jest.fn(),
@@ -47,6 +49,8 @@ const sendWhatsAppMessageMock = SendWhatsAppMessage as jest.Mock;
 
 describe("Schedule closed ticket guards", () => {
   beforeEach(() => {
+    jest.useFakeTimers("modern");
+    jest.setSystemTime(FIXED_NOW);
     jest.clearAllMocks();
     scheduleFindOneMock.mockResolvedValue(null);
     userFindByPkMock.mockResolvedValue(null);
@@ -54,6 +58,10 @@ describe("Schedule closed ticket guards", () => {
     createScheduleLogServiceMock.mockResolvedValue({});
     scheduleUpdateStaticMock.mockResolvedValue([1]);
     sendWhatsAppMessageMock.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("allows creating a schedule for an open ticket", async () => {
@@ -94,6 +102,36 @@ describe("Schedule closed ticket guards", () => {
       })
     );
     expect(result).toEqual({ id: 12, status: "pending" });
+  });
+
+  it("rejects creating a schedule in the past", async () => {
+    ticketFindByPkMock.mockResolvedValue({ id: 14, status: "open" });
+
+    await expect(
+      CreateScheduleService({
+        body: "past flow",
+        scheduledAt: "2026-05-23T08:59",
+        ticketId: 14
+      })
+    ).rejects.toMatchObject({ message: "ERR_SCHEDULE_DATE_MUST_BE_FUTURE" });
+
+    expect(scheduleCreateMock).not.toHaveBeenCalled();
+    expect(sendWhatsAppMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects creating a schedule equal to the current time", async () => {
+    ticketFindByPkMock.mockResolvedValue({ id: 15, status: "open" });
+
+    await expect(
+      CreateScheduleService({
+        body: "equal flow",
+        scheduledAt: "2026-05-23T09:00:00-03:00",
+        ticketId: 15
+      })
+    ).rejects.toMatchObject({ message: "ERR_SCHEDULE_DATE_MUST_BE_FUTURE" });
+
+    expect(scheduleCreateMock).not.toHaveBeenCalled();
+    expect(sendWhatsAppMessageMock).not.toHaveBeenCalled();
   });
 
   it("blocks creating a schedule for a closed ticket", async () => {
@@ -142,12 +180,82 @@ describe("Schedule closed ticket guards", () => {
     expect(scheduleReloadMock).not.toHaveBeenCalled();
   });
 
+  it("allows editing a schedule when the new date remains in the future", async () => {
+    const scheduleUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const scheduleReloadMock = jest.fn().mockResolvedValue(undefined);
+    const schedule = {
+      id: 21,
+      body: "current",
+      status: "pending",
+      scheduledAt: new Date("2026-05-24T12:00:00.000Z"),
+      sentAt: null,
+      canceledAt: null,
+      lastError: null,
+      lastResult: null,
+      assigneeId: null,
+      ticketId: 21,
+      contactId: null,
+      update: scheduleUpdateMock,
+      reload: scheduleReloadMock
+    };
+
+    scheduleFindByPkMock.mockResolvedValue(schedule);
+    ticketFindByPkMock.mockResolvedValue({ id: 21, status: "open" });
+
+    const result = await UpdateScheduleService({
+      scheduleId: "21",
+      scheduleData: { scheduledAt: "2026-05-23T12:30" }
+    });
+
+    expect(scheduleUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduledAt: new Date("2026-05-23T15:30:00.000Z")
+      })
+    );
+    expect(result).toBe(schedule);
+    expect(sendWhatsAppMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects editing a schedule into the past", async () => {
+    const scheduleUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const scheduleReloadMock = jest.fn().mockResolvedValue(undefined);
+
+    scheduleFindByPkMock.mockResolvedValue({
+      id: 22,
+      body: "current",
+      status: "pending",
+      scheduledAt: new Date("2026-05-24T12:00:00.000Z"),
+      sentAt: null,
+      canceledAt: null,
+      lastError: null,
+      lastResult: null,
+      assigneeId: null,
+      ticketId: 22,
+      contactId: null,
+      update: scheduleUpdateMock,
+      reload: scheduleReloadMock
+    });
+    ticketFindByPkMock.mockResolvedValue({ id: 22, status: "open" });
+
+    await expect(
+      UpdateScheduleService({
+        scheduleId: "22",
+        scheduleData: { scheduledAt: "2026-05-23T08:59" }
+      })
+    ).rejects.toMatchObject({ message: "ERR_SCHEDULE_DATE_MUST_BE_FUTURE" });
+
+    expect(scheduleUpdateMock).not.toHaveBeenCalled();
+    expect(scheduleReloadMock).not.toHaveBeenCalled();
+    expect(sendWhatsAppMessageMock).not.toHaveBeenCalled();
+  });
+
   it("does not send legacy schedules when the linked ticket is closed", async () => {
     scheduleFindByPkMock.mockResolvedValue({
       id: 30,
       status: "processing",
       ticketId: 30,
-      body: "scheduled body"
+      body: "scheduled body",
+      scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
     });
     showTicketServiceMock.mockResolvedValue({ id: 30, status: "closed" });
 
@@ -177,7 +285,8 @@ describe("Schedule closed ticket guards", () => {
         id: 31,
         status: "processing",
         ticketId: 31,
-        body: "scheduled body"
+        body: "scheduled body",
+        scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
       });
       showTicketServiceMock.mockResolvedValue({ id: 31, status: ticketStatus });
 
@@ -195,6 +304,85 @@ describe("Schedule closed ticket guards", () => {
         }),
         { where: { id: 31 } }
       );
+    }
+  );
+
+  it("does not execute a schedule before the scheduled time", async () => {
+    scheduleFindByPkMock.mockResolvedValue({
+      id: 32,
+      status: "processing",
+      ticketId: 32,
+      body: "scheduled body",
+      scheduledAt: new Date("2026-05-23T09:01:00.000-03:00")
+    });
+
+    await executeSchedule(32);
+
+    expect(sendWhatsAppMessageMock).not.toHaveBeenCalled();
+    expect(scheduleUpdateStaticMock).toHaveBeenCalledWith(
+      {
+        status: "pending",
+        lastError: null
+      },
+      {
+        where: {
+          id: 32,
+          status: "processing"
+        }
+      }
+    );
+    expect(createScheduleLogServiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleId: 32,
+        status: "pending",
+        message: "Schedule is not due yet"
+      })
+    );
+  });
+
+  it("does not execute schedules with invalid scheduledAt values", async () => {
+    scheduleFindByPkMock.mockResolvedValue({
+      id: 33,
+      status: "processing",
+      ticketId: 33,
+      body: "scheduled body",
+      scheduledAt: "invalid-date"
+    });
+
+    await executeSchedule(33);
+
+    expect(sendWhatsAppMessageMock).not.toHaveBeenCalled();
+    expect(scheduleUpdateStaticMock).toHaveBeenCalledWith(
+      {
+        status: "failed",
+        lastError: "ERR_SCHEDULE_DATE_INVALID"
+      },
+      { where: { id: 33 } }
+    );
+    expect(createScheduleLogServiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleId: 33,
+        status: "failed",
+        error: "ERR_SCHEDULE_DATE_INVALID"
+      })
+    );
+  });
+
+  it.each(["sent", "canceled", "failed"])(
+    "does not execute schedules already marked as %s",
+    async status => {
+      scheduleFindByPkMock.mockResolvedValue({
+        id: 34,
+        status,
+        ticketId: 34,
+        body: "scheduled body",
+        scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+      });
+
+      await executeSchedule(34);
+
+      expect(sendWhatsAppMessageMock).not.toHaveBeenCalled();
+      expect(scheduleUpdateStaticMock).not.toHaveBeenCalled();
     }
   );
 });

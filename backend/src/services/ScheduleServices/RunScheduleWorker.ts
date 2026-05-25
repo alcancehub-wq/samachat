@@ -5,6 +5,7 @@ import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 import { logger } from "../../utils/logger";
 import { ERR_SCHEDULE_TICKET_CLOSED, isClosedScheduleTicket } from "./assertScheduleTicketIsActive";
+import { parseScheduledAt } from "./normalizeScheduledAt";
 
 const DEFAULT_POLL_MS = 5000;
 const DEFAULT_BATCH_SIZE = 20;
@@ -68,10 +69,46 @@ const markSent = async (scheduleId: number, resultMessage: string): Promise<void
   });
 };
 
+const releasePending = async (scheduleId: number, message: string): Promise<void> => {
+  await Schedule.update(
+    {
+      status: "pending",
+      lastError: null
+    },
+    {
+      where: {
+        id: scheduleId,
+        status: "processing"
+      }
+    }
+  );
+
+  await CreateScheduleLogService({
+    scheduleId,
+    status: "pending",
+    message,
+    executedAt: new Date()
+  });
+};
+
 const executeSchedule = async (scheduleId: number): Promise<void> => {
   const schedule = await Schedule.findByPk(scheduleId);
 
   if (!schedule || schedule.status !== "processing") {
+    return;
+  }
+
+  let scheduledAt: Date;
+
+  try {
+    scheduledAt = parseScheduledAt(schedule.scheduledAt);
+  } catch (error) {
+    await markFailed(schedule.id, "ERR_SCHEDULE_DATE_INVALID");
+    return;
+  }
+
+  if (scheduledAt.getTime() > Date.now()) {
+    await releasePending(schedule.id, "Schedule is not due yet");
     return;
   }
 

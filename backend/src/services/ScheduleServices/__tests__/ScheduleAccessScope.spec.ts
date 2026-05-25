@@ -50,14 +50,22 @@ const adminAccess = {
   profile: "admin"
 };
 
+const FIXED_NOW = new Date("2026-05-23T12:00:00.000Z");
+
 describe("Schedule scope access", () => {
   beforeEach(() => {
+    jest.useFakeTimers("modern");
+    jest.setSystemTime(FIXED_NOW);
     jest.clearAllMocks();
     scheduleFindOneMock.mockResolvedValue(null);
     userFindByPkMock.mockResolvedValue(null);
     contactFindByPkMock.mockResolvedValue(null);
     createScheduleLogServiceMock.mockResolvedValue({});
     checkTicketAccessMock.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it("lets admin list schedules from any ticket", async () => {

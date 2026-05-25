@@ -6,6 +6,10 @@ import User from "../../models/User";
 import CreateScheduleLogService from "./CreateScheduleLogService";
 import assertScheduleTicketIsActive from "./assertScheduleTicketIsActive";
 import { ScheduleAccessData, loadScheduleTicketForAccess } from "./scheduleAccess";
+import {
+  assertScheduledAtIsFuture,
+  parseScheduledAt
+} from "./normalizeScheduledAt";
 
 interface Request {
   body: string;
@@ -38,11 +42,7 @@ const CreateScheduleService = async ({
     throw new AppError("ERR_SCHEDULE_DATE_REQUIRED");
   }
 
-  const scheduledAtDate = new Date(scheduledAt);
-
-  if (Number.isNaN(scheduledAtDate.getTime())) {
-    throw new AppError("ERR_SCHEDULE_DATE_INVALID");
-  }
+  const scheduledAtDate = parseScheduledAt(scheduledAt);
 
   const duplicate = await Schedule.findOne({
     where: {
@@ -77,6 +77,8 @@ const CreateScheduleService = async ({
       throw new AppError("ERR_NO_CONTACT_FOUND", 404);
     }
   }
+
+  assertScheduledAtIsFuture(scheduledAtDate);
 
   let sentAt: Date | null = null;
   let canceledAt: Date | null = null;

@@ -1744,6 +1744,7 @@ const messages = {
         ERR_SCHEDULE_BODY_REQUIRED: "El mensaje del agendamiento es obligatorio.",
         ERR_SCHEDULE_DATE_REQUIRED: "La fecha del agendamiento es obligatoria.",
         ERR_SCHEDULE_DATE_INVALID: "La fecha del agendamiento es invalida.",
+        ERR_SCHEDULE_DATE_MUST_BE_FUTURE: "La fecha del agendamiento debe estar en el futuro.",
         ERR_SCHEDULE_TICKET_CLOSED: "No se puede agendar en un ticket resuelto.",
         ERR_FETCH_WAPP_MSG:
           "Error al obtener el mensaje en WhtasApp, tal vez sea demasiado antiguo.",

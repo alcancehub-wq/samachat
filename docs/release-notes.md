@@ -1,5 +1,15 @@
 # Release Notes
 
+## 2026-05-25
+
+### legacy-prod
+
+- Agendamentos/Mensagens: salvar ou editar agendamento deixa de permitir `scheduledAt` no passado ou igual ao instante atual; o backend agora normaliza entradas sem timezone para `-03:00`, rejeita datas invalidas com erro explicito e impede que um novo agendamento ja nasca elegivel para disparo imediato do worker.
+- Agendamentos/Worker: o `RunScheduleWorker` recebeu hardening adicional para nao enviar registros com `scheduledAt` invalido, para devolver a `pending` qualquer item ainda nao vencido mesmo que tenha sido reivindicado por engano, e para continuar idempotente ignorando itens ja marcados como `sent`, `canceled` ou `failed`.
+- Frontend/Agendamentos: o modal legado passa a bloquear localmente datas passadas, envia `scheduledAt` com offset explicito `-03:00`, mostra mensagem amigavel para `ERR_SCHEDULE_DATE_MUST_BE_FUTURE` e forca criacao inicial em `pending`.
+- Escopo desta correcao: `backend/src/services/ScheduleServices/normalizeScheduledAt.ts`, `backend/src/services/ScheduleServices/CreateScheduleService.ts`, `backend/src/services/ScheduleServices/UpdateScheduleService.ts`, `backend/src/services/ScheduleServices/RunScheduleWorker.ts`, `backend/src/services/ScheduleServices/__tests__/ScheduleClosedTicketGuard.spec.ts`, `backend/src/services/ScheduleServices/__tests__/ScheduleAccessScope.spec.ts`, `frontend/src/components/ScheduleModal/index.js`, `frontend/src/translate/languages/pt.js`, `frontend/src/translate/languages/en.js`, `frontend/src/translate/languages/es.js` e `docs/release-notes.md`.
+- Validacao local desta correcao: `npx jest src/services/ScheduleServices/__tests__/ScheduleClosedTicketGuard.spec.ts src/services/ScheduleServices/__tests__/ScheduleAccessScope.spec.ts --runInBand --verbose` aprovado em `backend`; `npm run build` aprovado em `frontend`; `npm run build` aprovado em `backend`; nenhuma mensagem real foi enviada e nao houve `push` nem `deploy` nesta rodada.
+
 ## 2026-05-24
 
 ### legacy-prod

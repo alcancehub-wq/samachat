@@ -25,9 +25,67 @@ import { appendMessageVariable } from "../../utils/messageVariables";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 
+const BRAZIL_SCHEDULE_OFFSET = "-03:00";
+const DATETIME_LOCAL_MINUTES = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+const DATETIME_LOCAL_SECONDS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
+const DATETIME_LOCAL_MILLIS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,3}$/;
+const DATETIME_HAS_TIMEZONE = /(Z|[+-]\d{2}:\d{2})$/i;
+
+const normalizeScheduledAtForApi = value => {
+  if (!value) {
+    return value;
+  }
+
+  const normalizedValue = String(value).trim();
+
+  if (DATETIME_HAS_TIMEZONE.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  if (DATETIME_LOCAL_MINUTES.test(normalizedValue)) {
+    return `${normalizedValue}:00${BRAZIL_SCHEDULE_OFFSET}`;
+  }
+
+  if (
+    DATETIME_LOCAL_SECONDS.test(normalizedValue) ||
+    DATETIME_LOCAL_MILLIS.test(normalizedValue)
+  ) {
+    return `${normalizedValue}${BRAZIL_SCHEDULE_OFFSET}`;
+  }
+
+  return normalizedValue;
+};
+
+const parseScheduledAtInput = value => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(normalizeScheduledAtForApi(value));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const ScheduleSchema = Yup.object().shape({
   body: Yup.string().min(2, "Too Short!").max(1000, "Too Long!").required("Required"),
-  scheduledAt: Yup.string().required("Required"),
+  scheduledAt: Yup.string()
+    .required("Required")
+    .test(
+      "future-schedule",
+      i18n.t("backendErrors.ERR_SCHEDULE_DATE_MUST_BE_FUTURE"),
+      value => {
+        if (!value) {
+          return true;
+        }
+
+        const scheduledAt = parseScheduledAtInput(value);
+
+        if (!scheduledAt) {
+          return false;
+        }
+
+        return scheduledAt.getTime() > Date.now();
+      }
+    ),
   recurringMonths: Yup.number()
     .transform((value, originalValue) => {
       if (originalValue === "" || originalValue === null || originalValue === undefined) {
@@ -63,6 +121,13 @@ const toInputDateTime = value => {
   )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
+const getMinimumScheduledAtInputValue = () => {
+  const nextMinute = new Date();
+  nextMinute.setSeconds(0, 0);
+  nextMinute.setMinutes(nextMinute.getMinutes() + 1);
+  return toInputDateTime(nextMinute);
+};
+
 const ScheduleModal = ({
   open,
   onClose,
@@ -95,6 +160,7 @@ const ScheduleModal = ({
 
   const [schedule, setSchedule] = useState(initialState);
   const [users, setUsers] = useState([]);
+  const minScheduledAt = getMinimumScheduledAtInputValue();
 
   useEffect(() => {
     return () => {
@@ -208,8 +274,8 @@ const ScheduleModal = ({
   const handleSaveSchedule = async values => {
     const payload = {
       body: values.body,
-      status: hideStatusField && !scheduleId ? "pending" : values.status,
-      scheduledAt: values.scheduledAt,
+      status: scheduleId ? values.status : "pending",
+      scheduledAt: normalizeScheduledAtForApi(values.scheduledAt),
       assigneeId: normalizeId(values.assigneeId),
       ticketId: normalizeId(values.ticketId),
       contactId: normalizeId(values.contactId)
@@ -225,7 +291,7 @@ const ScheduleModal = ({
       ? buildRecurringDates(values.scheduledAt, Number(values.recurringMonths)).map(
           scheduledAt => ({
             ...payload,
-            scheduledAt
+            scheduledAt: normalizeScheduledAtForApi(scheduledAt)
           })
         )
       : [];
@@ -303,12 +369,13 @@ const ScheduleModal = ({
                 value={values.scheduledAt || ""}
                 onChange={event => setFieldValue("scheduledAt", event.target.value)}
                 InputLabelProps={{ shrink: true }}
+                inputProps={{ min: minScheduledAt }}
                 error={touched.scheduledAt && Boolean(errors.scheduledAt)}
                 helperText={
                   touched.scheduledAt && errors.scheduledAt ? errors.scheduledAt : ""
                 }
               />
-              {!hideStatusField && (
+              {!hideStatusField && scheduleId && (
                 <FormControl fullWidth margin="dense" variant="outlined">
                   <InputLabel>{i18n.t("scheduleModal.form.status")}</InputLabel>
                   <Select
