@@ -512,6 +512,9 @@ const getMessageData = async (
   let groupContact: ContactPayload | undefined;
 
   const chat = await msg.getChat();
+  const isGroupMessage = Boolean(
+    chat.isGroup || msg.from?.endsWith("@g.us") || msg.to?.endsWith("@g.us")
+  );
 
   if (chat.isGroup) {
     msgContact = await msg.getContact();
@@ -545,7 +548,8 @@ const getMessageData = async (
   const contextPayload: WhatsappContextPayload = {
     whatsappId: wbot.id!,
     unreadMessages,
-    groupContact
+    groupContact,
+    isGroupMessage
   };
 
   return {

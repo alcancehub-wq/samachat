@@ -114,7 +114,28 @@ export interface WhatsappContextPayload {
   whatsappId: number;
   unreadMessages: number;
   groupContact?: ContactPayload;
+  isGroupMessage?: boolean;
 }
+
+const GROUP_CHAT_SUFFIX = "@g.us";
+
+const isGroupChatId = (value?: string): boolean => {
+  return typeof value === "string" && value.endsWith(GROUP_CHAT_SUFFIX);
+};
+
+const shouldIgnoreInboundGroupMessage = (
+  messagePayload: MessagePayload,
+  contactPayload: ContactPayload,
+  contextPayload: WhatsappContextPayload
+): boolean => {
+  return Boolean(
+    contextPayload.isGroupMessage ||
+      contextPayload.groupContact ||
+      contactPayload.isGroup ||
+      isGroupChatId(messagePayload.from) ||
+      isGroupChatId(messagePayload.to)
+  );
+};
 
 const makeRandomId = (length: number): string => {
   let result = "";
@@ -309,6 +330,26 @@ export const handleMessage = async (
 ): Promise<void> => {
   try {
     const processedMessage = processLocationMessage(messagePayload);
+
+    if (
+      shouldIgnoreInboundGroupMessage(
+        processedMessage,
+        contactPayload,
+        contextPayload
+      )
+    ) {
+      logger.info(
+        {
+          whatsappId: contextPayload.whatsappId,
+          messageId: processedMessage.id,
+          from: processedMessage.from,
+          to: processedMessage.to,
+          fromMe: processedMessage.fromMe
+        },
+        "Ignoring inbound WhatsApp group message"
+      );
+      return;
+    }
 
     const contact = await CreateOrUpdateContactService({
       name: contactPayload.name,
