@@ -1,5 +1,10 @@
 import { getIO } from "../../libs/socket";
-import { getScopedNotificationRoom, getScopedTicketsRoom } from "../../helpers/socketRooms";
+import {
+  getScopedNotificationRoom,
+  getScopedTicketsRoom,
+  getUserScopedNotificationRoom,
+  getUserScopedTicketsRoom
+} from "../../helpers/socketRooms";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
@@ -82,6 +87,12 @@ const CreateMessageService = async ({
       roomTargets.add(
         getScopedTicketsRoom(message.ticket.status, message.ticket.whatsappId)
       );
+
+      if (message.ticket.userId) {
+        roomTargets.add(
+          getUserScopedTicketsRoom(message.ticket.status, message.ticket.userId)
+        );
+      }
     }
 
     if (broadcastToNotification) {
@@ -89,6 +100,12 @@ const CreateMessageService = async ({
       roomTargets.add(
         getScopedNotificationRoom(message.ticket.whatsappId)
       );
+
+      if (message.ticket.userId) {
+        roomTargets.add(
+          getUserScopedNotificationRoom(message.ticket.userId)
+        );
+      }
     }
 
     roomTargets.forEach(room => {

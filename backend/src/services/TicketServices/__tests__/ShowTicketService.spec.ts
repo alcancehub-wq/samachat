@@ -42,10 +42,10 @@ describe("ShowTicketService access control", () => {
 		expect(showUserServiceMock).toHaveBeenCalledWith(7);
   });
 
-  it("allows queue members to preview pending tickets assigned to nobody", async () => {
+  it("allows the assigned user to preview own pending tickets", async () => {
     const ticket = {
       id: 102,
-      userId: null,
+      userId: 7,
       queueId: 11,
       status: "pending"
     };
@@ -65,11 +65,11 @@ describe("ShowTicketService access control", () => {
     ).resolves.toBe(ticket);
   });
 
-  it("blocks pending preview when the queue is not authorized for the user", async () => {
+  it("blocks same-queue users from previewing another user's pending ticket", async () => {
     ticketFindByPkMock.mockResolvedValue({
       id: 106,
-      userId: null,
-      queueId: 12,
+      userId: 9,
+      queueId: 11,
       status: "pending"
     });
     showUserServiceMock.mockResolvedValue({
@@ -86,7 +86,7 @@ describe("ShowTicketService access control", () => {
     ).rejects.toEqual(new AppError("ERR_NO_PERMISSION", 403));
   });
 
-  it("blocks pending preview with queueId null when there is no explicit whatsapp scope", async () => {
+  it("blocks pending preview with queueId null when the ticket has no owner", async () => {
     ticketFindByPkMock.mockResolvedValue({
       id: 107,
       userId: null,

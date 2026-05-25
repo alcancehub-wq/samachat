@@ -7,7 +7,9 @@ import authConfig from "../config/auth";
 import {
   getScopedContactRoom,
   getScopedNotificationRoom,
-  getScopedTicketsRoom
+  getScopedTicketsRoom,
+  getUserScopedNotificationRoom,
+  getUserScopedTicketsRoom
 } from "../helpers/socketRooms";
 
 let io: SocketIO;
@@ -67,6 +69,13 @@ export const initIO = (httpServer: Server): SocketIO => {
       return io;
     }
 
+    const authenticatedUser = (tokenData || {}) as {
+      id?: string | number;
+      profile?: string;
+    };
+    const isAdmin =
+      String(authenticatedUser.profile || "").toLowerCase() === "admin";
+
     logger.info("Client Connected");
     socket.on("joinChatBox", (ticketId: string) => {
       logger.info("A client joined a ticket channel");
@@ -75,7 +84,13 @@ export const initIO = (httpServer: Server): SocketIO => {
 
     socket.on("joinNotification", (payload?: { whatsappId?: number | null }) => {
       logger.info("A client joined notification channel");
-      socket.join(getScopedNotificationRoom(payload?.whatsappId));
+
+      if (isAdmin || !authenticatedUser.id) {
+        socket.join(getScopedNotificationRoom(payload?.whatsappId));
+        return;
+      }
+
+      socket.join(getUserScopedNotificationRoom(authenticatedUser.id));
     });
 
     socket.on(
@@ -86,7 +101,13 @@ export const initIO = (httpServer: Server): SocketIO => {
           typeof payload === "string" ? undefined : payload?.whatsappId;
 
         logger.info(`A client joined to ${status} tickets channel.`);
-        socket.join(getScopedTicketsRoom(status, whatsappId));
+
+        if (isAdmin || !authenticatedUser.id) {
+          socket.join(getScopedTicketsRoom(status, whatsappId));
+          return;
+        }
+
+        socket.join(getUserScopedTicketsRoom(status, authenticatedUser.id));
       }
     );
 

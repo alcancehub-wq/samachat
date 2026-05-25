@@ -1,7 +1,12 @@
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 
-import { getScopedNotificationRoom, getScopedTicketsRoom } from "../helpers/socketRooms";
+import {
+  getScopedNotificationRoom,
+  getScopedTicketsRoom,
+  getUserScopedNotificationRoom,
+  getUserScopedTicketsRoom
+} from "../helpers/socketRooms";
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
 import Message from "../models/Message";
@@ -30,13 +35,20 @@ const emitTicketUpdate = async (ticket: Awaited<ReturnType<typeof ShowTicketServ
   await ticket.reload({ include: ["contact", "queue", "whatsapp", "user", "tags"] });
 
   const io = getIO();
-  io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
-    .to(getScopedNotificationRoom(ticket.whatsappId))
-    .to(ticket.id.toString())
-    .emit("ticket", {
-      action: "update",
-      ticket
-    });
+  let broadcaster = io
+    .to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
+    .to(getScopedNotificationRoom(ticket.whatsappId));
+
+  if (ticket.userId) {
+    broadcaster = broadcaster
+      .to(getUserScopedTicketsRoom(ticket.status, ticket.userId))
+      .to(getUserScopedNotificationRoom(ticket.userId));
+  }
+
+  broadcaster.to(ticket.id.toString()).emit("ticket", {
+    action: "update",
+    ticket
+  });
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {

@@ -420,24 +420,9 @@ const reducer = (state, action) => {
 			}
 
 			const isCurrentUsersTicket = String(ticket.userId || "") === String(user?.id || "");
-			const hasAssignedUser = ticket.userId !== null && ticket.userId !== undefined && ticket.userId !== "";
 
 			if (status === "pending") {
-				if (isCurrentUsersTicket) {
-					return true;
-				}
-
-				if (hasAssignedUser) {
-					return false;
-				}
-
-				const hasSharedPendingScope = selectedQueueIds.length > 0 || Boolean(user?.whatsappId);
-
-				if (!hasSharedPendingScope) {
-					return false;
-				}
-
-				return true;
+				return isCurrentUsersTicket;
 			}
 
 			if (isCurrentUsersTicket) {

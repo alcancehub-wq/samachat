@@ -6,7 +6,12 @@ import DeleteTicketService from "../services/TicketServices/DeleteTicketService"
 import ListTicketsService from "../services/TicketServices/ListTicketsService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
-import { getScopedNotificationRoom, getScopedTicketsRoom } from "../helpers/socketRooms";
+import {
+  getScopedNotificationRoom,
+  getScopedTicketsRoom,
+  getUserScopedNotificationRoom,
+  getUserScopedTicketsRoom
+} from "../helpers/socketRooms";
 import SetTicketMessagesAsUnread from "../helpers/SetTicketMessagesAsUnread";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
@@ -84,9 +89,17 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const ticket = await CreateTicketService({ contactId, status, userId });
 
   const io = getIO();
-  io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
-    .to(getScopedNotificationRoom(ticket.whatsappId))
-    .emit("ticket", {
+  let broadcaster = io
+    .to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
+    .to(getScopedNotificationRoom(ticket.whatsappId));
+
+  if (ticket.userId) {
+    broadcaster = broadcaster
+      .to(getUserScopedTicketsRoom(ticket.status, ticket.userId))
+      .to(getUserScopedNotificationRoom(ticket.userId));
+  }
+
+  broadcaster.emit("ticket", {
     action: "update",
     ticket
   });
@@ -152,13 +165,21 @@ export const remove = async (
   });
 
   const io = getIO();
-  io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
+  let broadcaster = io
+    .to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
     .to(ticketId)
-    .to(getScopedNotificationRoom(ticket.whatsappId))
-    .emit("ticket", {
-      action: "delete",
-      ticketId: +ticketId
-    });
+    .to(getScopedNotificationRoom(ticket.whatsappId));
+
+  if (ticket.userId) {
+    broadcaster = broadcaster
+      .to(getUserScopedTicketsRoom(ticket.status, ticket.userId))
+      .to(getUserScopedNotificationRoom(ticket.userId));
+  }
+
+  broadcaster.emit("ticket", {
+    action: "delete",
+    ticketId: +ticketId
+  });
 
   return res.status(200).json({ message: "ticket deleted" });
 };

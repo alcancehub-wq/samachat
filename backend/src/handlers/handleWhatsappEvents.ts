@@ -452,7 +452,6 @@ export const handleMessage = async (
       !ticket.queue &&
       !contextPayload.groupContact &&
       !processedMessage.fromMe &&
-      !ticket.userId &&
       whatsapp.queues.length >= 1
     ) {
       await handleQueueLogic(
