@@ -270,7 +270,7 @@ const SendWhatsAppMessage = async ({
     }
     return sentMessage;
   } catch (err) {
-    if (err instanceof AppError && err.message === "ERR_WAPP_INVALID_CONTACT") {
+    if (err instanceof AppError) {
       throw err;
     }
     logger.error(

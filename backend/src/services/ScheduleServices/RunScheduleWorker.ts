@@ -9,6 +9,7 @@ import { parseScheduledAt } from "./normalizeScheduledAt";
 
 const DEFAULT_POLL_MS = 5000;
 const DEFAULT_BATCH_SIZE = 20;
+const RETRYABLE_SCHEDULE_ERRORS = new Set(["ERR_WAPP_NOT_INITIALIZED"]);
 
 const parseNumber = (value: string | undefined, fallback: number): number => {
   if (!value) {
@@ -69,11 +70,16 @@ const markSent = async (scheduleId: number, resultMessage: string): Promise<void
   });
 };
 
-const releasePending = async (scheduleId: number, message: string): Promise<void> => {
+const releasePending = async (
+  scheduleId: number,
+  message: string,
+  errorMessage?: string
+): Promise<void> => {
   await Schedule.update(
     {
       status: "pending",
-      lastError: null
+      lastError: errorMessage || null,
+      lastResult: null
     },
     {
       where: {
@@ -87,8 +93,34 @@ const releasePending = async (scheduleId: number, message: string): Promise<void
     scheduleId,
     status: "pending",
     message,
+    error: errorMessage,
     executedAt: new Date()
   });
+};
+
+const extractErrorMessage = (error: unknown): string => {
+  if (typeof error === "string" && error.trim()) {
+    return error.trim();
+  }
+
+  if (error && typeof error === "object") {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) {
+      return message.trim();
+    }
+  }
+
+  return "Schedule execution failed";
+};
+
+const isRetryableScheduleError = (errorMessage: string): boolean => {
+  if (RETRYABLE_SCHEDULE_ERRORS.has(errorMessage)) {
+    return true;
+  }
+
+  return /session\s+not\s+ready|provider\s+not\s+ready|connecting\s+timeout/i.test(
+    errorMessage
+  );
 };
 
 const executeSchedule = async (scheduleId: number): Promise<void> => {
@@ -136,7 +168,17 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
     await SendWhatsAppMessage({ body: schedule.body, ticket });
     await markSent(schedule.id, "Schedule sent successfully");
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Schedule execution failed";
+    const message = extractErrorMessage(error);
+
+    if (isRetryableScheduleError(message)) {
+      await releasePending(
+        schedule.id,
+        "Retrying schedule because WhatsApp session is not ready",
+        message
+      );
+      return;
+    }
+
     await markFailed(schedule.id, message);
   }
 };

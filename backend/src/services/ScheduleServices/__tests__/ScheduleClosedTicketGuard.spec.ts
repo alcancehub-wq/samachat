@@ -9,6 +9,7 @@ import CreateScheduleLogService from "../CreateScheduleLogService";
 import ShowTicketService from "../../TicketServices/ShowTicketService";
 import SendWhatsAppMessage from "../../WbotServices/SendWhatsAppMessage";
 import { ERR_SCHEDULE_TICKET_CLOSED } from "../assertScheduleTicketIsActive";
+import AppError from "../../../errors/AppError";
 
 const FIXED_NOW = new Date("2026-05-23T12:00:00.000Z");
 
@@ -322,7 +323,8 @@ describe("Schedule closed ticket guards", () => {
     expect(scheduleUpdateStaticMock).toHaveBeenCalledWith(
       {
         status: "pending",
-        lastError: null
+        lastError: null,
+        lastResult: null
       },
       {
         where: {
@@ -385,4 +387,127 @@ describe("Schedule closed ticket guards", () => {
       expect(scheduleUpdateStaticMock).not.toHaveBeenCalled();
     }
   );
+
+  it("returns the schedule to pending when WhatsApp is not initialized yet", async () => {
+    scheduleFindByPkMock.mockResolvedValue({
+      id: 35,
+      status: "processing",
+      ticketId: 35,
+      body: "scheduled body",
+      scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+    });
+    showTicketServiceMock.mockResolvedValue({ id: 35, status: "open" });
+    sendWhatsAppMessageMock.mockRejectedValue(new AppError("ERR_WAPP_NOT_INITIALIZED"));
+
+    await executeSchedule(35);
+
+    expect(scheduleUpdateStaticMock).toHaveBeenCalledWith(
+      {
+        status: "pending",
+        lastError: "ERR_WAPP_NOT_INITIALIZED",
+        lastResult: null
+      },
+      {
+        where: {
+          id: 35,
+          status: "processing"
+        }
+      }
+    );
+    expect(createScheduleLogServiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleId: 35,
+        status: "pending",
+        message: "Retrying schedule because WhatsApp session is not ready",
+        error: "ERR_WAPP_NOT_INITIALIZED"
+      })
+    );
+  });
+
+  it("preserves definitive send errors instead of masking them as generic failures", async () => {
+    scheduleFindByPkMock.mockResolvedValue({
+      id: 36,
+      status: "processing",
+      ticketId: 36,
+      body: "scheduled body",
+      scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+    });
+    showTicketServiceMock.mockResolvedValue({ id: 36, status: "open" });
+    sendWhatsAppMessageMock.mockRejectedValue({ message: "ERR_WAPP_INVALID_CONTACT" });
+
+    await executeSchedule(36);
+
+    expect(scheduleUpdateStaticMock).toHaveBeenCalledWith(
+      {
+        status: "failed",
+        lastError: "ERR_WAPP_INVALID_CONTACT"
+      },
+      { where: { id: 36 } }
+    );
+    expect(createScheduleLogServiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleId: 36,
+        status: "failed",
+        error: "ERR_WAPP_INVALID_CONTACT"
+      })
+    );
+  });
+
+  it("retries on a later worker pass without duplicating a successful send", async () => {
+    scheduleFindByPkMock
+      .mockResolvedValueOnce({
+        id: 37,
+        status: "processing",
+        ticketId: 37,
+        body: "scheduled body",
+        scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+      })
+      .mockResolvedValueOnce({
+        id: 37,
+        status: "processing",
+        ticketId: 37,
+        body: "scheduled body",
+        scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+      })
+      .mockResolvedValueOnce({
+        id: 37,
+        status: "sent",
+        ticketId: 37,
+        body: "scheduled body",
+        scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+      });
+    showTicketServiceMock.mockResolvedValue({ id: 37, status: "open" });
+    sendWhatsAppMessageMock
+      .mockRejectedValueOnce(new AppError("ERR_WAPP_NOT_INITIALIZED"))
+      .mockResolvedValueOnce({});
+
+    await executeSchedule(37);
+    await executeSchedule(37);
+    await executeSchedule(37);
+
+    expect(sendWhatsAppMessageMock).toHaveBeenCalledTimes(2);
+    expect(scheduleUpdateStaticMock).toHaveBeenNthCalledWith(
+      1,
+      {
+        status: "pending",
+        lastError: "ERR_WAPP_NOT_INITIALIZED",
+        lastResult: null
+      },
+      {
+        where: {
+          id: 37,
+          status: "processing"
+        }
+      }
+    );
+    expect(scheduleUpdateStaticMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        status: "sent",
+        lastResult: "Schedule sent successfully",
+        lastError: null
+      }),
+      { where: { id: 37 } }
+    );
+  });
 });
