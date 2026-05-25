@@ -2,9 +2,38 @@ import { subHours } from "date-fns";
 import { Op } from "sequelize";
 import { getIO } from "../../libs/socket";
 import Contact from "../../models/Contact";
+import Tag from "../../models/Tag";
 import Ticket from "../../models/Ticket";
+import TicketTag from "../../models/TicketTag";
 import { getScopedNotificationRoom, getScopedTicketsRoom } from "../../helpers/socketRooms";
+import { FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag";
 import ShowTicketService from "./ShowTicketService";
+
+const removeAutomaticFollowUpTag = async (
+  ticketId: number,
+  oldStatus?: string | null
+): Promise<boolean> => {
+  if (oldStatus !== "closed") {
+    return false;
+  }
+
+  const followUpTag = await Tag.findOne({
+    where: { name: FOLLOW_UP_TAG_NAME }
+  });
+
+  if (!followUpTag) {
+    return false;
+  }
+
+  const removedCount = await TicketTag.destroy({
+    where: {
+      ticketId,
+      tagId: followUpTag.id
+    }
+  });
+
+  return removedCount > 0;
+};
 
 const emitAutomaticPendingTransition = ({
   ticket,
@@ -117,6 +146,10 @@ const FindOrCreateTicketService = async (
 		pendingSince: new Date(),
       whatsappId
     });
+  }
+
+  if (transitionedTicketId === ticket.id) {
+    await removeAutomaticFollowUpTag(ticket.id, transitionedFromStatus);
   }
 
   ticket = await ShowTicketService(ticket.id);
