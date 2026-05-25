@@ -1770,6 +1770,7 @@ const messages = {
         ERR_SCHEDULE_BODY_REQUIRED: "A mensagem do agendamento é obrigatória.",
         ERR_SCHEDULE_DATE_REQUIRED: "A data do agendamento é obrigatória.",
         ERR_SCHEDULE_DATE_INVALID: "A data do agendamento é inválida.",
+        ERR_SCHEDULE_TICKET_CLOSED: "Não é possível agendar em um ticket resolvido.",
         ERR_FETCH_WAPP_MSG:
           "Erro ao buscar a mensagem no WhatsApp, talvez ela seja muito antiga.",
         ERR_QUEUE_COLOR_ALREADY_EXISTS:

@@ -1748,6 +1748,7 @@ const messages = {
         ERR_SCHEDULE_BODY_REQUIRED: "Schedule message is required.",
         ERR_SCHEDULE_DATE_REQUIRED: "Schedule date is required.",
         ERR_SCHEDULE_DATE_INVALID: "Schedule date is invalid.",
+        ERR_SCHEDULE_TICKET_CLOSED: "Cannot schedule messages for a resolved ticket.",
         ERR_FETCH_WAPP_MSG:
           "Error fetching the message in WhtasApp, maybe it is too old.",
         ERR_QUEUE_COLOR_ALREADY_EXISTS:

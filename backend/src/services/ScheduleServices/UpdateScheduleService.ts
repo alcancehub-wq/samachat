@@ -4,6 +4,7 @@ import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
 import User from "../../models/User";
 import CreateScheduleLogService from "./CreateScheduleLogService";
+import assertScheduleTicketIsActive from "./assertScheduleTicketIsActive";
 
 interface ScheduleData {
   body?: string;
@@ -64,11 +65,26 @@ const UpdateScheduleService = async ({
     }
   }
 
-  if (scheduleData.ticketId) {
-    const ticket = await Ticket.findByPk(scheduleData.ticketId);
-    if (!ticket) {
+  if (schedule.ticketId !== null && schedule.ticketId !== undefined) {
+    const currentTicket = await Ticket.findByPk(schedule.ticketId);
+    if (!currentTicket) {
       throw new AppError("ERR_NO_TICKET_FOUND", 404);
     }
+
+    assertScheduleTicketIsActive(currentTicket);
+  }
+
+  if (
+    scheduleData.ticketId !== undefined &&
+    scheduleData.ticketId !== null &&
+    scheduleData.ticketId !== schedule.ticketId
+  ) {
+    const nextTicket = await Ticket.findByPk(scheduleData.ticketId);
+    if (!nextTicket) {
+      throw new AppError("ERR_NO_TICKET_FOUND", 404);
+    }
+
+    assertScheduleTicketIsActive(nextTicket);
   }
 
   if (scheduleData.contactId) {

@@ -4,6 +4,7 @@ import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
 import User from "../../models/User";
 import CreateScheduleLogService from "./CreateScheduleLogService";
+import assertScheduleTicketIsActive from "./assertScheduleTicketIsActive";
 
 interface Request {
   body: string;
@@ -66,6 +67,8 @@ const CreateScheduleService = async ({
     if (!ticket) {
       throw new AppError("ERR_NO_TICKET_FOUND", 404);
     }
+
+    assertScheduleTicketIsActive(ticket);
   }
 
   if (contactId) {

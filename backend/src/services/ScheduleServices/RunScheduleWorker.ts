@@ -4,6 +4,7 @@ import CreateScheduleLogService from "./CreateScheduleLogService";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 import { logger } from "../../utils/logger";
+import { ERR_SCHEDULE_TICKET_CLOSED, isClosedScheduleTicket } from "./assertScheduleTicketIsActive";
 
 const DEFAULT_POLL_MS = 5000;
 const DEFAULT_BATCH_SIZE = 20;
@@ -81,6 +82,20 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
 
   try {
     const ticket = await ShowTicketService(schedule.ticketId);
+
+    if (isClosedScheduleTicket(ticket)) {
+      logger.warn(
+        {
+          scheduleId: schedule.id,
+          ticketId: schedule.ticketId,
+          ticketStatus: ticket.status
+        },
+        "Blocked schedule execution for closed ticket"
+      );
+      await markFailed(schedule.id, ERR_SCHEDULE_TICKET_CLOSED);
+      return;
+    }
+
     await SendWhatsAppMessage({ body: schedule.body, ticket });
     await markSent(schedule.id, "Schedule sent successfully");
   } catch (error) {
@@ -145,5 +160,7 @@ const startScheduleWorker = (): void => {
   void tick();
   setInterval(tick, pollMs);
 };
+
+export { executeSchedule, runScheduleWorkerOnce };
 
 export default startScheduleWorker;
