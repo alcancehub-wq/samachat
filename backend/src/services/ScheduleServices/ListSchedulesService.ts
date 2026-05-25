@@ -1,8 +1,10 @@
+import AppError from "../../errors/AppError";
 import { Sequelize, WhereOptions, Op } from "sequelize";
 import Schedule from "../../models/Schedule";
 import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
 import User from "../../models/User";
+import { ScheduleAccessData, assertScheduleAccess, isAdminScheduleAccess } from "./scheduleAccess";
 
 interface Request {
   searchParam?: string;
@@ -12,6 +14,7 @@ interface Request {
   contactId?: number;
   scheduledFrom?: Date | string;
   scheduledTo?: Date | string;
+  accessData?: ScheduleAccessData;
 }
 
 const toDate = (value?: Date | string): Date | undefined => {
@@ -30,7 +33,8 @@ const ListSchedulesService = async ({
   ticketId,
   contactId,
   scheduledFrom,
-  scheduledTo
+  scheduledTo,
+  accessData
 }: Request): Promise<Schedule[]> => {
   const trimmedParam = searchParam.trim();
   const whereCondition: WhereOptions = {};
@@ -97,7 +101,7 @@ const ListSchedulesService = async ({
       },
       {
         model: Ticket,
-        attributes: ["id", "status", "lastMessage"]
+        attributes: ["id", "status", "lastMessage", "userId", "queueId", "whatsappId"]
       },
       {
         model: Contact,
@@ -107,7 +111,26 @@ const ListSchedulesService = async ({
     order: [["scheduledAt", "DESC"]]
   });
 
-  return schedules;
+  if (!accessData || isAdminScheduleAccess(accessData)) {
+    return schedules;
+  }
+
+  const visibleSchedules: Schedule[] = [];
+
+  for (const schedule of schedules) {
+    try {
+      await assertScheduleAccess(schedule as Schedule & { ticket?: Ticket | null }, accessData);
+      visibleSchedules.push(schedule);
+    } catch (error) {
+      if ((error as AppError)?.statusCode === 403) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  return visibleSchedules;
 };
 
 export default ListSchedulesService;

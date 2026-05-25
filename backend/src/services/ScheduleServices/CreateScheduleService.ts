@@ -5,6 +5,7 @@ import Contact from "../../models/Contact";
 import User from "../../models/User";
 import CreateScheduleLogService from "./CreateScheduleLogService";
 import assertScheduleTicketIsActive from "./assertScheduleTicketIsActive";
+import { ScheduleAccessData, loadScheduleTicketForAccess } from "./scheduleAccess";
 
 interface Request {
   body: string;
@@ -14,6 +15,7 @@ interface Request {
   ticketId?: number | null;
   contactId?: number | null;
   createdById?: number | null;
+  accessData?: ScheduleAccessData;
 }
 
 const CreateScheduleService = async ({
@@ -23,7 +25,8 @@ const CreateScheduleService = async ({
   assigneeId,
   ticketId,
   contactId,
-  createdById
+  createdById,
+  accessData
 }: Request): Promise<Schedule> => {
   const trimmedBody = body.trim();
 
@@ -62,11 +65,8 @@ const CreateScheduleService = async ({
     }
   }
 
-  if (ticketId) {
-    const ticket = await Ticket.findByPk(ticketId);
-    if (!ticket) {
-      throw new AppError("ERR_NO_TICKET_FOUND", 404);
-    }
+  if (ticketId !== undefined || accessData) {
+    const ticket = await loadScheduleTicketForAccess(ticketId, accessData);
 
     assertScheduleTicketIsActive(ticket);
   }

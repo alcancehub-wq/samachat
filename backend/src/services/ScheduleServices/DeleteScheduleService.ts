@@ -1,12 +1,11 @@
-import Schedule from "../../models/Schedule";
-import AppError from "../../errors/AppError";
+import ShowScheduleService from "./ShowScheduleService";
+import { ScheduleAccessData } from "./scheduleAccess";
 
-const DeleteScheduleService = async (id: string | number): Promise<void> => {
-  const schedule = await Schedule.findByPk(id);
-
-  if (!schedule) {
-    throw new AppError("ERR_NO_SCHEDULE_FOUND", 404);
-  }
+const DeleteScheduleService = async (
+  id: string | number,
+  accessData?: ScheduleAccessData
+): Promise<void> => {
+  const schedule = await ShowScheduleService(id, accessData);
 
   await schedule.destroy();
 };

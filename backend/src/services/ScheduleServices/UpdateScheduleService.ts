@@ -5,6 +5,12 @@ import Contact from "../../models/Contact";
 import User from "../../models/User";
 import CreateScheduleLogService from "./CreateScheduleLogService";
 import assertScheduleTicketIsActive from "./assertScheduleTicketIsActive";
+import ShowScheduleService from "./ShowScheduleService";
+import {
+  ScheduleAccessData,
+  isAdminScheduleAccess,
+  loadScheduleTicketForAccess
+} from "./scheduleAccess";
 
 interface ScheduleData {
   body?: string;
@@ -22,6 +28,7 @@ interface ScheduleData {
 interface Request {
   scheduleId: string;
   scheduleData: ScheduleData;
+  accessData?: ScheduleAccessData;
 }
 
 const normalizeDate = (value?: Date | string | null): Date | null | undefined => {
@@ -43,13 +50,10 @@ const normalizeDate = (value?: Date | string | null): Date | null | undefined =>
 
 const UpdateScheduleService = async ({
   scheduleId,
-  scheduleData
+  scheduleData,
+  accessData
 }: Request): Promise<Schedule> => {
-  const schedule = await Schedule.findByPk(scheduleId);
-
-  if (!schedule) {
-    throw new AppError("ERR_NO_SCHEDULE_FOUND", 404);
-  }
+  const schedule = await ShowScheduleService(scheduleId, accessData);
 
   const nextBody =
     scheduleData.body !== undefined ? scheduleData.body.trim() : undefined;
@@ -66,12 +70,19 @@ const UpdateScheduleService = async ({
   }
 
   if (schedule.ticketId !== null && schedule.ticketId !== undefined) {
-    const currentTicket = await Ticket.findByPk(schedule.ticketId);
-    if (!currentTicket) {
-      throw new AppError("ERR_NO_TICKET_FOUND", 404);
-    }
+    const currentTicket =
+      (schedule as Schedule & { ticket?: Ticket | null }).ticket ||
+      (await loadScheduleTicketForAccess(schedule.ticketId, accessData));
 
     assertScheduleTicketIsActive(currentTicket);
+  }
+
+  if (
+    scheduleData.ticketId === null &&
+    accessData &&
+    !isAdminScheduleAccess(accessData)
+  ) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
   if (
@@ -79,10 +90,10 @@ const UpdateScheduleService = async ({
     scheduleData.ticketId !== null &&
     scheduleData.ticketId !== schedule.ticketId
   ) {
-    const nextTicket = await Ticket.findByPk(scheduleData.ticketId);
-    if (!nextTicket) {
-      throw new AppError("ERR_NO_TICKET_FOUND", 404);
-    }
+    const nextTicket = await loadScheduleTicketForAccess(
+      scheduleData.ticketId,
+      accessData
+    );
 
     assertScheduleTicketIsActive(nextTicket);
   }

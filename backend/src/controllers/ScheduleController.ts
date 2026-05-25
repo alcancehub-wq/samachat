@@ -9,6 +9,7 @@ import UpdateScheduleService from "../services/ScheduleServices/UpdateScheduleSe
 import DeleteScheduleService from "../services/ScheduleServices/DeleteScheduleService";
 
 import AppError from "../errors/AppError";
+import { ScheduleAccessData } from "../services/ScheduleServices/scheduleAccess";
 
 type IndexQuery = {
   searchParam?: string;
@@ -29,6 +30,11 @@ interface ScheduleData {
   contactId?: number | null;
 }
 
+const getScheduleAccessData = (req: Request): ScheduleAccessData => ({
+  userId: req.user.id,
+  profile: req.user.profile
+});
+
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const {
     searchParam,
@@ -47,7 +53,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     ticketId: ticketId ? Number(ticketId) : undefined,
     contactId: contactId ? Number(contactId) : undefined,
     scheduledFrom,
-    scheduledTo
+    scheduledTo,
+    accessData: getScheduleAccessData(req)
   });
 
   return res.json(schedules);
@@ -75,7 +82,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     ...newSchedule,
     body: newSchedule.body as string,
     scheduledAt: newSchedule.scheduledAt as string,
-    createdById: Number(req.user.id)
+    createdById: Number(req.user.id),
+    accessData: getScheduleAccessData(req)
   });
 
   const io = getIO();
@@ -90,7 +98,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { scheduleId } = req.params;
 
-  const schedule = await ShowScheduleService(scheduleId);
+  const schedule = await ShowScheduleService(scheduleId, getScheduleAccessData(req));
 
   return res.status(200).json(schedule);
 };
@@ -117,7 +125,8 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
 
   const schedule = await UpdateScheduleService({
     scheduleId,
-    scheduleData
+    scheduleData,
+    accessData: getScheduleAccessData(req)
   });
 
   const io = getIO();
@@ -134,7 +143,8 @@ export const cancel = async (req: Request, res: Response): Promise<Response> => 
 
   const schedule = await UpdateScheduleService({
     scheduleId,
-    scheduleData: { status: "canceled" }
+    scheduleData: { status: "canceled" },
+    accessData: getScheduleAccessData(req)
   });
 
   const io = getIO();
@@ -151,7 +161,8 @@ export const reopen = async (req: Request, res: Response): Promise<Response> => 
 
   const schedule = await UpdateScheduleService({
     scheduleId,
-    scheduleData: { status: "pending" }
+    scheduleData: { status: "pending" },
+    accessData: getScheduleAccessData(req)
   });
 
   const io = getIO();
@@ -166,7 +177,7 @@ export const reopen = async (req: Request, res: Response): Promise<Response> => 
 export const remove = async (req: Request, res: Response): Promise<Response> => {
   const { scheduleId } = req.params;
 
-  await DeleteScheduleService(scheduleId);
+  await DeleteScheduleService(scheduleId, getScheduleAccessData(req));
 
   const io = getIO();
   io.emit("schedule", {

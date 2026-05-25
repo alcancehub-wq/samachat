@@ -4,8 +4,12 @@ import User from "../../models/User";
 import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
 import AppError from "../../errors/AppError";
+import { ScheduleAccessData, assertScheduleAccess } from "./scheduleAccess";
 
-const ShowScheduleService = async (id: string | number): Promise<Schedule> => {
+const ShowScheduleService = async (
+  id: string | number,
+  accessData?: ScheduleAccessData
+): Promise<Schedule> => {
   const schedule = await Schedule.findByPk(id, {
     include: [
       {
@@ -20,7 +24,7 @@ const ShowScheduleService = async (id: string | number): Promise<Schedule> => {
       },
       {
         model: Ticket,
-        attributes: ["id", "status", "lastMessage"]
+        attributes: ["id", "status", "lastMessage", "userId", "queueId", "whatsappId"]
       },
       {
         model: Contact,
@@ -37,6 +41,8 @@ const ShowScheduleService = async (id: string | number): Promise<Schedule> => {
   if (!schedule) {
     throw new AppError("ERR_NO_SCHEDULE_FOUND", 404);
   }
+
+  await assertScheduleAccess(schedule as Schedule & { ticket?: Ticket | null }, accessData);
 
   return schedule;
 };
