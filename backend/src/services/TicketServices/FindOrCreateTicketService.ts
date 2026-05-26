@@ -128,9 +128,10 @@ const FindOrCreateTicketService = async (
       transitionedTicketId = ticket.id;
       transitionedFromStatus = ticket.status;
       transitionedFromWhatsappId = ticket.whatsappId;
+      const preservedUserId = ticket.userId ?? null;
       await ticket.update({
         status: "pending",
-        userId: null,
+        userId: preservedUserId,
         unreadMessages,
         pendingSince: new Date()
       });

@@ -86,6 +86,7 @@ describe("FindOrCreateTicketService", () => {
       .mockResolvedValueOnce({
         id: 55,
         status: "closed",
+        userId: 7,
         whatsappId: 77,
         update: ticketUpdateMock
       });
@@ -104,7 +105,7 @@ describe("FindOrCreateTicketService", () => {
 
     expect(ticketUpdateMock).toHaveBeenCalledWith({
       status: "pending",
-      userId: null,
+      userId: 7,
       unreadMessages: 4,
       pendingSince: expect.any(Date)
     });
@@ -176,6 +177,7 @@ describe("FindOrCreateTicketService", () => {
       .mockResolvedValueOnce({
         id: 91,
         status: "closed",
+        userId: null,
         whatsappId: 13,
         tags: [{ id: 7, name: "Follow up" }],
         update: ticketUpdateMock

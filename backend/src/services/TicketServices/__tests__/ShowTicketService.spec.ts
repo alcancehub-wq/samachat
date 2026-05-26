@@ -42,6 +42,30 @@ describe("ShowTicketService access control", () => {
 		expect(showUserServiceMock).toHaveBeenCalledWith(7);
   });
 
+  it("allows the assigned user even when whatsapp scope differs", async () => {
+    const ticket = {
+      id: 108,
+      userId: 7,
+      queueId: 11,
+      whatsappId: 77,
+      status: "pending"
+    };
+
+    ticketFindByPkMock.mockResolvedValue(ticket);
+    showUserServiceMock.mockResolvedValue({
+      id: 7,
+      whatsappId: 33,
+      queues: []
+    });
+
+    await expect(
+      ShowTicketService(108, {
+        userId: 7,
+        profile: "user"
+      })
+    ).resolves.toBe(ticket);
+  });
+
   it("allows queue members to preview pending tickets assigned to nobody", async () => {
     const ticket = {
       id: 102,

@@ -54,12 +54,7 @@ const CheckTicketAccess = async ({
   const userWhatsappId = getUserScopedWhatsappId(user);
 
   if (Number(ticket.userId) === Number(userId)) {
-    if (
-      !userWhatsappId ||
-      Number(ticket.whatsappId) === Number(userWhatsappId)
-    ) {
-      return;
-    }
+    return;
   }
 
   if (userWhatsappId && Number(ticket.whatsappId) !== Number(userWhatsappId)) {
