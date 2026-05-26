@@ -3,12 +3,7 @@ import Message from "../models/Message";
 import Ticket from "../models/Ticket";
 import { logger } from "../utils/logger";
 import { whatsappProvider } from "../providers/WhatsApp";
-import {
-  getScopedNotificationRoom,
-  getScopedTicketsRoom,
-  getUserScopedNotificationRoom,
-  getUserScopedTicketsRoom
-} from "./socketRooms";
+import { getScopedNotificationRoom, getScopedTicketsRoom } from "./socketRooms";
 
 const SetTicketMessagesAsRead = async (ticket: Ticket): Promise<void> => {
   await Message.update(
@@ -37,20 +32,12 @@ const SetTicketMessagesAsRead = async (ticket: Ticket): Promise<void> => {
   }
 
   const io = getIO();
-  let broadcaster = io
-    .to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
-    .to(getScopedNotificationRoom(ticket.whatsappId));
-
-  if (ticket.userId) {
-    broadcaster = broadcaster
-      .to(getUserScopedTicketsRoom(ticket.status, ticket.userId))
-      .to(getUserScopedNotificationRoom(ticket.userId));
-  }
-
-  broadcaster.emit("ticket", {
-    action: "updateUnread",
-    ticketId: ticket.id
-  });
+  io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
+    .to(getScopedNotificationRoom(ticket.whatsappId))
+    .emit("ticket", {
+      action: "updateUnread",
+      ticketId: ticket.id
+    });
 };
 
 export default SetTicketMessagesAsRead;

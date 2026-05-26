@@ -2,7 +2,6 @@ import Ticket from "../../../models/Ticket";
 import Tag from "../../../models/Tag";
 import TicketTag from "../../../models/TicketTag";
 import { getIO } from "../../../libs/socket";
-import GetOperationalOwnerUserId from "../../../helpers/GetOperationalOwnerUserId";
 import FindOrCreateTicketService from "../FindOrCreateTicketService";
 import ShowTicketService from "../ShowTicketService";
 
@@ -19,8 +18,6 @@ jest.mock("../../../models/TicketTag", () => ({
   destroy: jest.fn()
 }));
 
-jest.mock("../../../helpers/GetOperationalOwnerUserId", () => jest.fn());
-
 jest.mock("../../../libs/socket", () => ({
   getIO: jest.fn()
 }));
@@ -31,8 +28,6 @@ const ticketFindOneMock = Ticket.findOne as jest.Mock;
 const ticketCreateMock = Ticket.create as jest.Mock;
 const tagFindOneMock = Tag.findOne as jest.Mock;
 const ticketTagDestroyMock = TicketTag.destroy as jest.Mock;
-const getOperationalOwnerUserIdMock =
-  GetOperationalOwnerUserId as jest.Mock;
 const getIOMock = getIO as jest.Mock;
 const showTicketServiceMock = ShowTicketService as jest.Mock;
 
@@ -50,14 +45,12 @@ describe("FindOrCreateTicketService", () => {
     getIOMock.mockReturnValue(ioMock);
     tagFindOneMock.mockResolvedValue(null);
     ticketTagDestroyMock.mockResolvedValue(0);
-    getOperationalOwnerUserIdMock.mockResolvedValue(9);
   });
 
   it("reuses open tickets only from the same whatsapp connection", async () => {
     const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
     ticketFindOneMock.mockResolvedValue({
       id: 55,
-      userId: 12,
       update: ticketUpdateMock
     });
     showTicketServiceMock.mockResolvedValue({ id: 55 });
@@ -77,7 +70,6 @@ describe("FindOrCreateTicketService", () => {
       })
     );
     expect(ticketUpdateMock).toHaveBeenCalledWith({ unreadMessages: 4 });
-    expect(getOperationalOwnerUserIdMock).not.toHaveBeenCalled();
     expect(showTicketServiceMock).toHaveBeenCalledWith(55);
     expect(tagFindOneMock).not.toHaveBeenCalled();
     expect(ticketTagDestroyMock).not.toHaveBeenCalled();
@@ -94,7 +86,6 @@ describe("FindOrCreateTicketService", () => {
       .mockResolvedValueOnce({
         id: 55,
         status: "closed",
-        userId: 42,
         whatsappId: 77,
         update: ticketUpdateMock
       });
@@ -113,11 +104,10 @@ describe("FindOrCreateTicketService", () => {
 
     expect(ticketUpdateMock).toHaveBeenCalledWith({
       status: "pending",
-      userId: 42,
+      userId: null,
       unreadMessages: 4,
       pendingSince: expect.any(Date)
     });
-    expect(getOperationalOwnerUserIdMock).not.toHaveBeenCalled();
     expect(tagFindOneMock).toHaveBeenCalledWith({
       where: { name: "Follow up" }
     });
@@ -152,7 +142,7 @@ describe("FindOrCreateTicketService", () => {
     });
   });
 
-  it("creates a new pending ticket with the linked connection owner", async () => {
+  it("preserves current behavior when creating a new ticket", async () => {
     ticketFindOneMock.mockResolvedValue(null);
     ticketCreateMock.mockResolvedValue({ id: 88 });
     showTicketServiceMock.mockResolvedValue({ id: 88, status: "pending" });
@@ -167,49 +157,14 @@ describe("FindOrCreateTicketService", () => {
       contactId: 101,
       status: "pending",
       isGroup: false,
-      userId: 9,
       unreadMessages: 4,
       pendingSince: expect.any(Date),
       whatsappId: 77
     });
-    expect(getOperationalOwnerUserIdMock).toHaveBeenCalledWith(77);
     expect(tagFindOneMock).not.toHaveBeenCalled();
     expect(ticketTagDestroyMock).not.toHaveBeenCalled();
     expect(emitMock).not.toHaveBeenCalled();
     expect(result).toEqual({ id: 88, status: "pending" });
-  });
-
-  it("falls back to the linked connection owner when reopening a closed ticket without owner", async () => {
-    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
-    ticketFindOneMock
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({
-        id: 73,
-        status: "closed",
-        userId: null,
-        whatsappId: 77,
-        update: ticketUpdateMock
-      });
-    showTicketServiceMock.mockResolvedValue({
-      id: 73,
-      status: "pending",
-      userId: 9,
-      whatsappId: 77
-    });
-
-    await FindOrCreateTicketService(
-      { id: 303 } as any,
-      77,
-      1
-    );
-
-    expect(getOperationalOwnerUserIdMock).toHaveBeenCalledWith(77);
-    expect(ticketUpdateMock).toHaveBeenCalledWith({
-      status: "pending",
-      userId: 9,
-      unreadMessages: 1,
-      pendingSince: expect.any(Date)
-    });
   });
 
   it("keeps other tags untouched when a closed ticket has no Follow up relation", async () => {
@@ -221,7 +176,6 @@ describe("FindOrCreateTicketService", () => {
       .mockResolvedValueOnce({
         id: 91,
         status: "closed",
-        userId: 99,
         whatsappId: 13,
         tags: [{ id: 7, name: "Follow up" }],
         update: ticketUpdateMock
@@ -241,7 +195,7 @@ describe("FindOrCreateTicketService", () => {
 
     expect(ticketUpdateMock).toHaveBeenCalledWith({
       status: "pending",
-      userId: 99,
+      userId: null,
       unreadMessages: 2,
       pendingSince: expect.any(Date)
     });

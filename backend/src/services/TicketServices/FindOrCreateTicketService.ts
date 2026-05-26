@@ -5,13 +5,7 @@ import Contact from "../../models/Contact";
 import Tag from "../../models/Tag";
 import Ticket from "../../models/Ticket";
 import TicketTag from "../../models/TicketTag";
-import {
-  getScopedNotificationRoom,
-  getScopedTicketsRoom,
-  getUserScopedNotificationRoom,
-  getUserScopedTicketsRoom
-} from "../../helpers/socketRooms";
-import GetOperationalOwnerUserId from "../../helpers/GetOperationalOwnerUserId";
+import { getScopedNotificationRoom, getScopedTicketsRoom } from "../../helpers/socketRooms";
 import { FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag";
 import ShowTicketService from "./ShowTicketService";
 
@@ -44,13 +38,11 @@ const removeAutomaticFollowUpTag = async (
 const emitAutomaticPendingTransition = ({
   ticket,
   oldStatus,
-  oldWhatsappId,
-  oldUserId
+  oldWhatsappId
 }: {
   ticket: Ticket;
   oldStatus?: string | null;
   oldWhatsappId?: number | null;
-  oldUserId?: number | null;
 }): void => {
   if (oldStatus !== "closed" || ticket.status !== "pending") {
     return;
@@ -58,33 +50,18 @@ const emitAutomaticPendingTransition = ({
 
   const io = getIO();
 
-  let deleteBroadcaster = io.to(getScopedTicketsRoom(oldStatus, oldWhatsappId));
-
-  if (oldUserId) {
-    deleteBroadcaster = deleteBroadcaster.to(
-      getUserScopedTicketsRoom(oldStatus, oldUserId)
-    );
-  }
-
-  deleteBroadcaster.emit("ticket", {
+  io.to(getScopedTicketsRoom(oldStatus, oldWhatsappId)).emit("ticket", {
     action: "delete",
     ticketId: ticket.id
   });
 
-  let updateBroadcaster = io
-    .to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
-    .to(getScopedNotificationRoom(ticket.whatsappId));
-
-  if (ticket.userId) {
-    updateBroadcaster = updateBroadcaster
-      .to(getUserScopedTicketsRoom(ticket.status, ticket.userId))
-      .to(getUserScopedNotificationRoom(ticket.userId));
-  }
-
-  updateBroadcaster.to(ticket.id.toString()).emit("ticket", {
-    action: "update",
-    ticket
-  });
+  io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
+    .to(getScopedNotificationRoom(ticket.whatsappId))
+    .to(ticket.id.toString())
+    .emit("ticket", {
+      action: "update",
+      ticket
+    });
 };
 
 const FindOrCreateTicketService = async (
@@ -97,17 +74,6 @@ const FindOrCreateTicketService = async (
   let transitionedTicketId: number | null = null;
   let transitionedFromStatus: string | null = null;
   let transitionedFromWhatsappId: number | null = null;
-  let transitionedFromUserId: number | null = null;
-  let resolvedOwnerUserId: number | null | undefined;
-
-  const getOwnerUserId = async (): Promise<number | null> => {
-    if (resolvedOwnerUserId !== undefined) {
-      return resolvedOwnerUserId;
-    }
-
-    resolvedOwnerUserId = await GetOperationalOwnerUserId(whatsappId);
-    return resolvedOwnerUserId;
-  };
 
   let ticket = await Ticket.findOne({
     where: {
@@ -121,11 +87,7 @@ const FindOrCreateTicketService = async (
   });
 
   if (ticket) {
-    const ownerUserId = ticket.userId ?? (await getOwnerUserId());
-    await ticket.update({
-      unreadMessages,
-      ...(ticket.userId == null && ownerUserId != null ? { userId: ownerUserId } : {})
-    });
+    await ticket.update({ unreadMessages });
   }
 
   if (!ticket && groupContact) {
@@ -138,14 +100,12 @@ const FindOrCreateTicketService = async (
     });
 
     if (ticket) {
-      const ownerUserId = ticket.userId ?? (await getOwnerUserId());
       transitionedTicketId = ticket.id;
       transitionedFromStatus = ticket.status;
       transitionedFromWhatsappId = ticket.whatsappId;
-      transitionedFromUserId = ticket.userId ?? null;
       await ticket.update({
         status: "pending",
-        userId: ownerUserId,
+        userId: null,
         unreadMessages,
         pendingSince: new Date()
       });
@@ -165,14 +125,12 @@ const FindOrCreateTicketService = async (
     });
 
     if (ticket) {
-      const ownerUserId = ticket.userId ?? (await getOwnerUserId());
       transitionedTicketId = ticket.id;
       transitionedFromStatus = ticket.status;
       transitionedFromWhatsappId = ticket.whatsappId;
-      transitionedFromUserId = ticket.userId ?? null;
       await ticket.update({
         status: "pending",
-        userId: ownerUserId,
+        userId: null,
         unreadMessages,
         pendingSince: new Date()
       });
@@ -180,12 +138,10 @@ const FindOrCreateTicketService = async (
   }
 
   if (!ticket) {
-    const ownerUserId = await getOwnerUserId();
     ticket = await Ticket.create({
       contactId: ticketContactId,
       status: "pending",
       isGroup: !!groupContact,
-      userId: ownerUserId,
       unreadMessages,
 		pendingSince: new Date(),
       whatsappId
@@ -202,8 +158,7 @@ const FindOrCreateTicketService = async (
     emitAutomaticPendingTransition({
       ticket,
       oldStatus: transitionedFromStatus,
-      oldWhatsappId: transitionedFromWhatsappId,
-      oldUserId: transitionedFromUserId
+      oldWhatsappId: transitionedFromWhatsappId
     });
   }
 

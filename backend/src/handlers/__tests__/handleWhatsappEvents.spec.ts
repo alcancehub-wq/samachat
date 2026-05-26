@@ -25,7 +25,6 @@ import CreateOrUpdateContactService from "../../services/ContactServices/CreateO
 import FindOrCreateTicketService from "../../services/TicketServices/FindOrCreateTicketService";
 import CreateMessageService from "../../services/MessageServices/CreateMessageService";
 import ShowWhatsAppService from "../../services/WhatsappService/ShowWhatsAppService";
-import UpdateTicketService from "../../services/TicketServices/UpdateTicketService";
 import HandleIncomingFlowMessageService from "../../services/FlowExecutionServices/HandleIncomingFlowMessageService";
 import { logger } from "../../utils/logger";
 
@@ -40,9 +39,6 @@ const createMessageServiceMock = CreateMessageService as jest.MockedFunction<
 >;
 const showWhatsAppServiceMock = ShowWhatsAppService as jest.MockedFunction<
   typeof ShowWhatsAppService
->;
-const updateTicketServiceMock = UpdateTicketService as jest.MockedFunction<
-  typeof UpdateTicketService
 >;
 const handleIncomingFlowMessageServiceMock =
   HandleIncomingFlowMessageService as jest.MockedFunction<
@@ -215,39 +211,6 @@ describe("handleWhatsappEvents group guard", () => {
     expect(findOrCreateTicketServiceMock).toHaveBeenCalledTimes(1);
     expect(createMessageServiceMock).toHaveBeenCalledTimes(1);
     expect(handleIncomingFlowMessageServiceMock).not.toHaveBeenCalled();
-  });
-
-  it("keeps queue routing active even when the pending ticket already has an owner", async () => {
-    const contact = { id: 16, name: "Larissa" } as any;
-    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
-    const ticket = {
-      id: 118,
-      status: "pending",
-      whatsappId: 35,
-      queue: null,
-      userId: 16,
-      user: { id: 16 },
-      update: ticketUpdateMock
-    } as any;
-
-    createOrUpdateContactServiceMock.mockResolvedValue(contact);
-    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
-    createMessageServiceMock.mockResolvedValue({ id: "msg-1" } as any);
-    showWhatsAppServiceMock.mockResolvedValue({
-      queues: [{ id: 4, name: "Comercial" }],
-      greetingMessage: ""
-    } as any);
-
-    await handleMessage(
-      buildMessagePayload(),
-      buildContactPayload(),
-      buildContextPayload()
-    );
-
-    expect(updateTicketServiceMock).toHaveBeenCalledWith({
-      ticketData: { queueId: 4 },
-      ticketId: 118
-    });
   });
 
   it("ignores group messages fromMe so they do not contaminate individual tickets", async () => {

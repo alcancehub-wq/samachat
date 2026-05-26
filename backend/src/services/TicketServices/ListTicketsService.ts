@@ -123,19 +123,101 @@ const getScopedWhatsappId = (
   return user.whatsappId || user.whatsapp?.id || null;
 };
 
+const buildPendingOwnerScope = (
+  assignedVisibilityScope: WhereOptions | undefined,
+  whatsappVisibilityScope: WhereOptions | undefined
+): WhereOptions =>
+  combineWhere(
+    assignedVisibilityScope,
+    whatsappVisibilityScope
+  );
+
+const buildPendingUnassignedQueueScope = (
+  queueVisibilityScope: WhereOptions | undefined,
+  whatsappVisibilityScope: WhereOptions | undefined
+): WhereOptions | undefined => {
+  if (!queueVisibilityScope) {
+    return undefined;
+  }
+
+  return combineWhere(
+    {
+      userId: null
+    },
+    queueVisibilityScope,
+    whatsappVisibilityScope
+  );
+};
+
+const buildPendingUnassignedWhatsappScope = (
+  scopedWhatsappId: number | null
+): WhereOptions | undefined => {
+  if (!scopedWhatsappId) {
+    return undefined;
+  }
+
+  return {
+    userId: null,
+    queueId: null,
+    whatsappId: scopedWhatsappId
+  };
+};
+
+const buildPendingVisibilityScope = (
+  ...branches: Array<WhereOptions | undefined>
+): WhereOptions => {
+  const filteredBranches = branches.filter(Boolean) as WhereOptions[];
+
+  if (!filteredBranches.length) {
+    return {};
+  }
+
+  if (filteredBranches.length === 1) {
+    return filteredBranches[0];
+  }
+
+  return {
+    [Op.or]: filteredBranches
+  };
+};
+
 const buildVisibilityScope = ({
   isAdmin,
+  status,
   assignedVisibilityScope,
   queueVisibilityScope,
-  whatsappVisibilityScope
+  whatsappVisibilityScope,
+  scopedWhatsappId
 }: {
   isAdmin: boolean;
+  status?: string;
   assignedVisibilityScope?: WhereOptions;
   queueVisibilityScope?: WhereOptions;
   whatsappVisibilityScope?: WhereOptions;
+  scopedWhatsappId?: number | null;
 }): WhereOptions => {
   if (isAdmin) {
     return combineWhere(queueVisibilityScope, whatsappVisibilityScope);
+  }
+
+  if (status === "pending") {
+    const ownerScope = buildPendingOwnerScope(
+      assignedVisibilityScope,
+      whatsappVisibilityScope
+    );
+    const unassignedQueueScope = buildPendingUnassignedQueueScope(
+      queueVisibilityScope,
+      whatsappVisibilityScope
+    );
+    const unassignedWhatsappScope = buildPendingUnassignedWhatsappScope(
+      scopedWhatsappId || null
+    );
+
+    return buildPendingVisibilityScope(
+      ownerScope,
+      unassignedQueueScope,
+      unassignedWhatsappScope
+    );
   }
 
   return combineWhere(
@@ -176,9 +258,11 @@ const ListTicketsService = async ({
     : ({ userId } as WhereOptions);
   const visibilityScope = buildVisibilityScope({
     isAdmin,
+    status,
     assignedVisibilityScope,
     queueVisibilityScope,
-    whatsappVisibilityScope
+    whatsappVisibilityScope,
+    scopedWhatsappId
   });
   let whereCondition: WhereOptions = visibilityScope;
   let includeCondition: Includeable[];

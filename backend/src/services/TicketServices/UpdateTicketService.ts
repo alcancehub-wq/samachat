@@ -1,15 +1,9 @@
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
-import GetOperationalOwnerUserId from "../../helpers/GetOperationalOwnerUserId";
 import SetTicketMessagesAsRead from "../../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../../libs/socket";
 import Ticket from "../../models/Ticket";
 import Tag from "../../models/Tag";
-import {
-  getScopedNotificationRoom,
-  getScopedTicketsRoom,
-  getUserScopedNotificationRoom,
-  getUserScopedTicketsRoom
-} from "../../helpers/socketRooms";
+import { getScopedNotificationRoom, getScopedTicketsRoom } from "../../helpers/socketRooms";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import GetDefaultWhatsAppByUser from "../../helpers/GetDefaultWhatsAppByUser";
@@ -18,7 +12,7 @@ import { FOLLOW_UP_TAG_COLOR, FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag
 
 interface TicketData {
   status?: string;
-  userId?: number | null;
+  userId?: number;
   queueId?: number;
   whatsappId?: number;
   tagIds?: number[];
@@ -57,12 +51,8 @@ const UpdateTicketService = async ({
   await SetTicketMessagesAsRead(ticket);
 
   const oldStatus = ticket.status;
-  const oldUserId = ticket.userId ?? ticket.user?.id;
+  const oldUserId = ticket.user?.id;
   const oldWhatsappId = ticket.whatsappId;
-  const hasExplicitUserSelection = Object.prototype.hasOwnProperty.call(
-    ticketData,
-    "userId"
-  );
 
   let nextWhatsappId = whatsappId;
   const hasExplicitWhatsappSelection =
@@ -90,18 +80,11 @@ const UpdateTicketService = async ({
   }
 
   const nextStatus = status || oldStatus;
-  let nextUserId = hasExplicitUserSelection ? userId ?? null : undefined;
-
-  if (nextStatus === "pending" && nextUserId == null) {
-    nextUserId =
-      oldUserId ||
-      (await GetOperationalOwnerUserId(nextWhatsappId || ticket.whatsappId));
-  }
 
   await ticket.update({
     status,
     queueId,
-    userId: nextUserId,
+    userId,
     pendingSince:
       nextStatus === "pending" && oldStatus !== "pending"
         ? new Date()
@@ -160,34 +143,20 @@ const UpdateTicketService = async ({
   const io = getIO();
 
   if (ticket.status !== oldStatus || ticket.user?.id !== oldUserId) {
-    let deleteBroadcaster = io.to(getScopedTicketsRoom(oldStatus, oldWhatsappId));
+    io.to(getScopedTicketsRoom(oldStatus, oldWhatsappId))
+      .emit("ticket", {
+        action: "delete",
+        ticketId: ticket.id
+      });
+  }
 
-    if (oldUserId) {
-      deleteBroadcaster = deleteBroadcaster.to(
-        getUserScopedTicketsRoom(oldStatus, oldUserId)
-      );
-    }
-
-    deleteBroadcaster.emit("ticket", {
-      action: "delete",
-      ticketId: ticket.id
+  io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
+    .to(getScopedNotificationRoom(ticket.whatsappId))
+    .to(ticketId.toString())
+    .emit("ticket", {
+      action: "update",
+      ticket
     });
-  }
-
-  let updateBroadcaster = io
-    .to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
-    .to(getScopedNotificationRoom(ticket.whatsappId));
-
-  if (ticket.userId) {
-    updateBroadcaster = updateBroadcaster
-      .to(getUserScopedTicketsRoom(ticket.status, ticket.userId))
-      .to(getUserScopedNotificationRoom(ticket.userId));
-  }
-
-  updateBroadcaster.to(ticketId.toString()).emit("ticket", {
-    action: "update",
-    ticket
-  });
 
   return { ticket, oldStatus, oldUserId };
 };
