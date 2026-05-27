@@ -36,6 +36,11 @@ import {
 } from "../../../handlers/handleWhatsappEvents";
 import { enqueueWhatsAppSessionStart } from "../../../services/WbotServices/WhatsAppSessionStartQueue";
 import { deriveWwebjsGroupContext } from "./wwebjsGroupContext";
+import {
+  ensureSessionListed,
+  registerReadySession,
+  resolvePersistedStatusFromChangeState
+} from "./wwebjsSessionRuntime";
 import type {
   WbotGroupContextChat,
   WbotGroupContextSource
@@ -899,11 +904,7 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
       qrCode.generate(qr, { small: true });
       await whatsapp.update({ qrcode: qr, status: "qrcode", retries: 0 });
       readySessions.delete(whatsapp.id);
-
-      const sessionIndex = sessions.findIndex(s => s.id === whatsapp.id);
-      if (sessionIndex === -1) {
-        sessions.push(wbot);
-      }
+      ensureSessionListed(sessions, wbot);
 
       io.emit("whatsappSession", {
         action: "update",
@@ -965,7 +966,7 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
 
       clearReconnectTimers(whatsapp.id);
       reconnectAttempts[whatsapp.id] = 0;
-      readySessions.add(whatsapp.id);
+      registerReadySession(sessions, readySessions, wbot);
 
       try {
         const connectedPhoneNumber = extractSessionPhoneNumber(wbot);
@@ -981,11 +982,6 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
           action: "update",
           session: whatsapp
         });
-
-        const sessionIndex = sessions.findIndex(s => s.id === whatsapp.id);
-        if (sessionIndex === -1) {
-          sessions.push(wbot);
-        }
 
         wbot.sendPresenceAvailable();
         logger.info(
@@ -1010,7 +1006,23 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
         readySessions.delete(whatsapp.id);
       }
       try {
-        await whatsapp.update({ status: newState });
+        const persistedStatus = resolvePersistedStatusFromChangeState(
+          readySessions.has(whatsapp.id),
+          newState
+        );
+
+        if (newState === "CONNECTED" && persistedStatus !== "CONNECTED") {
+          logger.warn(
+            {
+              whatsappId: whatsapp.id,
+              sessionName,
+              newState
+            },
+            "Ignoring CONNECTED state change until ready event completes"
+          );
+        }
+
+        await whatsapp.update({ status: persistedStatus });
 
         io.emit("whatsappSession", {
           action: "update",
