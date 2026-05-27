@@ -6,6 +6,7 @@ jest.mock("../../models/Contact", () => ({
 
 jest.mock("../../models/Ticket", () => ({
   findOne: jest.fn(),
+  findAll: jest.fn(),
   create: jest.fn(),
   update: jest.fn()
 }));
@@ -65,6 +66,7 @@ const contactFindAllMock = Contact.findAll as jest.Mock;
 const contactFindOneMock = Contact.findOne as jest.Mock;
 const contactCreateMock = Contact.create as jest.Mock;
 const ticketFindOneMock = Ticket.findOne as jest.Mock;
+const ticketFindAllMock = Ticket.findAll as jest.Mock;
 const ticketCreateMock = Ticket.create as jest.Mock;
 const tagFindOneMock = Tag.findOne as jest.Mock;
 const ticketTagDestroyMock = TicketTag.destroy as jest.Mock;
@@ -189,6 +191,18 @@ describe("handleWhatsappEvents manual contact echo flow", () => {
         }) || null
       );
     });
+    ticketFindAllMock.mockImplementation(async ({ where }: any) => {
+      const statuses = where?.status?.[Op.in] || [];
+      const contactIds = where?.contactId?.[Op.in] || [];
+
+      return ticketState
+        .filter(ticket =>
+          contactIds.includes(ticket.contactId) &&
+          ticket.whatsappId === where.whatsappId &&
+          statuses.includes(ticket.status)
+        )
+        .sort((left, right) => +new Date(right.updatedAt) - +new Date(left.updatedAt));
+    });
     ticketCreateMock.mockImplementation(async (data: Record<string, unknown>) => {
       const created = attachUpdate({
         id: 2000 + ticketState.length,
@@ -280,5 +294,89 @@ describe("handleWhatsappEvents manual contact echo flow", () => {
     ]);
     expect(messageState.filter(message => message.ticketId === 1173)).toHaveLength(2);
     expect(showTicketServiceMock).toHaveBeenCalledWith(1173);
+  });
+
+  it("prefers the current manual open ticket over an older equivalent pending duplicate", async () => {
+    contactState[0].name = "JULIANA FERREIRA IBIAPINO REIS / MYCON 4557";
+    contactState[0].number = "5599984396105";
+    ticketState[0].contact = contactState[0];
+
+    const staleLegacyContact = attachUpdate({
+      id: 6189,
+      name: "JULIANA FERREIRA IBIAPINO REIS / MYCON 4557",
+      number: "559984396105",
+      lid: null,
+      profilePicUrl: "https://example.com/legacy.jpg",
+      createdAt: new Date("2026-05-20T10:00:00.000Z"),
+      updatedAt: new Date("2026-05-27T13:37:17.000Z")
+    }, new Date("2026-05-27T13:37:17.000Z"));
+
+    const stalePendingTicket = attachUpdate({
+      id: 1154,
+      status: "pending",
+      contactId: 6189,
+      unreadMessages: 0,
+      userId: null,
+      queueId: null,
+      whatsappId: 35,
+      pendingSince: new Date("2026-05-27T13:37:17.000Z"),
+      updatedAt: new Date("2026-05-27T17:18:53.000Z"),
+      queue: null,
+      contact: staleLegacyContact
+    }, new Date("2026-05-27T17:18:53.000Z"));
+
+    contactState.unshift(staleLegacyContact);
+    ticketState.push(stalePendingTicket);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "wamid-out-2",
+        body: "Primeiro envio Juliana",
+        fromMe: true,
+        from: "5511888888888@c.us",
+        to: "5599984396105@c.us"
+      }) as any,
+      buildContactPayload({
+        name: "JULIANA FERREIRA IBIAPINO REIS / MYCON 4557",
+        number: "559984396105",
+        profilePicUrl: "https://example.com/juliana.jpg"
+      }) as any,
+      buildContextPayload({ unreadMessages: 0 }) as any
+    );
+
+    expect(contactCreateMock).not.toHaveBeenCalled();
+    expect(ticketCreateMock).not.toHaveBeenCalled();
+    expect(messageState).toContainEqual(
+      expect.objectContaining({
+        id: "wamid-out-2",
+        ticketId: 1173,
+        body: "Primeiro envio Juliana",
+        fromMe: true
+      })
+    );
+    expect(messageState).not.toContainEqual(
+      expect.objectContaining({
+        id: "wamid-out-2",
+        ticketId: 1154
+      })
+    );
+    expect(ticketState.find(ticket => ticket.id === 1173)).toEqual(
+      expect.objectContaining({
+        status: "open",
+        userId: 16,
+        queueId: 3,
+        whatsappId: 35,
+        contactId: 17179
+      })
+    );
+    expect(ticketState.find(ticket => ticket.id === 1154)).toEqual(
+      expect.objectContaining({
+        status: "pending",
+        userId: null,
+        queueId: null,
+        whatsappId: 35,
+        contactId: 6189
+      })
+    );
   });
 });

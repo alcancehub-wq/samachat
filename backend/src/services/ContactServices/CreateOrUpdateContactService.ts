@@ -32,6 +32,88 @@ const normalizeLid = (value?: string | null): string | undefined => {
   return value.includes("@") ? value : `${value}@lid`;
 };
 
+const resolveActiveTicketRank = (ticket: Ticket): number => {
+  if (ticket.status === "open") {
+    return 0;
+  }
+
+  if (ticket.status === "pending" && ticket.userId) {
+    return 1;
+  }
+
+  if (ticket.status === "pending") {
+    return 2;
+  }
+
+  return 3;
+};
+
+const selectPreferredEquivalentContact = async (
+  contacts: Contact[],
+  whatsappId?: number
+): Promise<Contact | null> => {
+  if (!contacts.length) {
+    return null;
+  }
+
+  if (contacts.length === 1 || !whatsappId) {
+    return contacts[0];
+  }
+
+  const activeTickets = await Ticket.findAll({
+    where: {
+      contactId: {
+        [Op.in]: contacts.map(contact => contact.id)
+      },
+      whatsappId,
+      status: {
+        [Op.in]: ["open", "pending"]
+      }
+    },
+    order: [["updatedAt", "DESC"], ["id", "DESC"]]
+  });
+
+  if (!activeTickets.length) {
+    return contacts[0];
+  }
+
+  const bestTicketByContactId = new Map<number, Ticket>();
+
+  for (const ticket of activeTickets) {
+    const current = bestTicketByContactId.get(ticket.contactId);
+
+    if (!current || resolveActiveTicketRank(ticket) < resolveActiveTicketRank(current)) {
+      bestTicketByContactId.set(ticket.contactId, ticket);
+    }
+  }
+
+  const rankedContacts = contacts
+    .map((contact, index) => ({
+      contact,
+      index,
+      ticket: bestTicketByContactId.get(contact.id) || null
+    }))
+    .sort((left, right) => {
+      const leftRank = left.ticket ? resolveActiveTicketRank(left.ticket) : Number.MAX_SAFE_INTEGER;
+      const rightRank = right.ticket ? resolveActiveTicketRank(right.ticket) : Number.MAX_SAFE_INTEGER;
+
+      if (leftRank !== rightRank) {
+        return leftRank - rightRank;
+      }
+
+      const leftUpdatedAt = left.ticket ? +new Date(left.ticket.updatedAt) : 0;
+      const rightUpdatedAt = right.ticket ? +new Date(right.ticket.updatedAt) : 0;
+
+      if (leftUpdatedAt !== rightUpdatedAt) {
+        return rightUpdatedAt - leftUpdatedAt;
+      }
+
+      return left.index - right.index;
+    });
+
+  return rankedContacts[0]?.contact || contacts[0];
+};
+
 const CreateOrUpdateContactService = async ({
   name,
   number: rawNumber,
@@ -76,7 +158,10 @@ const CreateOrUpdateContactService = async ({
     bareLid ? Contact.findOne({ where: { number: bareLid } }) : null,
     bareLid ? Contact.findOne({ where: { lid: bareLid } }) : null
   ]);
-  const contactByNumber = contactsByNumber[0] || null;
+  const contactByNumber = await selectPreferredEquivalentContact(
+    contactsByNumber,
+    whatsappId
+  );
 
   const resolvedContactByLid =
     contactByLid || legacyContactByBareLid || legacyContactByLid;
@@ -86,7 +171,8 @@ const CreateOrUpdateContactService = async ({
       info: "Multiple equivalent contacts found while reconciling WhatsApp payload",
       incomingNumber: number,
       numberCandidates,
-      contactIds: contactsByNumber.map(contact => contact.id)
+      contactIds: contactsByNumber.map(contact => contact.id),
+      preferredContactId: contactByNumber?.id || null
     });
   }
 
