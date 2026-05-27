@@ -1,5 +1,14 @@
 # Release Notes
 
+## 2026-05-27
+
+### legacy-prod
+
+- Chats/WhatsApp: o provider `wwebjs` deixa de abortar a verificacao de numero no primeiro candidato que falha individualmente; agora o lookup continua testando os proximos candidatos plausiveis antes de concluir erro inconclusivo.
+- Contatos/Envio: o cadastro manual de cliente e o fallback de envio por ticket passam a reaproveitar melhor a heuristica existente de `55 + DDD + numero` versus numero local, reduzindo o caso em que ambos falhavam juntos com `ERR_WAPP_CHECK_CONTACT` mesmo havendo outro candidato plausivel para consulta.
+- Escopo desta correcao: `backend/src/providers/WhatsApp/Implementations/wwebjs.ts`, `backend/src/providers/WhatsApp/Implementations/wwebjsNumberLookup.ts`, `backend/src/providers/WhatsApp/Implementations/__tests__/wwebjsNumberLookup.spec.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao: `pnpm exec jest src/providers/WhatsApp/Implementations/__tests__/wwebjsNumberLookup.spec.ts src/__tests__/unit/WbotServices/CheckNumber.spec.ts --runInBand --coverage=false` aprovado em `backend`; `pnpm exec jest src/__tests__/unit/WbotServices/CheckIsValidContact.spec.ts src/__tests__/unit/WbotServices/SendWhatsAppMessage.spec.ts --runInBand --coverage=false` aprovado em `backend`; `pnpm run build` aprovado em `backend`.
+
 ## 2026-05-25
 
 ### legacy-prod

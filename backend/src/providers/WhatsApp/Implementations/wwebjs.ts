@@ -14,7 +14,6 @@ import Whatsapp from "../../../models/Whatsapp";
 import AppError from "../../../errors/AppError";
 import BuildContactNumberCandidates from "../../../helpers/BuildContactNumberCandidates";
 import IsPlausiblePhoneNumber from "../../../helpers/IsPlausiblePhoneNumber";
-import NormalizeValidatedContactNumber from "../../../helpers/NormalizeValidatedContactNumber";
 import { logger } from "../../../utils/logger";
 import { WhatsappProvider } from "../whatsappProvider";
 import {
@@ -36,6 +35,7 @@ import {
 } from "../../../handlers/handleWhatsappEvents";
 import { enqueueWhatsAppSessionStart } from "../../../services/WbotServices/WhatsAppSessionStartQueue";
 import { deriveWwebjsGroupContext } from "./wwebjsGroupContext";
+import { resolveValidatedNumberFromCandidates } from "./wwebjsNumberLookup";
 import {
   ensureSessionListed,
   registerReadySession,
@@ -741,23 +741,13 @@ const checkNumber = async (
   const sessionPhoneNumber = extractSessionPhoneNumber(wbot);
   const candidates = BuildContactNumberCandidates(number, sessionPhoneNumber);
 
-  for (const candidate of candidates) {
-    const validNumber = await wbot.getNumberId(`${candidate}@c.us`);
-    const normalizedNumber = NormalizeValidatedContactNumber(
-      candidate,
-      validNumber as {
-        user?: string | null;
-        server?: string | null;
-        _serialized?: string | null;
-      }
-    );
-
-    if (normalizedNumber) {
-      return normalizedNumber;
+  return resolveValidatedNumberFromCandidates(candidates, async candidate =>
+    (await wbot.getNumberId(`${candidate}@c.us`)) as {
+      user?: string | null;
+      server?: string | null;
+      _serialized?: string | null;
     }
-  }
-
-  return "";
+  );
 };
 
 const getProfilePicUrl = async (
