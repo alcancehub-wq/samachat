@@ -1,9 +1,13 @@
+import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
+import BuildEquivalentContactNumberCandidates from "../../helpers/BuildEquivalentContactNumberCandidates";
+import Contact from "../../models/Contact";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import ShowTicketService, {
   TicketAccessData
 } from "../TicketServices/ShowTicketService";
+import { logger } from "../../utils/logger";
 
 interface Request {
   ticketId: string;
@@ -17,6 +21,92 @@ interface Response {
   count: number;
   hasMore: boolean;
 }
+
+const resolveMessageTicketIds = async (ticket: Ticket): Promise<number[]> => {
+  const primaryTicketId = Number(ticket.id);
+  const primaryMessageCount = await Message.count({
+    where: { ticketId: primaryTicketId }
+  });
+
+  if (primaryMessageCount > 0) {
+    return [primaryTicketId];
+  }
+
+  if (ticket.isGroup || !ticket.whatsappId || !ticket.contactId) {
+    return [primaryTicketId];
+  }
+
+  const currentNumber = ticket.contact?.number || "";
+  const numberCandidates = BuildEquivalentContactNumberCandidates(currentNumber);
+
+  if (numberCandidates.length < 2) {
+    return [primaryTicketId];
+  }
+
+  const equivalentContacts = await Contact.findAll({
+    where: {
+      number: {
+        [Op.in]: numberCandidates
+      }
+    },
+    attributes: ["id"],
+    order: [["createdAt", "ASC"], ["id", "ASC"]]
+  });
+
+  const equivalentContactIds = equivalentContacts
+    .map(contact => Number(contact.id))
+    .filter(contactId => contactId && contactId !== Number(ticket.contactId));
+
+  if (!equivalentContactIds.length) {
+    return [primaryTicketId];
+  }
+
+  const fallbackTickets = await Ticket.findAll({
+    where: {
+      id: {
+        [Op.ne]: primaryTicketId
+      },
+      contactId: {
+        [Op.in]: equivalentContactIds
+      },
+      whatsappId: ticket.whatsappId,
+      status: "pending",
+      userId: null,
+      queueId: null
+    },
+    attributes: ["id", "contactId"],
+    order: [["updatedAt", "DESC"], ["id", "DESC"]]
+  });
+
+  const fallbackTicketIds = fallbackTickets
+    .map(relatedTicket => Number(relatedTicket.id))
+    .filter(Boolean);
+
+  if (!fallbackTicketIds.length) {
+    return [primaryTicketId];
+  }
+
+  const fallbackMessageCount = await Message.count({
+    where: {
+      ticketId: {
+        [Op.in]: fallbackTicketIds
+      }
+    }
+  });
+
+  if (!fallbackMessageCount) {
+    return [primaryTicketId];
+  }
+
+  logger.warn({
+    info: "Listing messages with equivalent pending ticket fallback",
+    ticketId: primaryTicketId,
+    fallbackTicketIds,
+    numberCandidates
+  });
+
+  return [primaryTicketId, ...fallbackTicketIds];
+};
 
 const ListMessagesService = async ({
   pageNumber = "1",
@@ -32,9 +122,18 @@ const ListMessagesService = async ({
   // await setMessagesAsRead(ticket);
   const limit = 20;
   const offset = limit * (+pageNumber - 1);
+  const resolvedTicketIds = await resolveMessageTicketIds(ticket);
+  const messageWhere =
+    resolvedTicketIds.length === 1
+      ? { ticketId: resolvedTicketIds[0] }
+      : {
+          ticketId: {
+            [Op.in]: resolvedTicketIds
+          }
+        };
 
   const { count, rows: messages } = await Message.findAndCountAll({
-    where: { ticketId },
+    where: messageWhere,
     limit,
     include: [
       "contact",
@@ -45,7 +144,7 @@ const ListMessagesService = async ({
       }
     ],
     offset,
-    order: [["createdAt", "DESC"]]
+    order: [["createdAt", "DESC"], ["id", "DESC"]]
   });
 
   const hasMore = count > offset + messages.length;
