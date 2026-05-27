@@ -221,4 +221,40 @@ describe("FindOrCreateTicketService", () => {
       }
     });
   });
+
+  it("keeps a recent open ticket open instead of moving it to pending", async () => {
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    ticketFindOneMock
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 1173,
+        status: "open",
+        userId: 4,
+        whatsappId: 35,
+        update: ticketUpdateMock
+      });
+    showTicketServiceMock.mockResolvedValue({
+      id: 1173,
+      status: "open",
+      whatsappId: 35,
+      userId: 4
+    });
+
+    const result = await FindOrCreateTicketService(
+      { id: 17179 } as any,
+      35,
+      0
+    );
+
+    expect(ticketUpdateMock).toHaveBeenCalledWith({ unreadMessages: 0 });
+    expect(tagFindOneMock).not.toHaveBeenCalled();
+    expect(ticketTagDestroyMock).not.toHaveBeenCalled();
+    expect(emitMock).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      id: 1173,
+      status: "open",
+      whatsappId: 35,
+      userId: 4
+    });
+  });
 });

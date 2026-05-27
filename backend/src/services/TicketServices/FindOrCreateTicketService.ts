@@ -125,16 +125,20 @@ const FindOrCreateTicketService = async (
     });
 
     if (ticket) {
-      transitionedTicketId = ticket.id;
-      transitionedFromStatus = ticket.status;
-      transitionedFromWhatsappId = ticket.whatsappId;
-      const preservedUserId = ticket.userId ?? null;
-      await ticket.update({
-        status: "pending",
-        userId: preservedUserId,
-        unreadMessages,
-        pendingSince: new Date()
-      });
+      if (ticket.status === "closed") {
+        transitionedTicketId = ticket.id;
+        transitionedFromStatus = ticket.status;
+        transitionedFromWhatsappId = ticket.whatsappId;
+        const preservedUserId = ticket.userId ?? null;
+        await ticket.update({
+          status: "pending",
+          userId: preservedUserId,
+          unreadMessages,
+          pendingSince: new Date()
+        });
+      } else {
+        await ticket.update({ unreadMessages });
+      }
     }
   }
 

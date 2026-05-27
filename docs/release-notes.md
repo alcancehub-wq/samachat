@@ -9,6 +9,11 @@
 - Escopo desta correcao: `backend/src/providers/WhatsApp/Implementations/wwebjs.ts`, `backend/src/providers/WhatsApp/Implementations/wwebjsNumberLookup.ts`, `backend/src/providers/WhatsApp/Implementations/__tests__/wwebjsNumberLookup.spec.ts` e `docs/release-notes.md`.
 - Validacao local desta correcao: `pnpm exec jest src/providers/WhatsApp/Implementations/__tests__/wwebjsNumberLookup.spec.ts src/__tests__/unit/WbotServices/CheckNumber.spec.ts --runInBand --coverage=false` aprovado em `backend`; `pnpm exec jest src/__tests__/unit/WbotServices/CheckIsValidContact.spec.ts src/__tests__/unit/WbotServices/SendWhatsAppMessage.spec.ts --runInBand --coverage=false` aprovado em `backend`; `pnpm run build` aprovado em `backend`.
 
+- Chats/Contato manual: o echo outbound do primeiro envio passa a reconciliar numeros brasileiros equivalentes com e sem nono digito antes de criar/atualizar contato, reduzindo o caso em que o provider devolvia outra variante do telefone e abria um segundo `contactId` para o mesmo cliente manual.
+- Chats/Ticket manual: o `FindOrCreateTicketService` deixa de rebaixar para `pending` um ticket recente que ja estava `open`; com isso, atendimento criado manualmente e iniciado pelo operador permanece em `Atendendo`, preservando `userId`, `queueId` e o ticket original durante o echo do provider.
+- Escopo desta correcao complementar: `backend/src/helpers/BuildEquivalentContactNumberCandidates.ts`, `backend/src/__tests__/unit/Helpers/BuildEquivalentContactNumberCandidates.spec.ts`, `backend/src/services/ContactServices/CreateOrUpdateContactService.ts`, `backend/src/services/ContactServices/__tests__/CreateOrUpdateContactService.spec.ts`, `backend/src/services/TicketServices/FindOrCreateTicketService.ts`, `backend/src/services/TicketServices/__tests__/FindOrCreateTicketService.spec.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao complementar: `pnpm exec jest src/__tests__/unit/Helpers/BuildEquivalentContactNumberCandidates.spec.ts src/services/ContactServices/__tests__/CreateOrUpdateContactService.spec.ts src/services/TicketServices/__tests__/FindOrCreateTicketService.spec.ts --runInBand` aprovado em `backend`; diagnosticos do editor sem erros nos arquivos alterados.
+
 ## 2026-05-25
 
 ### legacy-prod

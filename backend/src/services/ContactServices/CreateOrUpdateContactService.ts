@@ -1,7 +1,8 @@
-import { getIO } from "../../libs/socket";
+import { Op } from "sequelize";
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
 import EmitContactEvent from "../../helpers/EmitContactEvent";
+import BuildEquivalentContactNumberCandidates from "../../helpers/BuildEquivalentContactNumberCandidates";
 import IsPlausiblePhoneNumber from "../../helpers/IsPlausiblePhoneNumber";
 import ResolveContactName from "../../helpers/ResolveContactName";
 import GetProfilePicUrl from "../WbotServices/GetProfilePicUrl";
@@ -52,20 +53,42 @@ const CreateOrUpdateContactService = async ({
     : IsPlausiblePhoneNumber(digitsOnlyNumber)
     ? digitsOnlyNumber
     : "";
+  const numberCandidates = isGroup
+    ? (number ? [number] : [])
+    : BuildEquivalentContactNumberCandidates(number);
 
   if (!number && !normalizedLid) {
     throw new Error("Either number or lid must be provided");
   }
 
-  const [contactByNumber, contactByLid, legacyContactByLid, legacyContactByBareLid] = await Promise.all([
-    number ? Contact.findOne({ where: { number } }) : null,
+  const [contactsByNumber, contactByLid, legacyContactByLid, legacyContactByBareLid] = await Promise.all([
+    numberCandidates.length
+      ? Contact.findAll({
+          where: {
+            number: {
+              [Op.in]: numberCandidates
+            }
+          },
+          order: [["createdAt", "ASC"], ["id", "ASC"]]
+        })
+      : [],
     normalizedLid ? Contact.findOne({ where: { lid: normalizedLid } }) : null,
     bareLid ? Contact.findOne({ where: { number: bareLid } }) : null,
     bareLid ? Contact.findOne({ where: { lid: bareLid } }) : null
   ]);
+  const contactByNumber = contactsByNumber[0] || null;
 
   const resolvedContactByLid =
     contactByLid || legacyContactByBareLid || legacyContactByLid;
+
+  if (contactsByNumber.length > 1) {
+    logger.warn({
+      info: "Multiple equivalent contacts found while reconciling WhatsApp payload",
+      incomingNumber: number,
+      numberCandidates,
+      contactIds: contactsByNumber.map(contact => contact.id)
+    });
+  }
 
   const resolveProfilePicUrl = async (
     currentProfilePicUrl?: string | null
