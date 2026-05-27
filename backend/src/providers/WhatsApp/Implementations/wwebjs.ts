@@ -35,7 +35,7 @@ import {
 } from "../../../handlers/handleWhatsappEvents";
 import { enqueueWhatsAppSessionStart } from "../../../services/WbotServices/WhatsAppSessionStartQueue";
 import { deriveWwebjsGroupContext } from "./wwebjsGroupContext";
-import { resolveValidatedNumberFromCandidates } from "./wwebjsNumberLookup";
+import { resolveContactLookupFromCandidates } from "./wwebjsNumberLookup";
 import {
   ensureSessionListed,
   registerReadySession,
@@ -732,22 +732,30 @@ const sendMedia = async (
   return convertToProviderMessage(sentMessage);
 };
 
-const checkNumber = async (
+const checkNumberLookup = async (
   sessionId: number,
   number: string
-): Promise<string> => {
+): Promise<import("../whatsappProvider").ProviderContactLookupResult> => {
   const wbot = getWbot(sessionId);
 
   const sessionPhoneNumber = extractSessionPhoneNumber(wbot);
   const candidates = BuildContactNumberCandidates(number, sessionPhoneNumber);
 
-  return resolveValidatedNumberFromCandidates(candidates, async candidate =>
+  return resolveContactLookupFromCandidates(candidates, async candidate =>
     (await wbot.getNumberId(`${candidate}@c.us`)) as {
       user?: string | null;
       server?: string | null;
       _serialized?: string | null;
     }
   );
+};
+
+const checkNumber = async (
+  sessionId: number,
+  number: string
+): Promise<string> => {
+  const lookupResult = await checkNumberLookup(sessionId, number);
+  return lookupResult.number;
 };
 
 const getProfilePicUrl = async (
@@ -1188,6 +1196,7 @@ export const WhatsappWebJsProvider: WhatsappProvider = {
   sendMedia,
   deleteMessage,
   checkNumber,
+  checkNumberLookup,
   getProfilePicUrl,
   getContacts,
   sendSeen,

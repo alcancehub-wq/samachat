@@ -4,6 +4,7 @@ import GetDefaultWhatsApp from "../../../helpers/GetDefaultWhatsApp";
 import formatBody from "../../../helpers/Mustache";
 import Whatsapp from "../../../models/Whatsapp";
 import { whatsappProvider } from "../../../providers/WhatsApp";
+import CheckNumber from "../../../services/WbotServices/CheckNumber";
 import SendWhatsAppMessage from "../../../services/WbotServices/SendWhatsAppMessage";
 import { StartWhatsAppSession } from "../../../services/WbotServices/StartWhatsAppSession";
 import ResolveMessageVariablesService from "../../../services/Variables/ResolveMessageVariablesService";
@@ -45,13 +46,14 @@ jest.mock("../../../utils/logger", () => ({
 }));
 jest.mock("../../../helpers/CheckContactOpenTickets", () => jest.fn());
 jest.mock("../../../helpers/GetDefaultWhatsApp", () => jest.fn());
+jest.mock("../../../services/WbotServices/CheckNumber", () => jest.fn());
 
 describe("SendWhatsAppMessage", () => {
   const findByPkMock = Whatsapp.findByPk as jest.Mock;
   const hasSessionMock = whatsappProvider.hasSession as jest.Mock;
   const isSessionReadyMock = whatsappProvider.isSessionReady as jest.Mock;
-  const checkNumberMock = whatsappProvider.checkNumber as jest.Mock;
   const sendMessageMock = whatsappProvider.sendMessage as jest.Mock;
+  const checkNumberServiceMock = CheckNumber as jest.Mock;
   const startWhatsAppSessionMock = StartWhatsAppSession as jest.Mock;
   const loggerWarnMock = logger.warn as jest.Mock;
   const sleepMock = sleep as jest.Mock;
@@ -98,6 +100,7 @@ describe("SendWhatsAppMessage", () => {
     resolveMessageVariablesServiceMock.mockImplementation(
       ({ template }: { template: string }) => ({ text: template })
     );
+    checkNumberServiceMock.mockResolvedValue("5511963715316");
     formatBodyMock.mockImplementation((body: string) => body);
     sleepMock.mockResolvedValue(undefined);
   });
@@ -133,7 +136,57 @@ describe("SendWhatsAppMessage", () => {
     expect(ticket.update).toHaveBeenCalledWith({
       lastMessage: "controle positivo"
     });
-    expect(checkNumberMock).not.toHaveBeenCalled();
+    expect(checkNumberServiceMock).not.toHaveBeenCalled();
+  });
+
+  it("retries Juliana with the rich lookup chat id when the first send fails with No LID for user", async () => {
+    const ticket = buildTicket({
+      id: 1153,
+      contactId: 17160,
+      contact: {
+        number: "5599984396105",
+        lid: "",
+        update: jest.fn().mockResolvedValue(undefined)
+      }
+    });
+    const providerMessage = { id: "msg-1153" };
+
+    sendMessageMock
+      .mockRejectedValueOnce(new Error("No LID for user"))
+      .mockResolvedValueOnce(providerMessage);
+    checkNumberServiceMock.mockResolvedValue({
+      number: "5599984396105",
+      chatId: "179473865519257@lid",
+      jid: "179473865519257@lid",
+      lid: "179473865519257@lid",
+      serializedId: "179473865519257@lid"
+    });
+
+    await expect(
+      SendWhatsAppMessage({ body: "regressao 1153", ticket })
+    ).resolves.toEqual(providerMessage);
+
+    expect(checkNumberServiceMock).toHaveBeenCalledWith("5599984396105", {
+      whatsappId: 35,
+      returnLookupResult: true
+    });
+    expect(sendMessageMock).toHaveBeenNthCalledWith(
+      1,
+      35,
+      "5599984396105@c.us",
+      "regressao 1153",
+      expect.any(Object)
+    );
+    expect(sendMessageMock).toHaveBeenNthCalledWith(
+      2,
+      35,
+      "179473865519257@lid",
+      "regressao 1153",
+      expect.any(Object)
+    );
+    expect(ticket.update).toHaveBeenCalledWith({
+      lastMessage: "regressao 1153"
+    });
   });
 
   it("keeps the ticket 1153 lookup inconclusive error out of ERR_WAPP_INVALID_CONTACT", async () => {
@@ -148,7 +201,13 @@ describe("SendWhatsAppMessage", () => {
     });
 
     sendMessageMock.mockRejectedValue(new Error("No LID for user"));
-    checkNumberMock.mockResolvedValue("");
+    checkNumberServiceMock.mockResolvedValue({
+      number: "",
+      chatId: undefined,
+      jid: undefined,
+      lid: undefined,
+      serializedId: undefined
+    });
 
     await expect(
       SendWhatsAppMessage({ body: "regressao 1153", ticket })
@@ -156,7 +215,7 @@ describe("SendWhatsAppMessage", () => {
       message: "ERR_WAPP_CHECK_CONTACT"
     });
 
-    expect(checkNumberMock).toHaveBeenCalledWith(35, "5599984396105");
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
     expect(loggerWarnMock).toHaveBeenCalledWith(
       expect.objectContaining({
         flow: "messages",
@@ -167,6 +226,34 @@ describe("SendWhatsAppMessage", () => {
       }),
       "SendWhatsAppMessage lookup returned no confirmed number"
     );
+  });
+
+  it("avoids retrying the same phone chat id when the lookup cannot improve the destination", async () => {
+    const ticket = buildTicket({
+      id: 1153,
+      contactId: 17160,
+      contact: {
+        number: "5599984396105",
+        lid: "",
+        update: jest.fn().mockResolvedValue(undefined)
+      }
+    });
+
+    sendMessageMock.mockRejectedValue(new Error("No LID for user"));
+    checkNumberServiceMock.mockResolvedValue({
+      number: "5599984396105",
+      chatId: "5599984396105@c.us",
+      jid: "5599984396105@c.us",
+      serializedId: "5599984396105@c.us"
+    });
+
+    await expect(
+      SendWhatsAppMessage({ body: "mesmo destino", ticket })
+    ).rejects.toMatchObject({
+      message: "ERR_WAPP_CHECK_CONTACT"
+    });
+
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
   });
 
   it("still blocks explicit provider negatives as invalid contacts", async () => {
@@ -181,7 +268,7 @@ describe("SendWhatsAppMessage", () => {
     });
 
     sendMessageMock.mockRejectedValue(new Error("No LID for user"));
-    checkNumberMock.mockRejectedValue(
+    checkNumberServiceMock.mockRejectedValue(
       new AppError("ERR_NUMBER_NOT_ON_WHATSAPP", 404)
     );
 

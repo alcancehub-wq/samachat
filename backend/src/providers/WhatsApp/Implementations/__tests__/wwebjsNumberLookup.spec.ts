@@ -1,4 +1,7 @@
-import { resolveValidatedNumberFromCandidates } from "../wwebjsNumberLookup";
+import {
+  resolveContactLookupFromCandidates,
+  resolveValidatedNumberFromCandidates
+} from "../wwebjsNumberLookup";
 
 describe("wwebjs number lookup", () => {
   it("keeps trying candidates when one candidate lookup fails", async () => {
@@ -55,6 +58,37 @@ describe("wwebjs number lookup", () => {
         lookupCandidate
       )
     ).resolves.toBe("");
+  });
+
+  it("preserves a sendable lid chat id when the lookup resolves a lid", async () => {
+    const lookupCandidate = jest
+      .fn<
+        Promise<
+          | {
+              user?: string | null;
+              server?: string | null;
+              _serialized?: string | null;
+            }
+          | null
+          | undefined
+        >,
+        [string]
+      >()
+      .mockResolvedValue({
+        user: "179473865519257",
+        server: "lid",
+        _serialized: "179473865519257@lid"
+      });
+
+    await expect(
+      resolveContactLookupFromCandidates(["5599984396105"], lookupCandidate)
+    ).resolves.toEqual({
+      number: "5599984396105",
+      chatId: "179473865519257@lid",
+      jid: "179473865519257@lid",
+      lid: "179473865519257@lid",
+      serializedId: "179473865519257@lid"
+    });
   });
 
   it("rethrows the last provider error when no candidate can be confirmed", async () => {

@@ -3,13 +3,15 @@ import BuildContactNumberCandidates from "../../helpers/BuildContactNumberCandid
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import IsPlausiblePhoneNumber from "../../helpers/IsPlausiblePhoneNumber";
-import NormalizeProviderCheckNumber from "../../helpers/NormalizeProviderCheckNumber";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
 import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
 
 import formatBody from "../../helpers/Mustache";
+import CheckContactNumber, {
+  CheckContactNumberLookupResult
+} from "./CheckNumber";
 import ResolveMessageVariablesService from "../Variables/ResolveMessageVariablesService";
 import { StartWhatsAppSession } from "./StartWhatsAppSession";
 import { sleep } from "../../utils/sleep";
@@ -23,6 +25,8 @@ interface Request {
 
 interface NumberLookupResult {
   normalizedNumber: string;
+  resolvedChatId?: string;
+  resolvedLid?: string;
   status: "resolved" | "not_found" | "inconclusive";
   errorCode?: string;
 }
@@ -67,12 +71,17 @@ const safeCheckNumber = async (
   const candidates = BuildContactNumberCandidates(number, whatsapp.phoneNumber);
 
   try {
-    const checkedNumber = await whatsappProvider.checkNumber(whatsapp.id, number);
-    const normalizedNumber = NormalizeProviderCheckNumber(checkedNumber);
+    const lookupResult = (await CheckContactNumber(number, {
+      whatsappId: whatsapp.id,
+      returnLookupResult: true
+    })) as CheckContactNumberLookupResult;
+    const normalizedNumber = lookupResult.number;
 
-    if (normalizedNumber) {
+    if (normalizedNumber || lookupResult.chatId) {
       return {
         normalizedNumber,
+        resolvedChatId: lookupResult.chatId,
+        resolvedLid: lookupResult.lid,
         status: "resolved"
       };
     }
@@ -244,6 +253,16 @@ const SendWhatsAppMessage = async ({
     return lookup.normalizedNumber ? `${lookup.normalizedNumber}@c.us` : null;
   };
 
+  const resolveAlternativeChatId = async (): Promise<string | null> => {
+    if (ticket.isGroup || !storedNumber) {
+      return null;
+    }
+
+    const lookup = await resolveNumberLookup();
+
+    return lookup.resolvedChatId || null;
+  };
+
   const chatIdentifier = storedLid || storedNumber;
 
   if (!chatIdentifier) {
@@ -305,9 +324,9 @@ const SendWhatsAppMessage = async ({
           chatId = storedLid;
           sentMessage = await sendWithChatId(chatId);
         } else {
-          const normalizedChatId = await resolveNormalizedChatId();
-          if (normalizedChatId && normalizedChatId !== chatId) {
-            chatId = normalizedChatId;
+          const alternativeChatId = await resolveAlternativeChatId();
+          if (alternativeChatId && alternativeChatId !== chatId) {
+            chatId = alternativeChatId;
             sentMessage = await sendWithChatId(chatId);
           } else {
             const lookup = await resolveNumberLookup();
@@ -317,6 +336,8 @@ const SendWhatsAppMessage = async ({
               whatsappId: ticket.whatsappId,
               number: ticket.contact.number,
               lid: storedLid,
+              lookupChatId: lookup.resolvedChatId,
+              lookupLid: lookup.resolvedLid,
               lookupStatus: lookup.status,
               lookupErrorCode: lookup.errorCode,
               candidates: BuildContactNumberCandidates(

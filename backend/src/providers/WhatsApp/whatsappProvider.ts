@@ -9,6 +9,14 @@ import {
 import { WhatsappWebJsProvider } from "./Implementations/wwebjs";
 import { WhaileysProvider } from "./Implementations/whaileys";
 
+export interface ProviderContactLookupResult {
+  number: string;
+  chatId?: string;
+  jid?: string;
+  lid?: string;
+  serializedId?: string;
+}
+
 export interface WhatsappProvider {
   init(whatsapp: Whatsapp): Promise<void>;
   hasSession(sessionId: number): boolean;
@@ -35,6 +43,10 @@ export interface WhatsappProvider {
     fromMe: boolean
   ): Promise<void>;
   checkNumber(sessionId: number, number: string): Promise<string>;
+  checkNumberLookup?(
+    sessionId: number,
+    number: string
+  ): Promise<ProviderContactLookupResult>;
   getProfilePicUrl(sessionId: number, number: string): Promise<string>;
   getContacts(sessionId: number): Promise<ProviderContact[]>;
   sendSeen(sessionId: number, chatId: string): Promise<void>;
