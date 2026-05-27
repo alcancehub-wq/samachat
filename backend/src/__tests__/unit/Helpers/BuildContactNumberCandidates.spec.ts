@@ -20,4 +20,11 @@ describe("BuildContactNumberCandidates", () => {
       "11987654321"
     ]);
   });
+
+  it("keeps the Larissa regression number normalized with 55 first", () => {
+    expect(BuildContactNumberCandidates("11959207315", "5511981901577")).toEqual([
+      "5511959207315",
+      "11959207315"
+    ]);
+  });
 });

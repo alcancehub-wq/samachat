@@ -1,4 +1,5 @@
 import AppError from "../../errors/AppError";
+import BuildContactNumberCandidates from "../../helpers/BuildContactNumberCandidates";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import IsPlausiblePhoneNumber from "../../helpers/IsPlausiblePhoneNumber";
@@ -18,6 +19,12 @@ interface Request {
   body: string;
   ticket: Ticket;
   quotedMsg?: Message;
+}
+
+interface NumberLookupResult {
+  normalizedNumber: string;
+  status: "resolved" | "not_found" | "inconclusive";
+  errorCode?: string;
 }
 
 const INITIAL_READY_TIMEOUT_MS = 5000;
@@ -46,23 +53,86 @@ const isNoLidError = (err: unknown): boolean => {
 };
 
 const safeCheckNumber = async (
-  whatsappId: number,
-  number: string
-): Promise<string> => {
+  whatsapp: Whatsapp,
+  number: string,
+  ticketId: number
+): Promise<NumberLookupResult> => {
   if (!IsPlausiblePhoneNumber(number)) {
-    return "";
+    return {
+      normalizedNumber: "",
+      status: "not_found"
+    };
   }
 
+  const candidates = BuildContactNumberCandidates(number, whatsapp.phoneNumber);
+
   try {
-    const checkedNumber = await whatsappProvider.checkNumber(whatsappId, number);
-    return NormalizeProviderCheckNumber(checkedNumber);
-  } catch (err) {
+    const checkedNumber = await whatsappProvider.checkNumber(whatsapp.id, number);
+    const normalizedNumber = NormalizeProviderCheckNumber(checkedNumber);
+
+    if (normalizedNumber) {
+      return {
+        normalizedNumber,
+        status: "resolved"
+      };
+    }
+
     logger.warn(
-      { err, whatsappId, number },
-      "SendWhatsAppMessage checkNumber failed, falling back to raw number"
+      {
+        flow: "messages",
+        ticketId,
+        whatsappId: whatsapp.id,
+        number,
+        candidates
+      },
+      "SendWhatsAppMessage lookup returned no confirmed number"
     );
-    return "";
+
+    return {
+      normalizedNumber: "",
+      status: "inconclusive"
+    };
+  } catch (err) {
+    if (err instanceof AppError && err.message === "ERR_NUMBER_NOT_ON_WHATSAPP") {
+      return {
+        normalizedNumber: "",
+        status: "not_found",
+        errorCode: err.message
+      };
+    }
+
+    logger.warn(
+      {
+        err,
+        flow: "messages",
+        ticketId,
+        whatsappId: whatsapp.id,
+        number,
+        candidates
+      },
+      "SendWhatsAppMessage checkNumber failed"
+    );
+
+    return {
+      normalizedNumber: "",
+      status: "inconclusive",
+      errorCode: err instanceof AppError ? err.message : undefined
+    };
   }
+};
+
+const resolveLookupFailureError = (
+  lookup: NumberLookupResult
+): AppError => {
+  if (lookup.errorCode === "ERR_WAPP_NOT_INITIALIZED") {
+    return new AppError("ERR_WAPP_NOT_INITIALIZED");
+  }
+
+  if (lookup.status === "not_found") {
+    return new AppError("ERR_WAPP_INVALID_CONTACT");
+  }
+
+  return new AppError("ERR_WAPP_CHECK_CONTACT");
 };
 
 const triggerWhatsappSessionStart = (whatsapp: Whatsapp): void => {
@@ -153,16 +223,25 @@ const SendWhatsAppMessage = async ({
   const storedLid = normalizeLid(ticket.contact.lid || "");
 
   let normalizedNumber = "";
+  let numberLookup: NumberLookupResult | null = null;
+
+  const resolveNumberLookup = async (): Promise<NumberLookupResult> => {
+    if (!numberLookup) {
+      numberLookup = await safeCheckNumber(whatsapp, storedNumber, ticket.id);
+      normalizedNumber = numberLookup.normalizedNumber;
+    }
+
+    return numberLookup;
+  };
+
   const resolveNormalizedChatId = async (): Promise<string | null> => {
     if (ticket.isGroup || !storedNumber) {
       return null;
     }
 
-    if (!normalizedNumber) {
-      normalizedNumber = await safeCheckNumber(whatsapp.id, storedNumber);
-    }
+    const lookup = await resolveNumberLookup();
 
-    return normalizedNumber ? `${normalizedNumber}@c.us` : null;
+    return lookup.normalizedNumber ? `${lookup.normalizedNumber}@c.us` : null;
   };
 
   const chatIdentifier = storedLid || storedNumber;
@@ -231,13 +310,22 @@ const SendWhatsAppMessage = async ({
             chatId = normalizedChatId;
             sentMessage = await sendWithChatId(chatId);
           } else {
+            const lookup = await resolveNumberLookup();
+
             logger.warn("SendWhatsAppMessage blocked by No LID for user", {
               ticketId: ticket.id,
               whatsappId: ticket.whatsappId,
               number: ticket.contact.number,
-              lid: storedLid
+              lid: storedLid,
+              lookupStatus: lookup.status,
+              lookupErrorCode: lookup.errorCode,
+              candidates: BuildContactNumberCandidates(
+                storedNumber,
+                whatsapp.phoneNumber
+              )
             });
-            throw new AppError("ERR_WAPP_INVALID_CONTACT");
+
+            throw resolveLookupFailureError(lookup);
           }
         }
       } else {
