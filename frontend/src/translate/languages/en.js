@@ -1352,6 +1352,9 @@ const messages = {
         },
         form: {
           body: "Message",
+          media: "File",
+          mediaHelp: "Attach an image, audio file, PDF, or another file to the schedule.",
+          mediaRemoved: "The current file will be removed when you save.",
           scheduledAt: "Schedule",
           status: "Status",
           assignee: "Assignee",
@@ -1367,6 +1370,9 @@ const messages = {
         buttons: {
           okAdd: "Add",
           okEdit: "Save",
+          addMedia: "Attach file",
+          replaceMedia: "Replace file",
+          removeMedia: "Remove file",
           cancel: "Cancel",
         },
         success: "Schedule saved successfully.",
@@ -1744,10 +1750,14 @@ const messages = {
         ERR_CREATING_TICKET: "Error while creating ticket on database.",
         ERR_TASK_TITLE_REQUIRED: "Task title is required.",
         ERR_SCHEDULE_BODY_REQUIRED: "Schedule message is required.",
+        ERR_SCHEDULE_BODY_OR_MEDIA_REQUIRED:
+          "Add a message or attach a file to the schedule.",
         ERR_SCHEDULE_DATE_REQUIRED: "Schedule date is required.",
         ERR_SCHEDULE_DATE_INVALID: "Schedule date is invalid.",
         ERR_SCHEDULE_DATE_MUST_BE_FUTURE: "Schedule date must be in the future.",
         ERR_SCHEDULE_TICKET_CLOSED: "Cannot schedule messages for a resolved ticket.",
+        ERR_SCHEDULE_MEDIA_NOT_FOUND:
+          "The scheduled file could not be found for delivery.",
         ERR_FETCH_WAPP_MSG:
           "Error fetching the message in WhtasApp, maybe it is too old.",
         ERR_QUEUE_COLOR_ALREADY_EXISTS:

@@ -1376,6 +1376,9 @@ const messages = {
         },
         form: {
           body: "Mensagem",
+          media: "Arquivo",
+          mediaHelp: "Anexe imagem, audio, PDF ou outro arquivo para envio agendado.",
+          mediaRemoved: "O arquivo atual sera removido ao salvar.",
           scheduledAt: "Agendamento",
           status: "Status",
           assignee: "Responsável",
@@ -1391,6 +1394,9 @@ const messages = {
         buttons: {
           okAdd: "Adicionar",
           okEdit: "Salvar",
+          addMedia: "Anexar arquivo",
+          replaceMedia: "Substituir arquivo",
+          removeMedia: "Remover arquivo",
           cancel: "Cancelar",
         },
         success: "Agendamento salvo com sucesso.",
@@ -1767,10 +1773,14 @@ const messages = {
         ERR_CREATING_TICKET: "Erro ao criar tíquete no banco de dados.",
         ERR_TASK_TITLE_REQUIRED: "O título da tarefa é obrigatório.",
         ERR_SCHEDULE_BODY_REQUIRED: "A mensagem do agendamento é obrigatória.",
+        ERR_SCHEDULE_BODY_OR_MEDIA_REQUIRED:
+          "Preencha uma mensagem ou anexe um arquivo ao agendamento.",
         ERR_SCHEDULE_DATE_REQUIRED: "A data do agendamento é obrigatória.",
         ERR_SCHEDULE_DATE_INVALID: "A data do agendamento é inválida.",
         ERR_SCHEDULE_DATE_MUST_BE_FUTURE: "A data do agendamento deve estar no futuro.",
         ERR_SCHEDULE_TICKET_CLOSED: "Não é possível agendar em um ticket resolvido.",
+        ERR_SCHEDULE_MEDIA_NOT_FOUND:
+          "O arquivo do agendamento não foi encontrado para envio.",
         ERR_FETCH_WAPP_MSG:
           "Erro ao buscar a mensagem no WhatsApp, talvez ela seja muito antiga.",
         ERR_QUEUE_COLOR_ALREADY_EXISTS:

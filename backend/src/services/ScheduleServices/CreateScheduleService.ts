@@ -12,30 +12,36 @@ import {
 } from "./normalizeScheduledAt";
 
 interface Request {
-  body: string;
+  body?: string;
   status?: string;
   scheduledAt: Date | string;
   assigneeId?: number | null;
   ticketId?: number | null;
   contactId?: number | null;
   createdById?: number | null;
+  mediaFileName?: string | null;
+  mediaOriginalName?: string | null;
+  mediaMimeType?: string | null;
   accessData?: ScheduleAccessData;
 }
 
 const CreateScheduleService = async ({
-  body,
+  body = "",
   status = "pending",
   scheduledAt,
   assigneeId,
   ticketId,
   contactId,
   createdById,
+  mediaFileName = null,
+  mediaOriginalName = null,
+  mediaMimeType = null,
   accessData
 }: Request): Promise<Schedule> => {
   const trimmedBody = body.trim();
 
-  if (!trimmedBody) {
-    throw new AppError("ERR_SCHEDULE_BODY_REQUIRED");
+  if (!trimmedBody && !mediaFileName) {
+    throw new AppError("ERR_SCHEDULE_BODY_OR_MEDIA_REQUIRED");
   }
 
   if (!scheduledAt) {
@@ -50,7 +56,8 @@ const CreateScheduleService = async ({
       scheduledAt: scheduledAtDate,
       body: trimmedBody,
       ticketId: ticketId || null,
-      contactId: contactId || null
+      contactId: contactId || null,
+      mediaOriginalName: mediaOriginalName || null
     }
   });
 
@@ -97,6 +104,9 @@ const CreateScheduleService = async ({
     scheduledAt: scheduledAtDate,
     sentAt,
     canceledAt,
+    mediaFileName,
+    mediaOriginalName,
+    mediaMimeType,
     assigneeId: assigneeId || null,
     ticketId: ticketId || null,
     contactId: contactId || null,

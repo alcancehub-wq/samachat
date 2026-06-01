@@ -51,6 +51,15 @@ class Schedule extends Model<Schedule> {
   @Column(DataType.TEXT)
   lastResult: string | null;
 
+  @Column(DataType.STRING)
+  mediaFileName: string | null;
+
+  @Column(DataType.TEXT)
+  mediaOriginalName: string | null;
+
+  @Column(DataType.STRING)
+  mediaMimeType: string | null;
+
   @ForeignKey(() => User)
   @Column
   assigneeId: number;

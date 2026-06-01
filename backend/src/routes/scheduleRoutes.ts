@@ -1,10 +1,13 @@
 import express from "express";
+import multer from "multer";
 import isAuth from "../middleware/isAuth";
 import checkSectorPermission from "../middleware/checkSectorPermission";
+import uploadConfig from "../config/upload";
 
 import * as ScheduleController from "../controllers/ScheduleController";
 
 const scheduleRoutes = express.Router();
+const upload = multer(uploadConfig);
 
 scheduleRoutes.get(
   "/schedules",
@@ -24,6 +27,7 @@ scheduleRoutes.post(
   "/schedules",
   isAuth,
   checkSectorPermission("schedules.create"),
+  upload.single("media"),
   ScheduleController.store
 );
 
@@ -31,6 +35,7 @@ scheduleRoutes.put(
   "/schedules/:scheduleId",
   isAuth,
   checkSectorPermission("schedules.update"),
+  upload.single("media"),
   ScheduleController.update
 );
 

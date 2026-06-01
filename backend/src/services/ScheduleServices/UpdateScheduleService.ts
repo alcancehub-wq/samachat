@@ -15,6 +15,7 @@ import {
   assertScheduledAtIsFuture,
   parseScheduledAt
 } from "./normalizeScheduledAt";
+import { deleteScheduleMediaFileIfExists } from "./scheduleMedia";
 
 interface ScheduleData {
   body?: string;
@@ -27,6 +28,10 @@ interface ScheduleData {
   assigneeId?: number | null;
   ticketId?: number | null;
   contactId?: number | null;
+  mediaFileName?: string | null;
+  mediaOriginalName?: string | null;
+  mediaMimeType?: string | null;
+  removeMedia?: boolean;
 }
 
 interface Request {
@@ -60,9 +65,27 @@ const UpdateScheduleService = async ({
 
   const nextBody =
     scheduleData.body !== undefined ? scheduleData.body.trim() : undefined;
+  const previousMediaFileName = schedule.mediaFileName || null;
+  const shouldRemoveMedia = scheduleData.removeMedia === true;
+  const nextMediaFileName = shouldRemoveMedia
+    ? null
+    : scheduleData.mediaFileName !== undefined
+    ? scheduleData.mediaFileName
+    : schedule.mediaFileName;
+  const nextMediaOriginalName = shouldRemoveMedia
+    ? null
+    : scheduleData.mediaOriginalName !== undefined
+    ? scheduleData.mediaOriginalName
+    : schedule.mediaOriginalName;
+  const nextMediaMimeType = shouldRemoveMedia
+    ? null
+    : scheduleData.mediaMimeType !== undefined
+    ? scheduleData.mediaMimeType
+    : schedule.mediaMimeType;
+  const resolvedBody = nextBody !== undefined ? nextBody : schedule.body;
 
-  if (scheduleData.body !== undefined && !nextBody) {
-    throw new AppError("ERR_SCHEDULE_BODY_REQUIRED");
+  if (!resolvedBody && !nextMediaFileName) {
+    throw new AppError("ERR_SCHEDULE_BODY_OR_MEDIA_REQUIRED");
   }
 
   if (scheduleData.assigneeId) {
@@ -149,7 +172,7 @@ const UpdateScheduleService = async ({
   const normalizedCanceledAt = normalizeDate(scheduleData.canceledAt);
 
   await schedule.update({
-    body: nextBody ?? schedule.body,
+    body: resolvedBody,
     status: nextStatus,
     scheduledAt,
     sentAt: normalizedSentAt !== undefined ? normalizedSentAt : sentAt,
@@ -162,6 +185,9 @@ const UpdateScheduleService = async ({
       scheduleData.assigneeId !== undefined
         ? scheduleData.assigneeId
         : schedule.assigneeId,
+    mediaFileName: nextMediaFileName,
+    mediaOriginalName: nextMediaOriginalName,
+    mediaMimeType: nextMediaMimeType,
     ticketId:
       scheduleData.ticketId !== undefined ? scheduleData.ticketId : schedule.ticketId,
     contactId:
@@ -171,6 +197,15 @@ const UpdateScheduleService = async ({
   });
 
   await schedule.reload();
+
+  const shouldDeletePreviousMedia =
+    previousMediaFileName &&
+    ((shouldRemoveMedia && previousMediaFileName !== null) ||
+      (nextMediaFileName && nextMediaFileName !== previousMediaFileName));
+
+  if (shouldDeletePreviousMedia) {
+    deleteScheduleMediaFileIfExists(previousMediaFileName);
+  }
 
   if (statusChanged) {
     await CreateScheduleLogService({

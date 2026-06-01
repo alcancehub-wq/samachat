@@ -7,8 +7,10 @@ import UpdateScheduleService from "../UpdateScheduleService";
 import { executeSchedule } from "../RunScheduleWorker";
 import CreateScheduleLogService from "../CreateScheduleLogService";
 import ShowTicketService from "../../TicketServices/ShowTicketService";
+import SendWhatsAppMedia from "../../WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../../WbotServices/SendWhatsAppMessage";
 import { ERR_SCHEDULE_TICKET_CLOSED } from "../assertScheduleTicketIsActive";
+import { buildScheduledMediaFile } from "../scheduleMedia";
 import AppError from "../../../errors/AppError";
 
 const FIXED_NOW = new Date("2026-05-23T12:00:00.000Z");
@@ -35,7 +37,12 @@ jest.mock("../../../models/Contact", () => ({
 
 jest.mock("../CreateScheduleLogService", () => jest.fn());
 jest.mock("../../TicketServices/ShowTicketService", () => jest.fn());
+jest.mock("../../WbotServices/SendWhatsAppMedia", () => jest.fn());
 jest.mock("../../WbotServices/SendWhatsAppMessage", () => jest.fn());
+jest.mock("../scheduleMedia", () => ({
+  buildScheduledMediaFile: jest.fn(),
+  deleteScheduleMediaFileIfExists: jest.fn()
+}));
 
 const scheduleFindOneMock = Schedule.findOne as jest.Mock;
 const scheduleCreateMock = Schedule.create as jest.Mock;
@@ -46,7 +53,9 @@ const userFindByPkMock = User.findByPk as jest.Mock;
 const contactFindByPkMock = Contact.findByPk as jest.Mock;
 const createScheduleLogServiceMock = CreateScheduleLogService as jest.Mock;
 const showTicketServiceMock = ShowTicketService as jest.Mock;
+const sendWhatsAppMediaMock = SendWhatsAppMedia as jest.Mock;
 const sendWhatsAppMessageMock = SendWhatsAppMessage as jest.Mock;
+const buildScheduledMediaFileMock = buildScheduledMediaFile as jest.Mock;
 
 describe("Schedule closed ticket guards", () => {
   beforeEach(() => {
@@ -58,6 +67,8 @@ describe("Schedule closed ticket guards", () => {
     contactFindByPkMock.mockResolvedValue(null);
     createScheduleLogServiceMock.mockResolvedValue({});
     scheduleUpdateStaticMock.mockResolvedValue([1]);
+    buildScheduledMediaFileMock.mockReturnValue(null);
+    sendWhatsAppMediaMock.mockResolvedValue({});
     sendWhatsAppMessageMock.mockResolvedValue({});
   });
 
@@ -147,6 +158,30 @@ describe("Schedule closed ticket guards", () => {
     ).rejects.toMatchObject({ message: ERR_SCHEDULE_TICKET_CLOSED });
 
     expect(scheduleCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("allows creating a schedule with media only", async () => {
+    ticketFindByPkMock.mockResolvedValue({ id: 16, status: "open" });
+    scheduleCreateMock.mockResolvedValue({ id: 16, status: "pending" });
+
+    const result = await CreateScheduleService({
+      body: "",
+      scheduledAt: "2026-05-24T12:30:00.000Z",
+      ticketId: 16,
+      mediaFileName: "media-16.mp3",
+      mediaOriginalName: "audio.mp3",
+      mediaMimeType: "audio/mpeg"
+    });
+
+    expect(scheduleCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: "",
+        mediaFileName: "media-16.mp3",
+        mediaOriginalName: "audio.mp3",
+        mediaMimeType: "audio/mpeg"
+      })
+    );
+    expect(result).toEqual({ id: 16, status: "pending" });
   });
 
   it("blocks editing a schedule linked to a closed ticket", async () => {
@@ -276,6 +311,74 @@ describe("Schedule closed ticket guards", () => {
         status: "failed",
         error: ERR_SCHEDULE_TICKET_CLOSED
       })
+    );
+  });
+
+  it("sends scheduled media through SendWhatsAppMedia", async () => {
+    const scheduledMedia = {
+      filename: "media-31.pdf",
+      originalname: "proposal.pdf",
+      mimetype: "application/pdf",
+      path: "C:\\temp\\media-31.pdf",
+      size: 1234
+    };
+
+    scheduleFindByPkMock.mockResolvedValue({
+      id: 31,
+      status: "processing",
+      ticketId: 31,
+      body: "scheduled body",
+      scheduledAt: new Date("2026-05-23T08:59:00.000-03:00"),
+      mediaFileName: "media-31.pdf",
+      mediaOriginalName: "proposal.pdf",
+      mediaMimeType: "application/pdf"
+    });
+    showTicketServiceMock.mockResolvedValue({ id: 31, status: "open" });
+    buildScheduledMediaFileMock.mockReturnValue(scheduledMedia);
+
+    await executeSchedule(31);
+
+    expect(sendWhatsAppMediaMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        media: scheduledMedia,
+        body: "scheduled body"
+      })
+    );
+    expect(sendWhatsAppMessageMock).not.toHaveBeenCalled();
+    expect(scheduleUpdateStaticMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "sent"
+      }),
+      { where: { id: 31 } }
+    );
+  });
+
+  it("fails scheduled media execution when the stored file is missing", async () => {
+    scheduleFindByPkMock.mockResolvedValue({
+      id: 32,
+      status: "processing",
+      ticketId: 32,
+      body: "scheduled body",
+      scheduledAt: new Date("2026-05-23T08:59:00.000-03:00"),
+      mediaFileName: "missing-32.pdf",
+      mediaOriginalName: "missing.pdf",
+      mediaMimeType: "application/pdf"
+    });
+    showTicketServiceMock.mockResolvedValue({ id: 32, status: "open" });
+    buildScheduledMediaFileMock.mockImplementation(() => {
+      throw new AppError("ERR_SCHEDULE_MEDIA_NOT_FOUND", 404);
+    });
+
+    await executeSchedule(32);
+
+    expect(sendWhatsAppMediaMock).not.toHaveBeenCalled();
+    expect(sendWhatsAppMessageMock).not.toHaveBeenCalled();
+    expect(scheduleUpdateStaticMock).toHaveBeenCalledWith(
+      {
+        status: "failed",
+        lastError: "ERR_SCHEDULE_MEDIA_NOT_FOUND"
+      },
+      { where: { id: 32 } }
     );
   });
 

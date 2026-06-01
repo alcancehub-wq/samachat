@@ -1,11 +1,13 @@
 import { Op } from "sequelize";
 import Schedule from "../../models/Schedule";
 import CreateScheduleLogService from "./CreateScheduleLogService";
+import SendWhatsAppMedia from "../WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 import { logger } from "../../utils/logger";
 import { ERR_SCHEDULE_TICKET_CLOSED, isClosedScheduleTicket } from "./assertScheduleTicketIsActive";
 import { parseScheduledAt } from "./normalizeScheduledAt";
+import { buildScheduledMediaFile } from "./scheduleMedia";
 
 const DEFAULT_POLL_MS = 5000;
 const DEFAULT_BATCH_SIZE = 20;
@@ -162,6 +164,28 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
         "Blocked schedule execution for closed ticket"
       );
       await markFailed(schedule.id, ERR_SCHEDULE_TICKET_CLOSED);
+      return;
+    }
+
+    const scheduledMedia = buildScheduledMediaFile(schedule);
+
+    if (scheduledMedia) {
+      const hasBody = Boolean(schedule.body?.trim());
+      const isAudioSchedule = (schedule.mediaMimeType || scheduledMedia.mimetype || "")
+        .toLowerCase()
+        .startsWith("audio/");
+
+      if (hasBody && isAudioSchedule) {
+        await SendWhatsAppMessage({ body: schedule.body, ticket });
+      }
+
+      await SendWhatsAppMedia({
+        media: scheduledMedia,
+        ticket,
+        body: hasBody && !isAudioSchedule ? schedule.body : undefined,
+        forceSendAudioAsVoice: isAudioSchedule ? false : undefined
+      });
+      await markSent(schedule.id, "Schedule media sent successfully");
       return;
     }
 

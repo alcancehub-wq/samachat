@@ -29,6 +29,7 @@ interface Request {
   media: Express.Multer.File;
   ticket: Ticket;
   body?: string;
+  forceSendAudioAsVoice?: boolean;
 }
 
 const INITIAL_READY_TIMEOUT_MS = 5000;
@@ -205,7 +206,8 @@ const ensureWhatsappReady = async (
 const SendWhatsAppMedia = async ({
   media,
   ticket,
-  body
+  body,
+  forceSendAudioAsVoice
 }: Request): Promise<ProviderMessage> => {
   try {
     const whatsapp = await ensureWhatsappSession(ticket);
@@ -323,7 +325,10 @@ const SendWhatsAppMedia = async ({
     }
 
     const sendAsVoice = shouldSendAudioAsVoice(mediaInput);
-    const effectiveSendAsVoice = sendAsVoice;
+    const effectiveSendAsVoice =
+      typeof forceSendAudioAsVoice === "boolean"
+        ? forceSendAudioAsVoice
+        : sendAsVoice;
     const effectiveSendMediaAsDocument = shouldSendMediaAsDocument(mediaInput, {
       sendAsVoice: effectiveSendAsVoice
     });

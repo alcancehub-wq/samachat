@@ -66,7 +66,27 @@ const parseScheduledAtInput = value => {
 };
 
 const ScheduleSchema = Yup.object().shape({
-  body: Yup.string().min(2, "Too Short!").max(1000, "Too Long!").required("Required"),
+  body: Yup.string()
+    .max(1000, "Too Long!")
+    .test("body-min", "Too Short!", value => {
+      if (!value || !value.trim()) {
+        return true;
+      }
+
+      return value.trim().length >= 2;
+    })
+    .test(
+      "body-or-media",
+      i18n.t("backendErrors.ERR_SCHEDULE_BODY_OR_MEDIA_REQUIRED"),
+      function validateBodyOrMedia(value) {
+        const hasBody = Boolean(value && value.trim());
+        const hasMedia = Boolean(
+          this.parent.mediaOriginalName && !this.parent.removeMedia
+        );
+
+        return hasBody || hasMedia;
+      }
+    ),
   scheduledAt: Yup.string()
     .required("Required")
     .test(
@@ -101,7 +121,9 @@ const ScheduleSchema = Yup.object().shape({
       is: true,
       then: schema => schema.required("Required"),
       otherwise: schema => schema.notRequired()
-    })
+    }),
+  mediaOriginalName: Yup.string().nullable(),
+  removeMedia: Yup.boolean()
 });
 
 const toInputDateTime = value => {
@@ -137,6 +159,7 @@ const ScheduleModal = ({
   hideStatusField = false
 }) => {
   const isMounted = useRef(true);
+  const fileInputRef = useRef(null);
 
   const initialState = {
     body: initialValues?.body || "",
@@ -154,11 +177,14 @@ const ScheduleModal = ({
       initialValues?.contactId === null || initialValues?.contactId === undefined
         ? ""
         : initialValues.contactId,
+    mediaOriginalName: initialValues?.mediaOriginalName || "",
+    removeMedia: false,
     monthlyRecurring: false,
     recurringMonths: "1"
   };
 
   const [schedule, setSchedule] = useState(initialState);
+  const [selectedMedia, setSelectedMedia] = useState(null);
   const [users, setUsers] = useState([]);
   const minScheduledAt = getMinimumScheduledAtInputValue();
 
@@ -223,7 +249,9 @@ const ScheduleModal = ({
             scheduledAt: toInputDateTime(data.scheduledAt),
             assigneeId: data.assigneeId || "",
             ticketId: data.ticketId || "",
-            contactId: data.contactId || ""
+            contactId: data.contactId || "",
+            mediaOriginalName: data.mediaOriginalName || "",
+            removeMedia: false
           });
         }
       } catch (err) {
@@ -240,12 +268,18 @@ const ScheduleModal = ({
     initialValues?.scheduledAt,
     initialValues?.assigneeId,
     initialValues?.ticketId,
-    initialValues?.contactId
+    initialValues?.contactId,
+    initialValues?.mediaOriginalName
   ]);
 
   const handleClose = () => {
     onClose();
     setSchedule(initialState);
+    setSelectedMedia(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const normalizeId = value => {
@@ -271,6 +305,73 @@ const ScheduleModal = ({
     });
   };
 
+  const appendSchedulePayloadToFormData = (formData, payload) => {
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value === undefined) {
+        return;
+      }
+
+      if (value === null) {
+        formData.append(key, "");
+        return;
+      }
+
+      formData.append(key, String(value));
+    });
+  };
+
+  const sendScheduleRequest = async ({ method, url, payload, mediaFile }) => {
+    if (!mediaFile) {
+      if (method === "put") {
+        return api.put(url, payload);
+      }
+
+      return api.post(url, payload);
+    }
+
+    const formData = new FormData();
+    appendSchedulePayloadToFormData(formData, payload);
+    formData.append("media", mediaFile);
+
+    if (method === "put") {
+      return api.put(url, formData);
+    }
+
+    return api.post(url, formData);
+  };
+
+  const handleSelectMedia = (event, setFieldValue) => {
+    const file = event.target.files && event.target.files[0];
+
+    if (!file) {
+      return;
+    }
+
+    setSelectedMedia(file);
+    setFieldValue("mediaOriginalName", file.name);
+    setFieldValue("removeMedia", false);
+  };
+
+  const handleRemoveMedia = (values, setFieldValue) => {
+    const hadExistingMedia = Boolean(schedule.mediaOriginalName);
+    const isRemovingReplacement = Boolean(selectedMedia && hadExistingMedia);
+
+    setSelectedMedia(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    if (isRemovingReplacement) {
+      setFieldValue("mediaOriginalName", schedule.mediaOriginalName);
+      setFieldValue("removeMedia", false);
+      return;
+    }
+
+    setFieldValue("mediaOriginalName", "");
+    setFieldValue("removeMedia", Boolean(values.mediaOriginalName));
+  };
+
   const handleSaveSchedule = async values => {
     const payload = {
       body: values.body,
@@ -278,7 +379,8 @@ const ScheduleModal = ({
       scheduledAt: normalizeScheduledAtForApi(values.scheduledAt),
       assigneeId: normalizeId(values.assigneeId),
       ticketId: normalizeId(values.ticketId),
-      contactId: normalizeId(values.contactId)
+      contactId: normalizeId(values.contactId),
+      removeMedia: Boolean(values.removeMedia)
     };
 
     const shouldCreateRecurringSchedules =
@@ -298,12 +400,27 @@ const ScheduleModal = ({
 
     try {
       if (scheduleId) {
-        await api.put(`/schedules/${scheduleId}`, payload);
+        await sendScheduleRequest({
+          method: "put",
+          url: `/schedules/${scheduleId}`,
+          payload,
+          mediaFile: selectedMedia
+        });
       } else {
-        await api.post("/schedules", payload);
+        await sendScheduleRequest({
+          method: "post",
+          url: "/schedules",
+          payload,
+          mediaFile: selectedMedia
+        });
 
         for (const recurringPayload of recurringPayloads) {
-          await api.post("/schedules", recurringPayload);
+          await sendScheduleRequest({
+            method: "post",
+            url: "/schedules",
+            payload: recurringPayload,
+            mediaFile: selectedMedia
+          });
         }
       }
 
@@ -355,6 +472,48 @@ const ScheduleModal = ({
                 error={touched.body && Boolean(errors.body)}
                 helperText={touched.body && errors.body ? errors.body : ""}
               />
+              <input
+                ref={fileInputRef}
+                type="file"
+                style={{ display: "none" }}
+                onChange={event => handleSelectMedia(event, setFieldValue)}
+              />
+              <TextField
+                label={i18n.t("scheduleModal.form.media")}
+                fullWidth
+                variant="outlined"
+                margin="dense"
+                value={values.removeMedia ? "" : values.mediaOriginalName || ""}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ readOnly: true }}
+                helperText={
+                  values.removeMedia
+                    ? i18n.t("scheduleModal.form.mediaRemoved")
+                    : i18n.t("scheduleModal.form.mediaHelp")
+                }
+              />
+              <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 8 }}>
+                <Button
+                  type="button"
+                  color="primary"
+                  variant="outlined"
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                >
+                  {values.mediaOriginalName && !values.removeMedia
+                    ? i18n.t("scheduleModal.buttons.replaceMedia")
+                    : i18n.t("scheduleModal.buttons.addMedia")}
+                </Button>
+                {values.mediaOriginalName && (
+                  <Button
+                    type="button"
+                    color="secondary"
+                    variant="outlined"
+                    onClick={() => handleRemoveMedia(values, setFieldValue)}
+                  >
+                    {i18n.t("scheduleModal.buttons.removeMedia")}
+                  </Button>
+                )}
+              </div>
               <MessageVariablesHelper
                 onInsertVariable={token => {
                   setFieldValue("body", appendMessageVariable(values.body, token));
