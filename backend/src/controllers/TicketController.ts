@@ -31,6 +31,7 @@ interface TicketData {
   whatsappId?: number;
   tagIds?: number[];
   followUp?: boolean;
+  suppressFarewell?: boolean;
   applyUserDefaultWhatsappOnTransfer?: boolean;
 }
 
@@ -121,7 +122,7 @@ export const update = async (
     }
   });
 
-  if (ticket.status === "closed" && !ticketData.followUp) {
+  if (ticket.status === "closed" && !ticketData.followUp && !ticketData.suppressFarewell) {
     const whatsapp = await ShowWhatsAppService(ticket.whatsappId);
 
     const { farewellMessage } = whatsapp;

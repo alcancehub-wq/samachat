@@ -374,7 +374,6 @@ const messages = {
         },
         tabs: {
           open: { title: "Atendimentos" },
-          followUp: { title: "Follow up" },
           closed: { title: "Resolvidos" },
           search: { title: "Busca" },
         },
@@ -1704,7 +1703,7 @@ const messages = {
       ticketOptionsMenu: {
         delete: "Deletar",
         transfer: "Transferir",
-        followUp: "Follow up",
+        markAsResolved: "Marcar como resolvido",
         markAsUnread: "Marcar como não lido",
         scheduleMessage: "Agendar mensagem",
         reopen: "Reabrir",

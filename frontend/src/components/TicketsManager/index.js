@@ -12,7 +12,6 @@ import Tab from "@material-ui/core/Tab";
 import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
-import AccessTimeIcon from "@material-ui/icons/AccessTime";
 import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
 import Switch from "@material-ui/core/Switch";
 import NewTicketModal from "../NewTicketModal";
@@ -440,7 +439,6 @@ const TicketsManager = () => {
   const location = useLocation();
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
-  const [followUpCount, setFollowUpCount] = useState(0);
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
@@ -478,7 +476,11 @@ const TicketsManager = () => {
     }
 
     if (dashboardFilters.tab) {
-      setTab(dashboardFilters.tab);
+      const nextTab =
+        dashboardFilters.tab === "followUp"
+          ? "closed"
+          : dashboardFilters.tab;
+      setTab(nextTab);
     }
 
     if (dashboardFilters.tabOpen) {
@@ -569,25 +571,6 @@ const TicketsManager = () => {
             value={"open"}
             icon={isMobile ? undefined : <MoveToInboxIcon />}
             label={renderTabLabel(i18n.t("tickets.tabs.open.title"))}
-            classes={{ root: classes.tab }}
-          />
-          <Tab
-            value={"followUp"}
-            icon={isMobile ? undefined : <AccessTimeIcon />}
-            label={
-              isMobile ? (
-                renderTabLabel(i18n.t("tickets.tabs.followUp.title"), followUpCount)
-              ) : (
-                <Badge
-                  className={classes.badge}
-                  badgeContent={followUpCount}
-                  color="primary"
-                  classes={{ badge: classes.openBadge }}
-                >
-                  {i18n.t("tickets.tabs.followUp.title")}
-                </Badge>
-              )
-            }
             classes={{ root: classes.tab }}
           />
           <Tab
@@ -746,16 +729,6 @@ const TicketsManager = () => {
           showAll={canShowAllTickets}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}
-        />
-      </TabPanel>
-      <TabPanel value={activeTab} name="followUp" className={classes.ticketsWrapper}>
-        <TicketsList
-          status="closed"
-          showAll={canShowAllTickets}
-          selectedQueueIds={selectedQueueIds}
-          selectedTagIds={selectedTagIds}
-          followUp="true"
-          updateCount={(val) => setFollowUpCount(val)}
         />
       </TabPanel>
       <TabPanel value={activeTab} name="search" className={classes.ticketsWrapper}>

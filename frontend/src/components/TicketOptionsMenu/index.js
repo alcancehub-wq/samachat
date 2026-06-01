@@ -5,7 +5,7 @@ import MenuItem from "@material-ui/core/MenuItem";
 import Menu from "@material-ui/core/Menu";
 import { makeStyles } from "@material-ui/core/styles";
 import SwapHorizIcon from "@material-ui/icons/SwapHoriz";
-import LowPriorityIcon from "@material-ui/icons/LowPriority";
+import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import MarkunreadOutlinedIcon from "@material-ui/icons/MarkunreadOutlined";
 import EventNoteOutlinedIcon from "@material-ui/icons/EventNoteOutlined";
 import ReplayIcon from "@material-ui/icons/Replay";
@@ -95,11 +95,11 @@ const TicketOptionsMenu = ({
 		handleClose();
 	};
 
-	const handleMoveToFollowUp = () => {
+	const handleMarkAsResolved = () => {
 		handleUpdateTicket({
 			status: "closed",
 			userId: ticket.userId || user?.id || null,
-			followUp: true,
+			suppressFarewell: true,
 		});
 	};
 
@@ -189,9 +189,9 @@ const TicketOptionsMenu = ({
 				)}
 				{ticket.status === "open" && (
 					renderMenuItem(
-						LowPriorityIcon,
-						i18n.t("ticketOptionsMenu.followUp"),
-						handleMoveToFollowUp
+						CheckCircleOutlineIcon,
+						i18n.t("ticketOptionsMenu.markAsResolved"),
+						handleMarkAsResolved
 					)
 				)}
 				{ticket.unreadMessages === 0 && (

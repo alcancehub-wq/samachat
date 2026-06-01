@@ -111,7 +111,6 @@ const messages = {
           },
           tasks: {
             title: "Priority tasks",
-            subtitle: "Open items with the highest operational urgency."
           },
           schedules: {
             title: "Upcoming schedules",
@@ -470,7 +469,6 @@ const messages = {
         },
         tabs: {
           open: { title: "Attendances" },
-          followUp: { title: "Follow up" },
           closed: { title: "Resolved" },
           search: { title: "Search" },
         },
@@ -1681,7 +1679,7 @@ const messages = {
       ticketOptionsMenu: {
         delete: "Delete",
         transfer: "Transfer",
-        followUp: "Follow up",
+        markAsResolved: "Mark as resolved",
         markAsUnread: "Mark as unread",
         scheduleMessage: "Schedule message",
         reopen: "Reopen",

@@ -111,7 +111,6 @@ const messages = {
           },
           tasks: {
             title: "Tareas prioritarias",
-            subtitle: "Elementos abiertos con mayor urgencia operativa."
           },
           schedules: {
             title: "Próximas programaciones",
@@ -467,7 +466,6 @@ const messages = {
         },
         tabs: {
           open: { title: "Atenciones" },
-          followUp: { title: "Follow up" },
           closed: { title: "Resueltos" },
           search: { title: "Buscar" },
         },
@@ -1676,7 +1674,7 @@ const messages = {
       ticketOptionsMenu: {
         delete: "Borrar",
         transfer: "Transferir",
-        followUp: "Follow up",
+        markAsResolved: "Marcar como resuelto",
         markAsUnread: "Marcar como no leído",
         scheduleMessage: "Agendar mensaje",
         reopen: "Reabrir",
