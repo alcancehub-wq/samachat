@@ -6,6 +6,7 @@ import { Formik, Form, Field } from "formik";
 import {
   Button,
   Checkbox,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -15,8 +16,10 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  TextField
+  TextField,
+  Typography
 } from "@material-ui/core";
+import Autocomplete from "@material-ui/lab/Autocomplete";
 import { toast } from "react-toastify";
 
 import { i18n } from "../../translate/i18n";
@@ -26,10 +29,72 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 
 const BRAZIL_SCHEDULE_OFFSET = "-03:00";
+const ACTIVE_TICKET_STATUSES = ["open", "pending"];
+const MIN_TICKET_SEARCH_LENGTH = 2;
 const DATETIME_LOCAL_MINUTES = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 const DATETIME_LOCAL_SECONDS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
 const DATETIME_LOCAL_MILLIS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,3}$/;
 const DATETIME_HAS_TIMEZONE = /(Z|[+-]\d{2}:\d{2})$/i;
+
+const buildTicketSearchOption = ticketLike => {
+  if (!ticketLike) {
+    return null;
+  }
+
+  if (ticketLike.contactName !== undefined || ticketLike.contactNumber !== undefined) {
+    return ticketLike.id
+      ? {
+          id: ticketLike.id,
+          status: ticketLike.status || "",
+          contactId: ticketLike.contactId || null,
+          contactName: ticketLike.contactName || "",
+          contactNumber: ticketLike.contactNumber || ""
+        }
+      : null;
+  }
+
+  const contact = ticketLike.contact || {};
+
+  if (!ticketLike.id) {
+    return null;
+  }
+
+  return {
+    id: ticketLike.id,
+    status: ticketLike.status || "",
+    contactId: ticketLike.contactId || contact.id || null,
+    contactName: contact.name || "",
+    contactNumber: contact.number || ""
+  };
+};
+
+const mergeTicketSearchOptions = (...collections) => {
+  const optionsMap = new Map();
+
+  collections.flat().forEach(item => {
+    const option = buildTicketSearchOption(item);
+
+    if (!option?.id || optionsMap.has(option.id)) {
+      return;
+    }
+
+    optionsMap.set(option.id, option);
+  });
+
+  return Array.from(optionsMap.values());
+};
+
+const getTicketOptionLabel = option => {
+  const normalizedOption = buildTicketSearchOption(option);
+
+  if (!normalizedOption) {
+    return "";
+  }
+
+  return normalizedOption.contactName ||
+    normalizedOption.contactNumber ||
+    `#${normalizedOption.id}`;
+};
 
 const normalizeScheduledAtForApi = value => {
   if (!value) {
@@ -122,6 +187,16 @@ const ScheduleSchema = Yup.object().shape({
       then: schema => schema.required("Required"),
       otherwise: schema => schema.notRequired()
     }),
+  ticketId: Yup.number()
+    .transform((value, originalValue) => {
+      if (originalValue === "" || originalValue === null || originalValue === undefined) {
+        return null;
+      }
+
+      return Number(originalValue);
+    })
+    .nullable()
+    .required(i18n.t("scheduleModal.search.ticketRequired")),
   mediaOriginalName: Yup.string().nullable(),
   removeMedia: Yup.boolean()
 });
@@ -185,8 +260,40 @@ const ScheduleModal = ({
 
   const [schedule, setSchedule] = useState(initialState);
   const [selectedMedia, setSelectedMedia] = useState(null);
+  const [ticketSearchInput, setTicketSearchInput] = useState("");
+  const [ticketSearchLoading, setTicketSearchLoading] = useState(false);
+  const [ticketSearchOptions, setTicketSearchOptions] = useState([]);
+  const [selectedTicketOption, setSelectedTicketOption] = useState(null);
   const [users, setUsers] = useState([]);
   const minScheduledAt = getMinimumScheduledAtInputValue();
+
+  const getTicketStatusLabel = status => {
+    if (status === "open") {
+      return i18n.t("scheduleModal.search.statusOpen");
+    }
+
+    if (status === "pending") {
+      return i18n.t("scheduleModal.search.statusPending");
+    }
+
+    return status || "";
+  };
+
+  const getTicketOptionMeta = option => {
+    const normalizedOption = buildTicketSearchOption(option);
+
+    if (!normalizedOption) {
+      return "";
+    }
+
+    return [
+      normalizedOption.contactNumber,
+      `#${normalizedOption.id}`,
+      getTicketStatusLabel(normalizedOption.status)
+    ]
+      .filter(Boolean)
+      .join(" • ");
+  };
 
   useEffect(() => {
     return () => {
@@ -236,6 +343,9 @@ const ScheduleModal = ({
 
       if (!scheduleId) {
         setSchedule({ ...initialState });
+        setSelectedTicketOption(null);
+        setTicketSearchInput("");
+        setTicketSearchOptions([]);
         return;
       }
 
@@ -243,6 +353,13 @@ const ScheduleModal = ({
         const { data } = await api.get(`/schedules/${scheduleId}`);
 
         if (isMounted.current) {
+          const resolvedTicketOption = buildTicketSearchOption({
+            id: data.ticketId,
+            status: data.ticket?.status,
+            contactId: data.contactId,
+            contact: data.contact
+          });
+
           setSchedule({
             body: data.body || "",
             status: data.status || "pending",
@@ -253,6 +370,13 @@ const ScheduleModal = ({
             mediaOriginalName: data.mediaOriginalName || "",
             removeMedia: false
           });
+          setSelectedTicketOption(resolvedTicketOption);
+          setTicketSearchInput(
+            resolvedTicketOption ? getTicketOptionLabel(resolvedTicketOption) : ""
+          );
+          setTicketSearchOptions(
+            resolvedTicketOption ? [resolvedTicketOption] : []
+          );
         }
       } catch (err) {
         toastError(err);
@@ -276,11 +400,75 @@ const ScheduleModal = ({
     onClose();
     setSchedule(initialState);
     setSelectedMedia(null);
+    setTicketSearchInput("");
+    setTicketSearchOptions([]);
+    setSelectedTicketOption(null);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
+
+  useEffect(() => {
+    if (!open || lockContextIds) {
+      return undefined;
+    }
+
+    const trimmedSearch = ticketSearchInput.trim();
+
+    if (trimmedSearch.length < MIN_TICKET_SEARCH_LENGTH) {
+      setTicketSearchLoading(false);
+      setTicketSearchOptions(selectedTicketOption ? [selectedTicketOption] : []);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setTicketSearchLoading(true);
+
+    const delayDebounceFn = setTimeout(() => {
+      const fetchTickets = async () => {
+        try {
+          const responses = await Promise.all(
+            ACTIVE_TICKET_STATUSES.map(status =>
+              api.get("/tickets", {
+                params: {
+                  searchParam: trimmedSearch,
+                  status
+                }
+              })
+            )
+          );
+
+          if (cancelled) {
+            return;
+          }
+
+          const mergedOptions = mergeTicketSearchOptions(
+            ...responses.map(response => response.data?.tickets || []),
+            selectedTicketOption ? [selectedTicketOption] : []
+          );
+
+          setTicketSearchOptions(mergedOptions);
+        } catch (err) {
+          if (!cancelled) {
+            setTicketSearchOptions(selectedTicketOption ? [selectedTicketOption] : []);
+            toastError(err);
+          }
+        } finally {
+          if (!cancelled) {
+            setTicketSearchLoading(false);
+          }
+        }
+      };
+
+      fetchTickets();
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(delayDebounceFn);
+    };
+  }, [lockContextIds, open, selectedTicketOption, ticketSearchInput]);
 
   const normalizeId = value => {
     if (value === "" || value === null || value === undefined) {
@@ -456,7 +644,17 @@ const ScheduleModal = ({
           }, 300);
         }}
       >
-        {({ values, touched, errors, setFieldValue, isSubmitting }) => (
+        {({ values, touched, errors, setFieldTouched, setFieldValue, isSubmitting }) => {
+          const ticketSearchHelperText =
+            touched.ticketId && errors.ticketId
+              ? errors.ticketId
+              : ticketSearchInput.trim().length >= MIN_TICKET_SEARCH_LENGTH &&
+                !ticketSearchLoading &&
+                ticketSearchOptions.length === 0
+              ? i18n.t("scheduleModal.search.noOptions")
+              : i18n.t("scheduleModal.search.helper");
+
+          return (
           <Form>
             <DialogContent dividers>
               <Field
@@ -599,28 +797,106 @@ const ScheduleModal = ({
                 </>
               ) : (
                 <>
-                  <TextField
-                    label={i18n.t("scheduleModal.form.ticketId")}
-                    type="number"
-                    fullWidth
-                    variant="outlined"
-                    margin="dense"
-                    value={values.ticketId}
-                    onChange={event => setFieldValue("ticketId", event.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    disabled={lockContextIds}
+                  <Autocomplete
+                    options={ticketSearchOptions}
+                    value={selectedTicketOption}
+                    inputValue={ticketSearchInput}
+                    loading={ticketSearchLoading}
+                    filterOptions={options => options}
+                    noOptionsText={
+                      ticketSearchInput.trim().length < MIN_TICKET_SEARCH_LENGTH
+                        ? i18n.t("scheduleModal.search.typeToSearch")
+                        : i18n.t("scheduleModal.search.noOptions")
+                    }
+                    loadingText={i18n.t("scheduleModal.search.loading")}
+                    getOptionLabel={getTicketOptionLabel}
+                    getOptionSelected={(option, value) => option.id === value.id}
+                    onChange={(event, newValue) => {
+                      const nextOption = buildTicketSearchOption(newValue);
+
+                      setSelectedTicketOption(nextOption);
+                      setTicketSearchInput(nextOption ? getTicketOptionLabel(nextOption) : "");
+                      setTicketSearchOptions(
+                        nextOption
+                          ? mergeTicketSearchOptions(ticketSearchOptions, [nextOption])
+                          : []
+                      );
+                      setFieldValue("ticketId", nextOption?.id || "");
+                      setFieldValue("contactId", nextOption?.contactId || "");
+                      setFieldTouched("ticketId", true, false);
+                    }}
+                    onInputChange={(event, newInputValue, reason) => {
+                      setTicketSearchInput(newInputValue);
+
+                      if (reason === "input") {
+                        setSelectedTicketOption(null);
+                        setFieldValue("ticketId", "");
+                        setFieldValue("contactId", "");
+                      }
+
+                      if (reason === "clear") {
+                        setSelectedTicketOption(null);
+                        setTicketSearchOptions([]);
+                        setFieldValue("ticketId", "");
+                        setFieldValue("contactId", "");
+                      }
+                    }}
+                    renderOption={option => (
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <Typography variant="body2">
+                          {getTicketOptionLabel(option)}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {getTicketOptionMeta(option)}
+                        </Typography>
+                      </div>
+                    )}
+                    renderInput={params => (
+                      <TextField
+                        {...params}
+                        label={i18n.t("scheduleModal.form.ticketLookup")}
+                        placeholder={i18n.t("scheduleModal.search.placeholder")}
+                        fullWidth
+                        variant="outlined"
+                        margin="dense"
+                        onBlur={() => setFieldTouched("ticketId", true, false)}
+                        error={touched.ticketId && Boolean(errors.ticketId)}
+                        helperText={ticketSearchHelperText}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {ticketSearchLoading ? (
+                                <CircularProgress color="inherit" size={20} />
+                              ) : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          )
+                        }}
+                      />
+                    )}
                   />
-                  <TextField
-                    label={i18n.t("scheduleModal.form.contactId")}
-                    type="number"
-                    fullWidth
-                    variant="outlined"
-                    margin="dense"
-                    value={values.contactId}
-                    onChange={event => setFieldValue("contactId", event.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    disabled={lockContextIds}
-                  />
+                  {selectedTicketOption && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        padding: 12,
+                        borderRadius: 8,
+                        border: "1px solid rgba(0, 0, 0, 0.12)",
+                        backgroundColor: "rgba(0, 0, 0, 0.02)"
+                      }}
+                    >
+                      <Typography variant="subtitle2">
+                        {i18n.t("scheduleModal.search.selected")}
+                      </Typography>
+                      <Typography variant="body2">
+                        {getTicketOptionLabel(selectedTicketOption)}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        {getTicketOptionMeta(selectedTicketOption)}
+                      </Typography>
+                    </div>
+                  )}
                 </>
               )}
               {!scheduleId && lockContextIds && (
@@ -674,7 +950,8 @@ const ScheduleModal = ({
               </Button>
             </DialogActions>
           </Form>
-        )}
+          );
+        }}
       </Formik>
     </Dialog>
   );
