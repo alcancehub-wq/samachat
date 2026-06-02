@@ -1180,6 +1180,24 @@ const messages = {
               disabled: "Disabled",
             },
           },
+          lostTicketPurge: {
+            name: "Lost ticket purge governance",
+            description: "Define the administrative policy that will be used by the future safe automatic purge routine for lost tickets.",
+            enabledLabel: "Enable automatic purge for lost tickets",
+            amountLabel: "Retention period",
+            amountHelper: "Choose how long lost tickets should be kept before a future safe purge routine can remove them.",
+            unitLabel: "Unit",
+            warningTitle: "Important notice",
+            warning: "When enabled, tickets marked as lost may be permanently purged after the configured period. The purge routine will run through a safe process.",
+            options: {
+              enabled: "Enabled",
+              disabled: "Disabled",
+            },
+            units: {
+              days: "Days",
+              months: "Months",
+            },
+          },
         },
       },
       apiAdmin: {

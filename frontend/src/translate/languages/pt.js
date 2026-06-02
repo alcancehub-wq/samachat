@@ -1203,6 +1203,24 @@ const messages = {
               disabled: "Desativado",
             },
           },
+          lostTicketPurge: {
+            name: "Depuração de perdidos",
+            description: "Defina a política administrativa que será usada pela futura rotina segura de depuração automática de tickets perdidos.",
+            enabledLabel: "Ativar depuração automática de perdidos",
+            amountLabel: "Tempo de retenção",
+            amountHelper: "Informe quantos dias ou meses os tickets perdidos devem ser mantidos antes de uma futura depuração segura.",
+            unitLabel: "Unidade",
+            warningTitle: "Aviso importante",
+            warning: "Quando habilitado, tickets marcados como perdidos poderão ser depurados definitivamente após o período configurado. A rotina de depuração será executada por processo seguro.",
+            options: {
+              enabled: "Ativado",
+              disabled: "Desativado",
+            },
+            units: {
+              days: "Dias",
+              months: "Meses",
+            },
+          },
         },
       },
       apiAdmin: {

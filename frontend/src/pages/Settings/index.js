@@ -22,6 +22,19 @@ import OpenAI from "../OpenAI";
 import ApiAdmin from "../ApiAdmin";
 import Integrations from "../Integrations";
 
+const LOST_TICKET_PURGE_DEFAULTS = {
+	lostTicketPurgeEnabled: "false",
+	lostTicketPurgeAmount: "90",
+	lostTicketPurgeUnit: "days",
+};
+
+const LOST_TICKET_PURGE_SETTING_KEYS = Object.keys(LOST_TICKET_PURGE_DEFAULTS);
+
+const getSettingValueFromList = (settingsList, key, fallback = "") => {
+	const setting = settingsList.find(item => item.key === key);
+	return setting ? setting.value : fallback;
+};
+
 const useStyles = makeStyles(theme => ({
 	root: {
 		display: "block",
@@ -107,14 +120,58 @@ const useStyles = makeStyles(theme => ({
 		backgroundColor: "#ffffff",
 		backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
 	},
+	stackPaper: {
+		flexDirection: "column",
+		alignItems: "stretch",
+		gap: theme.spacing(2),
+	},
 	settingMeta: {
 		display: "flex",
 		flexDirection: "column",
 		gap: 2,
 	},
+	settingHeader: {
+		display: "flex",
+		justifyContent: "space-between",
+		alignItems: "flex-start",
+		gap: theme.spacing(2),
+		[theme.breakpoints.down("sm")]: {
+			flexDirection: "column",
+		},
+	},
+	governanceControls: {
+		display: "grid",
+		gridTemplateColumns: "minmax(220px, 1.4fr) minmax(160px, 0.8fr) minmax(180px, 1fr)",
+		gap: theme.spacing(2),
+		alignItems: "start",
+		[theme.breakpoints.down("sm")]: {
+			gridTemplateColumns: "1fr",
+		},
+	},
+	settingField: {
+		width: "100%",
+	},
+	settingHint: {
+		marginTop: theme.spacing(0.5),
+	},
+	warningBox: {
+		padding: theme.spacing(1.5),
+		borderRadius: 12,
+		border: "1px solid rgba(180, 83, 9, 0.16)",
+		backgroundColor: "rgba(255, 247, 237, 0.9)",
+	},
+	warningTitle: {
+		fontWeight: 700,
+		marginBottom: theme.spacing(0.5),
+	},
 
 	settingOption: {
 		marginLeft: "auto",
+		minWidth: 180,
+		[theme.breakpoints.down("sm")]: {
+			marginLeft: 0,
+			width: "100%",
+		},
 	},
 	margin: {
 		margin: theme.spacing(1),
@@ -127,12 +184,59 @@ const Settings = () => {
 
 	const [settings, setSettings] = useState([]);
 	const [activeTab, setActiveTab] = useState("general");
+	const [lostTicketPurgeForm, setLostTicketPurgeForm] = useState(LOST_TICKET_PURGE_DEFAULTS);
+
+	const syncLostTicketPurgeForm = settingsList => {
+		setLostTicketPurgeForm({
+			lostTicketPurgeEnabled: getSettingValueFromList(
+				settingsList,
+				"lostTicketPurgeEnabled",
+				LOST_TICKET_PURGE_DEFAULTS.lostTicketPurgeEnabled
+			),
+			lostTicketPurgeAmount: getSettingValueFromList(
+				settingsList,
+				"lostTicketPurgeAmount",
+				LOST_TICKET_PURGE_DEFAULTS.lostTicketPurgeAmount
+			),
+			lostTicketPurgeUnit: getSettingValueFromList(
+				settingsList,
+				"lostTicketPurgeUnit",
+				LOST_TICKET_PURGE_DEFAULTS.lostTicketPurgeUnit
+			),
+		});
+	};
+
+	const updateSettingState = (settingKey, value) => {
+		setSettings(prevState => {
+			const aux = [...prevState];
+			const settingIndex = aux.findIndex(s => s.key === settingKey);
+
+			if (settingIndex === -1) {
+				return [...aux, { key: settingKey, value }];
+			}
+
+			aux[settingIndex] = {
+				...aux[settingIndex],
+				value,
+			};
+
+			return aux;
+		});
+	};
+
+	const persistSetting = async (settingKey, value) => {
+		await api.put(`/settings/${settingKey}`, {
+			value,
+		});
+		toast.success(i18n.t("settings.success"));
+	};
 
 	useEffect(() => {
 		const fetchSession = async () => {
 			try {
 				const { data } = await api.get("/settings");
 				setSettings(data);
+				syncLostTicketPurgeForm(data);
 			} catch (err) {
 				toastError(err);
 			}
@@ -145,12 +249,14 @@ const Settings = () => {
 
 		socket.on("settings", data => {
 			if (data.action === "update") {
-				setSettings(prevState => {
-					const aux = [...prevState];
-					const settingIndex = aux.findIndex(s => s.key === data.setting.key);
-					aux[settingIndex].value = data.setting.value;
-					return aux;
-				});
+				updateSettingState(data.setting.key, data.setting.value);
+
+				if (LOST_TICKET_PURGE_SETTING_KEYS.includes(data.setting.key)) {
+					setLostTicketPurgeForm(prevState => ({
+						...prevState,
+						[data.setting.key]: data.setting.value,
+					}));
+				}
 			}
 		});
 
@@ -164,18 +270,70 @@ const Settings = () => {
 		const settingKey = e.target.name;
 
 		try {
-			await api.put(`/settings/${settingKey}`, {
-				value: selectedValue,
-			});
-			toast.success(i18n.t("settings.success"));
+			await persistSetting(settingKey, selectedValue);
 		} catch (err) {
 			toastError(err);
 		}
 	};
 
-	const getSettingValue = key => {
-		const { value } = settings.find(s => s.key === key);
-		return value;
+	const handleChangeLostTicketPurgeSetting = async e => {
+		const { name, value } = e.target;
+
+		setLostTicketPurgeForm(prevState => ({
+			...prevState,
+			[name]: value,
+		}));
+
+		try {
+			await persistSetting(name, value);
+		} catch (err) {
+			setLostTicketPurgeForm(prevState => ({
+				...prevState,
+				[name]: getSettingValue(name, LOST_TICKET_PURGE_DEFAULTS[name]),
+			}));
+			toastError(err);
+		}
+	};
+
+	const handleLostTicketPurgeAmountChange = e => {
+		setLostTicketPurgeForm(prevState => ({
+			...prevState,
+			lostTicketPurgeAmount: e.target.value,
+		}));
+	};
+
+	const handleLostTicketPurgeAmountBlur = async () => {
+		const parsedValue = parseInt(lostTicketPurgeForm.lostTicketPurgeAmount, 10);
+		const nextValue = Number.isNaN(parsedValue) || parsedValue < 1
+			? LOST_TICKET_PURGE_DEFAULTS.lostTicketPurgeAmount
+			: String(parsedValue);
+		const currentPersistedValue = getSettingValue(
+			"lostTicketPurgeAmount",
+			LOST_TICKET_PURGE_DEFAULTS.lostTicketPurgeAmount
+		);
+
+		setLostTicketPurgeForm(prevState => ({
+			...prevState,
+			lostTicketPurgeAmount: nextValue,
+		}));
+
+		if (nextValue === currentPersistedValue) {
+			return;
+		}
+
+		try {
+			await persistSetting("lostTicketPurgeAmount", nextValue);
+		} catch (err) {
+			setLostTicketPurgeForm(prevState => ({
+				...prevState,
+				lostTicketPurgeAmount: currentPersistedValue,
+			}));
+			toastError(err);
+		}
+	};
+
+	const getSettingValue = (key, fallback = "") => {
+		return getSettingValueFromList(settings, key, fallback);
 	};
 
 	const handleChangeTab = (event, newValue) => {
@@ -258,6 +416,92 @@ const Settings = () => {
 						helperText={i18n.t("settings.apiToken.helper")}
 						value={settings && settings.length > 0 && getSettingValue("userApiToken")}
 					/>
+						</Paper>
+
+						<Paper className={`${classes.paper} ${classes.stackPaper}`}>
+							<div className={classes.settingHeader}>
+								<div className={classes.settingMeta}>
+									<Typography variant="body1">
+										{i18n.t("settings.settings.lostTicketPurge.name")}
+									</Typography>
+									<Typography variant="caption" className={classes.pageSubtitle}>
+										{i18n.t("settings.settings.lostTicketPurge.description")}
+									</Typography>
+								</div>
+							</div>
+
+							<div className={classes.governanceControls}>
+								<div className={classes.settingField}>
+									<Typography variant="caption" display="block">
+										{i18n.t("settings.settings.lostTicketPurge.enabledLabel")}
+									</Typography>
+									<Select
+										native
+										margin="dense"
+										variant="outlined"
+										name="lostTicketPurgeEnabled"
+										value={lostTicketPurgeForm.lostTicketPurgeEnabled}
+										className={classes.settingField}
+										onChange={handleChangeLostTicketPurgeSetting}
+									>
+										<option value="false">
+											{i18n.t("settings.settings.lostTicketPurge.options.disabled")}
+										</option>
+										<option value="true">
+											{i18n.t("settings.settings.lostTicketPurge.options.enabled")}
+										</option>
+									</Select>
+								</div>
+
+								<div className={classes.settingField}>
+									<Typography variant="caption" display="block">
+										{i18n.t("settings.settings.lostTicketPurge.amountLabel")}
+									</Typography>
+									<TextField
+										type="number"
+										name="lostTicketPurgeAmount"
+										variant="outlined"
+										margin="dense"
+										value={lostTicketPurgeForm.lostTicketPurgeAmount}
+										onChange={handleLostTicketPurgeAmountChange}
+										onBlur={handleLostTicketPurgeAmountBlur}
+										className={classes.settingField}
+										inputProps={{ min: 1, step: 1 }}
+										helperText={i18n.t("settings.settings.lostTicketPurge.amountHelper")}
+									/>
+								</div>
+
+								<div className={classes.settingField}>
+									<Typography variant="caption" display="block">
+										{i18n.t("settings.settings.lostTicketPurge.unitLabel")}
+									</Typography>
+									<Select
+										native
+										margin="dense"
+										variant="outlined"
+										name="lostTicketPurgeUnit"
+										value={lostTicketPurgeForm.lostTicketPurgeUnit}
+										className={classes.settingField}
+										onChange={handleChangeLostTicketPurgeSetting}
+									>
+										<option value="days">
+											{i18n.t("settings.settings.lostTicketPurge.units.days")}
+										</option>
+										<option value="months">
+											{i18n.t("settings.settings.lostTicketPurge.units.months")}
+										</option>
+									</Select>
+								</div>
+							</div>
+
+							<div className={classes.warningBox}>
+								<Typography variant="body2" className={classes.warningTitle}>
+									{i18n.t("settings.settings.lostTicketPurge.warningTitle")}
+								</Typography>
+								<Typography variant="caption" className={classes.pageSubtitle}>
+									{i18n.t("settings.settings.lostTicketPurge.warning")}
+								</Typography>
+							</div>
 						</Paper>
 					</>
 				)}
