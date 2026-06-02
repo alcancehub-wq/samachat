@@ -595,6 +595,7 @@ const messages = {
       tags: {
         title: "Tags",
         subtitle: "Organize clients and attendances with labels.",
+          lost: { title: "Lost" },
         searchPlaceholder: "Search tags...",
         table: {
           name: "Name",
@@ -1698,6 +1699,7 @@ const messages = {
         delete: "Delete",
         transfer: "Transfer",
         markAsResolved: "Mark as resolved",
+        markAsLost: "Mark as lost",
         markAsUnread: "Mark as unread",
         scheduleMessage: "Schedule message",
         reopen: "Reopen",

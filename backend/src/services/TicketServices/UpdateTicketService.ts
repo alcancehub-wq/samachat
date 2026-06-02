@@ -53,6 +53,15 @@ const UpdateTicketService = async ({
   const oldStatus = ticket.status;
   const oldUserId = ticket.user?.id;
   const oldWhatsappId = ticket.whatsappId;
+  const nextStatus = status || oldStatus;
+  const nextLostAt =
+    nextStatus === "lost"
+      ? oldStatus !== "lost"
+        ? new Date()
+        : ticket.lostAt
+      : oldStatus === "lost"
+      ? null
+      : ticket.lostAt;
 
   let nextWhatsappId = whatsappId;
   const hasExplicitWhatsappSelection =
@@ -79,12 +88,11 @@ const UpdateTicketService = async ({
     await CheckContactOpenTickets(ticket.contact.id, ticket.whatsappId);
   }
 
-  const nextStatus = status || oldStatus;
-
   await ticket.update({
     status,
     queueId,
     userId,
+    lostAt: nextLostAt,
     pendingSince:
       nextStatus === "pending" && oldStatus !== "pending"
         ? new Date()

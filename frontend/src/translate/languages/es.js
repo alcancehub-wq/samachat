@@ -467,6 +467,7 @@ const messages = {
         tabs: {
           open: { title: "Atenciones" },
           closed: { title: "Resueltos" },
+          lost: { title: "Perdidos" },
           search: { title: "Buscar" },
         },
         search: {
@@ -1693,6 +1694,7 @@ const messages = {
         delete: "Borrar",
         transfer: "Transferir",
         markAsResolved: "Marcar como resuelto",
+        markAsLost: "Marcar como perdido",
         markAsUnread: "Marcar como no leído",
         scheduleMessage: "Agendar mensaje",
         reopen: "Reabrir",

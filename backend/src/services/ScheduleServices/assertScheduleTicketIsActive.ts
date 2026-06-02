@@ -8,7 +8,9 @@ interface TicketLike {
 
 export const isClosedScheduleTicket = (
   ticket?: TicketLike | null
-): boolean => String(ticket?.status || "").toLowerCase() === "closed";
+): boolean => ["closed", "lost"].includes(
+  String(ticket?.status || "").toLowerCase()
+);
 
 const assertScheduleTicketIsActive = (ticket?: TicketLike | null): void => {
   if (isClosedScheduleTicket(ticket)) {

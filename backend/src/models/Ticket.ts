@@ -47,6 +47,9 @@ class Ticket extends Model<Ticket> {
   @Column
   pendingSince: Date;
 
+  @Column
+  lostAt: Date;
+
   @UpdatedAt
   updatedAt: Date;
 

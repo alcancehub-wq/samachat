@@ -106,6 +106,7 @@ describe("FindOrCreateTicketService", () => {
     expect(ticketUpdateMock).toHaveBeenCalledWith({
       status: "pending",
       userId: 7,
+      lostAt: null,
       unreadMessages: 4,
       pendingSince: expect.any(Date)
     });
@@ -198,6 +199,7 @@ describe("FindOrCreateTicketService", () => {
     expect(ticketUpdateMock).toHaveBeenCalledWith({
       status: "pending",
       userId: null,
+      lostAt: null,
       unreadMessages: 2,
       pendingSince: expect.any(Date)
     });
@@ -255,6 +257,52 @@ describe("FindOrCreateTicketService", () => {
       status: "open",
       whatsappId: 35,
       userId: 4
+    });
+  });
+
+  it("reopens a recent lost ticket into pending and clears lostAt on inbound", async () => {
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    ticketFindOneMock
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 200,
+        status: "lost",
+        userId: 4,
+        whatsappId: 35,
+        lostAt: new Date("2026-06-01T10:00:00.000Z"),
+        update: ticketUpdateMock
+      });
+    showTicketServiceMock.mockResolvedValue({
+      id: 200,
+      status: "pending",
+      whatsappId: 35,
+      userId: 4,
+      lostAt: null
+    });
+
+    const result = await FindOrCreateTicketService(
+      { id: 17179 } as any,
+      35,
+      2
+    );
+
+    expect(ticketUpdateMock).toHaveBeenCalledWith({
+      status: "pending",
+      userId: 4,
+      lostAt: null,
+      unreadMessages: 2,
+      pendingSince: expect.any(Date)
+    });
+    expect(tagFindOneMock).not.toHaveBeenCalled();
+    expect(ticketTagDestroyMock).not.toHaveBeenCalled();
+    expect(toMock).toHaveBeenCalledWith("tickets:lost:whatsapp:35");
+    expect(toMock).toHaveBeenCalledWith("tickets:pending:whatsapp:35");
+    expect(result).toEqual({
+      id: 200,
+      status: "pending",
+      whatsappId: 35,
+      userId: 4,
+      lostAt: null
     });
   });
 });

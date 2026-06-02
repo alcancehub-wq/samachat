@@ -44,13 +44,13 @@ const emitAutomaticPendingTransition = ({
   oldStatus?: string | null;
   oldWhatsappId?: number | null;
 }): void => {
-  if (oldStatus !== "closed" || ticket.status !== "pending") {
+  if (!["closed", "lost"].includes(String(oldStatus || "")) || ticket.status !== "pending") {
     return;
   }
 
   const io = getIO();
 
-  io.to(getScopedTicketsRoom(oldStatus, oldWhatsappId)).emit("ticket", {
+  io.to(getScopedTicketsRoom(String(oldStatus || ""), oldWhatsappId)).emit("ticket", {
     action: "delete",
     ticketId: ticket.id
   });
@@ -125,7 +125,7 @@ const FindOrCreateTicketService = async (
     });
 
     if (ticket) {
-      if (ticket.status === "closed") {
+      if (["closed", "lost"].includes(ticket.status)) {
         transitionedTicketId = ticket.id;
         transitionedFromStatus = ticket.status;
         transitionedFromWhatsappId = ticket.whatsappId;
@@ -133,6 +133,7 @@ const FindOrCreateTicketService = async (
         await ticket.update({
           status: "pending",
           userId: preservedUserId,
+          lostAt: null,
           unreadMessages,
           pendingSince: new Date()
         });

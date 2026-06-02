@@ -8,6 +8,7 @@ import SwapHorizIcon from "@material-ui/icons/SwapHoriz";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import MarkunreadOutlinedIcon from "@material-ui/icons/MarkunreadOutlined";
 import EventNoteOutlinedIcon from "@material-ui/icons/EventNoteOutlined";
+import HighlightOffIcon from "@material-ui/icons/HighlightOff";
 import ReplayIcon from "@material-ui/icons/Replay";
 
 import { i18n } from "../../translate/i18n";
@@ -103,8 +104,16 @@ const TicketOptionsMenu = ({
 		});
 	};
 
+	const handleMarkAsLost = () => {
+		handleUpdateTicket({
+			status: "lost",
+			userId: ticket.userId || user?.id || null,
+			suppressFarewell: true,
+		});
+	};
+
 	const handleReopen = () => {
-		if (ticket.status === "closed") {
+		if (ticket.status === "closed" || ticket.status === "lost") {
 			handleUpdateTicket({
 				status: "open",
 				userId: user?.id,
@@ -192,6 +201,13 @@ const TicketOptionsMenu = ({
 						CheckCircleOutlineIcon,
 						i18n.t("ticketOptionsMenu.markAsResolved"),
 						handleMarkAsResolved
+					)
+				)}
+				{["open", "pending"].includes(ticket.status) && (
+					renderMenuItem(
+						HighlightOffIcon,
+						i18n.t("ticketOptionsMenu.markAsLost"),
+						handleMarkAsLost
 					)
 				)}
 				{ticket.unreadMessages === 0 && (

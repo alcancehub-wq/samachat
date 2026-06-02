@@ -12,6 +12,7 @@ import Tab from "@material-ui/core/Tab";
 import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
+import HighlightOffIcon from "@material-ui/icons/HighlightOff";
 import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
 import Switch from "@material-ui/core/Switch";
 import NewTicketModal from "../NewTicketModal";
@@ -579,6 +580,12 @@ const TicketsManager = () => {
             label={renderTabLabel(i18n.t("tickets.tabs.closed.title"))}
             classes={{ root: classes.tab }}
           />
+          <Tab
+            value={"lost"}
+            icon={isMobile ? undefined : <HighlightOffIcon />}
+            label={renderTabLabel(i18n.t("tickets.tabs.lost.title"))}
+            classes={{ root: classes.tab }}
+          />
         </Tabs>
       </Paper>
       <Paper square elevation={0} className={classes.ticketOptionsBox}>
@@ -726,6 +733,14 @@ const TicketsManager = () => {
       <TabPanel value={activeTab} name="closed" className={classes.ticketsWrapper}>
         <TicketsList
           status="closed"
+          showAll={canShowAllTickets}
+          selectedQueueIds={selectedQueueIds}
+          selectedTagIds={selectedTagIds}
+        />
+      </TabPanel>
+      <TabPanel value={activeTab} name="lost" className={classes.ticketsWrapper}>
+        <TicketsList
+          status="lost"
           showAll={canShowAllTickets}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}

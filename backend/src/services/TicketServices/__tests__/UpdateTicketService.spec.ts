@@ -35,6 +35,31 @@ describe("UpdateTicketService", () => {
     emit: emitMock
   };
 
+  const buildTicket = (overrides: Partial<any> = {}) => {
+    let ticket: any;
+
+    ticket = {
+      id: 41,
+      status: "open",
+      whatsappId: 13,
+      pendingSince: null,
+      lostAt: null,
+      user: { id: 3 },
+      userId: 3,
+      contactId: 99,
+      contact: { id: 99 },
+      tags: [],
+      update: jest.fn().mockImplementation(async payload => {
+        Object.assign(ticket, payload);
+      }),
+      $set: jest.fn().mockResolvedValue(undefined),
+      reload: jest.fn().mockResolvedValue(undefined),
+      ...overrides
+    };
+
+    return ticket;
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     toMock.mockReturnThis();
@@ -44,28 +69,17 @@ describe("UpdateTicketService", () => {
   });
 
   it("preserves manual reopen cleanup by removing only the Follow up tag", async () => {
-    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
-    const ticketSetTagsMock = jest.fn().mockResolvedValue(undefined);
-    const ticketReloadMock = jest.fn().mockImplementation(async () => {
-      ticket.tags = [{ id: 8, name: "VIP" }];
-    });
-    const ticket: any = {
-      id: 41,
+    const ticket = buildTicket({
       status: "closed",
-      whatsappId: 13,
-      pendingSince: null,
-      user: { id: 3 },
-      userId: 3,
-      contactId: 99,
-      contact: { id: 99 },
       tags: [
         { id: 7, name: "Follow up" },
         { id: 8, name: "VIP" }
-      ],
-      update: ticketUpdateMock,
-      $set: ticketSetTagsMock,
-      reload: ticketReloadMock
-    };
+      ]
+    });
+
+    ticket.reload = jest.fn().mockImplementation(async () => {
+      ticket.tags = [{ id: 8, name: "VIP" }];
+    });
 
     showTicketServiceMock.mockResolvedValue(ticket);
     tagFindOneMock.mockResolvedValue({ id: 7, name: "Follow up" });
@@ -79,10 +93,94 @@ describe("UpdateTicketService", () => {
       }
     });
 
-    expect(ticketSetTagsMock).toHaveBeenCalledWith("tags", [8]);
-    expect(ticketReloadMock).toHaveBeenCalledWith({
+    expect(ticket.$set).toHaveBeenCalledWith("tags", [8]);
+    expect(ticket.reload).toHaveBeenCalledWith({
       include: ["contact", "queue", "whatsapp", "user", "tags"]
     });
     expect(result.ticket.tags).toEqual([{ id: 8, name: "VIP" }]);
+  });
+
+  it("fills lostAt when marking an open ticket as lost", async () => {
+    const pendingSince = new Date("2026-06-01T10:00:00.000Z");
+    const ticket = buildTicket({ status: "open", lostAt: null, pendingSince });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    const result = await UpdateTicketService({
+      ticketId: 41,
+      ticketData: {
+        status: "lost",
+        userId: 3
+      }
+    });
+
+    expect(ticket.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "lost",
+        userId: 3,
+        lostAt: expect.any(Date),
+        pendingSince
+      })
+    );
+    expect(result.ticket.status).toBe("lost");
+    expect(result.ticket.lostAt).toBeInstanceOf(Date);
+  });
+
+  it("fills lostAt when marking a pending ticket as lost", async () => {
+    const pendingSince = new Date("2026-06-01T09:00:00.000Z");
+    const ticket = buildTicket({
+      status: "pending",
+      user: null,
+      userId: null,
+      pendingSince,
+      lostAt: null
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await UpdateTicketService({
+      ticketId: 41,
+      ticketData: {
+        status: "lost",
+        userId: 5
+      }
+    });
+
+    expect(ticket.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "lost",
+        userId: 5,
+        lostAt: expect.any(Date),
+        pendingSince
+      })
+    );
+  });
+
+  it("clears lostAt when reopening a lost ticket", async () => {
+    const ticket = buildTicket({
+      status: "lost",
+      lostAt: new Date("2026-06-01T08:00:00.000Z")
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    const result = await UpdateTicketService({
+      ticketId: 41,
+      ticketData: {
+        status: "open",
+        userId: 9,
+        followUp: false
+      }
+    });
+
+    expect(ticket.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "open",
+        userId: 9,
+        lostAt: null
+      })
+    );
+    expect(result.ticket.status).toBe("open");
+    expect(result.ticket.lostAt).toBeNull();
   });
 });

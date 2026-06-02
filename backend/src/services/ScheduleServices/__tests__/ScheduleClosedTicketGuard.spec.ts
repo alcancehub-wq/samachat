@@ -160,6 +160,20 @@ describe("Schedule closed ticket guards", () => {
     expect(scheduleCreateMock).not.toHaveBeenCalled();
   });
 
+  it("blocks creating a schedule for a lost ticket", async () => {
+    ticketFindByPkMock.mockResolvedValue({ id: 130, status: "lost" });
+
+    await expect(
+      CreateScheduleService({
+        body: "lost flow",
+        scheduledAt: "2026-05-24T12:00:00.000Z",
+        ticketId: 130
+      })
+    ).rejects.toMatchObject({ message: ERR_SCHEDULE_TICKET_CLOSED });
+
+    expect(scheduleCreateMock).not.toHaveBeenCalled();
+  });
+
   it("allows creating a schedule with media only", async () => {
     ticketFindByPkMock.mockResolvedValue({ id: 16, status: "open" });
     scheduleCreateMock.mockResolvedValue({ id: 16, status: "pending" });
