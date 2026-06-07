@@ -2,7 +2,6 @@ import Flow from "../../models/Flow";
 import FlowNode from "../../models/FlowNode";
 import FlowEdge from "../../models/FlowEdge";
 import FlowTrigger from "../../models/FlowTrigger";
-import Whatsapp from "../../models/Whatsapp";
 import AppError from "../../errors/AppError";
 
 const ShowFlowService = async (id: string | number): Promise<Flow> => {
@@ -16,16 +15,6 @@ const ShowFlowService = async (id: string | number): Promise<Flow> => {
       },
       {
         model: FlowTrigger
-      },
-      {
-        model: Whatsapp,
-        attributes: ["id", "name", "phoneNumber"],
-        include: [
-          {
-            association: "users",
-            attributes: ["id", "name"]
-          }
-        ]
       }
     ],
     order: [

@@ -16,10 +16,6 @@ const PublishFlowService = async ({ flowId, status }: Request): Promise<Flow> =>
   }
 
   if (status === "published") {
-    if (!flow.whatsappId) {
-      throw new AppError("ERR_FLOW_WHATSAPP_REQUIRED", 400);
-    }
-
     const nodes = await FlowNode.findAll({ where: { flowId: flow.id } });
     const edges = await FlowEdge.findAll({ where: { flowId: flow.id } });
 

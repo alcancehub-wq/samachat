@@ -7,55 +7,29 @@ import { toast } from "react-toastify";
 import {
   Button,
   Checkbox,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControl,
   FormControlLabel,
-  FormHelperText,
-  InputLabel,
-  MenuItem,
-  Select,
   TextField
 } from "@material-ui/core";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-import useWhatsApps from "../../hooks/useWhatsApps";
 
 const FlowSchema = Yup.object().shape({
-  name: Yup.string().min(2, "Too Short!").max(120, "Too Long!").required("Required"),
-  whatsappId: Yup.string().required("Required")
+  name: Yup.string().min(2, "Too Short!").max(120, "Too Long!").required("Required")
 });
 
-const formatWhatsappOption = whatsapp => {
-  const name = whatsapp?.name || `#${whatsapp?.id}`;
-  const linkedUser = Array.isArray(whatsapp?.users) && whatsapp.users.length > 0
-    ? whatsapp.users[0]?.name
-    : null;
-  const phoneNumber = whatsapp?.phoneNumber || null;
-
-  return [
-    name,
-    linkedUser ? `${i18n.t("flowModal.form.whatsappUserLabel")}: ${linkedUser}` : null,
-    phoneNumber
-  ]
-    .filter(Boolean)
-    .join(" — ");
-};
-
-const FlowModal = ({ open, onClose, flowId, onSaved }) => {
+const FlowModal = ({ open, onClose, flowId }) => {
   const isMounted = useRef(true);
-  const { loading: loadingWhatsApps, whatsApps } = useWhatsApps();
 
   const initialState = {
     name: "",
     description: "",
-    isActive: true,
-    whatsappId: ""
+    isActive: true
   };
 
   const [flow, setFlow] = useState(initialState);
@@ -84,8 +58,7 @@ const FlowModal = ({ open, onClose, flowId, onSaved }) => {
           setFlow({
             name: data.name || "",
             description: data.description || "",
-            isActive: data.isActive !== undefined ? data.isActive : true,
-            whatsappId: data.whatsappId ? String(data.whatsappId) : ""
+            isActive: data.isActive !== undefined ? data.isActive : true
           });
         }
       } catch (err) {
@@ -103,24 +76,10 @@ const FlowModal = ({ open, onClose, flowId, onSaved }) => {
 
   const handleSaveFlow = async values => {
     try {
-      const payload = {
-        ...values,
-        whatsappId: values.whatsappId ? Number(values.whatsappId) : null
-      };
-
-      let savedFlow;
-
       if (flowId) {
-        const { data } = await api.put(`/flows/${flowId}`, payload);
-        savedFlow = data;
+        await api.put(`/flows/${flowId}`, values);
       } else {
-        const { data } = await api.post("/flows", payload);
-        savedFlow = data;
-      }
-
-      if (savedFlow?.id) {
-        const { data } = await api.get(`/flows/${savedFlow.id}`);
-        onSaved?.(data);
+        await api.post("/flows", values);
       }
 
       toast.success(i18n.t("flowModal.success"));
@@ -172,37 +131,6 @@ const FlowModal = ({ open, onClose, flowId, onSaved }) => {
                 multiline
                 rows={3}
               />
-              <FormControl
-                variant="outlined"
-                margin="dense"
-                fullWidth
-                error={touched.whatsappId && Boolean(errors.whatsappId)}
-              >
-                <InputLabel>{i18n.t("flowModal.form.whatsappId")}</InputLabel>
-                <Field
-                  as={Select}
-                  name="whatsappId"
-                  value={values.whatsappId}
-                  label={i18n.t("flowModal.form.whatsappId")}
-                  disabled={loadingWhatsApps}
-                >
-                  <MenuItem value="">
-                    {loadingWhatsApps
-                      ? i18n.t("flowModal.form.whatsappLoading")
-                      : i18n.t("flowModal.form.whatsappPlaceholder")}
-                  </MenuItem>
-                  {whatsApps.map(whatsapp => (
-                    <MenuItem key={whatsapp.id} value={String(whatsapp.id)}>
-                      {formatWhatsappOption(whatsapp)}
-                    </MenuItem>
-                  ))}
-                </Field>
-                <FormHelperText>
-                  {touched.whatsappId && errors.whatsappId
-                    ? errors.whatsappId
-                    : i18n.t("flowModal.form.whatsappHelper")}
-                </FormHelperText>
-              </FormControl>
               <FormControlLabel
                 control={
                   <Checkbox
@@ -227,7 +155,6 @@ const FlowModal = ({ open, onClose, flowId, onSaved }) => {
                 {flowId
                   ? `${i18n.t("flowModal.buttons.okEdit")}`
                   : `${i18n.t("flowModal.buttons.okAdd")}`}
-                {isSubmitting && <CircularProgress size={20} color="inherit" style={{ marginLeft: 8 }} />}
               </Button>
             </DialogActions>
           </Form>

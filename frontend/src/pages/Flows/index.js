@@ -143,24 +143,6 @@ const Flows = () => {
     setSearchParam(event.target.value.toLowerCase());
   };
 
-  const formatFlowWhatsapp = flow => {
-    if (!flow?.whatsapp) {
-      return "-";
-    }
-
-    const linkedUser = Array.isArray(flow.whatsapp.users) && flow.whatsapp.users.length > 0
-      ? flow.whatsapp.users[0]?.name
-      : null;
-
-    return [
-      flow.whatsapp.name || `#${flow.whatsapp.id}`,
-      linkedUser ? `${i18n.t("flows.table.userLabel")}: ${linkedUser}` : null,
-      flow.whatsapp.phoneNumber || null
-    ]
-      .filter(Boolean)
-      .join(" — ");
-  };
-
   const handleOpenFlowModal = () => {
     setSelectedFlow(null);
     setFlowModalOpen(true);
@@ -271,7 +253,6 @@ const Flows = () => {
         open={flowModalOpen}
         onClose={handleCloseFlowModal}
         flowId={selectedFlow?.id}
-        onSaved={flow => dispatch({ type: "UPDATE_FLOW", payload: flow })}
       />
       <MainHeader>
         <div className={classes.headerTitle}>
@@ -335,7 +316,6 @@ const Flows = () => {
                 />
               </TableCell>
               <TableCell className={classes.tableHeadCell}>{i18n.t("flows.table.name")}</TableCell>
-              <TableCell className={classes.tableHeadCell}>{i18n.t("flows.table.whatsapp")}</TableCell>
               <TableCell className={classes.tableHeadCell}>{i18n.t("flows.table.status")}</TableCell>
               <TableCell className={classes.tableHeadCell}>{i18n.t("flows.table.active")}</TableCell>
               <TableCell className={classes.tableHeadCell}>{i18n.t("flows.table.updatedAt")}</TableCell>
@@ -344,7 +324,7 @@ const Flows = () => {
           </TableHead>
           <TableBody>
             {loading ? (
-              <TableRowSkeleton columns={7} />
+              <TableRowSkeleton columns={5} />
             ) : (
               flows.map(flow => (
                 <TableRow key={flow.id} className={classes.tableRow}>
@@ -356,7 +336,6 @@ const Flows = () => {
                     />
                   </TableCell>
                   <TableCell className={classes.tableCell}>{flow.name}</TableCell>
-                  <TableCell className={classes.tableCell}>{formatFlowWhatsapp(flow)}</TableCell>
                   <TableCell className={classes.tableCell}>
                     <Chip
                       className={classes.statusChip}

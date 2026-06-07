@@ -1424,8 +1424,6 @@ const messages = {
         },
         table: {
           name: "Name",
-          whatsapp: "Connection",
-          userLabel: "User",
           status: "Status",
           active: "Active",
           updatedAt: "Updated",
@@ -1520,11 +1518,6 @@ const messages = {
         form: {
           name: "Name",
           description: "Description",
-          whatsappId: "WhatsApp Number/Connection",
-          whatsappHelper: "Select the connection allowed to trigger this flow automatically.",
-          whatsappPlaceholder: "Select a connection",
-          whatsappLoading: "Loading connections...",
-          whatsappUserLabel: "User",
           isActive: "Active",
         },
         buttons: {
@@ -1822,7 +1815,6 @@ const messages = {
           ERR_FLOW_EMPTY: "Flow has no nodes.",
           ERR_FLOW_INVALID_NODES: "Flow must have start and end nodes.",
           ERR_FLOW_INVALID_EDGES: "Flow has invalid edges.",
-          ERR_FLOW_WHATSAPP_REQUIRED: "Select a WhatsApp connection before publishing the flow.",
         ERR_DUPLICATED_INTEGRATION: "An integration with this name already exists.",
         ERR_NO_INTEGRATION_FOUND: "No integration found with this ID.",
         ERR_DUPLICATED_WEBHOOK: "A webhook with this name already exists.",
