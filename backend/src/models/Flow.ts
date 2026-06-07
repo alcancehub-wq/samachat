@@ -14,10 +14,12 @@ import {
 } from "sequelize-typescript";
 
 import User from "./User";
+import Whatsapp from "./Whatsapp";
 import FlowNode from "./FlowNode";
 import FlowEdge from "./FlowEdge";
 import FlowTrigger from "./FlowTrigger";
 import FlowExecution from "./FlowExecution";
+import { BelongsTo } from "sequelize-typescript";
 
 @Table
 class Flow extends Model<Flow> {
@@ -46,6 +48,13 @@ class Flow extends Model<Flow> {
   @ForeignKey(() => User)
   @Column
   createdById: number;
+
+  @ForeignKey(() => Whatsapp)
+  @Column
+  whatsappId: number | null;
+
+  @BelongsTo(() => Whatsapp)
+  whatsapp: Whatsapp;
 
   @HasMany(() => FlowNode)
   nodes: FlowNode[];

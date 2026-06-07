@@ -22,6 +22,7 @@ interface FlowData {
   description?: string;
   status?: string;
   isActive?: boolean;
+  whatsappId?: number | null;
 }
 
 const serializeNodeData = (value?: string | null): any => {
@@ -55,7 +56,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     name: Yup.string().required(),
     description: Yup.string(),
     status: Yup.string(),
-    isActive: Yup.boolean()
+    isActive: Yup.boolean(),
+    whatsappId: Yup.number().nullable()
   });
 
   try {
@@ -69,7 +71,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     description: newFlow.description,
     status: newFlow.status,
     isActive: newFlow.isActive,
-    createdById: Number(req.user.id)
+    createdById: Number(req.user.id),
+    whatsappId: newFlow.whatsappId ?? null
   });
 
   return res.status(200).json(flow);
@@ -111,7 +114,8 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
     name: Yup.string(),
     description: Yup.string(),
     status: Yup.string(),
-    isActive: Yup.boolean()
+    isActive: Yup.boolean(),
+    whatsappId: Yup.number().nullable()
   });
 
   try {

@@ -1,5 +1,6 @@
 import { Sequelize, WhereOptions, Op } from "sequelize";
 import Flow from "../../models/Flow";
+import Whatsapp from "../../models/Whatsapp";
 
 interface Request {
   searchParam?: string;
@@ -46,6 +47,18 @@ const ListFlowsService = async ({
 
   const flows = await Flow.findAll({
     where: Object.keys(whereCondition).length ? whereCondition : undefined,
+    include: [
+      {
+        model: Whatsapp,
+        attributes: ["id", "name", "phoneNumber"],
+        include: [
+          {
+            association: "users",
+            attributes: ["id", "name"]
+          }
+        ]
+      }
+    ],
     order: [["updatedAt", "DESC"]]
   });
 

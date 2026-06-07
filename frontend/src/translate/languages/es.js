@@ -1419,6 +1419,8 @@ const messages = {
         },
         table: {
           name: "Nombre",
+          whatsapp: "Conexion",
+          userLabel: "Usuario",
           status: "Estado",
           active: "Activo",
           updatedAt: "Actualizado",
@@ -1513,6 +1515,11 @@ const messages = {
         form: {
           name: "Nombre",
           description: "Descripcion",
+          whatsappId: "Numero/Conexion de WhatsApp",
+          whatsappHelper: "Seleccione la conexion que podra activar este flujo automaticamente.",
+          whatsappPlaceholder: "Seleccione una conexion",
+          whatsappLoading: "Cargando conexiones...",
+          whatsappUserLabel: "Usuario",
           isActive: "Activo",
         },
         buttons: {
@@ -1811,6 +1818,7 @@ const messages = {
         ERR_FLOW_EMPTY: "El flujo no tiene nodos.",
         ERR_FLOW_INVALID_NODES: "El flujo requiere nodos de inicio y fin.",
         ERR_FLOW_INVALID_EDGES: "El flujo tiene conexiones invalidas.",
+        ERR_FLOW_WHATSAPP_REQUIRED: "Seleccione una conexion de WhatsApp antes de publicar el flujo.",
         ERR_DUPLICATED_INTEGRATION: "Ya existe una integracion con ese nombre.",
         ERR_NO_INTEGRATION_FOUND: "No se encontro ninguna integracion con este ID.",
         ERR_DUPLICATED_WEBHOOK: "Ya existe un webhook con ese nombre.",

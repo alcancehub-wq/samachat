@@ -172,7 +172,8 @@ const HandleIncomingFlowMessageService = async ({
   const flows = await Flow.findAll({
     where: {
       status: "published",
-      isActive: true
+      isActive: true,
+      whatsappId: ticket.whatsappId || null
     },
     include: [
       {
@@ -192,6 +193,10 @@ const HandleIncomingFlowMessageService = async ({
   let matchedPriority = Number.MAX_SAFE_INTEGER;
 
   for (const flow of flows) {
+    if (!flow.whatsappId || String(flow.whatsappId) !== String(ticket.whatsappId)) {
+      continue;
+    }
+
     const matchedTrigger = (flow.triggers || []).find(trigger =>
       matchTrigger(trigger, normalizedInput, tags, ticket.queueId)
     );

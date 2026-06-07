@@ -1,5 +1,6 @@
 import AppError from "../../errors/AppError";
 import Flow from "../../models/Flow";
+import Whatsapp from "../../models/Whatsapp";
 
 interface Request {
   name: string;
@@ -7,6 +8,7 @@ interface Request {
   status?: string;
   isActive?: boolean;
   createdById?: number | null;
+  whatsappId?: number | null;
 }
 
 const CreateFlowService = async ({
@@ -14,7 +16,8 @@ const CreateFlowService = async ({
   description,
   status = "draft",
   isActive = true,
-  createdById
+  createdById,
+  whatsappId = null
 }: Request): Promise<Flow> => {
   const trimmedName = name.trim();
 
@@ -22,12 +25,21 @@ const CreateFlowService = async ({
     throw new AppError("ERR_FLOW_NAME_REQUIRED");
   }
 
+  if (whatsappId !== null && whatsappId !== undefined) {
+    const whatsapp = await Whatsapp.findByPk(whatsappId);
+
+    if (!whatsapp) {
+      throw new AppError("ERR_NO_WAPP_FOUND", 404);
+    }
+  }
+
   const flow = await Flow.create({
     name: trimmedName,
     description,
     status,
     isActive,
-    createdById: createdById || null
+    createdById: createdById || null,
+    whatsappId
   });
 
   return flow;
