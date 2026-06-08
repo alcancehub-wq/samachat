@@ -55,7 +55,12 @@ const DeleteWhatsAppMessage = async (
         ticketId: ticket.id,
         whatsappId: ticket.whatsappId
       },
-      "DeleteWhatsAppMessage could not revoke remotely; applying local soft delete"
+      "DeleteWhatsAppMessage could not revoke remotely"
+    );
+
+    throw new AppError(
+      "Nao foi possivel excluir esta mensagem no WhatsApp. Tente novamente ou verifique se ela ainda pode ser apagada.",
+      422
     );
   }
 

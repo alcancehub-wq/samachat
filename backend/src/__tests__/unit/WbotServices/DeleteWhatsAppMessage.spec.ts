@@ -180,7 +180,7 @@ describe("DeleteWhatsAppMessage", () => {
     expect(messageUpdateMock).not.toHaveBeenCalled();
   });
 
-  it("keeps local soft delete when the WhatsApp provider revoke fails", async () => {
+  it("returns a controlled error and keeps the message visible when the WhatsApp provider revoke fails", async () => {
     const messageUpdateMock = jest.fn().mockResolvedValue(undefined);
 
     messageFindByPkMock.mockResolvedValue({
@@ -203,10 +203,18 @@ describe("DeleteWhatsAppMessage", () => {
     });
     deleteMessageMock.mockRejectedValue(new Error("provider failed"));
 
-    const result = await DeleteWhatsAppMessage("msg-provider-fail", {
-      userId: 16,
-      profile: "user"
-    });
+    await expect(
+      DeleteWhatsAppMessage("msg-provider-fail", {
+        userId: 16,
+        profile: "user"
+      })
+    ).rejects.toEqual(
+      expect.objectContaining<AppError>({
+        message:
+          "Nao foi possivel excluir esta mensagem no WhatsApp. Tente novamente ou verifique se ela ainda pode ser apagada.",
+        statusCode: 422
+      })
+    );
 
     expect(deleteMessageMock).toHaveBeenCalledWith(
       35,
@@ -221,9 +229,8 @@ describe("DeleteWhatsAppMessage", () => {
         ticketId: 91,
         whatsappId: 35
       }),
-      "DeleteWhatsAppMessage could not revoke remotely; applying local soft delete"
+      "DeleteWhatsAppMessage could not revoke remotely"
     );
-    expect(messageUpdateMock).toHaveBeenCalledWith({ isDeleted: true });
-    expect(result.id).toBe("msg-provider-fail");
+    expect(messageUpdateMock).not.toHaveBeenCalled();
   });
 });
