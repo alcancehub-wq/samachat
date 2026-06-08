@@ -4,7 +4,7 @@ import User from "../../../models/User";
 import Contact from "../../../models/Contact";
 import CreateScheduleService from "../CreateScheduleService";
 import UpdateScheduleService from "../UpdateScheduleService";
-import { executeSchedule } from "../RunScheduleWorker";
+import { executeSchedule, runScheduleWorkerOnce, resetScheduleWorkerState } from "../RunScheduleWorker";
 import CreateScheduleLogService from "../CreateScheduleLogService";
 import ShowTicketService from "../../TicketServices/ShowTicketService";
 import SendWhatsAppMedia from "../../WbotServices/SendWhatsAppMedia";
@@ -47,6 +47,7 @@ jest.mock("../scheduleMedia", () => ({
 const scheduleFindOneMock = Schedule.findOne as jest.Mock;
 const scheduleCreateMock = Schedule.create as jest.Mock;
 const scheduleFindByPkMock = Schedule.findByPk as jest.Mock;
+const scheduleFindAllMock = Schedule.findAll as jest.Mock;
 const scheduleUpdateStaticMock = Schedule.update as jest.Mock;
 const ticketFindByPkMock = Ticket.findByPk as jest.Mock;
 const userFindByPkMock = User.findByPk as jest.Mock;
@@ -62,10 +63,12 @@ describe("Schedule closed ticket guards", () => {
     jest.useFakeTimers("modern");
     jest.setSystemTime(FIXED_NOW);
     jest.clearAllMocks();
+    resetScheduleWorkerState();
     scheduleFindOneMock.mockResolvedValue(null);
     userFindByPkMock.mockResolvedValue(null);
     contactFindByPkMock.mockResolvedValue(null);
     createScheduleLogServiceMock.mockResolvedValue({});
+    scheduleFindAllMock.mockResolvedValue([]);
     scheduleUpdateStaticMock.mockResolvedValue([1]);
     buildScheduledMediaFileMock.mockReturnValue(null);
     sendWhatsAppMediaMock.mockResolvedValue({});
@@ -535,7 +538,7 @@ describe("Schedule closed ticket guards", () => {
       expect.objectContaining({
         scheduleId: 35,
         status: "pending",
-        message: "Retrying schedule because WhatsApp session is not ready",
+        message: "Retrying schedule later because WhatsApp session is not ready",
         error: "ERR_WAPP_NOT_INITIALIZED"
       })
     );
@@ -626,5 +629,169 @@ describe("Schedule closed ticket guards", () => {
       }),
       { where: { id: 37 } }
     );
+  });
+
+  it("processes different WhatsApp connections in the same worker cycle", async () => {
+    scheduleFindAllMock.mockResolvedValue([
+      {
+        id: 41,
+        ticket: { id: 410, whatsappId: 101 }
+      },
+      {
+        id: 42,
+        ticket: { id: 420, whatsappId: 202 }
+      }
+    ]);
+    scheduleFindByPkMock
+      .mockResolvedValueOnce({
+        id: 41,
+        status: "processing",
+        ticketId: 410,
+        body: "message 41",
+        scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+      })
+      .mockResolvedValueOnce({
+        id: 42,
+        status: "processing",
+        ticketId: 420,
+        body: "message 42",
+        scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+      });
+    showTicketServiceMock
+      .mockResolvedValueOnce({ id: 410, status: "open", whatsappId: 101 })
+      .mockResolvedValueOnce({ id: 420, status: "open", whatsappId: 202 });
+
+    await runScheduleWorkerOnce();
+
+    expect(sendWhatsAppMessageMock).toHaveBeenCalledTimes(2);
+    expect(sendWhatsAppMessageMock).toHaveBeenNthCalledWith(1, {
+      body: "message 41",
+      ticket: { id: 410, status: "open", whatsappId: 101 }
+    });
+    expect(sendWhatsAppMessageMock).toHaveBeenNthCalledWith(2, {
+      body: "message 42",
+      ticket: { id: 420, status: "open", whatsappId: 202 }
+    });
+  });
+
+  it("limits the worker to one due schedule per WhatsApp connection per cycle", async () => {
+    scheduleFindAllMock.mockResolvedValue([
+      {
+        id: 51,
+        ticket: { id: 510, whatsappId: 303 }
+      },
+      {
+        id: 52,
+        ticket: { id: 520, whatsappId: 303 }
+      }
+    ]);
+    scheduleFindByPkMock.mockResolvedValue({
+      id: 51,
+      status: "processing",
+      ticketId: 510,
+      body: "message 51",
+      scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+    });
+    showTicketServiceMock.mockResolvedValue({ id: 510, status: "open", whatsappId: 303 });
+
+    await runScheduleWorkerOnce();
+
+    expect(scheduleUpdateStaticMock).toHaveBeenCalledWith(
+      { status: "processing" },
+      {
+        where: {
+          id: 51,
+          status: "pending"
+        }
+      }
+    );
+    expect(scheduleUpdateStaticMock).not.toHaveBeenCalledWith(
+      { status: "processing" },
+      {
+        where: {
+          id: 52,
+          status: "pending"
+        }
+      }
+    );
+    expect(sendWhatsAppMessageMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips a WhatsApp connection during cooldown after ERR_WAPP_NOT_INITIALIZED and retries later", async () => {
+    process.env.SCHEDULE_WAPP_UNAVAILABLE_COOLDOWN_MS = "60000";
+    scheduleFindByPkMock.mockResolvedValue({
+      id: 61,
+      status: "processing",
+      ticketId: 610,
+      body: "message 61",
+      scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+    });
+    showTicketServiceMock.mockResolvedValue({ id: 610, status: "open", whatsappId: 404 });
+    sendWhatsAppMessageMock.mockRejectedValueOnce(new AppError("ERR_WAPP_NOT_INITIALIZED"));
+
+    await executeSchedule(61);
+
+    scheduleFindAllMock.mockResolvedValue([
+      {
+        id: 61,
+        ticket: { id: 610, whatsappId: 404 }
+      },
+      {
+        id: 62,
+        ticket: { id: 620, whatsappId: 505 }
+      }
+    ]);
+    scheduleFindByPkMock.mockResolvedValueOnce({
+      id: 62,
+      status: "processing",
+      ticketId: 620,
+      body: "message 62",
+      scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+    });
+    showTicketServiceMock.mockResolvedValueOnce({ id: 620, status: "open", whatsappId: 505 });
+    sendWhatsAppMessageMock.mockResolvedValueOnce({});
+
+    await runScheduleWorkerOnce();
+
+    expect(scheduleUpdateStaticMock).toHaveBeenCalledWith(
+      { status: "processing" },
+      {
+        where: {
+          id: 62,
+          status: "pending"
+        }
+      }
+    );
+    expect(scheduleUpdateStaticMock).not.toHaveBeenCalledWith(
+      { status: "processing" },
+      {
+        where: {
+          id: 61,
+          status: "pending"
+        }
+      }
+    );
+
+    jest.advanceTimersByTime(60001);
+
+    scheduleFindAllMock.mockResolvedValue([
+      {
+        id: 61,
+        ticket: { id: 610, whatsappId: 404 }
+      }
+    ]);
+    scheduleFindByPkMock.mockResolvedValueOnce({
+      id: 61,
+      status: "processing",
+      ticketId: 610,
+      body: "message 61",
+      scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+    });
+    showTicketServiceMock.mockResolvedValueOnce({ id: 610, status: "open", whatsappId: 404 });
+    sendWhatsAppMessageMock.mockResolvedValueOnce({});
+
+    await runScheduleWorkerOnce();
+
+    expect(sendWhatsAppMessageMock).toHaveBeenCalledTimes(3);
   });
 });

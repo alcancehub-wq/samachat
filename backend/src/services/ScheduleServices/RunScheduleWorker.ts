@@ -1,5 +1,6 @@
 import { Op } from "sequelize";
 import Schedule from "../../models/Schedule";
+import Ticket from "../../models/Ticket";
 import CreateScheduleLogService from "./CreateScheduleLogService";
 import SendWhatsAppMedia from "../WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
@@ -11,7 +12,13 @@ import { buildScheduledMediaFile } from "./scheduleMedia";
 
 const DEFAULT_POLL_MS = 5000;
 const DEFAULT_BATCH_SIZE = 20;
+const DEFAULT_WAPP_UNAVAILABLE_COOLDOWN_MS = 60000;
 const RETRYABLE_SCHEDULE_ERRORS = new Set(["ERR_WAPP_NOT_INITIALIZED"]);
+const whatsappCooldownUntil = new Map<number, number>();
+
+type ScheduleWithTicket = Schedule & {
+  ticket?: Pick<Ticket, "id" | "whatsappId"> | null;
+};
 
 const parseNumber = (value: string | undefined, fallback: number): number => {
   if (!value) {
@@ -20,6 +27,53 @@ const parseNumber = (value: string | undefined, fallback: number): number => {
 
   const parsed = Number(value);
   return Number.isNaN(parsed) ? fallback : parsed;
+};
+
+const getWhatsappUnavailableCooldownMs = (): number =>
+  parseNumber(
+    process.env.SCHEDULE_WAPP_UNAVAILABLE_COOLDOWN_MS,
+    DEFAULT_WAPP_UNAVAILABLE_COOLDOWN_MS
+  );
+
+const clearExpiredWhatsappCooldowns = (now = Date.now()): void => {
+  for (const [whatsappId, cooldownUntil] of whatsappCooldownUntil.entries()) {
+    if (cooldownUntil <= now) {
+      whatsappCooldownUntil.delete(whatsappId);
+    }
+  }
+};
+
+const setWhatsappCooldown = (whatsappId: number, durationMs: number): void => {
+  if (!Number.isFinite(whatsappId)) {
+    return;
+  }
+
+  whatsappCooldownUntil.set(whatsappId, Date.now() + durationMs);
+};
+
+const getScheduleWhatsappId = (schedule: ScheduleWithTicket): number | null => {
+  const whatsappId = schedule.ticket?.whatsappId;
+
+  if (typeof whatsappId !== "number" || Number.isNaN(whatsappId)) {
+    return null;
+  }
+
+  return whatsappId;
+};
+
+const isWhatsappCooldownActive = (whatsappId: number, now = Date.now()): boolean => {
+  const cooldownUntil = whatsappCooldownUntil.get(whatsappId);
+
+  if (!cooldownUntil) {
+    return false;
+  }
+
+  if (cooldownUntil <= now) {
+    whatsappCooldownUntil.delete(whatsappId);
+    return false;
+  }
+
+  return true;
 };
 
 const claimSchedule = async (scheduleId: number): Promise<boolean> => {
@@ -195,9 +249,25 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
     const message = extractErrorMessage(error);
 
     if (isRetryableScheduleError(message)) {
+      try {
+        const ticket = await ShowTicketService(schedule.ticketId);
+        if (typeof ticket.whatsappId === "number") {
+          setWhatsappCooldown(ticket.whatsappId, getWhatsappUnavailableCooldownMs());
+        }
+      } catch (ticketError) {
+        logger.warn(
+          {
+            scheduleId: schedule.id,
+            ticketId: schedule.ticketId,
+            error: extractErrorMessage(ticketError)
+          },
+          "Failed to inspect ticket while throttling unavailable WhatsApp schedule"
+        );
+      }
+
       await releasePending(
         schedule.id,
-        "Retrying schedule because WhatsApp session is not ready",
+        "Retrying schedule later because WhatsApp session is not ready",
         message
       );
       return;
@@ -209,8 +279,12 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
 
 const runScheduleWorkerOnce = async (): Promise<void> => {
   const batchSize = parseNumber(process.env.SCHEDULE_BATCH_SIZE, DEFAULT_BATCH_SIZE);
+  const now = Date.now();
+  const handledWhatsappIds = new Set<number>();
 
-  const schedules = await Schedule.findAll({
+  clearExpiredWhatsappCooldowns(now);
+
+  const schedules = (await Schedule.findAll({
     where: {
       status: "pending",
       scheduledAt: {
@@ -219,14 +293,38 @@ const runScheduleWorkerOnce = async (): Promise<void> => {
       sentAt: null,
       canceledAt: null
     },
+    include: [
+      {
+        model: Ticket,
+        as: "ticket",
+        attributes: ["id", "whatsappId"],
+        required: false
+      }
+    ],
     order: [["scheduledAt", "ASC"]],
     limit: batchSize
-  });
+  })) as ScheduleWithTicket[];
 
   for (const schedule of schedules) {
+    const whatsappId = getScheduleWhatsappId(schedule);
+
+    if (whatsappId !== null) {
+      if (handledWhatsappIds.has(whatsappId)) {
+        continue;
+      }
+
+      if (isWhatsappCooldownActive(whatsappId, now)) {
+        continue;
+      }
+    }
+
     const claimed = await claimSchedule(schedule.id);
     if (!claimed) {
       continue;
+    }
+
+    if (whatsappId !== null) {
+      handledWhatsappIds.add(whatsappId);
     }
 
     await CreateScheduleLogService({
@@ -238,6 +336,10 @@ const runScheduleWorkerOnce = async (): Promise<void> => {
 
     await executeSchedule(schedule.id);
   }
+};
+
+const resetScheduleWorkerState = (): void => {
+  whatsappCooldownUntil.clear();
 };
 
 const startScheduleWorker = (): void => {
@@ -264,6 +366,6 @@ const startScheduleWorker = (): void => {
   setInterval(tick, pollMs);
 };
 
-export { executeSchedule, runScheduleWorkerOnce };
+export { executeSchedule, runScheduleWorkerOnce, resetScheduleWorkerState };
 
 export default startScheduleWorker;
