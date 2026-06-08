@@ -1,8 +1,17 @@
 import { QueryInterface, DataTypes } from "sequelize";
 
 module.exports = {
-  up: (queryInterface: QueryInterface) => {
-    return queryInterface.addColumn("Flows", "whatsappId", {
+  up: async (queryInterface: QueryInterface) => {
+    const table = (await queryInterface.describeTable("Flows")) as Record<
+      string,
+      unknown
+    >;
+
+    if (table.whatsappId) {
+      return;
+    }
+
+    await queryInterface.addColumn("Flows", "whatsappId", {
       type: DataTypes.INTEGER,
       allowNull: true,
       references: { model: "Whatsapps", key: "id" },
@@ -11,7 +20,16 @@ module.exports = {
     });
   },
 
-  down: (queryInterface: QueryInterface) => {
-    return queryInterface.removeColumn("Flows", "whatsappId");
+  down: async (queryInterface: QueryInterface) => {
+    const table = (await queryInterface.describeTable("Flows")) as Record<
+      string,
+      unknown
+    >;
+
+    if (!table.whatsappId) {
+      return;
+    }
+
+    await queryInterface.removeColumn("Flows", "whatsappId");
   }
 };
