@@ -19,9 +19,12 @@ const CreateTicketService = async ({
   userId,
   queueId
 }: Request): Promise<Ticket> => {
+  const defaultWhatsapp = await GetDefaultWhatsApp(userId);
+
   const existingTicket = await Ticket.findOne({
     where: {
       contactId,
+      whatsappId: defaultWhatsapp.id,
       status: {
         [Op.or]: ["open", "pending"]
       }
@@ -32,8 +35,6 @@ const CreateTicketService = async ({
   if (existingTicket) {
     throw new AppError("ERR_OTHER_OPEN_TICKET");
   }
-
-  const defaultWhatsapp = await GetDefaultWhatsApp(userId);
 
   await CheckContactOpenTickets(contactId, defaultWhatsapp.id);
 
