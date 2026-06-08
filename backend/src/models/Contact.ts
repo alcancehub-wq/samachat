@@ -47,6 +47,10 @@ class Contact extends Model<Contact> {
   @Column
   isGroup: boolean;
 
+  @Default(false)
+  @Column
+  allowMultipleConversations: boolean;
+
   @CreatedAt
   createdAt: Date;
 

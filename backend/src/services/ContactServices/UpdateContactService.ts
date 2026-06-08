@@ -14,6 +14,7 @@ interface ContactData {
   name?: string;
   extraInfo?: ExtraInfo[];
   tagIds?: number[];
+  allowMultipleConversations?: boolean;
 }
 
 interface Request {
@@ -25,7 +26,14 @@ const UpdateContactService = async ({
   contactData,
   contactId
 }: Request): Promise<Contact> => {
-  const { email, name, number, extraInfo, tagIds } = contactData;
+  const {
+    email,
+    name,
+    number,
+    extraInfo,
+    tagIds,
+    allowMultipleConversations
+  } = contactData;
 
   const contact = await Contact.findOne({
     where: { id: contactId },
@@ -55,11 +63,17 @@ const UpdateContactService = async ({
     );
   }
 
-  await contact.update({
+  const updatePayload: Partial<ContactData> = {
     name,
     number,
     email
-  });
+  };
+
+  if (typeof allowMultipleConversations === "boolean") {
+    updatePayload.allowMultipleConversations = allowMultipleConversations;
+  }
+
+  await contact.update(updatePayload);
 
   if (tagIds) {
     await contact.$set("tags", tagIds);

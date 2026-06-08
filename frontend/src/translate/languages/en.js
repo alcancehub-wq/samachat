@@ -286,6 +286,9 @@ const messages = {
           numberPlaceholder: "11912345678 or 14155552671",
           email: "Email",
           emailHelper: "Optional. Used for contact and notices.",
+          allowMultipleConversations: "Allow multiple conversations",
+          allowMultipleConversationsHelper:
+            "Use this only for internal contacts, team members, suppliers, partners, or test numbers. When disabled, SamaChat prevents another agent from starting a new conversation with this same number if there is already prior service assigned to another user.",
           tags: "Tags",
           tagsPlaceholder: "Select tags",
           notes: "Notes",

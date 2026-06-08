@@ -14,6 +14,7 @@ interface Request {
   profilePicUrl?: string;
   extraInfo?: ExtraInfo[];
   tagIds?: number[];
+  allowMultipleConversations?: boolean;
 }
 
 const CreateContactService = async ({
@@ -21,7 +22,8 @@ const CreateContactService = async ({
   number,
   email = "",
   extraInfo = [],
-  tagIds = []
+  tagIds = [],
+  allowMultipleConversations
 }: Request): Promise<Contact> => {
   const numberExists = await Contact.findOne({
     where: { number }
@@ -36,7 +38,8 @@ const CreateContactService = async ({
       name,
       number,
       email,
-      extraInfo
+      extraInfo,
+      allowMultipleConversations
     },
     {
       include: ["extraInfo"]

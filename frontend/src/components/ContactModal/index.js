@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 
 import * as Yup from "yup";
 import { Formik, FieldArray, Form, Field } from "formik";
@@ -14,6 +14,8 @@ import DialogContent from "@material-ui/core/DialogContent";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
+import Checkbox from "@material-ui/core/Checkbox";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import CircularProgress from "@material-ui/core/CircularProgress";
 
@@ -22,6 +24,7 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import TagSelect from "../TagSelect";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const CONTACT_NOTES_FIELD = "__contact_notes__";
 
@@ -39,6 +42,7 @@ const normalizeContactValues = source => ({
 	name: source?.name || "",
 	number: source?.number || "",
 	email: source?.email || "",
+	allowMultipleConversations: Boolean(source?.allowMultipleConversations),
 	tagIds: source?.tagIds || source?.tags?.map(tag => tag.id) || [],
 	extraInfo: normalizeExtraInfo(source?.extraInfo),
 	notes: extractNotes(source?.extraInfo),
@@ -129,11 +133,14 @@ const ContactSchema = Yup.object().shape({
 const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 	const classes = useStyles();
 	const isMounted = useRef(true);
+	const { user } = useContext(AuthContext);
+	const isAdmin = String(user?.profile || "").toLowerCase() === "admin";
 
 	const initialState = {
 		name: "",
 		number: "",
 		email: "",
+		allowMultipleConversations: false,
 		notes: "",
 		extraInfo: [],
 		tagIds: [],
@@ -186,6 +193,10 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 				]
 				: normalizedExtraInfo,
 		};
+
+		if (!isAdmin) {
+			delete payload.allowMultipleConversations;
+		}
 
 		delete payload.notes;
 
@@ -283,6 +294,35 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 										variant="outlined"
 									/>
 								</div>
+								{isAdmin && (
+									<>
+										<Typography
+											style={{ marginBottom: 8, marginTop: 12 }}
+											variant="subtitle1"
+											className={classes.sectionTitle}
+										>
+											{i18n.t("contactModal.form.allowMultipleConversations")}
+										</Typography>
+										<FormControlLabel
+											control={
+												<Checkbox
+													checked={Boolean(values.allowMultipleConversations)}
+													onChange={event =>
+														setFieldValue(
+															"allowMultipleConversations",
+															event.target.checked
+														)
+													}
+													color="primary"
+												/>
+											}
+											label={i18n.t("contactModal.form.allowMultipleConversations")}
+										/>
+										<Typography variant="body2" color="textSecondary">
+											{i18n.t("contactModal.form.allowMultipleConversationsHelper")}
+										</Typography>
+									</>
+								)}
 								<Typography
 									style={{ marginBottom: 8, marginTop: 12 }}
 									variant="subtitle1"

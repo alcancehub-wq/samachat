@@ -36,6 +36,7 @@ interface ContactData {
   email?: string;
   extraInfo?: ExtraInfo[];
   tagIds?: number[];
+  allowMultipleConversations?: boolean;
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -76,7 +77,14 @@ export const getContact = async (
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const newContact: ContactData = req.body;
   const userId = Number(req.user?.id);
+  const isAdmin = String(req.user?.profile || "").toLowerCase() === "admin";
   newContact.number = newContact.number.replace(/\D/g, "");
+
+  if (!isAdmin) {
+    delete newContact.allowMultipleConversations;
+  } else if (typeof newContact.allowMultipleConversations === "boolean") {
+    newContact.allowMultipleConversations = Boolean(newContact.allowMultipleConversations);
+  }
 
   const schema = Yup.object().shape({
     name: Yup.string().required(),
@@ -103,6 +111,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   let email = newContact.email;
   let extraInfo = newContact.extraInfo;
   let tagIds = newContact.tagIds;
+  let allowMultipleConversations = newContact.allowMultipleConversations;
 
   const contact = await CreateContactService({
     name,
@@ -110,7 +119,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     email,
     extraInfo,
     profilePicUrl,
-    tagIds
+    tagIds,
+    allowMultipleConversations
   });
 
   const scopedWhatsappId = await GetUserScopedWhatsappId(
@@ -137,7 +147,16 @@ export const update = async (
   const contactData: ContactData = req.body;
   const { contactId } = req.params;
   const userId = Number(req.user?.id);
+  const isAdmin = String(req.user?.profile || "").toLowerCase() === "admin";
   const currentContact = await ShowContactService(contactId);
+
+  if (!isAdmin) {
+    delete contactData.allowMultipleConversations;
+  } else if (typeof contactData.allowMultipleConversations === "boolean") {
+    contactData.allowMultipleConversations = Boolean(
+      contactData.allowMultipleConversations
+    );
+  }
 
   const normalizedInputNumber =
     typeof contactData.number === "string"
