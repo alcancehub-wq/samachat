@@ -115,7 +115,10 @@ export const remove = async (
 ): Promise<Response> => {
   const { messageId } = req.params;
 
-  const message = await DeleteWhatsAppMessage(messageId);
+  const message = await DeleteWhatsAppMessage(messageId, {
+    userId: req.user.id,
+    profile: req.user.profile
+  });
 
   const io = getIO();
   io.to(message.ticketId.toString()).emit("appMessage", {
