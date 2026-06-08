@@ -3,6 +3,7 @@ import Message from "../../../models/Message";
 import { whatsappProvider } from "../../../providers/WhatsApp";
 import DeleteWhatsAppMessage from "../../../services/WbotServices/DeleteWhatsAppMessage";
 import ShowTicketService from "../../../services/TicketServices/ShowTicketService";
+import { logger } from "../../../utils/logger";
 
 jest.mock("../../../models/Message", () => ({
   findByPk: jest.fn()
@@ -15,10 +16,19 @@ jest.mock("../../../providers/WhatsApp", () => ({
 }));
 
 jest.mock("../../../services/TicketServices/ShowTicketService", () => jest.fn());
+jest.mock("../../../utils/logger", () => ({
+  logger: {
+    warn: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn()
+  }
+}));
 
 const messageFindByPkMock = Message.findByPk as jest.Mock;
 const deleteMessageMock = whatsappProvider.deleteMessage as jest.Mock;
 const showTicketServiceMock = ShowTicketService as jest.Mock;
+const loggerWarnMock = logger.warn as jest.Mock;
 
 describe("DeleteWhatsAppMessage", () => {
   beforeEach(() => {
@@ -168,5 +178,52 @@ describe("DeleteWhatsAppMessage", () => {
 
     expect(deleteMessageMock).not.toHaveBeenCalled();
     expect(messageUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps local soft delete when the WhatsApp provider revoke fails", async () => {
+    const messageUpdateMock = jest.fn().mockResolvedValue(undefined);
+
+    messageFindByPkMock.mockResolvedValue({
+      id: "msg-provider-fail",
+      ticketId: 91,
+      fromMe: true,
+      isInternal: false,
+      update: messageUpdateMock,
+      ticket: {
+        whatsappId: 35,
+        isGroup: false,
+        contact: { number: "5511999999999" }
+      }
+    });
+    showTicketServiceMock.mockResolvedValue({
+      id: 91,
+      whatsappId: 35,
+      isGroup: false,
+      contact: { number: "5511999999999" }
+    });
+    deleteMessageMock.mockRejectedValue(new Error("provider failed"));
+
+    const result = await DeleteWhatsAppMessage("msg-provider-fail", {
+      userId: 16,
+      profile: "user"
+    });
+
+    expect(deleteMessageMock).toHaveBeenCalledWith(
+      35,
+      "5511999999999@c.us",
+      "msg-provider-fail",
+      true
+    );
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        err: expect.any(Error),
+        messageId: "msg-provider-fail",
+        ticketId: 91,
+        whatsappId: 35
+      }),
+      "DeleteWhatsAppMessage could not revoke remotely; applying local soft delete"
+    );
+    expect(messageUpdateMock).toHaveBeenCalledWith({ isDeleted: true });
+    expect(result.id).toBe("msg-provider-fail");
   });
 });

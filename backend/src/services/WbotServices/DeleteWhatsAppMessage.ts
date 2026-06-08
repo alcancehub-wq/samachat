@@ -5,6 +5,7 @@ import { whatsappProvider } from "../../providers/WhatsApp";
 import ShowTicketService, {
   TicketAccessData
 } from "../TicketServices/ShowTicketService";
+import { logger } from "../../utils/logger";
 
 const DeleteWhatsAppMessage = async (
   messageId: string,
@@ -39,12 +40,24 @@ const DeleteWhatsAppMessage = async (
 
   const chatId = `${ticket.contact.number}@${ticket.isGroup ? "g" : "c"}.us`;
 
-  await whatsappProvider.deleteMessage(
-    ticket.whatsappId,
-    chatId,
-    message.id,
-    message.fromMe
-  );
+  try {
+    await whatsappProvider.deleteMessage(
+      ticket.whatsappId,
+      chatId,
+      message.id,
+      message.fromMe
+    );
+  } catch (err) {
+    logger.warn(
+      {
+        err,
+        messageId: message.id,
+        ticketId: ticket.id,
+        whatsappId: ticket.whatsappId
+      },
+      "DeleteWhatsAppMessage could not revoke remotely; applying local soft delete"
+    );
+  }
 
   await message.update({ isDeleted: true });
 
