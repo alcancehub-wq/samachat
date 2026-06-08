@@ -41,6 +41,7 @@ import {
   registerReadySession,
   resolvePersistedStatusFromChangeState
 } from "./wwebjsSessionRuntime";
+import { revokeMessageWithLookupFallback } from "./wwebjsDeleteLookup";
 import type {
   WbotGroupContextChat,
   WbotGroupContextSource
@@ -812,11 +813,14 @@ const deleteMessage = async (
 ): Promise<void> => {
   const wbot = getWbot(sessionId);
 
-  const serializedMsgId = getSerializedMessageId(chatId, fromMe, messageId);
-
-  const message = await wbot.getMessageById(serializedMsgId);
-
-  await message.delete(true);
+  await revokeMessageWithLookupFallback(
+    wbot,
+    chatId,
+    messageId,
+    fromMe,
+    getSerializedMessageId,
+    logger
+  );
 };
 
 const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
