@@ -1,4 +1,4 @@
-import {
+﻿import {
   Table,
   Column,
   DataType,
@@ -6,7 +6,8 @@ import {
   UpdatedAt,
   Model,
   PrimaryKey,
-  AutoIncrement
+  AutoIncrement,
+  AllowNull
 } from "sequelize-typescript";
 
 @Table
@@ -21,6 +22,10 @@ class QuickAnswer extends Model<QuickAnswer> {
 
   @Column(DataType.TEXT)
   message: string;
+
+  @AllowNull(true)
+  @Column(DataType.INTEGER)
+  userId: number | null;
 
   @CreatedAt
   createdAt: Date;
