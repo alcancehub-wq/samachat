@@ -1,4 +1,4 @@
-﻿import QuickAnswer from "../../models/QuickAnswer";
+import QuickAnswer from "../../models/QuickAnswer";
 import AppError from "../../errors/AppError";
 
 interface QuickAnswerData {
@@ -9,29 +9,29 @@ interface QuickAnswerData {
 interface Request {
   quickAnswerData: QuickAnswerData;
   quickAnswerId: string;
-  userId: number;
 }
 
 const UpdateQuickAnswerService = async ({
   quickAnswerData,
-  quickAnswerId,
-  userId
+  quickAnswerId
 }: Request): Promise<QuickAnswer> => {
   const { shortcut, message } = quickAnswerData;
 
   const quickAnswer = await QuickAnswer.findOne({
-    where: { id: quickAnswerId, userId },
-    attributes: ["id", "shortcut", "message", "userId"]
+    where: { id: quickAnswerId },
+    attributes: ["id", "shortcut", "message"]
   });
 
   if (!quickAnswer) {
     throw new AppError("ERR_NO_QUICK_ANSWERS_FOUND", 404);
   }
-
-  await quickAnswer.update({ shortcut, message });
+  await quickAnswer.update({
+    shortcut,
+    message
+  });
 
   await quickAnswer.reload({
-    attributes: ["id", "shortcut", "message", "userId"]
+    attributes: ["id", "shortcut", "message"]
   });
 
   return quickAnswer;

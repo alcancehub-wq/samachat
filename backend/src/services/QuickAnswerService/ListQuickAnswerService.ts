@@ -1,10 +1,9 @@
-﻿import { Op, Sequelize } from "sequelize";
+import { Sequelize } from "sequelize";
 import QuickAnswer from "../../models/QuickAnswer";
 
 interface Request {
   searchParam?: string;
   pageNumber?: string;
-  userId: number;
 }
 
 interface Response {
@@ -15,24 +14,15 @@ interface Response {
 
 const ListQuickAnswerService = async ({
   searchParam = "",
-  pageNumber = "1",
-  userId
+  pageNumber = "1"
 }: Request): Promise<Response> => {
   const whereCondition = {
-    [Op.and]: [
-      {
-        [Op.or]: [{ userId }, { userId: null }]
-      },
-      {
-        message: Sequelize.where(
-          Sequelize.fn("LOWER", Sequelize.col("message")),
-          "LIKE",
-          `%${searchParam.toLowerCase().trim()}%`
-        )
-      }
-    ]
+    message: Sequelize.where(
+      Sequelize.fn("LOWER", Sequelize.col("message")),
+      "LIKE",
+      `%${searchParam.toLowerCase().trim()}%`
+    )
   };
-
   const limit = 20;
   const offset = limit * (+pageNumber - 1);
 
@@ -45,7 +35,11 @@ const ListQuickAnswerService = async ({
 
   const hasMore = count > offset + quickAnswers.length;
 
-  return { quickAnswers, count, hasMore };
+  return {
+    quickAnswers,
+    count,
+    hasMore
+  };
 };
 
 export default ListQuickAnswerService;
