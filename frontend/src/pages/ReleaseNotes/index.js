@@ -11,6 +11,23 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.06.10 / Operacao, atalhos e mobile",
+    label: "Pacote de estabilidade e usabilidade",
+    summary:
+      "Entrega concentrada em estabilidade operacional dos atendimentos, governanca dos atalhos, agendamentos e melhoria da experiencia mobile em Chats.",
+    changes: [
+      "Corrigida a listagem de atalhos para respeitar o usuario logado, mantendo visiveis os atalhos proprios e os atalhos globais quando aplicavel.",
+      "Reforcada a estrutura dos atalhos com coluna de usuario declarada de forma explicita, preparando a governanca por atendente sem quebrar registros existentes.",
+      "Ajustada a mensagem interna no mobile para abrir corretamente ao tocar na linha Mensagem interna dentro do menu de acoes do composer.",
+      "Aplicado fundo solido ao composer de mensagem interna no mobile, evitando mistura visual com as mensagens da conversa ao fundo.",
+      "Corrigida a visibilidade de tickets transferidos para o usuario de destino e melhorado o envio de notificacoes sobre transferencias.",
+      "Evitado que tickets sejam marcados como lidos automaticamente apenas por abertura ou transferencia, preservando melhor a leitura operacional.",
+      "Reforcada a protecao contra duplicidade em conversas manuais, respeitando proprietario do contato, conexao e reaproveitamento seguro de tickets.",
+      "Melhorada a auditoria dos agendamentos executados e endurecido o controle de horario das campanhas agendadas.",
+      "Reforcadas regras de exclusao/revogacao de mensagens, incluindo fallback seguro e confirmacao antes de marcar mensagens como apagadas.",
+    ],
+  },
+  {
     version: "2026.05.11 / FlowBuilder canvas visual",
     label: "Atualizacao do dia",
     summary:
