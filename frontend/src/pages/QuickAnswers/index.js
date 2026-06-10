@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer } from "react";
+import React, { useState, useEffect, useReducer, useContext } from "react";
 import openSocket from "../../services/socket-io";
 
 import {
@@ -31,6 +31,7 @@ import ConfirmationModal from "../../components/ConfirmationModal";
 import { toast } from "react-toastify";
 import toastError from "../../errors/toastError";
 import buildMenuListPageStyles from "../../styles/menuListPageStyles";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_QUICK_ANSWERS") {
@@ -82,6 +83,7 @@ const useStyles = makeStyles((theme) => ({
 
 const QuickAnswers = () => {
   const classes = useStyles();
+  const { user } = useContext(AuthContext);
 
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
@@ -123,6 +125,16 @@ const QuickAnswers = () => {
 
     socket.on("quickAnswer", (data) => {
       if (data.action === "update" || data.action === "create") {
+        const quickAnswerUserId = data.quickAnswer?.userId;
+
+        if (
+          quickAnswerUserId &&
+          user?.id &&
+          Number(quickAnswerUserId) !== Number(user.id)
+        ) {
+          return;
+        }
+
         dispatch({ type: "UPDATE_QUICK_ANSWERS", payload: data.quickAnswer });
       }
 
@@ -137,7 +149,7 @@ const QuickAnswers = () => {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [user?.id]);
 
   const handleSearch = (event) => {
     setSearchParam(event.target.value.toLowerCase());

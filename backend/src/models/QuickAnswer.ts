@@ -1,4 +1,4 @@
-import {
+﻿import {
   Table,
   Column,
   DataType,
@@ -6,8 +6,12 @@ import {
   UpdatedAt,
   Model,
   PrimaryKey,
-  AutoIncrement
+  AutoIncrement,
+  ForeignKey,
+  BelongsTo
 } from "sequelize-typescript";
+
+import User from "./User";
 
 @Table
 class QuickAnswer extends Model<QuickAnswer> {
@@ -21,6 +25,13 @@ class QuickAnswer extends Model<QuickAnswer> {
 
   @Column(DataType.TEXT)
   message: string;
+
+  @ForeignKey(() => User)
+  @Column
+  userId: number | null;
+
+  @BelongsTo(() => User)
+  user: User;
 
   @CreatedAt
   createdAt: Date;
