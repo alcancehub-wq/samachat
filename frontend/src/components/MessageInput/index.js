@@ -302,7 +302,14 @@ const useStyles = makeStyles(theme => ({
     width: "100%",
     padding: "10px 16px 8px",
     borderBottom: `1px solid ${theme.palette.divider}`,
-    background: theme.custom.softBackground,
+    backgroundColor: theme.palette.background.paper,
+    position: "relative",
+    zIndex: 2,
+    [theme.breakpoints.down("sm")]: {
+      padding: "12px 16px 10px",
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: "0 -8px 20px rgba(0, 0, 0, 0.08)",
+    },
   },
 
   internalComposerTitle: {
