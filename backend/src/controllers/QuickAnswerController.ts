@@ -1,4 +1,4 @@
-﻿import * as Yup from "yup";
+import * as Yup from "yup";
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 
@@ -20,24 +20,12 @@ interface QuickAnswerData {
   message: string;
 }
 
-const getAuthenticatedUserId = (req: Request): number => {
-  const userId = Number((req as any).user?.id);
-
-  if (!userId) {
-    throw new AppError("ERR_SESSION_EXPIRED", 401);
-  }
-
-  return userId;
-};
-
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber } = req.query as IndexQuery;
-  const userId = getAuthenticatedUserId(req);
 
   const { quickAnswers, count, hasMore } = await ListQuickAnswerService({
     searchParam,
-    pageNumber,
-    userId
+    pageNumber
   });
 
   return res.json({ quickAnswers, count, hasMore });
@@ -45,7 +33,6 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const newQuickAnswer: QuickAnswerData = req.body;
-  const userId = getAuthenticatedUserId(req);
 
   const QuickAnswerSchema = Yup.object().shape({
     shortcut: Yup.string().required(),
@@ -59,8 +46,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   }
 
   const quickAnswer = await CreateQuickAnswerService({
-    ...newQuickAnswer,
-    userId
+    ...newQuickAnswer
   });
 
   const io = getIO();
@@ -74,9 +60,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { quickAnswerId } = req.params;
-  const userId = getAuthenticatedUserId(req);
 
-  const quickAnswer = await ShowQuickAnswerService(quickAnswerId, userId);
+  const quickAnswer = await ShowQuickAnswerService(quickAnswerId);
 
   return res.status(200).json(quickAnswer);
 };
@@ -86,7 +71,6 @@ export const update = async (
   res: Response
 ): Promise<Response> => {
   const quickAnswerData: QuickAnswerData = req.body;
-  const userId = getAuthenticatedUserId(req);
 
   const schema = Yup.object().shape({
     shortcut: Yup.string(),
@@ -103,8 +87,7 @@ export const update = async (
 
   const quickAnswer = await UpdateQuickAnswerService({
     quickAnswerData,
-    quickAnswerId,
-    userId
+    quickAnswerId
   });
 
   const io = getIO();
@@ -121,9 +104,8 @@ export const remove = async (
   res: Response
 ): Promise<Response> => {
   const { quickAnswerId } = req.params;
-  const userId = getAuthenticatedUserId(req);
 
-  await DeleteQuickAnswerService(quickAnswerId, userId);
+  await DeleteQuickAnswerService(quickAnswerId);
 
   const io = getIO();
   io.emit("quickAnswer", {

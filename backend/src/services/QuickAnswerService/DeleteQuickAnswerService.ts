@@ -1,12 +1,9 @@
-﻿import QuickAnswer from "../../models/QuickAnswer";
+import QuickAnswer from "../../models/QuickAnswer";
 import AppError from "../../errors/AppError";
 
-const DeleteQuickAnswerService = async (
-  id: string,
-  userId: number
-): Promise<void> => {
+const DeleteQuickAnswerService = async (id: string): Promise<void> => {
   const quickAnswer = await QuickAnswer.findOne({
-    where: { id, userId }
+    where: { id }
   });
 
   if (!quickAnswer) {
