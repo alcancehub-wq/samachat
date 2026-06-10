@@ -20,6 +20,49 @@ type ScheduleWithTicket = Schedule & {
   ticket?: Pick<Ticket, "id" | "whatsappId"> | null;
 };
 
+const toISOStringOrNull = (value: Date | string | null | undefined): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString();
+};
+
+const buildScheduleAuditMessage = (
+  event: string,
+  schedule: Pick<
+    Schedule,
+    | "id"
+    | "scheduledAt"
+    | "ticketId"
+    | "contactId"
+    | "assigneeId"
+    | "status"
+    | "mediaFileName"
+    | "mediaMimeType"
+  >,
+  extra: Record<string, unknown> = {}
+): string =>
+  JSON.stringify({
+    event,
+    scheduleId: schedule.id,
+    status: schedule.status,
+    scheduledAt: toISOStringOrNull(schedule.scheduledAt),
+    workerNow: new Date().toISOString(),
+    ticketId: schedule.ticketId || null,
+    contactId: schedule.contactId || null,
+    assigneeId: schedule.assigneeId || null,
+    hasMedia: Boolean(schedule.mediaFileName),
+    mediaMimeType: schedule.mediaMimeType || null,
+    ...extra
+  });
+
 const parseNumber = (value: string | undefined, fallback: number): number => {
   if (!value) {
     return fallback;
@@ -107,7 +150,11 @@ const markFailed = async (scheduleId: number, errorMessage: string): Promise<voi
   });
 };
 
-const markSent = async (scheduleId: number, resultMessage: string): Promise<void> => {
+const markSent = async (
+  scheduleId: number,
+  resultMessage: string,
+  auditMessage?: string
+): Promise<void> => {
   await Schedule.update(
     {
       status: "sent",
@@ -121,7 +168,7 @@ const markSent = async (scheduleId: number, resultMessage: string): Promise<void
   await CreateScheduleLogService({
     scheduleId,
     status: "sent",
-    message: resultMessage,
+    message: auditMessage || resultMessage,
     executedAt: new Date()
   });
 };
@@ -196,7 +243,12 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
   }
 
   if (scheduledAt.getTime() > Date.now()) {
-    await releasePending(schedule.id, "Schedule is not due yet");
+    await releasePending(
+      schedule.id,
+      buildScheduleAuditMessage("schedule_not_due_yet", schedule, {
+        parsedScheduledAt: scheduledAt.toISOString()
+      })
+    );
     return;
   }
 
@@ -239,12 +291,26 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
         body: hasBody && !isAudioSchedule ? schedule.body : undefined,
         forceSendAudioAsVoice: isAudioSchedule ? false : undefined
       });
-      await markSent(schedule.id, "Schedule media sent successfully");
+      await markSent(
+        schedule.id,
+        "Schedule media sent successfully",
+        buildScheduleAuditMessage("schedule_media_sent", schedule, {
+          ticketId: ticket.id,
+          whatsappId: ticket.whatsappId || null
+        })
+      );
       return;
     }
 
     await SendWhatsAppMessage({ body: schedule.body, ticket });
-    await markSent(schedule.id, "Schedule sent successfully");
+    await markSent(
+      schedule.id,
+      "Schedule sent successfully",
+      buildScheduleAuditMessage("schedule_message_sent", schedule, {
+        ticketId: ticket.id,
+        whatsappId: ticket.whatsappId || null
+      })
+    );
   } catch (error) {
     const message = extractErrorMessage(error);
 
@@ -267,7 +333,9 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
 
       await releasePending(
         schedule.id,
-        "Retrying schedule later because WhatsApp session is not ready",
+        buildScheduleAuditMessage("schedule_retry_whatsapp_unavailable", schedule, {
+          error: message
+        }),
         message
       );
       return;
@@ -330,7 +398,9 @@ const runScheduleWorkerOnce = async (): Promise<void> => {
     await CreateScheduleLogService({
       scheduleId: schedule.id,
       status: "processing",
-      message: "Schedule claimed for execution",
+      message: buildScheduleAuditMessage("schedule_claimed_for_execution", schedule, {
+        whatsappId
+      }),
       executedAt: new Date()
     });
 

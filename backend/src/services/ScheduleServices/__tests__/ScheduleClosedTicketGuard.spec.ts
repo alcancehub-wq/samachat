@@ -457,7 +457,7 @@ describe("Schedule closed ticket guards", () => {
       expect.objectContaining({
         scheduleId: 32,
         status: "pending",
-        message: "Schedule is not due yet"
+        message: expect.stringContaining('"event":"schedule_not_due_yet"')
       })
     );
   });
@@ -538,7 +538,7 @@ describe("Schedule closed ticket guards", () => {
       expect.objectContaining({
         scheduleId: 35,
         status: "pending",
-        message: "Retrying schedule later because WhatsApp session is not ready",
+        message: expect.stringContaining('"event":"schedule_retry_whatsapp_unavailable"'),
         error: "ERR_WAPP_NOT_INITIALIZED"
       })
     );
