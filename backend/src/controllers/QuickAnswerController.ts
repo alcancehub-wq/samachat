@@ -1,5 +1,5 @@
+﻿import { Request, Response } from "express";
 import * as Yup from "yup";
-import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 
 import ListQuickAnswerService from "../services/QuickAnswerService/ListQuickAnswerService";
@@ -7,7 +7,6 @@ import CreateQuickAnswerService from "../services/QuickAnswerService/CreateQuick
 import ShowQuickAnswerService from "../services/QuickAnswerService/ShowQuickAnswerService";
 import UpdateQuickAnswerService from "../services/QuickAnswerService/UpdateQuickAnswerService";
 import DeleteQuickAnswerService from "../services/QuickAnswerService/DeleteQuickAnswerService";
-
 import AppError from "../errors/AppError";
 
 type IndexQuery = {
@@ -15,17 +14,29 @@ type IndexQuery = {
   pageNumber: string;
 };
 
-interface QuickAnswerData {
+type QuickAnswerData = {
   shortcut: string;
   message: string;
-}
+};
+
+const getAuthenticatedUserId = (req: Request): number => {
+  const userId = Number((req as any).user?.id);
+
+  if (!userId) {
+    throw new AppError("ERR_SESSION_EXPIRED", 401);
+  }
+
+  return userId;
+};
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber } = req.query as IndexQuery;
+  const userId = getAuthenticatedUserId(req);
 
   const { quickAnswers, count, hasMore } = await ListQuickAnswerService({
     searchParam,
-    pageNumber
+    pageNumber,
+    userId
   });
 
   return res.json({ quickAnswers, count, hasMore });
@@ -45,9 +56,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError(err.message);
   }
 
-  const quickAnswer = await CreateQuickAnswerService({
-    ...newQuickAnswer
-  });
+  const quickAnswer = await CreateQuickAnswerService(newQuickAnswer);
 
   const io = getIO();
   io.emit("quickAnswer", {
@@ -71,6 +80,7 @@ export const update = async (
   res: Response
 ): Promise<Response> => {
   const quickAnswerData: QuickAnswerData = req.body;
+  const { quickAnswerId } = req.params;
 
   const schema = Yup.object().shape({
     shortcut: Yup.string(),
@@ -82,8 +92,6 @@ export const update = async (
   } catch (err) {
     throw new AppError(err.message);
   }
-
-  const { quickAnswerId } = req.params;
 
   const quickAnswer = await UpdateQuickAnswerService({
     quickAnswerData,
