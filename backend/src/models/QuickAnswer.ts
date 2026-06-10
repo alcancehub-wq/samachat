@@ -1,4 +1,4 @@
-import {
+﻿import {
   Table,
   Column,
   DataType,
@@ -21,6 +21,9 @@ class QuickAnswer extends Model<QuickAnswer> {
 
   @Column(DataType.TEXT)
   message: string;
+
+  @Column
+  userId: number | null;
 
   @CreatedAt
   createdAt: Date;
