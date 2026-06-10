@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import openSocket from "../../services/socket-io";
 import clsx from "clsx";
 
-import { Paper, makeStyles } from "@material-ui/core";
+import { Paper, makeStyles, Typography } from "@material-ui/core";
 
 import ContactDrawer from "../ContactDrawer";
 import MessageInput from "../MessageInput/";
@@ -93,6 +93,20 @@ const useStyles = makeStyles((theme) => ({
       alignItems: "center",
     },
   },
+  transferNotice: {
+    margin: theme.spacing(1.25, 1.5, 0),
+    padding: theme.spacing(1, 1.25),
+    borderRadius: 10,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default,
+    color: theme.palette.text.primary,
+    fontWeight: 600,
+    fontSize: "0.9rem",
+    [theme.breakpoints.down("sm")]: {
+      margin: theme.spacing(1, 1, 0),
+      borderRadius: 8,
+    },
+  },
 }));
 
 const Ticket = () => {
@@ -104,6 +118,7 @@ const Ticket = () => {
   const [loading, setLoading] = useState(true);
   const [contact, setContact] = useState({});
   const [ticket, setTicket] = useState({});
+  const [transferNotice, setTransferNotice] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -114,6 +129,7 @@ const Ticket = () => {
 
           setContact(data.contact);
           setTicket(data);
+          setTransferNotice(false);
           setLoading(false);
         } catch (err) {
           setLoading(false);
@@ -133,6 +149,11 @@ const Ticket = () => {
     socket.on("ticket", (data) => {
       if (data.action === "update") {
         setTicket(data.ticket);
+      }
+
+      if (data.action === "transfer") {
+        setTicket(data.ticket);
+        setTransferNotice(true);
       }
 
       if (data.action === "delete") {
@@ -192,6 +213,11 @@ const Ticket = () => {
             </div>
           </TicketHeader>
         </div>
+        {transferNotice && (
+          <Typography className={classes.transferNotice}>
+            Atendimento transferido para você. Verifique o histórico da conversa e mensagens agendadas antes de responder.
+          </Typography>
+        )}
         <ReplyMessageProvider>
           <MessagesList
             ticketId={ticketId}

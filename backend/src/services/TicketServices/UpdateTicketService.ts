@@ -217,6 +217,18 @@ const UpdateTicketService = async ({
       ticket
     });
 
+  if (oldUserId && ticket.user?.id && ticket.user?.id !== oldUserId) {
+    io.to(getScopedNotificationRoom(ticket.whatsappId))
+      .to(ticketId.toString())
+      .emit("ticket", {
+        action: "transfer",
+        ticket,
+        oldUserId,
+        newUserId: ticket.user.id,
+        transferredAt: new Date().toISOString()
+      });
+  }
+
   return { ticket, oldStatus, oldUserId };
 };
 

@@ -85,22 +85,26 @@ const NotificationsPopOver = () => {
 		});
 	};
 
-	const handleTicketReminderNotification = ticket => {
+	const handleTicketReminderNotification = (ticket, transferNotice = false) => {
 		if (!ticket) {
 			return;
 		}
 
 		const options = {
-			body: ticket.lastMessage || i18n.t("dashboard.recent.noMessage"),
+			body: transferNotice
+                          ? "Atendimento transferido para voce. Revise o historico antes da resposta."
+                          : ticket.lastMessage || i18n.t("dashboard.recent.noMessage"),
 			icon: ticket.contact?.profilePicUrl,
-			tag: String(ticket.id),
+			tag: transferNotice ? `transfer-${ticket.id}` : String(ticket.id),
 			renotify: true,
 		};
 
 		const notification = new Notification(
-			`${i18n.t("tickets.notification.message")} ${ticket.contact?.name || ""}`.trim(),
-			options
-		);
+                  transferNotice
+                          ? `Novo atendimento transferido: ${ticket.contact?.name || ""}`.trim()
+                          : `${i18n.t("tickets.notification.message")} ${ticket.contact?.name || ""}`.trim(),
+                  options
+          );
 
 		notification.onclick = e => {
 			e.preventDefault();
@@ -216,8 +220,21 @@ const NotificationsPopOver = () => {
 				}
 
 				removeNotification(data.ticket.id);
-			}
-		});
+                  }
+
+                  if (data.action === "transfer") {
+                          if (
+                                  canTrackTicket(data.ticket) &&
+                                  Number(data.newUserId) === Number(user?.id)
+                          ) {
+                                  syncNotification({
+                                          ...data.ticket,
+                                          transferNotice: true
+                                  });
+                                  handleTicketReminderNotification(data.ticket, true);
+                          }
+                  }
+          });
 
 		socket.on("appMessage", data => {
 			if (data.action === "create" && !data.message.read && canTrackTicket(data.ticket)) {
