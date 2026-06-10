@@ -1105,7 +1105,15 @@ const MessageInput = ({ ticketStatus }) => {
                 </label>
                 <span className={classes.mobileMenuLabel}>Arquivo</span>
               </MenuItem>
-              <MenuItem onClick={handleMenuItemClick} className={classes.mobileMenuItem}>
+              <MenuItem
+                onClick={() => {
+                  if (loading || recording || ticketStatus !== "open") return;
+                  handleToggleInternalMessage();
+                  setAnchorEl(null);
+                }}
+                className={classes.mobileMenuItem}
+                disabled={loading || recording || ticketStatus !== "open"}
+              >
                 <IconButton
                   aria-label="toggleInternalMessage"
                   component="span"
