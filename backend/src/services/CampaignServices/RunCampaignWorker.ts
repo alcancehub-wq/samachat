@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+﻿import { Op } from "sequelize";
 import Campaign from "../../models/Campaign";
 import Contact from "../../models/Contact";
 import ContactCustomField from "../../models/ContactCustomField";
@@ -10,6 +10,7 @@ import CampaignLog from "../../models/CampaignLog";
 import User from "../../models/User";
 import { parseCampaignTagIds } from "./campaignTags";
 import { applyCampaignTagScope } from "./campaignAudience";
+import { parseCampaignScheduledAt } from "./campaignSchedule";
 import {
   parseContactListFilters,
   findDynamicContactListContacts
@@ -23,6 +24,7 @@ import { logger } from "../../utils/logger";
 
 const DEFAULT_POLL_MS = 8000;
 const DEFAULT_BATCH_SIZE = 10;
+const CAMPAIGN_WORKER_ID = `campaign-worker:${process.pid}`;
 
 const parseNumber = (value: string | undefined, fallback: number): number => {
   if (!value) {
@@ -33,14 +35,17 @@ const parseNumber = (value: string | undefined, fallback: number): number => {
   return Number.isNaN(parsed) ? fallback : parsed;
 };
 
-const claimCampaign = async (campaignId: number): Promise<boolean> => {
+const claimCampaign = async (campaignId: number, now = new Date()): Promise<boolean> => {
   const [updated] = await Campaign.update(
     { status: "processing", lastStatusAt: new Date() },
     {
       where: {
         id: campaignId,
         status: "scheduled",
-        isActive: true
+        isActive: true,
+        scheduledAt: {
+          [Op.lte]: now
+        }
       }
     }
   );
@@ -248,15 +253,72 @@ const runCampaignOnce = async (campaign: Campaign): Promise<void> => {
   await markCampaignStatus(campaign.id, "completed");
 };
 
+const validateClaimedCampaignIsDue = async (campaign: Campaign): Promise<boolean> => {
+  const now = new Date();
+
+  if (!campaign.scheduledAt) {
+    logger.warn({
+      info: "Campaign worker skipped campaign without scheduledAt",
+      campaignId: campaign.id,
+      workerId: CAMPAIGN_WORKER_ID,
+      now
+    });
+
+    await markCampaignStatus(campaign.id, "failed");
+    return false;
+  }
+
+  let scheduledAt: Date;
+
+  try {
+    scheduledAt = parseCampaignScheduledAt(campaign.scheduledAt);
+  } catch (error) {
+    logger.warn({
+      info: "Campaign worker skipped campaign with invalid scheduledAt",
+      campaignId: campaign.id,
+      workerId: CAMPAIGN_WORKER_ID,
+      scheduledAt: campaign.scheduledAt,
+      now
+    });
+
+    await markCampaignStatus(campaign.id, "failed");
+    return false;
+  }
+
+  if (scheduledAt.getTime() > now.getTime()) {
+    logger.warn({
+      info: "Campaign worker released campaign because it is not due yet",
+      campaignId: campaign.id,
+      workerId: CAMPAIGN_WORKER_ID,
+      scheduledAt,
+      now
+    });
+
+    await markCampaignStatus(campaign.id, "scheduled");
+    return false;
+  }
+
+  logger.info({
+    info: "Campaign worker executing due campaign",
+    campaignId: campaign.id,
+    workerId: CAMPAIGN_WORKER_ID,
+    scheduledAt,
+    now
+  });
+
+  return true;
+};
+
 const runCampaignWorkerOnce = async (): Promise<void> => {
   const batchSize = parseNumber(process.env.CAMPAIGN_BATCH_SIZE, DEFAULT_BATCH_SIZE);
+  const now = new Date();
 
   const campaigns = await Campaign.findAll({
     where: {
       status: "scheduled",
       isActive: true,
       scheduledAt: {
-        [Op.lte]: new Date()
+        [Op.lte]: now
       }
     },
     order: [["scheduledAt", "ASC"]],
@@ -264,15 +326,27 @@ const runCampaignWorkerOnce = async (): Promise<void> => {
   });
 
   for (const campaign of campaigns) {
-    const claimed = await claimCampaign(campaign.id);
+    const claimed = await claimCampaign(campaign.id, now);
     if (!claimed) {
+      continue;
+    }
+
+    await campaign.reload();
+
+    const isDue = await validateClaimedCampaignIsDue(campaign);
+    if (!isDue) {
       continue;
     }
 
     try {
       await runCampaignOnce(campaign);
     } catch (error) {
-      logger.error({ info: "Campaign execution failed", error });
+      logger.error({
+        info: "Campaign execution failed",
+        campaignId: campaign.id,
+        workerId: CAMPAIGN_WORKER_ID,
+        error
+      });
       await markCampaignStatus(campaign.id, "failed");
     }
   }
@@ -292,14 +366,26 @@ const startCampaignWorker = (): void => {
     try {
       await runCampaignWorkerOnce();
     } catch (error) {
-      logger.error({ info: "Campaign worker failed", error });
+      logger.error({
+        info: "Campaign worker failed",
+        workerId: CAMPAIGN_WORKER_ID,
+        error
+      });
     } finally {
       running = false;
     }
   };
 
+  logger.info({
+    info: "Campaign worker started",
+    workerId: CAMPAIGN_WORKER_ID,
+    pollMs
+  });
+
   void tick();
   setInterval(tick, pollMs);
 };
+
+export { runCampaignWorkerOnce };
 
 export default startCampaignWorker;

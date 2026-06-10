@@ -1,4 +1,4 @@
-import AppError from "../../errors/AppError";
+﻿import AppError from "../../errors/AppError";
 import Campaign from "../../models/Campaign";
 import Dialog from "../../models/Dialog";
 import ContactList from "../../models/ContactList";
@@ -7,6 +7,10 @@ import {
   CampaignStatus,
   normalizeCampaignStatus
 } from "./campaignStatus";
+import {
+  assertCampaignScheduledAtIsFuture,
+  parseCampaignScheduledAt
+} from "./campaignSchedule";
 import TriggerWebhooksService from "../WebhookServices/TriggerWebhooksService";
 
 interface CampaignData {
@@ -77,17 +81,24 @@ const UpdateCampaignService = async ({
     if (!campaignData.scheduledAt) {
       scheduledAtValue = null;
     } else {
-      const parsed = new Date(campaignData.scheduledAt);
-      if (Number.isNaN(parsed.getTime())) {
-        throw new AppError("ERR_CAMPAIGN_SCHEDULE_INVALID");
-      }
-      scheduledAtValue = parsed;
+      scheduledAtValue = parseCampaignScheduledAt(campaignData.scheduledAt);
     }
   }
 
   const nextStatus = incomingStatus ?? campaign.status;
-  if (nextStatus === "scheduled" && !scheduledAtValue) {
-    throw new AppError("ERR_CAMPAIGN_SCHEDULE_REQUIRED");
+  const nextIsActive =
+    typeof campaignData.isActive === "boolean"
+      ? campaignData.isActive
+      : campaign.isActive;
+
+  if (nextStatus === "scheduled") {
+    if (!scheduledAtValue) {
+      throw new AppError("ERR_CAMPAIGN_SCHEDULE_REQUIRED");
+    }
+
+    if (nextIsActive) {
+      assertCampaignScheduledAtIsFuture(scheduledAtValue);
+    }
   }
 
   await campaign.update({
@@ -105,10 +116,7 @@ const UpdateCampaignService = async ({
       campaignData.tagIds !== undefined
         ? stringifyCampaignTagIds(campaignData.tagIds)
         : campaign.tagIds,
-    isActive:
-      typeof campaignData.isActive === "boolean"
-        ? campaignData.isActive
-        : campaign.isActive,
+    isActive: nextIsActive,
     status: nextStatus,
     scheduledAt: scheduledAtValue,
     reviewedAt:

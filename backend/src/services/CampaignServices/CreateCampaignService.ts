@@ -1,4 +1,4 @@
-import AppError from "../../errors/AppError";
+﻿import AppError from "../../errors/AppError";
 import Campaign from "../../models/Campaign";
 import Dialog from "../../models/Dialog";
 import ContactList from "../../models/ContactList";
@@ -7,6 +7,10 @@ import {
   CampaignStatus,
   normalizeCampaignStatus
 } from "./campaignStatus";
+import {
+  assertCampaignScheduledAtIsFuture,
+  parseCampaignScheduledAt
+} from "./campaignSchedule";
 import TriggerWebhooksService from "../WebhookServices/TriggerWebhooksService";
 
 interface Request {
@@ -60,15 +64,15 @@ const CreateCampaignService = async ({
 
   let scheduledAtValue: Date | null = null;
   if (scheduledAt) {
-    const parsed = new Date(scheduledAt);
-    if (Number.isNaN(parsed.getTime())) {
-      throw new AppError("ERR_CAMPAIGN_SCHEDULE_INVALID");
-    }
-    scheduledAtValue = parsed;
+    scheduledAtValue = parseCampaignScheduledAt(scheduledAt);
   }
 
-  if (nextStatus === "scheduled" && !scheduledAtValue) {
-    throw new AppError("ERR_CAMPAIGN_SCHEDULE_REQUIRED");
+  if (nextStatus === "scheduled") {
+    if (!scheduledAtValue) {
+      throw new AppError("ERR_CAMPAIGN_SCHEDULE_REQUIRED");
+    }
+
+    assertCampaignScheduledAtIsFuture(scheduledAtValue);
   }
 
   const campaign = await Campaign.create({
