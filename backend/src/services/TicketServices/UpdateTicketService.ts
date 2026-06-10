@@ -1,6 +1,5 @@
-﻿import AppError from "../../errors/AppError";
+import AppError from "../../errors/AppError";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
-import SetTicketMessagesAsRead from "../../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../../libs/socket";
 import Ticket from "../../models/Ticket";
 import Tag from "../../models/Tag";
@@ -94,7 +93,6 @@ const UpdateTicketService = async ({
   } = ticketData;
 
   const ticket = await ShowTicketService(ticketId, accessData);
-  await SetTicketMessagesAsRead(ticket);
 
   const oldStatus = ticket.status;
   const oldUserId = ticket.user?.id;
