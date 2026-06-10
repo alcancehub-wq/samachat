@@ -1,13 +1,19 @@
-import Tag from "../../../models/Tag";
+﻿import Tag from "../../../models/Tag";
+import User from "../../../models/User";
 import { getIO } from "../../../libs/socket";
 import CheckContactOpenTickets from "../../../helpers/CheckContactOpenTickets";
 import SetTicketMessagesAsRead from "../../../helpers/SetTicketMessagesAsRead";
+import GetDefaultWhatsAppByUser from "../../../helpers/GetDefaultWhatsAppByUser";
 import UpdateTicketService from "../UpdateTicketService";
 import ShowTicketService from "../ShowTicketService";
 
 jest.mock("../../../models/Tag", () => ({
   findOne: jest.fn(),
   findOrCreate: jest.fn()
+}));
+
+jest.mock("../../../models/User", () => ({
+  findByPk: jest.fn()
 }));
 
 jest.mock("../../../libs/socket", () => ({
@@ -22,9 +28,11 @@ jest.mock("../../../helpers/GetDefaultWhatsAppByUser", () => jest.fn());
 jest.mock("../ShowTicketService", () => jest.fn());
 
 const tagFindOneMock = Tag.findOne as jest.Mock;
+const userFindByPkMock = User.findByPk as jest.Mock;
 const getIOMock = getIO as jest.Mock;
 const checkContactOpenTicketsMock = CheckContactOpenTickets as jest.Mock;
 const setTicketMessagesAsReadMock = SetTicketMessagesAsRead as jest.Mock;
+const getDefaultWhatsAppByUserMock = GetDefaultWhatsAppByUser as jest.Mock;
 const showTicketServiceMock = ShowTicketService as jest.Mock;
 
 describe("UpdateTicketService", () => {
@@ -42,6 +50,7 @@ describe("UpdateTicketService", () => {
       id: 41,
       status: "open",
       whatsappId: 13,
+      queueId: 4,
       pendingSince: null,
       lostAt: null,
       user: { id: 3 },
@@ -66,6 +75,8 @@ describe("UpdateTicketService", () => {
     getIOMock.mockReturnValue(ioMock);
     checkContactOpenTicketsMock.mockResolvedValue(undefined);
     setTicketMessagesAsReadMock.mockResolvedValue(undefined);
+    getDefaultWhatsAppByUserMock.mockResolvedValue(null);
+    userFindByPkMock.mockResolvedValue(null);
   });
 
   it("preserves manual reopen cleanup by removing only the Follow up tag", async () => {
@@ -182,5 +193,64 @@ describe("UpdateTicketService", () => {
     );
     expect(result.ticket.status).toBe("open");
     expect(result.ticket.lostAt).toBeNull();
+  });
+
+  it("uses the destination user's first queue when transfer payload has no queueId", async () => {
+    const ticket = buildTicket({
+      queueId: 4,
+      user: { id: 3 },
+      userId: 3,
+      whatsappId: 13
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+    getDefaultWhatsAppByUserMock.mockResolvedValue({ id: 22 });
+    userFindByPkMock.mockResolvedValue({
+      queues: [{ id: 6, name: "SDR ATIVO" }]
+    });
+
+    await UpdateTicketService({
+      ticketId: 41,
+      ticketData: {
+        userId: 21,
+        applyUserDefaultWhatsappOnTransfer: true
+      }
+    });
+
+    expect(userFindByPkMock).toHaveBeenCalledWith(21, { include: ["queues"] });
+    expect(ticket.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 21,
+        queueId: 6
+      })
+    );
+    expect(ticket.update).toHaveBeenCalledWith({ whatsappId: 22 });
+  });
+
+  it("rejects an explicit queueId that does not belong to the destination user", async () => {
+    const ticket = buildTicket({
+      queueId: 4,
+      user: { id: 3 },
+      userId: 3,
+      whatsappId: 13
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+    userFindByPkMock.mockResolvedValue({
+      queues: [{ id: 6, name: "SDR ATIVO" }]
+    });
+
+    await expect(
+      UpdateTicketService({
+        ticketId: 41,
+        ticketData: {
+          userId: 21,
+          queueId: 4,
+          applyUserDefaultWhatsappOnTransfer: true
+        }
+      })
+    ).rejects.toMatchObject({
+      message: "ERR_TRANSFER_QUEUE_NOT_ALLOWED"
+    });
   });
 });

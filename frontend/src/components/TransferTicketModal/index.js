@@ -145,7 +145,13 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 				data.whatsappId = selectedWhatsapp;
 			}
 
-			await api.put(`/tickets/${ticketid}`, data);
+			
+                        if (Object.keys(data).length === 0) {
+                                setLoading(false);
+                                return;
+                        }
+
+                        await api.put(`/tickets/${ticketid}`, data);
 
 			setLoading(false);
 			history.push(`/tickets`);
@@ -167,12 +173,13 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 						getOptionLabel={option => `${option.name}`}
 						onChange={(e, newValue) => {
 							setSelectedUser(newValue);
-							if (newValue != null && Array.isArray(newValue.queues)) {
-								setQueues(newValue.queues);
-							} else {
-								setQueues(allQueues);
-								setSelectedQueue('');
-							}
+                                                        if (newValue != null && Array.isArray(newValue.queues)) {
+                                                                setQueues(newValue.queues);
+                                                                setSelectedQueue(newValue.queues[0]?.id || '');
+                                                        } else {
+                                                                setQueues(allQueues);
+                                                                setSelectedQueue('');
+                                                        }
 						}}
 						options={options}
 						filterOptions={filterOptions}

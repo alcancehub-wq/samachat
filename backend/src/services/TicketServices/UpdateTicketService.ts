@@ -1,8 +1,10 @@
+﻿import AppError from "../../errors/AppError";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import SetTicketMessagesAsRead from "../../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../../libs/socket";
 import Ticket from "../../models/Ticket";
 import Tag from "../../models/Tag";
+import User from "../../models/User";
 import { getScopedNotificationRoom, getScopedTicketsRoom } from "../../helpers/socketRooms";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
@@ -12,9 +14,9 @@ import { FOLLOW_UP_TAG_COLOR, FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag
 
 interface TicketData {
   status?: string;
-  userId?: number;
-  queueId?: number;
-  whatsappId?: number;
+  userId?: number | null;
+  queueId?: number | null;
+  whatsappId?: number | null;
   tagIds?: number[];
   followUp?: boolean;
   applyUserDefaultWhatsappOnTransfer?: boolean;
@@ -31,6 +33,50 @@ interface Response {
   oldStatus: string;
   oldUserId: number | undefined;
 }
+
+const hasValue = (value: number | null | undefined): value is number =>
+  value !== null && value !== undefined;
+
+const resolveTransferQueueId = async ({
+  userId,
+  requestedQueueId,
+  currentQueueId,
+  shouldResolve
+}: {
+  userId?: number | null;
+  requestedQueueId?: number | null;
+  currentQueueId?: number | null;
+  shouldResolve: boolean;
+}): Promise<number | null | undefined> => {
+  if (!shouldResolve || !userId) {
+    return requestedQueueId;
+  }
+
+  const user = await User.findByPk(userId, { include: ["queues"] });
+  const userQueueIds = (user?.queues || [])
+    .map(queue => Number(queue.id))
+    .filter(queueId => Number.isInteger(queueId) && queueId > 0);
+
+  if (!userQueueIds.length) {
+    return requestedQueueId;
+  }
+
+  if (hasValue(requestedQueueId)) {
+    const normalizedQueueId = Number(requestedQueueId);
+
+    if (!userQueueIds.includes(normalizedQueueId)) {
+      throw new AppError("ERR_TRANSFER_QUEUE_NOT_ALLOWED");
+    }
+
+    return normalizedQueueId;
+  }
+
+  if (hasValue(currentQueueId) && userQueueIds.includes(Number(currentQueueId))) {
+    return Number(currentQueueId);
+  }
+
+  return userQueueIds[0];
+};
 
 const UpdateTicketService = async ({
   ticketData,
@@ -80,6 +126,13 @@ const UpdateTicketService = async ({
     }
   }
 
+  const nextQueueId = await resolveTransferQueueId({
+    userId,
+    requestedQueueId: queueId,
+    currentQueueId: ticket.queueId,
+    shouldResolve: Boolean(applyUserDefaultWhatsappOnTransfer && userId)
+  });
+
   if (nextWhatsappId && ticket.whatsappId !== nextWhatsappId) {
     await CheckContactOpenTickets(ticket.contactId, nextWhatsappId);
   }
@@ -90,7 +143,7 @@ const UpdateTicketService = async ({
 
   await ticket.update({
     status,
-    queueId,
+    queueId: nextQueueId,
     userId,
     lostAt: nextLostAt,
     pendingSince:
