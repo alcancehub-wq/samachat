@@ -5,6 +5,10 @@ const DEFAULT_START_DELAY_MS = 30000;
 const MIN_START_DELAY_MS = 20000;
 const MAX_START_DELAY_MS = 40000;
 
+const DEFAULT_START_TIMEOUT_MS = 120000;
+const MIN_START_TIMEOUT_MS = 60000;
+const MAX_START_TIMEOUT_MS = 180000;
+
 const queuedSessionStarts = new Map<number, Promise<void>>();
 
 let queueTail: Promise<void> = Promise.resolve();
@@ -35,6 +39,62 @@ const getSessionStartDelayMs = (reason: string): number => {
     MAX_START_DELAY_MS,
     Math.max(MIN_START_DELAY_MS, configuredDelay)
   );
+};
+
+const getSessionStartTimeoutMs = (): number => {
+  const configuredTimeout = Number(
+    process.env.WWEBJS_SESSION_START_TIMEOUT_MS || DEFAULT_START_TIMEOUT_MS
+  );
+
+  if (!Number.isFinite(configuredTimeout)) {
+    return DEFAULT_START_TIMEOUT_MS;
+  }
+
+  return Math.min(
+    MAX_START_TIMEOUT_MS,
+    Math.max(MIN_START_TIMEOUT_MS, configuredTimeout)
+  );
+};
+
+const withSessionStartTimeout = async (
+  whatsappId: number,
+  sessionName: string,
+  reason: string,
+  task: () => Promise<void>
+): Promise<void> => {
+  const timeoutMs = getSessionStartTimeoutMs();
+
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    await Promise.race([
+      task(),
+      new Promise<void>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(
+            new Error(
+              `WhatsApp session start timeout after ${timeoutMs}ms`
+            )
+          );
+        }, timeoutMs);
+      })
+    ]);
+  } catch (err) {
+    logger.error(
+      {
+        err,
+        whatsappId,
+        sessionName,
+        reason,
+        timeoutMs
+      },
+      "WhatsApp session start task failed or timed out"
+    );
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
 };
 
 interface EnqueueSessionStartOptions {
@@ -106,7 +166,12 @@ export const enqueueWhatsAppSessionStart = (
         "Dequeued WhatsApp session start"
       );
 
-      await task();
+      await withSessionStartTimeout(
+        whatsapp.id,
+        sessionName,
+        options.reason,
+        task
+      );
     })
     .finally(() => {
       if (
