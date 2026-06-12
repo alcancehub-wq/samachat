@@ -292,8 +292,8 @@ const reducer = (state, action) => {
 };
 
 	const TicketsList = (props) => {
-		const { status, searchParam, showAll, selectedQueueIds, selectedTagIds, updateCount, style, followUp } =
-			props;
+		const { status, searchParam, showAll, selectedQueueIds, selectedTagIds, selectedUserId, updateCount, style, followUp, unreadOnly } =
+                        props;
 	const classes = useStyles();
 	const [pageNumber, setPageNumber] = useState(1);
 	const [ticketsList, dispatch] = useReducer(reducer, []);
@@ -305,7 +305,26 @@ const reducer = (state, action) => {
 	const permissions = user?.permissions || [];
 	const isAdmin = user?.profile?.toLowerCase() === "admin";
 	const canShowAllTickets = isAdmin && Boolean(showAll);
-	const visibleTickets = filterTicketsByStatus(ticketsList, status);
+
+        const matchesUnreadFilter = ticket => {
+                if (!unreadOnly) return true;
+                return Number(ticket.unreadMessages) > 0;
+        };
+
+        const matchesResponsibleFilter = ticket => {
+                if (!selectedUserId) return true;
+
+                const ticketUserId = ticket.userId || ticket.user?.id || "";
+
+                return String(ticketUserId) === String(selectedUserId);
+        };
+
+        const applyLocalFilters = ticketItems =>
+                filterTicketsByStatus(ticketItems, status)
+                        .filter(matchesUnreadFilter)
+                        .filter(matchesResponsibleFilter);
+
+        const visibleTickets = applyLocalFilters(ticketsList);
 	const visibleSelectedTicketIds = selectedTicketIds.filter(ticketId =>
 		visibleTickets.some(ticket => ticket.id === ticketId)
 	);
@@ -318,7 +337,7 @@ const reducer = (state, action) => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
 		setSelectedTicketIds([]);
-	}, [status, searchParam, dispatch, showAll, selectedQueueIds, selectedTagIds]);
+	}, [status, searchParam, dispatch, showAll, selectedQueueIds, selectedTagIds, selectedUserId, unreadOnly]);
 
 	const { tickets, hasMore, loading } = useTickets({
 		pageNumber,
@@ -400,7 +419,11 @@ const reducer = (state, action) => {
 			return ticket.tags?.some(tag => tag.name === FOLLOW_UP_TAG_NAME);
 		};
 
-		const hasStatusMatch = ticket => matchesTicketStatus(ticket, status);
+                const hasUnreadMatch = ticket => matchesUnreadFilter(ticket);
+
+                const hasResponsibleMatch = ticket => matchesResponsibleFilter(ticket);
+
+                const hasStatusMatch = ticket => matchesTicketStatus(ticket, status);
 
 		const hasQueueScopeMatch = ticket => {
 			if (selectedQueueIds.length === 0) {
@@ -448,8 +471,10 @@ const reducer = (state, action) => {
 		};
 
 		const shouldUpdateTicket = ticket =>
-			hasStatusMatch(ticket) &&
-			matchesSearchParam(ticket) &&
+                        hasStatusMatch(ticket) &&
+                        hasUnreadMatch(ticket) &&
+                        hasResponsibleMatch(ticket) &&
+                        matchesSearchParam(ticket) &&
 			canAccessTicketInCurrentList(ticket) &&
 			hasQueueScopeMatch(ticket) &&
 			hasTagMatch(ticket) &&
@@ -518,7 +543,7 @@ const reducer = (state, action) => {
 			isEffectMounted = false;
 			socket.disconnect();
 		};
-	}, [canShowAllTickets, followUp, status, searchParam, user, selectedQueueIds, selectedTagIds]);
+	}, [canShowAllTickets, followUp, status, searchParam, user, selectedQueueIds, selectedTagIds, selectedUserId, unreadOnly]);
 
 	useEffect(() => {
     if (typeof updateCount === "function") {

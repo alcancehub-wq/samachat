@@ -19,9 +19,10 @@ import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsList";
 import TabPanel from "../TabPanel";
 import { i18n } from "../../translate/i18n";
+import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import TicketsQueueSelect from "../TicketsQueueSelect";
-import { Button } from "@material-ui/core";
+import { Button, FormControl, Select, MenuItem } from "@material-ui/core";
 import TagSelect from "../TagSelect";
 import { useLocation } from "react-router-dom";
 
@@ -440,10 +441,38 @@ const TicketsManager = () => {
   const location = useLocation();
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [users, setUsers] = useState([]);
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const canShowAllTickets = user?.profile?.toUpperCase() === "ADMIN";
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchResponsibleUsers = async () => {
+      try {
+        const { data } = await api.get("/users");
+        const rows = Array.isArray(data) ? data : data?.users || [];
+
+        if (mounted) {
+          setUsers(rows.filter(item => item && item.id && item.name));
+        }
+      } catch (_error) {
+        if (mounted) {
+          setUsers([]);
+        }
+      }
+    };
+
+    fetchResponsibleUsers();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const existingTicketSearch =
     location.state && typeof location.state.existingTicketSearch === "string"
       ? location.state.existingTicketSearch.trim()
@@ -625,9 +654,20 @@ const TicketsManager = () => {
             </span>
           </Button>
         </div>
-        <div className={classes.ticketOptionsSecondary}>
+        <div
+          className={classes.ticketOptionsSecondary}
+          style={{
+            maxWidth: "100%",
+            overflowX: "auto",
+            overflowY: "hidden",
+            flexWrap: "nowrap",
+            gap: 6,
+            paddingBottom: 4,
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
           {canShowAllTickets && (
-            <div className={classes.showAllInline}>
+            <div className={classes.showAllInline} style={{ flex: "0 0 auto" }}>
               <div className={classes.showAllControl}>
                 <span className={classes.showAllLabel}>{i18n.t("tickets.buttons.showAll")}</span>
                 <Switch
@@ -649,19 +689,73 @@ const TicketsManager = () => {
           )}
           <TagSelect
             selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
             onChange={setSelectedTagIds}
             label={i18n.t("ticketsManager.tagsFilter")}
-            style={{ minWidth: 140, flex: "1 1 0" }}
+            style={{ minWidth: 104, width: 112, flex: "0 0 112px" }}
             className={classes.selectSurface}
           />
-          <div className={clsx(classes.filterField, classes.selectSurface)}>
-            <TicketsQueueSelect
-              selectedQueueIds={selectedQueueIds}
-              userQueues={user?.queues}
-              onChange={(values) => setSelectedQueueIds(values)}
-              style={{ width: "100%", marginTop: 0 }}
-            />
-          </div>
+          <FormControl
+            variant="outlined"
+            size="small"
+            className={clsx(classes.filterField, classes.selectSurface)}
+            style={{
+              flex: "0 0 138px",
+              width: 138,
+              minWidth: 138,
+              boxSizing: "border-box",
+            }}
+          >
+            <Select
+              value={selectedUserId}
+              onChange={event => setSelectedUserId(event.target.value)}
+              displayEmpty
+              disableUnderline
+              MenuProps={{
+                getContentAnchorEl: null,
+                anchorOrigin: {
+                  vertical: "bottom",
+                  horizontal: "left",
+                },
+                transformOrigin: {
+                  vertical: "top",
+                  horizontal: "left",
+                },
+                PaperProps: {
+                  style: {
+                    borderRadius: 12,
+                    marginTop: 6,
+                  },
+                },
+              }}
+              style={{
+                height: 36,
+                borderRadius: 14,
+                background: "transparent",
+                fontSize: "0.9rem",
+                fontWeight: 500,
+              }}
+              inputProps={{
+                style: {
+                  padding: "8px 30px 8px 12px",
+                },
+              }}
+              renderValue={value => {
+                if (!value) return "Responsável";
+                const selectedResponsible = users.find(
+                  responsibleUser => String(responsibleUser.id) === String(value)
+                );
+                return selectedResponsible?.name || "Responsável";
+              }}
+            >
+              <MenuItem value="">Responsável</MenuItem>
+              {users.map(responsibleUser => (
+                <MenuItem key={responsibleUser.id} value={responsibleUser.id}>
+                  {responsibleUser.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </div>
       </Paper>
       <TabPanel value={activeTab} name="open" className={classes.ticketsWrapper}>
@@ -710,6 +804,24 @@ const TicketsManager = () => {
             value={"pending"}
             className={classes.subTab}
           />
+          <Tab
+            label={
+              isMobile ? (
+                renderTabLabel("Não lidas", unreadCount)
+              ) : (
+                <Badge
+                  className={classes.badge}
+                  badgeContent={unreadCount}
+                  color="primary"
+                  classes={{ badge: classes.openBadge }}
+                >
+                  Não lidas
+                </Badge>
+              )
+            }
+            value={"unread"}
+            className={classes.subTab}
+          />
         </Tabs>
         <Paper className={classes.ticketsWrapper}>
           <TicketsList
@@ -719,6 +831,7 @@ const TicketsManager = () => {
             updateCount={(val) => setOpenCount(val)}
             style={applyPanelStyle("open")}
             selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
           />
           <TicketsList
             status="pending"
@@ -727,6 +840,17 @@ const TicketsManager = () => {
             updateCount={(val) => setPendingCount(val)}
             style={applyPanelStyle("pending")}
             selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
+          />
+          <TicketsList
+            status="open"
+            showAll={showAllTickets}
+            selectedQueueIds={selectedQueueIds}
+            updateCount={(val) => setUnreadCount(val)}
+            style={applyPanelStyle("unread")}
+            selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
+            unreadOnly
           />
         </Paper>
       </TabPanel>
@@ -736,6 +860,7 @@ const TicketsManager = () => {
           showAll={canShowAllTickets}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
         />
       </TabPanel>
       <TabPanel value={activeTab} name="lost" className={classes.ticketsWrapper}>
@@ -744,6 +869,7 @@ const TicketsManager = () => {
           showAll={canShowAllTickets}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
         />
       </TabPanel>
       <TabPanel value={activeTab} name="search" className={classes.ticketsWrapper}>
@@ -752,6 +878,7 @@ const TicketsManager = () => {
           showAll={canShowAllTickets}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
         />
       </TabPanel>
     </Paper>
