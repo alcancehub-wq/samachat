@@ -16,31 +16,32 @@ const pushCandidate = (candidates: string[], value?: string | null): void => {
   candidates.push(normalizedValue);
 };
 
-const addBrazilianLegacyMobileVariants = (
-  value: string,
+const looksLikeBrazilianLocalNumber = (value: string): boolean => {
+  return /^[1-9]{2}9\d{8}$/.test(value) || /^[1-9]{2}[2-8]\d{7}$/.test(value);
+};
+
+const addBrazilianMobileVariants = (
+  localNumber: string,
   candidates: string[]
 ): void => {
-  const addLocalVariants = (countryPrefix: string, localNumber: string): void => {
-    if (/^[1-9]{2}9\d{8}$/.test(localNumber)) {
-      pushCandidate(
-        candidates,
-        `${countryPrefix}${localNumber.slice(0, 2)}${localNumber.slice(3)}`
-      );
-    }
-
-    if (/^[1-9]{2}[6-9]\d{7}$/.test(localNumber)) {
-      pushCandidate(
-        candidates,
-        `${countryPrefix}${localNumber.slice(0, 2)}9${localNumber.slice(2)}`
-      );
-    }
-  };
-
-  if (value.startsWith("55")) {
-    addLocalVariants("55", value.slice(2));
+  if (!looksLikeBrazilianLocalNumber(localNumber)) {
+    return;
   }
 
-  addLocalVariants("", value);
+  pushCandidate(candidates, localNumber);
+  pushCandidate(candidates, `55${localNumber}`);
+
+  if (/^[1-9]{2}9\d{8}$/.test(localNumber)) {
+    const withoutNinthDigit = `${localNumber.slice(0, 2)}${localNumber.slice(3)}`;
+    pushCandidate(candidates, withoutNinthDigit);
+    pushCandidate(candidates, `55${withoutNinthDigit}`);
+  }
+
+  if (/^[1-9]{2}[6-9]\d{7}$/.test(localNumber)) {
+    const withNinthDigit = `${localNumber.slice(0, 2)}9${localNumber.slice(2)}`;
+    pushCandidate(candidates, withNinthDigit);
+    pushCandidate(candidates, `55${withNinthDigit}`);
+  }
 };
 
 const BuildEquivalentContactNumberCandidates = (
@@ -54,7 +55,12 @@ const BuildEquivalentContactNumberCandidates = (
 
   const candidates: string[] = [];
   pushCandidate(candidates, normalizedValue);
-  addBrazilianLegacyMobileVariants(normalizedValue, candidates);
+
+  if (normalizedValue.startsWith("55") && normalizedValue.length > 4) {
+    addBrazilianMobileVariants(normalizedValue.slice(2), candidates);
+  } else {
+    addBrazilianMobileVariants(normalizedValue, candidates);
+  }
 
   return candidates;
 };

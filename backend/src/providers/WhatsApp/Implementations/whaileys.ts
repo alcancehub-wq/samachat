@@ -833,7 +833,7 @@ const getMessageData = async (
 
   const contextPayload: WhatsappContextPayload = {
     whatsappId: wbot.id,
-    unreadMessages: 0,
+    unreadMessages: msg.key.fromMe ? 0 : 1,
     groupContact,
     isGroupMessage: isGroup || remoteJid.endsWith("@g.us")
   };

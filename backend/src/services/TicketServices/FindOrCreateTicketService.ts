@@ -64,6 +64,24 @@ const emitAutomaticPendingTransition = ({
     });
 };
 
+const resolveNextUnreadMessages = (
+  ticket: Ticket,
+  incomingUnreadMessages: number
+): number => {
+  const currentUnreadMessages = Math.max(Number(ticket.unreadMessages) || 0, 0);
+  const safeIncomingUnreadMessages = Math.max(Number(incomingUnreadMessages) || 0, 0);
+
+  if (safeIncomingUnreadMessages <= 0) {
+    return currentUnreadMessages;
+  }
+
+  if (safeIncomingUnreadMessages > currentUnreadMessages) {
+    return safeIncomingUnreadMessages;
+  }
+
+  return currentUnreadMessages + 1;
+};
+
 const FindOrCreateTicketService = async (
   contact: Contact,
   whatsappId: number,
@@ -87,7 +105,7 @@ const FindOrCreateTicketService = async (
   });
 
   if (ticket) {
-    await ticket.update({ unreadMessages });
+    await ticket.update({ unreadMessages: resolveNextUnreadMessages(ticket, unreadMessages) });
   }
 
   if (!ticket && groupContact) {
@@ -138,7 +156,7 @@ const FindOrCreateTicketService = async (
           pendingSince: new Date()
         });
       } else {
-        await ticket.update({ unreadMessages });
+        await ticket.update({ unreadMessages: resolveNextUnreadMessages(ticket, unreadMessages) });
       }
     }
   }

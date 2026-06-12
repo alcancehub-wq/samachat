@@ -561,7 +561,7 @@ const getMessageData = async (
     contactPayload = await convertToContactPayload(msgContact);
   }
 
-  const unreadMessages = msg.fromMe ? 0 : chat.unreadCount;
+  const unreadMessages = msg.fromMe ? 0 : Math.max(Number(chat.unreadCount) || 0, 1);
 
   const messagePayload = await convertToMessagePayload(msg);
   const mediaPayload = await convertToMediaPayload(msg);
