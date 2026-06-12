@@ -22,7 +22,7 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import TicketsQueueSelect from "../TicketsQueueSelect";
-import { Button } from "@material-ui/core";
+import { Button, FormControl, Select, MenuItem } from "@material-ui/core";
 import TagSelect from "../TagSelect";
 import { useLocation } from "react-router-dom";
 
@@ -695,57 +695,67 @@ const TicketsManager = () => {
             style={{ minWidth: 104, width: 112, flex: "0 0 112px" }}
             className={classes.selectSurface}
           />
-          <div
-            className={clsx(classes.filterField, classes.selectSurface)}
-            style={{ flex: "0 0 112px", width: 112, minWidth: 112 }}
-          >
-            <TicketsQueueSelect
-              selectedQueueIds={selectedQueueIds}
-              userQueues={user?.queues}
-              onChange={(values) => setSelectedQueueIds(values)}
-              style={{ width: "100%", marginTop: 0 }}
-            />
-          </div>
-          <div
+          <FormControl
+            variant="outlined"
+            size="small"
             className={clsx(classes.filterField, classes.selectSurface)}
             style={{
               flex: "0 0 138px",
               width: 138,
               minWidth: 138,
-              display: "flex",
-              alignItems: "center",
               boxSizing: "border-box",
             }}
           >
-            <select
+            <Select
               value={selectedUserId}
               onChange={event => setSelectedUserId(event.target.value)}
+              displayEmpty
+              disableUnderline
+              MenuProps={{
+                getContentAnchorEl: null,
+                anchorOrigin: {
+                  vertical: "bottom",
+                  horizontal: "left",
+                },
+                transformOrigin: {
+                  vertical: "top",
+                  horizontal: "left",
+                },
+                PaperProps: {
+                  style: {
+                    borderRadius: 12,
+                    marginTop: 6,
+                  },
+                },
+              }}
               style={{
-                width: "100%",
-                height: "36px",
-                minWidth: 0,
-                border: 0,
-                outline: "none",
+                height: 36,
+                borderRadius: 14,
                 background: "transparent",
-                color: "inherit",
-                font: "inherit",
                 fontSize: "0.9rem",
                 fontWeight: 500,
-                cursor: "pointer",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                padding: 0,
+              }}
+              inputProps={{
+                style: {
+                  padding: "8px 30px 8px 12px",
+                },
+              }}
+              renderValue={value => {
+                if (!value) return "Responsável";
+                const selectedResponsible = users.find(
+                  responsibleUser => String(responsibleUser.id) === String(value)
+                );
+                return selectedResponsible?.name || "Responsável";
               }}
             >
-              <option value="">Responsável</option>
+              <MenuItem value="">Responsável</MenuItem>
               {users.map(responsibleUser => (
-                <option key={responsibleUser.id} value={responsibleUser.id}>
+                <MenuItem key={responsibleUser.id} value={responsibleUser.id}>
                   {responsibleUser.name}
-                </option>
+                </MenuItem>
               ))}
-            </select>
-          </div>
+            </Select>
+          </FormControl>
         </div>
       </Paper>
       <TabPanel value={activeTab} name="open" className={classes.ticketsWrapper}>
