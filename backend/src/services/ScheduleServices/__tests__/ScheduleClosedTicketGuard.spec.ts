@@ -508,6 +508,61 @@ describe("Schedule closed ticket guards", () => {
     }
   );
 
+
+  it("uses the schedule creator as message context even after ticket transfer", async () => {
+    const scheduleCreator = { id: 101, name: "Bruna", email: "bruna@example.com" };
+    const transferredTicket = {
+      id: 70,
+      status: "open",
+      userId: 202,
+      user: { id: 202, name: "Ana Carvalho", email: "ana@example.com" },
+      setDataValue: jest.fn((key: string, value: unknown) => {
+        transferredTicket[key as keyof typeof transferredTicket] = value as never;
+      })
+    };
+
+    scheduleFindByPkMock.mockResolvedValue({
+      id: 70,
+      status: "processing",
+      ticketId: 70,
+      createdById: 101,
+      body: "scheduled body with creator context",
+      scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
+    });
+
+    showTicketServiceMock.mockResolvedValue(transferredTicket);
+    userFindByPkMock.mockResolvedValue(scheduleCreator);
+
+    await executeSchedule(70);
+
+    expect(userFindByPkMock).toHaveBeenCalledWith(101, {
+      attributes: ["id", "name", "email"]
+    });
+
+    expect(transferredTicket.setDataValue).toHaveBeenCalledWith(
+      "user",
+      scheduleCreator
+    );
+
+    expect(sendWhatsAppMessageMock).toHaveBeenCalledWith({
+      body: "scheduled body with creator context",
+      ticket: expect.objectContaining({
+        id: 70,
+        userId: 202,
+        user: scheduleCreator
+      })
+    });
+
+    expect(scheduleUpdateStaticMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "sent",
+        lastResult: "Schedule sent successfully",
+        lastError: null
+      }),
+      { where: { id: 70 } }
+    );
+  });
+
   it("returns the schedule to pending when WhatsApp is not initialized yet", async () => {
     scheduleFindByPkMock.mockResolvedValue({
       id: 35,

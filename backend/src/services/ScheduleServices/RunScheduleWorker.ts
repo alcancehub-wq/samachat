@@ -1,6 +1,7 @@
 import { Op } from "sequelize";
 import Schedule from "../../models/Schedule";
 import Ticket from "../../models/Ticket";
+import User from "../../models/User";
 import CreateScheduleLogService from "./CreateScheduleLogService";
 import SendWhatsAppMedia from "../WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
@@ -216,6 +217,29 @@ const extractErrorMessage = (error: unknown): string => {
   return "Schedule execution failed";
 };
 
+
+const applyScheduleCreatorContextToTicket = async (
+  schedule: Schedule,
+  ticket: Ticket
+): Promise<Ticket> => {
+  if (!schedule.createdById) {
+    return ticket;
+  }
+
+  const scheduleCreator = await User.findByPk(schedule.createdById, {
+    attributes: ["id", "name", "email"]
+  });
+
+  if (!scheduleCreator) {
+    return ticket;
+  }
+
+  ticket.user = scheduleCreator;
+  ticket.setDataValue("user", scheduleCreator);
+
+  return ticket;
+};
+
 const isRetryableScheduleError = (errorMessage: string): boolean => {
   if (RETRYABLE_SCHEDULE_ERRORS.has(errorMessage)) {
     return true;
@@ -258,7 +282,10 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
   }
 
   try {
-    const ticket = await ShowTicketService(schedule.ticketId);
+    const ticket = await applyScheduleCreatorContextToTicket(
+      schedule,
+      await ShowTicketService(schedule.ticketId)
+    );
 
     if (isClosedScheduleTicket(ticket)) {
       logger.warn(
