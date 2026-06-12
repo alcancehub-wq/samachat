@@ -654,9 +654,20 @@ const TicketsManager = () => {
             </span>
           </Button>
         </div>
-        <div className={classes.ticketOptionsSecondary}>
+        <div
+          className={classes.ticketOptionsSecondary}
+          style={{
+            maxWidth: "100%",
+            overflowX: "auto",
+            overflowY: "hidden",
+            flexWrap: "nowrap",
+            gap: 6,
+            paddingBottom: 4,
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
           {canShowAllTickets && (
-            <div className={classes.showAllInline}>
+            <div className={classes.showAllInline} style={{ flex: "0 0 auto" }}>
               <div className={classes.showAllControl}>
                 <span className={classes.showAllLabel}>{i18n.t("tickets.buttons.showAll")}</span>
                 <Switch
@@ -681,10 +692,13 @@ const TicketsManager = () => {
             selectedUserId={selectedUserId}
             onChange={setSelectedTagIds}
             label={i18n.t("ticketsManager.tagsFilter")}
-            style={{ minWidth: 140, flex: "1 1 0" }}
+            style={{ minWidth: 104, width: 112, flex: "0 0 112px" }}
             className={classes.selectSurface}
           />
-          <div className={clsx(classes.filterField, classes.selectSurface)}>
+          <div
+            className={clsx(classes.filterField, classes.selectSurface)}
+            style={{ flex: "0 0 112px", width: 112, minWidth: 112 }}
+          >
             <TicketsQueueSelect
               selectedQueueIds={selectedQueueIds}
               userQueues={user?.queues}
@@ -692,20 +706,29 @@ const TicketsManager = () => {
               style={{ width: "100%", marginTop: 0 }}
             />
           </div>
-          <div className={clsx(classes.filterField, classes.selectSurface)}>
+          <div
+            className={clsx(classes.filterField, classes.selectSurface)}
+            style={{ flex: "0 0 138px", width: 138, minWidth: 138 }}
+          >
             <select
               value={selectedUserId}
               onChange={event => setSelectedUserId(event.target.value)}
               style={{
                 width: "100%",
+                height: "100%",
                 minWidth: 0,
                 border: 0,
                 outline: "none",
                 background: "transparent",
                 color: "inherit",
                 font: "inherit",
+                fontSize: "0.9rem",
                 fontWeight: 500,
                 cursor: "pointer",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                padding: "0 4px",
               }}
             >
               <option value="">Responsável</option>
