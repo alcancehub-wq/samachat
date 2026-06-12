@@ -19,6 +19,7 @@ import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsList";
 import TabPanel from "../TabPanel";
 import { i18n } from "../../translate/i18n";
+import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import { Button } from "@material-ui/core";
@@ -440,10 +441,38 @@ const TicketsManager = () => {
   const location = useLocation();
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [users, setUsers] = useState([]);
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const canShowAllTickets = user?.profile?.toUpperCase() === "ADMIN";
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchResponsibleUsers = async () => {
+      try {
+        const { data } = await api.get("/users");
+        const rows = Array.isArray(data) ? data : data?.users || [];
+
+        if (mounted) {
+          setUsers(rows.filter(item => item && item.id && item.name));
+        }
+      } catch (_error) {
+        if (mounted) {
+          setUsers([]);
+        }
+      }
+    };
+
+    fetchResponsibleUsers();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const existingTicketSearch =
     location.state && typeof location.state.existingTicketSearch === "string"
       ? location.state.existingTicketSearch.trim()
@@ -649,6 +678,7 @@ const TicketsManager = () => {
           )}
           <TagSelect
             selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
             onChange={setSelectedTagIds}
             label={i18n.t("ticketsManager.tagsFilter")}
             style={{ minWidth: 140, flex: "1 1 0" }}
@@ -661,6 +691,30 @@ const TicketsManager = () => {
               onChange={(values) => setSelectedQueueIds(values)}
               style={{ width: "100%", marginTop: 0 }}
             />
+          </div>
+          <div className={clsx(classes.filterField, classes.selectSurface)}>
+            <select
+              value={selectedUserId}
+              onChange={event => setSelectedUserId(event.target.value)}
+              style={{
+                width: "100%",
+                minWidth: 0,
+                border: 0,
+                outline: "none",
+                background: "transparent",
+                color: "inherit",
+                font: "inherit",
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              <option value="">Responsável</option>
+              {users.map(responsibleUser => (
+                <option key={responsibleUser.id} value={responsibleUser.id}>
+                  {responsibleUser.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </Paper>
@@ -710,6 +764,24 @@ const TicketsManager = () => {
             value={"pending"}
             className={classes.subTab}
           />
+          <Tab
+            label={
+              isMobile ? (
+                renderTabLabel("Não lidas", unreadCount)
+              ) : (
+                <Badge
+                  className={classes.badge}
+                  badgeContent={unreadCount}
+                  color="primary"
+                  classes={{ badge: classes.openBadge }}
+                >
+                  Não lidas
+                </Badge>
+              )
+            }
+            value={"unread"}
+            className={classes.subTab}
+          />
         </Tabs>
         <Paper className={classes.ticketsWrapper}>
           <TicketsList
@@ -719,6 +791,7 @@ const TicketsManager = () => {
             updateCount={(val) => setOpenCount(val)}
             style={applyPanelStyle("open")}
             selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
           />
           <TicketsList
             status="pending"
@@ -727,6 +800,17 @@ const TicketsManager = () => {
             updateCount={(val) => setPendingCount(val)}
             style={applyPanelStyle("pending")}
             selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
+          />
+          <TicketsList
+            status="open"
+            showAll={showAllTickets}
+            selectedQueueIds={selectedQueueIds}
+            updateCount={(val) => setUnreadCount(val)}
+            style={applyPanelStyle("unread")}
+            selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
+            unreadOnly
           />
         </Paper>
       </TabPanel>
@@ -736,6 +820,7 @@ const TicketsManager = () => {
           showAll={canShowAllTickets}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
         />
       </TabPanel>
       <TabPanel value={activeTab} name="lost" className={classes.ticketsWrapper}>
@@ -744,6 +829,7 @@ const TicketsManager = () => {
           showAll={canShowAllTickets}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
         />
       </TabPanel>
       <TabPanel value={activeTab} name="search" className={classes.ticketsWrapper}>
@@ -752,6 +838,7 @@ const TicketsManager = () => {
           showAll={canShowAllTickets}
           selectedQueueIds={selectedQueueIds}
           selectedTagIds={selectedTagIds}
+            selectedUserId={selectedUserId}
         />
       </TabPanel>
     </Paper>
