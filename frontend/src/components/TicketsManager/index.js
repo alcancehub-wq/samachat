@@ -708,14 +708,21 @@ const TicketsManager = () => {
           </div>
           <div
             className={clsx(classes.filterField, classes.selectSurface)}
-            style={{ flex: "0 0 138px", width: 138, minWidth: 138 }}
+            style={{
+              flex: "0 0 138px",
+              width: 138,
+              minWidth: 138,
+              display: "flex",
+              alignItems: "center",
+              boxSizing: "border-box",
+            }}
           >
             <select
               value={selectedUserId}
               onChange={event => setSelectedUserId(event.target.value)}
               style={{
                 width: "100%",
-                height: "100%",
+                height: "36px",
                 minWidth: 0,
                 border: 0,
                 outline: "none",
@@ -728,7 +735,7 @@ const TicketsManager = () => {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-                padding: "0 4px",
+                padding: 0,
               }}
             >
               <option value="">Responsável</option>
