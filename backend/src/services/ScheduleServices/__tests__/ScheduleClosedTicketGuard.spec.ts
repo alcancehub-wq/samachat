@@ -514,8 +514,8 @@ describe("Schedule closed ticket guards", () => {
         id: 101,
         name: "Bruna",
         email: "bruna@example.com",
-        whatsappId: 303,
-        whatsapp: { id: 303 }
+        whatsappId: 909,
+        whatsapp: { id: 909 }
       };
     const transferredTicket = {
       id: 70,
@@ -532,6 +532,7 @@ describe("Schedule closed ticket guards", () => {
       status: "processing",
       ticketId: 70,
       createdById: 101,
+      senderWhatsappId: 303,
       body: "scheduled body with creator context",
       scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
     });
