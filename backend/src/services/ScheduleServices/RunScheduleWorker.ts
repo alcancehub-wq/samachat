@@ -227,15 +227,24 @@ const applyScheduleCreatorContextToTicket = async (
   }
 
   const scheduleCreator = await User.findByPk(schedule.createdById, {
-    attributes: ["id", "name", "email"]
+    attributes: ["id", "name", "email", "whatsappId"],
+    include: ["whatsapp"]
   });
 
   if (!scheduleCreator) {
     return ticket;
   }
 
+  const creatorWhatsappId =
+    scheduleCreator.whatsappId || scheduleCreator.whatsapp?.id || null;
+
   ticket.user = scheduleCreator;
   ticket.setDataValue("user", scheduleCreator);
+
+  if (creatorWhatsappId) {
+    ticket.whatsappId = creatorWhatsappId;
+    ticket.setDataValue("whatsappId", creatorWhatsappId);
+  }
 
   return ticket;
 };

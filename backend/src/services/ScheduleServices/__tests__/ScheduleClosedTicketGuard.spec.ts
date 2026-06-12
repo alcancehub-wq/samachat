@@ -510,7 +510,13 @@ describe("Schedule closed ticket guards", () => {
 
 
   it("uses the schedule creator as message context even after ticket transfer", async () => {
-    const scheduleCreator = { id: 101, name: "Bruna", email: "bruna@example.com" };
+    const scheduleCreator = {
+        id: 101,
+        name: "Bruna",
+        email: "bruna@example.com",
+        whatsappId: 303,
+        whatsapp: { id: 303 }
+      };
     const transferredTicket = {
       id: 70,
       status: "open",
@@ -536,12 +542,18 @@ describe("Schedule closed ticket guards", () => {
     await executeSchedule(70);
 
     expect(userFindByPkMock).toHaveBeenCalledWith(101, {
-      attributes: ["id", "name", "email"]
+      attributes: ["id", "name", "email", "whatsappId"],
+      include: ["whatsapp"]
     });
 
     expect(transferredTicket.setDataValue).toHaveBeenCalledWith(
       "user",
       scheduleCreator
+    );
+
+    expect(transferredTicket.setDataValue).toHaveBeenCalledWith(
+      "whatsappId",
+      303
     );
 
     expect(sendWhatsAppMessageMock).toHaveBeenCalledWith({
