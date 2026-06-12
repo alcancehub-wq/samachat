@@ -28,9 +28,13 @@ import TicketTagsModal from "../TicketTagsModal";
 
 const useStyles = makeStyles(theme => ({
 	ticket: {
-		position: "relative",
-		margin: theme.spacing(0.85, 1.25),
-		padding: theme.spacing(1.35, 1.5, 1.15, 2),
+                position: "relative",
+                boxSizing: "border-box",
+                width: "auto",
+                maxWidth: "100%",
+                overflow: "hidden",
+                margin: theme.spacing(0.85, 1.25),
+                padding: theme.spacing(1.35, 1.5, 1.15, 2),
 		borderRadius: theme.shape.borderRadius + 2,
 		border: `1px solid ${theme.palette.divider}`,
 		backgroundColor: theme.palette.background.paper,
@@ -152,21 +156,25 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	footerMeta: {
-		display: "flex",
-		alignItems: "center",
-		gap: theme.spacing(0.75),
-		minWidth: 0,
-		flexWrap: "wrap",
-	},
+                display: "flex",
+                alignItems: "center",
+                gap: theme.spacing(0.75),
+                minWidth: 0,
+                flex: "1 1 auto",
+                flexWrap: "wrap",
+                overflow: "hidden",
+        },
 
 	footerActions: {
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "flex-end",
-		gap: theme.spacing(0.75),
-		flexShrink: 0,
-		minWidth: 0,
-	},
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: theme.spacing(0.75),
+                flexShrink: 0,
+                minWidth: 0,
+                maxWidth: "42%",
+                overflow: "hidden",
+        },
 
 	lastMessageTime: {
 		fontSize: "0.8rem",
@@ -199,14 +207,24 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	newMessagesCount: {
-		marginRight: 2,
-	},
+                marginRight: 0,
+                flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+        },
 
-	badgeStyle: {
-		color: "white",
-		backgroundColor: green[500],
-		fontWeight: 700,
-	},
+        badgeStyle: {
+                color: "white",
+                backgroundColor: green[500],
+                fontWeight: 700,
+                position: "static",
+                transform: "none",
+                minWidth: 20,
+                height: 20,
+                padding: "0 6px",
+                lineHeight: "20px",
+        },
 
 	acceptButton: {
 		borderRadius: 4,
