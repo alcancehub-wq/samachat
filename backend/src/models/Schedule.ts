@@ -17,6 +17,7 @@ import {
 import User from "./User";
 import Ticket from "./Ticket";
 import Contact from "./Contact";
+import Whatsapp from "./Whatsapp";
 import ScheduleLog from "./ScheduleLog";
 
 @Table
@@ -75,6 +76,13 @@ class Schedule extends Model<Schedule> {
   @ForeignKey(() => User)
   @Column
   createdById: number;
+
+  @ForeignKey(() => Whatsapp)
+  @Column
+  senderWhatsappId: number;
+
+  @BelongsTo(() => Whatsapp, "senderWhatsappId")
+  senderWhatsapp: Whatsapp;
 
   @BelongsTo(() => User, "assigneeId")
   assignee: User;

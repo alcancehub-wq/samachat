@@ -7,7 +7,10 @@ import SendWhatsAppMedia from "../WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 import { logger } from "../../utils/logger";
-import { ERR_SCHEDULE_TICKET_CLOSED, isClosedScheduleTicket } from "./assertScheduleTicketIsActive";
+import {
+  ERR_SCHEDULE_TICKET_CLOSED,
+  isClosedScheduleTicket
+} from "./assertScheduleTicketIsActive";
 import { parseScheduledAt } from "./normalizeScheduledAt";
 import { buildScheduledMediaFile } from "./scheduleMedia";
 
@@ -18,10 +21,13 @@ const RETRYABLE_SCHEDULE_ERRORS = new Set(["ERR_WAPP_NOT_INITIALIZED"]);
 const whatsappCooldownUntil = new Map<number, number>();
 
 type ScheduleWithTicket = Schedule & {
+  senderWhatsappId?: number | null;
   ticket?: Pick<Ticket, "id" | "whatsappId"> | null;
 };
 
-const toISOStringOrNull = (value: Date | string | null | undefined): string | null => {
+const toISOStringOrNull = (
+  value: Date | string | null | undefined
+): string | null => {
   if (!value) {
     return null;
   }
@@ -96,7 +102,7 @@ const setWhatsappCooldown = (whatsappId: number, durationMs: number): void => {
 };
 
 const getScheduleWhatsappId = (schedule: ScheduleWithTicket): number | null => {
-  const whatsappId = schedule.ticket?.whatsappId;
+  const whatsappId = schedule.senderWhatsappId || schedule.ticket?.whatsappId;
 
   if (typeof whatsappId !== "number" || Number.isNaN(whatsappId)) {
     return null;
@@ -105,7 +111,10 @@ const getScheduleWhatsappId = (schedule: ScheduleWithTicket): number | null => {
   return whatsappId;
 };
 
-const isWhatsappCooldownActive = (whatsappId: number, now = Date.now()): boolean => {
+const isWhatsappCooldownActive = (
+  whatsappId: number,
+  now = Date.now()
+): boolean => {
   const cooldownUntil = whatsappCooldownUntil.get(whatsappId);
 
   if (!cooldownUntil) {
@@ -134,7 +143,10 @@ const claimSchedule = async (scheduleId: number): Promise<boolean> => {
   return updated > 0;
 };
 
-const markFailed = async (scheduleId: number, errorMessage: string): Promise<void> => {
+const markFailed = async (
+  scheduleId: number,
+  errorMessage: string
+): Promise<void> => {
   await Schedule.update(
     {
       status: "failed",
@@ -217,7 +229,6 @@ const extractErrorMessage = (error: unknown): string => {
   return "Schedule execution failed";
 };
 
-
 const applyScheduleCreatorContextToTicket = async (
   schedule: Schedule,
   ticket: Ticket
@@ -235,15 +246,18 @@ const applyScheduleCreatorContextToTicket = async (
     return ticket;
   }
 
-  const creatorWhatsappId =
-    scheduleCreator.whatsappId || scheduleCreator.whatsapp?.id || null;
+  const senderWhatsappId =
+    schedule.senderWhatsappId ||
+    scheduleCreator.whatsappId ||
+    scheduleCreator.whatsapp?.id ||
+    null;
 
   ticket.user = scheduleCreator;
   ticket.setDataValue("user", scheduleCreator);
 
-  if (creatorWhatsappId) {
-    ticket.whatsappId = creatorWhatsappId;
-    ticket.setDataValue("whatsappId", creatorWhatsappId);
+  if (senderWhatsappId) {
+    ticket.whatsappId = senderWhatsappId;
+    ticket.setDataValue("whatsappId", senderWhatsappId);
   }
 
   return ticket;
@@ -313,7 +327,11 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
 
     if (scheduledMedia) {
       const hasBody = Boolean(schedule.body?.trim());
-      const isAudioSchedule = (schedule.mediaMimeType || scheduledMedia.mimetype || "")
+      const isAudioSchedule = (
+        schedule.mediaMimeType ||
+        scheduledMedia.mimetype ||
+        ""
+      )
         .toLowerCase()
         .startsWith("audio/");
 
@@ -354,7 +372,10 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
       try {
         const ticket = await ShowTicketService(schedule.ticketId);
         if (typeof ticket.whatsappId === "number") {
-          setWhatsappCooldown(ticket.whatsappId, getWhatsappUnavailableCooldownMs());
+          setWhatsappCooldown(
+            ticket.whatsappId,
+            getWhatsappUnavailableCooldownMs()
+          );
         }
       } catch (ticketError) {
         logger.warn(
@@ -369,9 +390,13 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
 
       await releasePending(
         schedule.id,
-        buildScheduleAuditMessage("schedule_retry_whatsapp_unavailable", schedule, {
-          error: message
-        }),
+        buildScheduleAuditMessage(
+          "schedule_retry_whatsapp_unavailable",
+          schedule,
+          {
+            error: message
+          }
+        ),
         message
       );
       return;
@@ -382,7 +407,10 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
 };
 
 const runScheduleWorkerOnce = async (): Promise<void> => {
-  const batchSize = parseNumber(process.env.SCHEDULE_BATCH_SIZE, DEFAULT_BATCH_SIZE);
+  const batchSize = parseNumber(
+    process.env.SCHEDULE_BATCH_SIZE,
+    DEFAULT_BATCH_SIZE
+  );
   const now = Date.now();
   const handledWhatsappIds = new Set<number>();
 
@@ -434,9 +462,13 @@ const runScheduleWorkerOnce = async (): Promise<void> => {
     await CreateScheduleLogService({
       scheduleId: schedule.id,
       status: "processing",
-      message: buildScheduleAuditMessage("schedule_claimed_for_execution", schedule, {
-        whatsappId
-      }),
+      message: buildScheduleAuditMessage(
+        "schedule_claimed_for_execution",
+        schedule,
+        {
+          whatsappId
+        }
+      ),
       executedAt: new Date()
     });
 

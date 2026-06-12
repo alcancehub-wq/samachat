@@ -4,7 +4,11 @@ import User from "../../../models/User";
 import Contact from "../../../models/Contact";
 import CreateScheduleService from "../CreateScheduleService";
 import UpdateScheduleService from "../UpdateScheduleService";
-import { executeSchedule, runScheduleWorkerOnce, resetScheduleWorkerState } from "../RunScheduleWorker";
+import {
+  executeSchedule,
+  runScheduleWorkerOnce,
+  resetScheduleWorkerState
+} from "../RunScheduleWorker";
 import CreateScheduleLogService from "../CreateScheduleLogService";
 import ShowTicketService from "../../TicketServices/ShowTicketService";
 import SendWhatsAppMedia from "../../WbotServices/SendWhatsAppMedia";
@@ -508,22 +512,22 @@ describe("Schedule closed ticket guards", () => {
     }
   );
 
-
   it("uses the schedule creator as message context even after ticket transfer", async () => {
     const scheduleCreator = {
-        id: 101,
-        name: "Bruna",
-        email: "bruna@example.com",
-        whatsappId: 303,
-        whatsapp: { id: 303 }
-      };
+      id: 101,
+      name: "Bruna",
+      email: "bruna@example.com",
+      whatsappId: 909,
+      whatsapp: { id: 909 }
+    };
     const transferredTicket = {
       id: 70,
       status: "open",
       userId: 202,
       user: { id: 202, name: "Ana Carvalho", email: "ana@example.com" },
       setDataValue: jest.fn((key: string, value: unknown) => {
-        transferredTicket[key as keyof typeof transferredTicket] = value as never;
+        transferredTicket[key as keyof typeof transferredTicket] =
+          value as never;
       })
     };
 
@@ -532,6 +536,7 @@ describe("Schedule closed ticket guards", () => {
       status: "processing",
       ticketId: 70,
       createdById: 101,
+      senderWhatsappId: 303,
       body: "scheduled body with creator context",
       scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
     });
@@ -584,7 +589,9 @@ describe("Schedule closed ticket guards", () => {
       scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
     });
     showTicketServiceMock.mockResolvedValue({ id: 35, status: "open" });
-    sendWhatsAppMessageMock.mockRejectedValue(new AppError("ERR_WAPP_NOT_INITIALIZED"));
+    sendWhatsAppMessageMock.mockRejectedValue(
+      new AppError("ERR_WAPP_NOT_INITIALIZED")
+    );
 
     await executeSchedule(35);
 
@@ -605,7 +612,9 @@ describe("Schedule closed ticket guards", () => {
       expect.objectContaining({
         scheduleId: 35,
         status: "pending",
-        message: expect.stringContaining('"event":"schedule_retry_whatsapp_unavailable"'),
+        message: expect.stringContaining(
+          '"event":"schedule_retry_whatsapp_unavailable"'
+        ),
         error: "ERR_WAPP_NOT_INITIALIZED"
       })
     );
@@ -620,7 +629,9 @@ describe("Schedule closed ticket guards", () => {
       scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
     });
     showTicketServiceMock.mockResolvedValue({ id: 36, status: "open" });
-    sendWhatsAppMessageMock.mockRejectedValue({ message: "ERR_WAPP_INVALID_CONTACT" });
+    sendWhatsAppMessageMock.mockRejectedValue({
+      message: "ERR_WAPP_INVALID_CONTACT"
+    });
 
     await executeSchedule(36);
 
@@ -759,7 +770,11 @@ describe("Schedule closed ticket guards", () => {
       body: "message 51",
       scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
     });
-    showTicketServiceMock.mockResolvedValue({ id: 510, status: "open", whatsappId: 303 });
+    showTicketServiceMock.mockResolvedValue({
+      id: 510,
+      status: "open",
+      whatsappId: 303
+    });
 
     await runScheduleWorkerOnce();
 
@@ -793,8 +808,14 @@ describe("Schedule closed ticket guards", () => {
       body: "message 61",
       scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
     });
-    showTicketServiceMock.mockResolvedValue({ id: 610, status: "open", whatsappId: 404 });
-    sendWhatsAppMessageMock.mockRejectedValueOnce(new AppError("ERR_WAPP_NOT_INITIALIZED"));
+    showTicketServiceMock.mockResolvedValue({
+      id: 610,
+      status: "open",
+      whatsappId: 404
+    });
+    sendWhatsAppMessageMock.mockRejectedValueOnce(
+      new AppError("ERR_WAPP_NOT_INITIALIZED")
+    );
 
     await executeSchedule(61);
 
@@ -815,7 +836,11 @@ describe("Schedule closed ticket guards", () => {
       body: "message 62",
       scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
     });
-    showTicketServiceMock.mockResolvedValueOnce({ id: 620, status: "open", whatsappId: 505 });
+    showTicketServiceMock.mockResolvedValueOnce({
+      id: 620,
+      status: "open",
+      whatsappId: 505
+    });
     sendWhatsAppMessageMock.mockResolvedValueOnce({});
 
     await runScheduleWorkerOnce();
@@ -854,7 +879,11 @@ describe("Schedule closed ticket guards", () => {
       body: "message 61",
       scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
     });
-    showTicketServiceMock.mockResolvedValueOnce({ id: 610, status: "open", whatsappId: 404 });
+    showTicketServiceMock.mockResolvedValueOnce({
+      id: 610,
+      status: "open",
+      whatsappId: 404
+    });
     sendWhatsAppMessageMock.mockResolvedValueOnce({});
 
     await runScheduleWorkerOnce();
