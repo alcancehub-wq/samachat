@@ -1,13 +1,13 @@
 import Whatsapp from "../../models/Whatsapp";
 import { logger } from "../../utils/logger";
 
-const DEFAULT_START_DELAY_MS = 30000;
-const MIN_START_DELAY_MS = 20000;
-const MAX_START_DELAY_MS = 40000;
+const DEFAULT_START_DELAY_MS = 0;
+const MIN_START_DELAY_MS = 0;
+const MAX_START_DELAY_MS = 5000;
 
-const DEFAULT_START_TIMEOUT_MS = 120000;
-const MIN_START_TIMEOUT_MS = 60000;
-const MAX_START_TIMEOUT_MS = 180000;
+const DEFAULT_START_TIMEOUT_MS = 20000;
+const MIN_START_TIMEOUT_MS = 10000;
+const MAX_START_TIMEOUT_MS = 30000;
 
 const queuedSessionStarts = new Map<number, Promise<void>>();
 
