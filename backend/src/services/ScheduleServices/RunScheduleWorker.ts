@@ -235,18 +235,15 @@ const applyScheduleCreatorContextToTicket = async (
     return ticket;
   }
 
-  const senderWhatsappId =
-    schedule.senderWhatsappId ||
-    scheduleCreator.whatsappId ||
-    scheduleCreator.whatsapp?.id ||
-    null;
+  const creatorWhatsappId =
+    scheduleCreator.whatsappId || scheduleCreator.whatsapp?.id || null;
 
   ticket.user = scheduleCreator;
   ticket.setDataValue("user", scheduleCreator);
 
-  if (senderWhatsappId) {
-    ticket.whatsappId = senderWhatsappId;
-    ticket.setDataValue("whatsappId", senderWhatsappId);
+  if (creatorWhatsappId) {
+    ticket.whatsappId = creatorWhatsappId;
+    ticket.setDataValue("whatsappId", creatorWhatsappId);
   }
 
   return ticket;

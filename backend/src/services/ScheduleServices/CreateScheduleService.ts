@@ -19,7 +19,6 @@ interface Request {
   ticketId?: number | null;
   contactId?: number | null;
   createdById?: number | null;
-  senderWhatsappId?: number | null;
   mediaFileName?: string | null;
   mediaOriginalName?: string | null;
   mediaMimeType?: string | null;
@@ -34,7 +33,6 @@ const CreateScheduleService = async ({
   ticketId,
   contactId,
   createdById,
-  senderWhatsappId,
   mediaFileName = null,
   mediaOriginalName = null,
   mediaMimeType = null,
@@ -74,16 +72,10 @@ const CreateScheduleService = async ({
     }
   }
 
-  let resolvedSenderWhatsappId = senderWhatsappId || null;
-
   if (ticketId !== undefined || accessData) {
     const ticket = await loadScheduleTicketForAccess(ticketId, accessData);
 
     assertScheduleTicketIsActive(ticket);
-
-    if (!resolvedSenderWhatsappId && ticket?.whatsappId) {
-      resolvedSenderWhatsappId = ticket.whatsappId;
-    }
   }
 
   if (contactId) {
@@ -118,8 +110,7 @@ const CreateScheduleService = async ({
     assigneeId: assigneeId || null,
     ticketId: ticketId || null,
     contactId: contactId || null,
-    createdById: createdById || null,
-    senderWhatsappId: resolvedSenderWhatsappId
+    createdById: createdById || null
   });
 
   await CreateScheduleLogService({
