@@ -14,6 +14,7 @@ import AppError from "../errors/AppError";
 import GetContactService from "../services/ContactServices/GetContactService";
 import EmitContactEvent from "../helpers/EmitContactEvent";
 import GetUserScopedWhatsappId from "../helpers/GetUserScopedWhatsappId";
+import FindDuplicatedContactByNumberService from "../services/ContactServices/FindDuplicatedContactByNumberService";
 
 type IndexQuery = {
   searchParam: string;
@@ -103,6 +104,14 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const validNumber: any = await CheckContactNumber(newContact.number, {
     userId
   });
+
+  const duplicatedContact = await FindDuplicatedContactByNumberService({
+    number: validNumber
+  });
+
+  if (duplicatedContact) {
+    throw new AppError("ERR_DUPLICATED_CONTACT");
+  }
 
   const profilePicUrl = await GetProfilePicUrl(validNumber, { userId });
 
@@ -195,6 +204,15 @@ export const update = async (
     contactData.number = await CheckContactNumber(normalizedInputNumber, {
       userId
     });
+
+    const duplicatedContact = await FindDuplicatedContactByNumberService({
+      number: contactData.number,
+      ignoreContactId: contactId
+    });
+
+    if (duplicatedContact) {
+      throw new AppError("ERR_DUPLICATED_CONTACT");
+    }
   } else {
     contactData.number = currentContact.number;
   }
