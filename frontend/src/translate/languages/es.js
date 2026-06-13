@@ -1765,7 +1765,7 @@ const messages = {
         ERR_USER_CREATION_DISABLED:
           "La creación de usuarios fue deshabilitada por el administrador.",
         ERR_NO_PERMISSION: "No tienes permiso para acceder a este recurso.",
-        ERR_DUPLICATED_CONTACT: "Ya existe un contacto con este número.",
+        ERR_DUPLICATED_CONTACT: "Ya existe un contacto registrado con este n?mero. Usa el contacto existente o fusiona los duplicados antes de continuar.",
         ERR_NO_SETTING_FOUND:
           "No se encontró ninguna configuración con este ID.",
         ERR_NO_CONTACT_FOUND: "No se encontró ningún contacto con este ID.",

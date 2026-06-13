@@ -1770,7 +1770,7 @@ const messages = {
         ERR_USER_CREATION_DISABLED:
           "User creation was disabled by administrator.",
         ERR_NO_PERMISSION: "You don't have permission to access this resource.",
-        ERR_DUPLICATED_CONTACT: "A contact with this number already exists.",
+        ERR_DUPLICATED_CONTACT: "A contact with this number already exists. Use the existing contact or merge duplicates before continuing.",
         ERR_NO_SETTING_FOUND: "No setting found with this ID.",
         ERR_NO_CONTACT_FOUND: "No contact found with this ID.",
         ERR_NO_TICKET_FOUND: "No ticket found with this ID.",

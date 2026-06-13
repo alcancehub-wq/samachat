@@ -90,7 +90,7 @@ const Routes = () => {
               </LoggedInLayout>
             </WhatsAppsProvider>
           </Switch>
-          <ToastContainer autoClose={3000} />
+          <ToastContainer autoClose={10000} />
         </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>
