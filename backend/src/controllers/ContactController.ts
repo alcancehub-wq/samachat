@@ -100,6 +100,14 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError(err.message);
   }
 
+  const existingDuplicatedContact = await FindDuplicatedContactByNumberService({
+    number: newContact.number
+  });
+
+  if (existingDuplicatedContact) {
+    throw new AppError("ERR_DUPLICATED_CONTACT");
+  }
+
   await CheckIsValidContact(newContact.number, { userId });
   const validNumber: any = await CheckContactNumber(newContact.number, {
     userId
@@ -200,6 +208,15 @@ export const update = async (
     normalizedInputNumber !== normalizedCurrentNumber;
 
   if (numberChanged) {
+    const existingDuplicatedContact = await FindDuplicatedContactByNumberService({
+      number: normalizedInputNumber,
+      ignoreContactId: contactId
+    });
+
+    if (existingDuplicatedContact) {
+      throw new AppError("ERR_DUPLICATED_CONTACT");
+    }
+
     await CheckIsValidContact(normalizedInputNumber, { userId });
     contactData.number = await CheckContactNumber(normalizedInputNumber, {
       userId
