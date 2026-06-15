@@ -210,13 +210,13 @@ const TicketOptionsMenu = ({
 						handleMarkAsLost
 					)
 				)}
-				{ticket.unreadMessages === 0 && (
-					renderMenuItem(
-						MarkunreadOutlinedIcon,
-						i18n.t("ticketOptionsMenu.markAsUnread"),
-						handleMarkAsUnread
-					)
-				)}
+				{["open", "pending"].includes(ticket.status) && (
+                                    renderMenuItem(
+                                            MarkunreadOutlinedIcon,
+                                            i18n.t("ticketOptionsMenu.markAsUnread"),
+                                            handleMarkAsUnread
+                                    )
+                            )}
 				{canCreateSchedules && ticket?.id && (
 					renderMenuItem(
 						EventNoteOutlinedIcon,
