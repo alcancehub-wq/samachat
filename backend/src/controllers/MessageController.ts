@@ -52,6 +52,10 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     }
   });
 
+  if (Number(ticket.unreadMessages) > 0) {
+    await SetTicketMessagesAsRead(ticket);
+  }
+
   return res.json({ count, messages, ticket, hasMore });
 };
 
