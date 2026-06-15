@@ -696,12 +696,15 @@ const reducer = (state, action) => {
 						<>
 							{visibleTickets.map(ticket => (
 								<TicketListItem
-									ticket={ticket}
-									key={ticket.id}
-									selectable={isPendingList}
-									selectedInBulk={visibleSelectedTicketIds.includes(ticket.id)}
-									onToggleSelect={handleToggleTicketSelection}
-								/>
+                                    ticket={ticket}
+                                    key={ticket.id}
+                                    selectable={isPendingList}
+                                    selectedInBulk={visibleSelectedTicketIds.includes(ticket.id)}
+                                    onToggleSelect={handleToggleTicketSelection}
+                                    onSelectTicket={ticketId =>
+                                        dispatch({ type: "RESET_UNREAD", payload: ticketId })
+                                    }
+                                />
 							))}
 						</>
 					)}

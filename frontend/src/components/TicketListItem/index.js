@@ -365,7 +365,7 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, onToggleSelect }) => {
+const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, onToggleSelect, onSelectTicket }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const [loading, setLoading] = useState(false);
@@ -418,9 +418,13 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 		history.push(`/tickets/${id}`);
 	};
 
-	const handleSelectTicket = id => {
-		history.push(`/tickets/${id}`);
-	};
+	    const handleSelectTicket = id => {
+        if (Number(ticket.unreadMessages) > 0 && typeof onSelectTicket === "function") {
+            onSelectTicket(id);
+        }
+
+        history.push(`/tickets/${id}`);
+    };
 
 	return (
 		<React.Fragment key={ticket.id}>
