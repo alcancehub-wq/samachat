@@ -141,6 +141,7 @@ const TicketOptionsMenu = ({
 
 		try {
 			await api.put(`/tickets/${ticket.id}/unread`);
+            history.push("/tickets");
 		} catch (err) {
 			toastError(err);
 		} finally {
