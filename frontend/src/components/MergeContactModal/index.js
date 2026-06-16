@@ -82,13 +82,9 @@ const MergeContactModal = ({
 
     const loadDuplicatedContacts = async () => {
       try {
-        const { data } = await api.get("/contacts", {
-          params: { searchParam: normalizedNumber, pageNumber: 1 }
-        });
+        const { data } = await api.get("/contacts/" + targetContactId + "/duplicates");
 
-        const contacts = (data.contacts || []).filter(
-          contact => Number(contact.id) !== Number(targetContactId)
-        );
+        const contacts = data.contacts || [];
 
         setOptions(contacts);
 
@@ -199,7 +195,7 @@ const MergeContactModal = ({
             filterOptions={filterOptions}
             loading={loading}
             autoHighlight
-            noOptionsText="Nenhum contato duplicado encontrado automaticamente. Digite pelo menos 3 caracteres para buscar manualmente."
+            noOptionsText="Nenhum contato duplicado encontrado para este n\u00famero."
             renderInput={params => (
               <TextField
                 {...params}

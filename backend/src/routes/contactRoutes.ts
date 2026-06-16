@@ -49,6 +49,13 @@ contactRoutes.put(
   ContactController.update
 );
 
+contactRoutes.get(
+  "/contacts/:contactId/duplicates",
+  isAuth,
+  checkSectorPermission("contacts.show"),
+  ContactController.duplicates
+);
+
 contactRoutes.post(
   "/contacts/:contactId/merge",
   isAuth,
