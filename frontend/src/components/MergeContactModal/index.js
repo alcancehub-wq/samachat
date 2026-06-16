@@ -190,6 +190,7 @@ const MergeContactModal = ({
                 <span className={classes.optionNumber}>{option.number || "sem n\u00famero"}</span>
               </div>
             )}
+            value={selectedContact}
             onChange={(event, value) => setSelectedContact(value)}
             options={options}
             filterOptions={filterOptions}
@@ -202,7 +203,6 @@ const MergeContactModal = ({
                 label={"Contato duplicado localizado pelo n\u00famero"}
                 variant="outlined"
                 autoFocus
-                required
                 onChange={event => setSearchParam(event.target.value)}
                 InputProps={{
                   ...params.InputProps,
