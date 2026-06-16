@@ -52,6 +52,7 @@ const MergeContactModal = ({
   const [selectedContact, setSelectedContact] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [autoSearchDone, setAutoSearchDone] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -60,8 +61,53 @@ const MergeContactModal = ({
       setSelectedContact(null);
       setLoading(false);
       setSaving(false);
+      setAutoSearchDone(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !targetContactNumber || autoSearchDone) {
+      return;
+    }
+
+    const normalizedNumber = String(targetContactNumber).replace(/\D/g, "");
+
+    if (normalizedNumber.length < 8) {
+      setAutoSearchDone(true);
+      return;
+    }
+
+    setLoading(true);
+    setAutoSearchDone(true);
+
+    const loadDuplicatedContacts = async () => {
+      try {
+        const { data } = await api.get("/contacts", {
+          params: { searchParam: normalizedNumber, pageNumber: 1 }
+        });
+
+        const contacts = (data.contacts || []).filter(
+          contact => Number(contact.id) !== Number(targetContactId)
+        );
+
+        setOptions(contacts);
+
+        if (contacts.length === 1) {
+          setSelectedContact(contacts[0]);
+        }
+
+        if (contacts.length > 0) {
+          setSearchParam(normalizedNumber);
+        }
+      } catch (err) {
+        toastError(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDuplicatedContacts();
+  }, [open, targetContactNumber, targetContactId, autoSearchDone]);
 
   useEffect(() => {
     if (!open || searchParam.length < 3) {
@@ -153,11 +199,11 @@ const MergeContactModal = ({
             filterOptions={filterOptions}
             loading={loading}
             autoHighlight
-            noOptionsText="Digite pelo menos 3 caracteres para buscar"
+            noOptionsText="Nenhum contato duplicado encontrado automaticamente. Digite pelo menos 3 caracteres para buscar manualmente."
             renderInput={params => (
               <TextField
                 {...params}
-                label="Buscar contato duplicado"
+                label={"Contato duplicado localizado pelo n\u00famero"}
                 variant="outlined"
                 autoFocus
                 required
