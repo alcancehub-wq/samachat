@@ -7,8 +7,6 @@ import {
   Typography,
   makeStyles
 } from "@material-ui/core";
-import AddCircleOutlineIcon from "@material-ui/icons/AddCircleOutline";
-
 import { i18n } from "../../translate/i18n";
 import { AVAILABLE_MESSAGE_VARIABLES } from "../../utils/messageVariables";
 
@@ -58,8 +56,8 @@ const useStyles = makeStyles(theme => ({
     borderRadius: 12,
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.common.white,
-    textAlign: "left",
-    padding: theme.spacing(1.25),
+    textAlign: "center",
+    padding: theme.spacing(1.25, 1.5),
     transition: "transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease",
     "&:hover": {
       transform: "translateY(-1px)",
@@ -67,35 +65,11 @@ const useStyles = makeStyles(theme => ({
       boxShadow: "0 10px 24px rgba(37, 99, 235, 0.14)"
     }
   },
-  cardContent: {
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: theme.spacing(0.75)
-  },
-  token: {
-    display: "inline-flex",
-    alignItems: "center",
-    minHeight: 28,
-    padding: theme.spacing(0.375, 0.875),
-    borderRadius: 999,
-    backgroundColor: "rgba(37, 99, 235, 0.1)",
-    color: theme.palette.primary.main,
-    fontSize: "0.8rem",
-    fontWeight: 700,
-    letterSpacing: 0.2
-  },
   description: {
-    marginTop: theme.spacing(0.75),
     lineHeight: 1.35,
     fontSize: "0.95rem",
-    color: theme.palette.text.secondary
-  },
-  icon: {
-    fontSize: 18,
-    color: theme.palette.primary.main,
-    opacity: 0.8
+    color: theme.palette.text.secondary,
+    fontWeight: 500
   }
 }));
 
@@ -128,15 +102,9 @@ const MessageVariablesHelper = ({ onInsertVariable }) => {
               className={classes.card}
               onClick={() => onInsertVariable && onInsertVariable(variable.token)}
             >
-              <div>
-                <div className={classes.cardContent}>
-                  <span className={classes.token}>{variable.token}</span>
-                  <AddCircleOutlineIcon className={classes.icon} />
-                </div>
-                <Typography variant="body2" className={classes.description}>
-                  {i18n.t(`messageVariablesHelper.items.${variable.descriptionKey}`)}
-                </Typography>
-              </div>
+              <Typography variant="body2" className={classes.description}>
+                {i18n.t(`messageVariablesHelper.items.${variable.descriptionKey}`)}
+              </Typography>
             </ButtonBase>
           ))}
         </div>
