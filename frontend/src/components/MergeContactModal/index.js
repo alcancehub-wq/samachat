@@ -195,7 +195,7 @@ const MergeContactModal = ({
             filterOptions={filterOptions}
             loading={loading}
             autoHighlight
-            noOptionsText="Nenhum contato duplicado encontrado para este n\u00famero."
+            noOptionsText={"Nenhum contato duplicado encontrado para este n\u00famero."}
             renderInput={params => (
               <TextField
                 {...params}
