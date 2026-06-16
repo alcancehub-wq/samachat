@@ -47,17 +47,21 @@ const useStyles = makeStyles(theme => ({
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(4, minmax(150px, 1fr))",
     gap: theme.spacing(1),
     marginTop: theme.spacing(1.5)
   },
   card: {
     width: "100%",
+    minHeight: 48,
     borderRadius: 12,
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.common.white,
     textAlign: "center",
-    padding: theme.spacing(1.25, 1.5),
+    padding: theme.spacing(1.1, 1.25),
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     transition: "transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease",
     "&:hover": {
       transform: "translateY(-1px)",
@@ -66,13 +70,15 @@ const useStyles = makeStyles(theme => ({
     }
   },
   description: {
-    lineHeight: 1.2,
+    lineHeight: 1.25,
     fontSize: "14px",
     color: theme.palette.text.secondary,
     fontWeight: 400,
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis"
+    whiteSpace: "normal",
+    overflow: "visible",
+    textOverflow: "clip",
+    textAlign: "center",
+    wordBreak: "normal"
   }
 }));
 
