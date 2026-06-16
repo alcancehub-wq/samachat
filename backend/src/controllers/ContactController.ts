@@ -252,11 +252,9 @@ export const duplicates = async (
   res: Response
 ): Promise<Response> => {
   const { contactId } = req.params;
-  const { companyId } = req.user as any;
 
   const contacts = await ListDuplicatedContactsByNumberService({
-    contactId,
-    companyId
+    contactId
   });
 
   return res.status(200).json({ contacts });

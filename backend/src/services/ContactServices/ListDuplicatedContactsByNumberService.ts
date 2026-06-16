@@ -6,7 +6,6 @@ import Contact from "../../models/Contact";
 
 type Request = {
   contactId: string | number;
-  companyId: number;
 };
 
 const normalizeId = (value: string | number): number => {
@@ -20,17 +19,11 @@ const normalizeId = (value: string | number): number => {
 };
 
 const ListDuplicatedContactsByNumberService = async ({
-  contactId,
-  companyId
+  contactId
 }: Request): Promise<Contact[]> => {
   const id = normalizeId(contactId);
 
-  const contact = await Contact.findOne({
-    where: {
-      id,
-      companyId
-    }
-  });
+  const contact = await Contact.findByPk(id);
 
   if (!contact) {
     throw new AppError("ERR_NO_CONTACT_FOUND", 404);
@@ -38,6 +31,12 @@ const ListDuplicatedContactsByNumberService = async ({
 
   if (contact.isGroup) {
     return [];
+  }
+
+  const contactCompanyId = (contact as any).companyId;
+
+  if (!contactCompanyId) {
+    throw new AppError("ERR_CONTACT_COMPANY_NOT_FOUND", 500);
   }
 
   const numberCandidates = BuildEquivalentContactNumberCandidates(contact.number || "");
@@ -65,7 +64,7 @@ const ListDuplicatedContactsByNumberService = async ({
 
   const duplicatedContacts = await Contact.findAll({
     where: {
-      companyId,
+      companyId: contactCompanyId,
       id: {
         [Op.ne]: contact.id
       },
