@@ -15,6 +15,7 @@ import GetContactService from "../services/ContactServices/GetContactService";
 import EmitContactEvent from "../helpers/EmitContactEvent";
 import GetUserScopedWhatsappId from "../helpers/GetUserScopedWhatsappId";
 import FindDuplicatedContactByNumberService from "../services/ContactServices/FindDuplicatedContactByNumberService";
+import MergeContactService from "../services/ContactServices/MergeContactService";
 
 type IndexQuery = {
   searchParam: string;
@@ -243,6 +244,38 @@ export const update = async (
   EmitContactEvent({ action: "update", contact, whatsappId: scopedWhatsappId });
 
   return res.status(200).json(contact);
+};
+
+export const merge = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { contactId } = req.params;
+  const { sourceContactId } = req.body;
+
+  const result = await MergeContactService({
+    targetContactId: contactId,
+    sourceContactId
+  });
+
+  const scopedWhatsappId = await GetUserScopedWhatsappId(
+    req.user.id,
+    req.user.profile
+  );
+
+  EmitContactEvent({
+    action: "update",
+    contact: result.contact,
+    whatsappId: scopedWhatsappId
+  });
+
+  EmitContactEvent({
+    action: "delete",
+    contactId: String(result.mergedContactId),
+    whatsappId: scopedWhatsappId
+  });
+
+  return res.status(200).json(result);
 };
 
 export const remove = async (

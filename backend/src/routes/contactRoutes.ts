@@ -49,6 +49,13 @@ contactRoutes.put(
   ContactController.update
 );
 
+contactRoutes.post(
+  "/contacts/:contactId/merge",
+  isAuth,
+  checkSectorPermission("contacts.update"),
+  ContactController.merge
+);
+
 contactRoutes.delete(
   "/contacts/:contactId",
   isAuth,
