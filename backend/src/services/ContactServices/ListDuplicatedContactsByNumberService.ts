@@ -33,12 +33,6 @@ const ListDuplicatedContactsByNumberService = async ({
     return [];
   }
 
-  const contactCompanyId = (contact as any).companyId;
-
-  if (!contactCompanyId) {
-    throw new AppError("ERR_CONTACT_COMPANY_NOT_FOUND", 500);
-  }
-
   const numberCandidates = BuildEquivalentContactNumberCandidates(contact.number || "");
   const uniqueNumberCandidates = Array.from(new Set(numberCandidates.filter(Boolean)));
 
@@ -64,7 +58,6 @@ const ListDuplicatedContactsByNumberService = async ({
 
   const duplicatedContacts = await Contact.findAll({
     where: {
-      companyId: contactCompanyId,
       id: {
         [Op.ne]: contact.id
       },
