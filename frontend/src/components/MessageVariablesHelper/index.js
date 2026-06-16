@@ -47,7 +47,7 @@ const useStyles = makeStyles(theme => ({
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
     gap: theme.spacing(1),
     marginTop: theme.spacing(1.5)
   },
@@ -66,10 +66,13 @@ const useStyles = makeStyles(theme => ({
     }
   },
   description: {
-    lineHeight: 1.35,
-    fontSize: "0.95rem",
+    lineHeight: 1.2,
+    fontSize: "14px",
     color: theme.palette.text.secondary,
-    fontWeight: 500
+    fontWeight: 400,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis"
   }
 }));
 
