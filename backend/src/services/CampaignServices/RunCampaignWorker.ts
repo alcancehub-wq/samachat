@@ -24,6 +24,7 @@ import { logger } from "../../utils/logger";
 
 const DEFAULT_POLL_MS = 8000;
 const DEFAULT_BATCH_SIZE = 10;
+const DEFAULT_CONTACT_DELAY_MS = process.env.NODE_ENV === "test" ? 0 : 7000;
 const CAMPAIGN_WORKER_ID = `campaign-worker:${process.pid}`;
 
 const parseNumber = (value: string | undefined, fallback: number): number => {
@@ -34,6 +35,9 @@ const parseNumber = (value: string | undefined, fallback: number): number => {
   const parsed = Number(value);
   return Number.isNaN(parsed) ? fallback : parsed;
 };
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms));
 
 const claimCampaign = async (campaignId: number, now = new Date()): Promise<boolean> => {
   const [updated] = await Campaign.update(
@@ -202,6 +206,10 @@ const runCampaignOnce = async (campaign: Campaign): Promise<void> => {
 
   let failedCount = 0;
   const signaturePrefix = await loadCampaignSignaturePrefix(defaultWhatsapp.id);
+  const contactDelayMs = parseNumber(
+    process.env.CAMPAIGN_CONTACT_DELAY_MS,
+    DEFAULT_CONTACT_DELAY_MS
+  );
 
   for (const contact of contacts) {
     if (await alreadySent(campaign.id, contact.id)) {
@@ -242,6 +250,10 @@ const runCampaignOnce = async (campaign: Campaign): Promise<void> => {
         error: message,
         executedAt: new Date()
       });
+    }
+
+    if (contactDelayMs > 0) {
+      await sleep(contactDelayMs);
     }
   }
 
