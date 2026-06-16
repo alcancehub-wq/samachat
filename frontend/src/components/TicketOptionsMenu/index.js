@@ -281,6 +281,8 @@ const TicketOptionsMenu = ({
                                 targetContactId={contactId || ticket?.contactId || ticket?.contact?.id}
                                 targetContactName={contactName || ticket?.contact?.name}
                                 targetContactNumber={ticket?.contact?.number}
+                                targetAllowMultipleConversations={ticket?.contact?.allowMultipleConversations}
+                                targetUserId={ticket?.userId}
                                 onMerged={handleContactMerged}
                         />
                         <ScheduleModal

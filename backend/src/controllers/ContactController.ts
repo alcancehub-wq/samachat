@@ -265,11 +265,12 @@ export const merge = async (
   res: Response
 ): Promise<Response> => {
   const { contactId } = req.params;
-  const { sourceContactId } = req.body;
+  const { sourceContactId, targetUserId } = req.body;
 
   const result = await MergeContactService({
     targetContactId: contactId,
-    sourceContactId
+    sourceContactId,
+    targetUserId
   });
 
   const scopedWhatsappId = await GetUserScopedWhatsappId(

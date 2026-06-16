@@ -31,6 +31,9 @@ const useStyles = makeStyles(theme => ({
   optionNumber: {
     color: theme.palette.text.secondary,
     fontSize: "0.85rem"
+  },
+  fieldSpacing: {
+    marginTop: theme.spacing(2)
   }
 }));
 
@@ -44,22 +47,33 @@ const MergeContactModal = ({
   targetContactId,
   targetContactName,
   targetContactNumber,
+  targetAllowMultipleConversations,
+  targetUserId,
   onMerged
 }) => {
   const classes = useStyles();
   const [options, setOptions] = useState([]);
+  const [users, setUsers] = useState([]);
   const [searchParam, setSearchParam] = useState("");
   const [selectedContact, setSelectedContact] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSearchDone, setAutoSearchDone] = useState(false);
+
+  const mustChooseResponsible =
+    Boolean(selectedContact) && targetAllowMultipleConversations !== true;
 
   useEffect(() => {
     if (!open) {
       setOptions([]);
+      setUsers([]);
       setSearchParam("");
       setSelectedContact(null);
+      setSelectedUser(null);
       setLoading(false);
+      setUsersLoading(false);
       setSaving(false);
       setAutoSearchDone(false);
     }
@@ -106,6 +120,37 @@ const MergeContactModal = ({
   }, [open, targetContactNumber, targetContactId, autoSearchDone]);
 
   useEffect(() => {
+    if (!open || !mustChooseResponsible || users.length > 0 || usersLoading) {
+      return;
+    }
+
+    setUsersLoading(true);
+
+    const loadUsers = async () => {
+      try {
+        const { data } = await api.get("/users/");
+        const loadedUsers = data.users || [];
+
+        setUsers(loadedUsers);
+
+        const currentUser = loadedUsers.find(
+          user => Number(user.id) === Number(targetUserId)
+        );
+
+        if (currentUser) {
+          setSelectedUser(currentUser);
+        }
+      } catch (err) {
+        toastError(err);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, [open, mustChooseResponsible, users.length, usersLoading, targetUserId]);
+
+  useEffect(() => {
     if (!open || searchParam.length < 3) {
       setOptions([]);
       setLoading(false);
@@ -147,11 +192,17 @@ const MergeContactModal = ({
       return;
     }
 
+    if (mustChooseResponsible && !selectedUser?.id) {
+      toast.error("Escolha o respons\u00e1vel final deste cliente.");
+      return;
+    }
+
     setSaving(true);
 
     try {
       await api.post("/contacts/" + targetContactId + "/merge", {
-        sourceContactId: selectedContact.id
+        sourceContactId: selectedContact.id,
+        targetUserId: mustChooseResponsible ? selectedUser.id : null
       });
 
       toast.success("Contatos mesclados com sucesso.");
@@ -224,6 +275,42 @@ const MergeContactModal = ({
               {selectedContact.number ? "(" + selectedContact.number + ")" : ""}
             </Typography>
           )}
+
+          {mustChooseResponsible && (
+            <>
+              <Typography variant="body2" style={{ marginTop: 16 }}>
+                {"Este cliente n\u00e3o permite m\u00faltiplas conversas. Escolha qual respons\u00e1vel ficar\u00e1 com o atendimento principal."}
+              </Typography>
+
+              <Autocomplete
+                className={classes.fieldSpacing}
+                getOptionLabel={option => option?.name || ""}
+                value={selectedUser}
+                onChange={(event, value) => setSelectedUser(value)}
+                options={users}
+                loading={usersLoading}
+                autoHighlight
+                noOptionsText={"Nenhum usu\u00e1rio encontrado"}
+                renderInput={params => (
+                  <TextField
+                    {...params}
+                    label={"Respons\u00e1vel final"}
+                    variant="outlined"
+                    required
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {usersLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      )
+                    }}
+                  />
+                )}
+              />
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} disabled={saving}>
@@ -234,7 +321,7 @@ const MergeContactModal = ({
             color="primary"
             variant="contained"
             loading={saving}
-            disabled={!selectedContact || saving}
+            disabled={!selectedContact || saving || (mustChooseResponsible && !selectedUser)}
           >
             Mesclar contatos
           </ButtonWithSpinner>
