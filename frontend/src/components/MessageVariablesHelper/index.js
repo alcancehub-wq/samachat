@@ -19,7 +19,8 @@ const useStyles = makeStyles(theme => ({
     borderRadius: 16,
     padding: theme.spacing(1.5),
     backgroundColor: "#F5F6F8",
-    boxShadow: "0 16px 32px rgba(15, 23, 42, 0.08)"
+    boxShadow: "0 16px 32px rgba(15, 23, 42, 0.08)",
+    overflow: "hidden"
   },
   header: {
     display: "flex",
@@ -47,18 +48,21 @@ const useStyles = makeStyles(theme => ({
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(150px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
     gap: theme.spacing(1),
-    marginTop: theme.spacing(1.5)
+    marginTop: theme.spacing(1.5),
+    width: "100%"
   },
   card: {
     width: "100%",
+    minWidth: 0,
     minHeight: 48,
+    boxSizing: "border-box",
     borderRadius: 12,
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.common.white,
     textAlign: "center",
-    padding: theme.spacing(1.1, 1.25),
+    padding: theme.spacing(1.05, 1.15),
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -76,7 +80,6 @@ const useStyles = makeStyles(theme => ({
     fontWeight: 400,
     whiteSpace: "normal",
     overflow: "visible",
-    textOverflow: "clip",
     textAlign: "center",
     wordBreak: "normal"
   }
