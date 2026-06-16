@@ -539,9 +539,28 @@ const reducer = (state, action) => {
 			}
 		});
 
-		return () => {
+		        const handleLocalTicketUpdate = event => {
+            const updatedTicket = event.detail?.ticket;
+
+            if (!updatedTicket?.id) {
+                return;
+            }
+
+            if (shouldUpdateTicket(updatedTicket)) {
+                dispatch({
+                    type: "UPDATE_TICKET",
+                    payload: updatedTicket,
+                });
+            } else {
+                dispatch({ type: "DELETE_TICKET", payload: updatedTicket.id });
+            }
+        };
+
+        window.addEventListener("samachat:ticket-updated", handleLocalTicketUpdate);
+return () => {
 			isEffectMounted = false;
-			socket.disconnect();
+			            window.removeEventListener("samachat:ticket-updated", handleLocalTicketUpdate);
+            socket.disconnect();
 		};
 	}, [canShowAllTickets, followUp, status, searchParam, user, selectedQueueIds, selectedTagIds, selectedUserId, unreadOnly]);
 

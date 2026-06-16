@@ -140,7 +140,12 @@ const TicketOptionsMenu = ({
 		setLoading(true);
 
 		try {
-			await api.put(`/tickets/${ticket.id}/unread`);
+			const { data } = await api.put(`/tickets/${ticket.id}/unread`);
+            window.dispatchEvent(
+                new CustomEvent("samachat:ticket-updated", {
+                    detail: { ticket: data }
+                })
+            );
             history.push("/tickets");
 		} catch (err) {
 			toastError(err);
