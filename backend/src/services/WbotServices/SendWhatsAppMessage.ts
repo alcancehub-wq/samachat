@@ -33,6 +33,28 @@ interface NumberLookupResult {
 
 const INITIAL_READY_TIMEOUT_MS = 5000;
 const RECOVERY_READY_TIMEOUT_MS = 15000;
+const MESSAGE_LOOKUP_TIMEOUT_MS = 12000;
+
+const withMessageLookupTimeout = async <T>(
+  promise: Promise<T>
+): Promise<T> => {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(new AppError("ERR_WAPP_CHECK_CONTACT_TIMEOUT"));
+        }, MESSAGE_LOOKUP_TIMEOUT_MS);
+      })
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+};
 const startingSessions = new Set<number>();
 
 const normalizeLid = (value?: string | null): string => {
@@ -71,10 +93,12 @@ const safeCheckNumber = async (
   const candidates = BuildContactNumberCandidates(number, whatsapp.phoneNumber);
 
   try {
-    const lookupResult = (await CheckContactNumber(number, {
-      whatsappId: whatsapp.id,
-      returnLookupResult: true
-    })) as CheckContactNumberLookupResult;
+    const lookupResult = (await withMessageLookupTimeout(
+      CheckContactNumber(number, {
+        whatsappId: whatsapp.id,
+        returnLookupResult: true
+      })
+    )) as CheckContactNumberLookupResult;
     const normalizedNumber = lookupResult.number;
 
     if (normalizedNumber || lookupResult.chatId) {
