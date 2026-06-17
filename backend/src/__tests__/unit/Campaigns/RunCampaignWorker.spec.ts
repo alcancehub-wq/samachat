@@ -1,4 +1,8 @@
 import { applyCampaignTagScope } from "../../../services/CampaignServices/campaignAudience";
+import {
+  getCampaignContactDelayRange,
+  getRandomCampaignContactDelayMs
+} from "../../../services/CampaignServices/campaignDelay";
 
 describe("RunCampaignWorker", () => {
   it("should keep only contacts matching campaign tags when list and tags are combined", () => {
@@ -43,5 +47,75 @@ describe("RunCampaignWorker", () => {
     const result = applyCampaignTagScope(contacts as any, [10]);
 
     expect(result.map(contact => contact.id)).toEqual([7, 8]);
+  });
+
+  const originalCampaignDelayEnv = {
+    legacy: process.env.CAMPAIGN_CONTACT_DELAY_MS,
+    min: process.env.CAMPAIGN_CONTACT_DELAY_MIN_MS,
+    max: process.env.CAMPAIGN_CONTACT_DELAY_MAX_MS
+  };
+
+  const restoreCampaignDelayEnv = (): void => {
+    if (originalCampaignDelayEnv.legacy === undefined) {
+      delete process.env.CAMPAIGN_CONTACT_DELAY_MS;
+    } else {
+      process.env.CAMPAIGN_CONTACT_DELAY_MS = originalCampaignDelayEnv.legacy;
+    }
+
+    if (originalCampaignDelayEnv.min === undefined) {
+      delete process.env.CAMPAIGN_CONTACT_DELAY_MIN_MS;
+    } else {
+      process.env.CAMPAIGN_CONTACT_DELAY_MIN_MS = originalCampaignDelayEnv.min;
+    }
+
+    if (originalCampaignDelayEnv.max === undefined) {
+      delete process.env.CAMPAIGN_CONTACT_DELAY_MAX_MS;
+    } else {
+      process.env.CAMPAIGN_CONTACT_DELAY_MAX_MS = originalCampaignDelayEnv.max;
+    }
+  };
+
+  afterEach(() => {
+    restoreCampaignDelayEnv();
+    jest.restoreAllMocks();
+  });
+
+  it("should preserve legacy campaign contact delay as a fixed delay", () => {
+    process.env.CAMPAIGN_CONTACT_DELAY_MS = "9000";
+    process.env.CAMPAIGN_CONTACT_DELAY_MIN_MS = "7000";
+    process.env.CAMPAIGN_CONTACT_DELAY_MAX_MS = "15000";
+
+    expect(getCampaignContactDelayRange()).toEqual({
+      minMs: 9000,
+      maxMs: 9000
+    });
+    expect(getRandomCampaignContactDelayMs()).toBe(9000);
+  });
+
+  it("should randomize campaign contact delay within the configured range", () => {
+    delete process.env.CAMPAIGN_CONTACT_DELAY_MS;
+    process.env.CAMPAIGN_CONTACT_DELAY_MIN_MS = "7000";
+    process.env.CAMPAIGN_CONTACT_DELAY_MAX_MS = "15000";
+
+    jest.spyOn(Math, "random").mockReturnValueOnce(0).mockReturnValueOnce(0.999999);
+
+    expect(getCampaignContactDelayRange()).toEqual({
+      minMs: 7000,
+      maxMs: 15000
+    });
+    expect(getRandomCampaignContactDelayMs()).toBe(7000);
+    expect(getRandomCampaignContactDelayMs()).toBe(15000);
+  });
+
+  it("should never return a campaign contact delay below the configured minimum", () => {
+    delete process.env.CAMPAIGN_CONTACT_DELAY_MS;
+    process.env.CAMPAIGN_CONTACT_DELAY_MIN_MS = "12000";
+    process.env.CAMPAIGN_CONTACT_DELAY_MAX_MS = "7000";
+
+    expect(getCampaignContactDelayRange()).toEqual({
+      minMs: 12000,
+      maxMs: 12000
+    });
+    expect(getRandomCampaignContactDelayMs()).toBe(12000);
   });
 });

@@ -1,4 +1,4 @@
-﻿import { Op } from "sequelize";
+import { Op } from "sequelize";
 import Campaign from "../../models/Campaign";
 import Contact from "../../models/Contact";
 import ContactCustomField from "../../models/ContactCustomField";
@@ -21,10 +21,10 @@ import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import SendStoredWhatsAppMedia from "../WbotServices/SendStoredWhatsAppMedia";
 import { logger } from "../../utils/logger";
+import { getRandomCampaignContactDelayMs } from "./campaignDelay";
 
 const DEFAULT_POLL_MS = 8000;
 const DEFAULT_BATCH_SIZE = 10;
-const DEFAULT_CONTACT_DELAY_MS = process.env.NODE_ENV === "test" ? 0 : 7000;
 const CAMPAIGN_WORKER_ID = `campaign-worker:${process.pid}`;
 
 const parseNumber = (value: string | undefined, fallback: number): number => {
@@ -206,11 +206,6 @@ const runCampaignOnce = async (campaign: Campaign): Promise<void> => {
 
   let failedCount = 0;
   const signaturePrefix = await loadCampaignSignaturePrefix(defaultWhatsapp.id);
-  const contactDelayMs = parseNumber(
-    process.env.CAMPAIGN_CONTACT_DELAY_MS,
-    DEFAULT_CONTACT_DELAY_MS
-  );
-
   for (const contact of contacts) {
     if (await alreadySent(campaign.id, contact.id)) {
       continue;
@@ -251,6 +246,8 @@ const runCampaignOnce = async (campaign: Campaign): Promise<void> => {
         executedAt: new Date()
       });
     }
+
+    const contactDelayMs = getRandomCampaignContactDelayMs();
 
     if (contactDelayMs > 0) {
       await sleep(contactDelayMs);
