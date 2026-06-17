@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 
+import AppError from "../errors/AppError";
+
 import { getScopedNotificationRoom, getScopedTicketsRoom } from "../helpers/socketRooms";
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
@@ -26,6 +28,45 @@ type MessageData = {
   isInternal?: boolean;
 };
 
+const DEFAULT_MANUAL_SEND_COOLDOWN_MS = 30000;
+const manualSendCooldownByWhatsapp = new Map<number, number>();
+
+const getManualSendCooldownMs = (): number => {
+  const rawValue = process.env.MANUAL_SEND_COOLDOWN_MS;
+
+  if (!rawValue) {
+    return DEFAULT_MANUAL_SEND_COOLDOWN_MS;
+  }
+
+  const parsedValue = Number(rawValue);
+
+  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+    return DEFAULT_MANUAL_SEND_COOLDOWN_MS;
+  }
+
+  return parsedValue;
+};
+
+const assertManualSendCooldown = (ticket: {
+  id: number;
+  whatsappId?: number | null;
+}): void => {
+  const whatsappId = ticket.whatsappId;
+  const cooldownMs = getManualSendCooldownMs();
+
+  if (!whatsappId || cooldownMs <= 0) {
+    return;
+  }
+
+  const now = Date.now();
+  const cooldownUntil = manualSendCooldownByWhatsapp.get(whatsappId) || 0;
+
+  if (cooldownUntil > now) {
+    throw new AppError("ERR_MANUAL_SEND_COOLDOWN");
+  }
+
+  manualSendCooldownByWhatsapp.set(whatsappId, now + cooldownMs);
+};
 const emitTicketUpdate = async (ticket: Awaited<ReturnType<typeof ShowTicketService>>): Promise<void> => {
   await ticket.reload({ include: ["contact", "queue", "whatsapp", "user", "tags"] });
 
@@ -93,6 +134,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
     return res.status(201).json(message);
   }
+
+  assertManualSendCooldown(ticket);
 
   SetTicketMessagesAsRead(ticket);
 
