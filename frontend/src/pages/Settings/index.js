@@ -6,6 +6,7 @@ import Paper from "@material-ui/core/Paper";
 import Typography from "@material-ui/core/Typography";
 import Container from "@material-ui/core/Container";
 import Select from "@material-ui/core/Select";
+import Autocomplete from "@material-ui/lab/Autocomplete";
 import TextField from "@material-ui/core/TextField";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
@@ -45,7 +46,7 @@ const parseSelectedUserIds = value => {
 
 	try {
 		const parsed = JSON.parse(value);
-		return Array.isArray(parsed) ? parsed.map(String) : [];
+		return Array.isArray(parsed) ? parsed.map(Number).filter(item => Number.isInteger(item) && item > 0) : [];
 	} catch (err) {
 		return [];
 	}
@@ -398,11 +399,10 @@ const Settings = () => {
 		}
 	};
 
-	const handleChangeFullContactsVisibilityUsers = async e => {
-		const selectedValues = Array.from(e.target.selectedOptions || []).map(option => option.value);
+	const handleChangeFullContactsVisibilityUsers = async selectedUsers => {
 		const nextValue = JSON.stringify(
-			selectedValues
-				.map(value => Number(value))
+			(selectedUsers || [])
+				.map(userItem => Number(userItem.id))
 				.filter(value => Number.isInteger(value) && value > 0)
 		);
 		const currentPersistedValue = getSettingValue(
@@ -610,24 +610,25 @@ const Settings = () => {
 														<Typography variant="caption" display="block">
 															Usuários liberados para lista completa
 														</Typography>
-														<Select
-															native
+														<Autocomplete
 															multiple
-															margin="dense"
-															variant="outlined"
-															value={parseSelectedUserIds(contactVisibilityForm.fullContactsVisibilityUserIds)}
-															className={classes.settingField}
-															onChange={handleChangeFullContactsVisibilityUsers}
-															inputProps={{ size: Math.min(Math.max(users.length, 3), 8) }}
-														>
-															{users.map(userItem => (
-																<option key={userItem.id} value={String(userItem.id)}>
-																	{userItem.name}
-																</option>
-															))}
-														</Select>
+															options={users}
+															getOptionLabel={option => option.name || ""}
+															value={users.filter(userItem =>
+																parseSelectedUserIds(contactVisibilityForm.fullContactsVisibilityUserIds).includes(Number(userItem.id))
+															)}
+															onChange={(event, selectedUsers) => handleChangeFullContactsVisibilityUsers(selectedUsers)}
+															renderInput={params => (
+																<TextField
+																	{...params}
+																	variant="outlined"
+																	margin="dense"
+																	placeholder="Selecione os usuários"
+																/>
+															)}
+														/>
 														<Typography variant="caption" className={`${classes.pageSubtitle} ${classes.settingHint}`}>
-															Segure Ctrl para selecionar mais de um usuário. Admin sempre vê tudo.
+															Selecione um ou mais usuários autorizados. Admin sempre vê tudo.
 														</Typography>
 													</div>
 												</div>
