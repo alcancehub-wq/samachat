@@ -2,6 +2,7 @@ import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
+import GetDefaultWhatsAppByUser from "../../helpers/GetDefaultWhatsAppByUser";
 import Ticket from "../../models/Ticket";
 import User from "../../models/User";
 import ShowContactService from "../ContactServices/ShowContactService";
@@ -53,7 +54,13 @@ const CreateTicketService = async ({
   userId,
   queueId
 }: Request): Promise<Ticket> => {
-  const defaultWhatsapp = await GetDefaultWhatsApp(userId);
+  const defaultWhatsapp = userId
+    ? await GetDefaultWhatsAppByUser(userId)
+    : await GetDefaultWhatsApp();
+
+  if (!defaultWhatsapp) {
+    throw new AppError("ERR_USER_WAPP_NOT_FOUND");
+  }
   const contact = await ShowContactService(contactId);
 
   if (!contact.allowMultipleConversations) {
