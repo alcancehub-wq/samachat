@@ -66,6 +66,19 @@ const withContactLookupTimeout = async <T>(
   }
 };
 
+const isManualContactLookupUnavailableError = (err: unknown): boolean => {
+  if (!(err instanceof AppError)) {
+    return false;
+  }
+
+  return [
+    "ERR_WAPP_CHECK_CONTACT_TIMEOUT",
+    "ERR_WAPP_PROFILE_PIC_TIMEOUT",
+    "ERR_WAPP_CHECK_CONTACT",
+    "ERR_WAPP_NOT_INITIALIZED"
+  ].includes(err.message);
+};
+
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber, tagIds: tagIdsStringified } =
     req.query as IndexQuery;
@@ -134,15 +147,23 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError("ERR_DUPLICATED_CONTACT");
   }
 
-  await withContactLookupTimeout(
-    CheckIsValidContact(newContact.number, { userId })
-  );
+  let validNumber: any = newContact.number;
 
-  const validNumber: any = await withContactLookupTimeout(
-    CheckContactNumber(newContact.number, {
-      userId
-    })
-  );
+  try {
+    await withContactLookupTimeout(
+      CheckIsValidContact(newContact.number, { userId })
+    );
+
+    validNumber = await withContactLookupTimeout(
+      CheckContactNumber(newContact.number, {
+        userId
+      })
+    );
+  } catch (err) {
+    if (!isManualContactLookupUnavailableError(err)) {
+      throw err;
+    }
+  }
 
   const duplicatedContact = await FindDuplicatedContactByNumberService({
     number: validNumber
@@ -152,7 +173,18 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError("ERR_DUPLICATED_CONTACT");
   }
 
-  const profilePicUrl = await GetProfilePicUrl(validNumber, { userId });
+  let profilePicUrl = "";
+
+  try {
+    profilePicUrl = await withContactLookupTimeout(
+      GetProfilePicUrl(validNumber, { userId }),
+      "ERR_WAPP_PROFILE_PIC_TIMEOUT"
+    );
+  } catch (err) {
+    if (!isManualContactLookupUnavailableError(err)) {
+      throw err;
+    }
+  }
 
   let name = newContact.name;
   let number = validNumber;
