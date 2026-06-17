@@ -80,9 +80,20 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { contactId, status, userId }: TicketData = req.body;
+  const { contactId, status, queueId }: TicketData = req.body;
 
-  const ticket = await CreateTicketService({ contactId, status, userId });
+  const authenticatedUserId = Number(req.user.id);
+
+  if (!authenticatedUserId) {
+    throw new Error("ERR_INVALID_AUTHENTICATED_USER");
+  }
+
+  const ticket = await CreateTicketService({
+    contactId,
+    status,
+    userId: authenticatedUserId,
+    queueId
+  });
 
   const io = getIO();
   io.to(getScopedTicketsRoom(ticket.status, ticket.whatsappId))
@@ -94,7 +105,6 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   return res.status(200).json(ticket);
 };
-
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
 
