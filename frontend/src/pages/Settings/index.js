@@ -30,6 +30,28 @@ const LOST_TICKET_PURGE_DEFAULTS = {
 
 const LOST_TICKET_PURGE_SETTING_KEYS = Object.keys(LOST_TICKET_PURGE_DEFAULTS);
 
+const CONTACT_VISIBILITY_DEFAULTS = {
+	showAllContactsToAllUsers: "false",
+	showMultipleConversationContactsToAllUsers: "false",
+	fullContactsVisibilityUserIds: "[]",
+};
+
+const CONTACT_VISIBILITY_SETTING_KEYS = Object.keys(CONTACT_VISIBILITY_DEFAULTS);
+
+const parseSelectedUserIds = value => {
+	if (!value) {
+		return [];
+	}
+
+	try {
+		const parsed = JSON.parse(value);
+		return Array.isArray(parsed) ? parsed.map(String) : [];
+	} catch (err) {
+		return [];
+	}
+};
+
+
 const getSettingValueFromList = (settingsList, key, fallback = "") => {
 	const setting = settingsList.find(item => item.key === key);
 	return setting ? setting.value : fallback;
@@ -185,6 +207,8 @@ const Settings = () => {
 	const [settings, setSettings] = useState([]);
 	const [activeTab, setActiveTab] = useState("general");
 	const [lostTicketPurgeForm, setLostTicketPurgeForm] = useState(LOST_TICKET_PURGE_DEFAULTS);
+	const [contactVisibilityForm, setContactVisibilityForm] = useState(CONTACT_VISIBILITY_DEFAULTS);
+	const [users, setUsers] = useState([]);
 
 	const syncLostTicketPurgeForm = settingsList => {
 		setLostTicketPurgeForm({
@@ -202,6 +226,27 @@ const Settings = () => {
 				settingsList,
 				"lostTicketPurgeUnit",
 				LOST_TICKET_PURGE_DEFAULTS.lostTicketPurgeUnit
+			),
+		});
+	};
+
+
+	const syncContactVisibilityForm = settingsList => {
+		setContactVisibilityForm({
+			showAllContactsToAllUsers: getSettingValueFromList(
+				settingsList,
+				"showAllContactsToAllUsers",
+				CONTACT_VISIBILITY_DEFAULTS.showAllContactsToAllUsers
+			),
+			showMultipleConversationContactsToAllUsers: getSettingValueFromList(
+				settingsList,
+				"showMultipleConversationContactsToAllUsers",
+				CONTACT_VISIBILITY_DEFAULTS.showMultipleConversationContactsToAllUsers
+			),
+			fullContactsVisibilityUserIds: getSettingValueFromList(
+				settingsList,
+				"fullContactsVisibilityUserIds",
+				CONTACT_VISIBILITY_DEFAULTS.fullContactsVisibilityUserIds
 			),
 		});
 	};
@@ -236,13 +281,44 @@ const Settings = () => {
 			try {
 				const { data } = await api.get("/settings");
 				setSettings(data);
-				syncLostTicketPurgeForm(data);
+						syncLostTicketPurgeForm(data);
+						syncContactVisibilityForm(data);
 			} catch (err) {
 				toastError(err);
 			}
 		};
 		fetchSession();
 	}, []);
+	useEffect(() => {
+		const fetchUsers = async () => {
+			try {
+				let pageNumber = 1;
+				let hasMore = true;
+				const loadedUsers = [];
+
+				while (hasMore) {
+					const { data } = await api.get("/users", {
+						params: { searchParam: "", pageNumber },
+					});
+
+					loadedUsers.push(...(data.users || []));
+					hasMore = Boolean(data.hasMore);
+					pageNumber += 1;
+
+					if (!data.hasMore) {
+						break;
+					}
+				}
+
+				setUsers(loadedUsers);
+			} catch (err) {
+				toastError(err);
+			}
+		};
+
+		fetchUsers();
+	}, []);
+
 
 	useEffect(() => {
 		const socket = openSocket();
@@ -253,6 +329,13 @@ const Settings = () => {
 
 				if (LOST_TICKET_PURGE_SETTING_KEYS.includes(data.setting.key)) {
 					setLostTicketPurgeForm(prevState => ({
+						...prevState,
+						[data.setting.key]: data.setting.value,
+					}));
+				}
+
+				if (CONTACT_VISIBILITY_SETTING_KEYS.includes(data.setting.key)) {
+					setContactVisibilityForm(prevState => ({
 						...prevState,
 						[data.setting.key]: data.setting.value,
 					}));
@@ -290,6 +373,54 @@ const Settings = () => {
 			setLostTicketPurgeForm(prevState => ({
 				...prevState,
 				[name]: getSettingValue(name, LOST_TICKET_PURGE_DEFAULTS[name]),
+			}));
+			toastError(err);
+		}
+	};
+
+
+	const handleChangeContactVisibilitySetting = async e => {
+		const { name, value } = e.target;
+
+		setContactVisibilityForm(prevState => ({
+			...prevState,
+			[name]: value,
+		}));
+
+		try {
+			await persistSetting(name, value);
+		} catch (err) {
+			setContactVisibilityForm(prevState => ({
+				...prevState,
+				[name]: getSettingValue(name, CONTACT_VISIBILITY_DEFAULTS[name]),
+			}));
+			toastError(err);
+		}
+	};
+
+	const handleChangeFullContactsVisibilityUsers = async e => {
+		const selectedValues = Array.from(e.target.selectedOptions || []).map(option => option.value);
+		const nextValue = JSON.stringify(
+			selectedValues
+				.map(value => Number(value))
+				.filter(value => Number.isInteger(value) && value > 0)
+		);
+		const currentPersistedValue = getSettingValue(
+			"fullContactsVisibilityUserIds",
+			CONTACT_VISIBILITY_DEFAULTS.fullContactsVisibilityUserIds
+		);
+
+		setContactVisibilityForm(prevState => ({
+			...prevState,
+			fullContactsVisibilityUserIds: nextValue,
+		}));
+
+		try {
+			await persistSetting("fullContactsVisibilityUserIds", nextValue);
+		} catch (err) {
+			setContactVisibilityForm(prevState => ({
+				...prevState,
+				fullContactsVisibilityUserIds: currentPersistedValue,
 			}));
 			toastError(err);
 		}
@@ -418,7 +549,91 @@ const Settings = () => {
 					/>
 						</Paper>
 
-						<Paper className={`${classes.paper} ${classes.stackPaper}`}>
+
+
+											<Paper className={`${classes.paper} ${classes.stackPaper}`}>
+												<div className={classes.settingHeader}>
+													<div className={classes.settingMeta}>
+														<Typography variant="body1">
+															Governança de clientes
+														</Typography>
+														<Typography variant="caption" className={classes.pageSubtitle}>
+															Controle quais clientes aparecem na tela Clientes para usuários comuns.
+														</Typography>
+													</div>
+												</div>
+
+												<div className={classes.governanceControls}>
+													<div className={classes.settingField}>
+														<Typography variant="caption" display="block">
+															Mostrar contatos com múltiplas conversas para todos
+														</Typography>
+														<Select
+															native
+															margin="dense"
+															variant="outlined"
+															name="showMultipleConversationContactsToAllUsers"
+															value={contactVisibilityForm.showMultipleConversationContactsToAllUsers}
+															className={classes.settingField}
+															onChange={handleChangeContactVisibilitySetting}
+														>
+															<option value="false">Desativado</option>
+															<option value="true">Ativado</option>
+														</Select>
+														<Typography variant="caption" className={`${classes.pageSubtitle} ${classes.settingHint}`}>
+															Quando ativado, contatos marcados com múltiplas conversas aparecem para todos, sem liberar a lista inteira.
+														</Typography>
+													</div>
+
+													<div className={classes.settingField}>
+														<Typography variant="caption" display="block">
+															Mostrar lista completa para todos
+														</Typography>
+														<Select
+															native
+															margin="dense"
+															variant="outlined"
+															name="showAllContactsToAllUsers"
+															value={contactVisibilityForm.showAllContactsToAllUsers}
+															className={classes.settingField}
+															onChange={handleChangeContactVisibilitySetting}
+														>
+															<option value="false">Desativado</option>
+															<option value="true">Ativado</option>
+														</Select>
+														<Typography variant="caption" className={`${classes.pageSubtitle} ${classes.settingHint}`}>
+															Quando ativado, todos os usuários enxergam todos os clientes.
+														</Typography>
+													</div>
+
+													<div className={classes.settingField}>
+														<Typography variant="caption" display="block">
+															Usuários liberados para lista completa
+														</Typography>
+														<Select
+															native
+															multiple
+															margin="dense"
+															variant="outlined"
+															value={parseSelectedUserIds(contactVisibilityForm.fullContactsVisibilityUserIds)}
+															className={classes.settingField}
+															onChange={handleChangeFullContactsVisibilityUsers}
+															inputProps={{ size: Math.min(Math.max(users.length, 3), 8) }}
+														>
+															{users.map(userItem => (
+																<option key={userItem.id} value={String(userItem.id)}>
+																	{userItem.name}
+																</option>
+															))}
+														</Select>
+														<Typography variant="caption" className={`${classes.pageSubtitle} ${classes.settingHint}`}>
+															Segure Ctrl para selecionar mais de um usuário. Admin sempre vê tudo.
+														</Typography>
+													</div>
+												</div>
+											</Paper>
+
+<Paper className={`${classes.paper} ${classes.stackPaper}`}>
 							<div className={classes.settingHeader}>
 								<div className={classes.settingMeta}>
 									<Typography variant="body1">

@@ -3,6 +3,7 @@ import Contact from "../../models/Contact";
 import Tag from "../../models/Tag";
 import Ticket from "../../models/Ticket";
 import GetUserScopedWhatsappId from "../../helpers/GetUserScopedWhatsappId";
+import GetContactVisibilityGovernanceSettings from "../../helpers/GetContactVisibilityGovernanceSettings";
 
 interface Request {
   searchParam?: string;
@@ -26,18 +27,51 @@ const ListContactsService = async ({
   profile
 }: Request): Promise<Response> => {
   const scopedWhatsappId = await GetUserScopedWhatsappId(userId, profile);
-  const whereCondition = {
+  const isAdmin = String(profile || "").toLowerCase() === "admin";
+  const currentUserId = Number(userId);
+  const normalizedSearchParam = searchParam.toLowerCase().trim();
+
+  const {
+    showAllContactsToAllUsers,
+    showMultipleConversationContactsToAllUsers,
+    fullContactsVisibilityUserIds
+  } = await GetContactVisibilityGovernanceSettings();
+
+  const userCanSeeFullContacts =
+    isAdmin ||
+    showAllContactsToAllUsers ||
+    fullContactsVisibilityUserIds.includes(currentUserId);
+
+  const searchCondition = {
     [Op.or]: [
       {
         name: Sequelize.where(
           Sequelize.fn("LOWER", Sequelize.col("Contact.name")),
           "LIKE",
-          `%${searchParam.toLowerCase().trim()}%`
+          `%${normalizedSearchParam}%`
         )
       },
-      { number: { [Op.like]: `%${searchParam.toLowerCase().trim()}%` } }
+      { number: { [Op.like]: `%${normalizedSearchParam}%` } }
     ]
   };
+
+  const shouldScopeByWhatsapp = Boolean(scopedWhatsappId && !userCanSeeFullContacts);
+
+  const whereCondition =
+    showMultipleConversationContactsToAllUsers && shouldScopeByWhatsapp
+      ? {
+          [Op.and]: [
+            searchCondition,
+            {
+              [Op.or]: [
+                { allowMultipleConversations: true },
+                { "$tickets.id$": { [Op.ne]: null } }
+              ]
+            }
+          ]
+        }
+      : searchCondition;
+
   const limit = 20;
   const offset = limit * (+pageNumber - 1);
 
@@ -50,11 +84,12 @@ const ListContactsService = async ({
     where: tagIds.length > 0 ? { id: { [Op.in]: tagIds } } : undefined
   };
 
-  const includeTickets = scopedWhatsappId
+  const includeTickets = shouldScopeByWhatsapp
     ? {
         model: Ticket,
+        as: "tickets",
         attributes: [],
-        required: true,
+        required: !showMultipleConversationContactsToAllUsers,
         where: {
           whatsappId: scopedWhatsappId
         }
