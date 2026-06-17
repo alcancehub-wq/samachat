@@ -42,6 +42,30 @@ interface ContactData {
   allowMultipleConversations?: boolean;
 }
 
+const CONTACT_WHATSAPP_LOOKUP_TIMEOUT_MS = 12000;
+
+const withContactLookupTimeout = async <T>(
+  promise: Promise<T>,
+  errorMessage = "ERR_WAPP_CHECK_CONTACT_TIMEOUT"
+): Promise<T> => {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(new AppError(errorMessage));
+        }, CONTACT_WHATSAPP_LOOKUP_TIMEOUT_MS);
+      })
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+};
+
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber, tagIds: tagIdsStringified } =
     req.query as IndexQuery;
@@ -110,10 +134,15 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError("ERR_DUPLICATED_CONTACT");
   }
 
-  await CheckIsValidContact(newContact.number, { userId });
-  const validNumber: any = await CheckContactNumber(newContact.number, {
-    userId
-  });
+  await withContactLookupTimeout(
+    CheckIsValidContact(newContact.number, { userId })
+  );
+
+  const validNumber: any = await withContactLookupTimeout(
+    CheckContactNumber(newContact.number, {
+      userId
+    })
+  );
 
   const duplicatedContact = await FindDuplicatedContactByNumberService({
     number: validNumber
