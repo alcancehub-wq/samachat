@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import Autocomplete from "@material-ui/lab/Autocomplete";
 
 import {
   Button,
@@ -102,14 +103,16 @@ const OpenAI = ({ embedded = false }) => {
   const [logs, setLogs] = useState([]);
 
   const [attendanceAuditLoading, setAttendanceAuditLoading] = useState(false);
+  const [attendanceAuditUserSearch, setAttendanceAuditUserSearch] = useState("");
+  const [attendanceAuditUsers, setAttendanceAuditUsers] = useState([]);
+  const [attendanceAuditSelectedUsers, setAttendanceAuditSelectedUsers] = useState([]);
   const [attendanceAuditFilters, setAttendanceAuditFilters] = useState({
-    userId: "",
     dateFrom: "",
     dateTo: "",
     status: "",
     limit: 10
   });
-  const [attendanceAuditReport, setAttendanceAuditReport] = useState(null);
+  const [attendanceAuditReports, setAttendanceAuditReports] = useState([]);
 
   const hasValidKey = useMemo(() => {
     if (clearApiKey) {
@@ -200,6 +203,29 @@ const OpenAI = ({ embedded = false }) => {
     loadLogs();
   }, []);
 
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      const fetchAttendanceAuditUsers = async () => {
+        try {
+          const { data } = await api.get("/users/", {
+            params: {
+              searchParam: attendanceAuditUserSearch,
+              pageNumber: 1
+            }
+          });
+
+          setAttendanceAuditUsers(data?.users || []);
+        } catch (err) {
+          toastError(err);
+        }
+      };
+
+      fetchAttendanceAuditUsers();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [attendanceAuditUserSearch]);
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -232,8 +258,8 @@ const OpenAI = ({ embedded = false }) => {
   };
 
   const handleAttendanceAuditReport = async () => {
-    if (!attendanceAuditFilters.userId) {
-      toast.error("Informe o ID do usuario para auditar.");
+    if (attendanceAuditSelectedUsers.length === 0) {
+      toast.error("Selecione pelo menos um usuario para auditar.");
       return;
     }
 
@@ -245,22 +271,31 @@ const OpenAI = ({ embedded = false }) => {
     setAttendanceAuditLoading(true);
 
     try {
-      setAttendanceAuditReport(null);
+      setAttendanceAuditReports([]);
 
-      const params = {
-        userId: Number(attendanceAuditFilters.userId),
-        dateFrom: attendanceAuditFilters.dateFrom,
-        dateTo: attendanceAuditFilters.dateTo,
-        limit: Number(attendanceAuditFilters.limit) || 10
-      };
+      const reportResults = [];
 
-      if (attendanceAuditFilters.status) {
-        params.status = attendanceAuditFilters.status;
+      for (const selectedUser of attendanceAuditSelectedUsers) {
+        const params = {
+          userId: Number(selectedUser.id),
+          dateFrom: attendanceAuditFilters.dateFrom,
+          dateTo: attendanceAuditFilters.dateTo,
+          limit: Number(attendanceAuditFilters.limit) || 10
+        };
+
+        if (attendanceAuditFilters.status) {
+          params.status = attendanceAuditFilters.status;
+        }
+
+        const { data } = await api.get("/attendance-audit/report", { params });
+
+        reportResults.push({
+          user: selectedUser,
+          data
+        });
       }
 
-      const { data } = await api.get("/attendance-audit/report", { params });
-
-      setAttendanceAuditReport(data);
+      setAttendanceAuditReports(reportResults);
       toast.success("Relatorio de auditoria gerado com sucesso.");
       await loadLogs();
     } catch (err) {
@@ -269,7 +304,6 @@ const OpenAI = ({ embedded = false }) => {
 
     setAttendanceAuditLoading(false);
   };
-
 
   const handleSandboxAction = async action => {
     if (!sandboxText && action !== "summarize") {
@@ -737,20 +771,35 @@ const OpenAI = ({ embedded = false }) => {
           </Typography>
 
           <Grid container spacing={2} style={{ marginTop: 8 }}>
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="ID do usuario"
-                name="userId"
-                value={attendanceAuditFilters.userId}
-                onChange={handleAttendanceAuditFilterChange}
-                fullWidth
-                variant="outlined"
-                margin="dense"
-                type="number"
-                InputProps={{ inputProps: { min: 1, step: 1 } }}
+            <Grid item xs={12} md={4}>
+              <Autocomplete
+                multiple
+                options={attendanceAuditUsers}
+                value={attendanceAuditSelectedUsers}
+                onChange={(event, value) => setAttendanceAuditSelectedUsers(value)}
+                onInputChange={(event, value) => setAttendanceAuditUserSearch(value)}
+                getOptionLabel={option =>
+                  option?.name
+                    ? option.email
+                      ? `${option.name} - ${option.email}`
+                      : option.name
+                    : ""
+                }
+                getOptionSelected={(option, value) => option.id === value.id}
+                filterSelectedOptions
+                renderInput={params => (
+                  <TextField
+                    {...params}
+                    label="Usuarios"
+                    placeholder="Buscar por nome ou e-mail"
+                    fullWidth
+                    variant="outlined"
+                    margin="dense"
+                  />
+                )}
               />
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={2}>
               <TextField
                 label="Data inicial"
                 name="dateFrom"
@@ -824,12 +873,12 @@ const OpenAI = ({ embedded = false }) => {
               </Button>
             </Grid>
 
-            {attendanceAuditReport && (
+            {attendanceAuditReports.length > 0 && (
               <>
                 <Grid item xs={12} md={3}>
                   <TextField
                     label="Tickets analisados"
-                    value={attendanceAuditReport.summary?.ticketsAnalyzed ?? 0}
+                    value={attendanceAuditReports[0]?.data?.summary?.ticketsAnalyzed ?? 0}
                     fullWidth
                     variant="outlined"
                     margin="dense"
@@ -839,7 +888,7 @@ const OpenAI = ({ embedded = false }) => {
                 <Grid item xs={12} md={3}>
                   <TextField
                     label="Mensagens do cliente"
-                    value={attendanceAuditReport.summary?.totalCustomerMessages ?? 0}
+                    value={attendanceAuditReports[0]?.data?.summary?.totalCustomerMessages ?? 0}
                     fullWidth
                     variant="outlined"
                     margin="dense"
@@ -849,7 +898,7 @@ const OpenAI = ({ embedded = false }) => {
                 <Grid item xs={12} md={3}>
                   <TextField
                     label="Mensagens do atendente"
-                    value={attendanceAuditReport.summary?.totalAgentMessages ?? 0}
+                    value={attendanceAuditReports[0]?.data?.summary?.totalAgentMessages ?? 0}
                     fullWidth
                     variant="outlined"
                     margin="dense"
@@ -859,7 +908,7 @@ const OpenAI = ({ embedded = false }) => {
                 <Grid item xs={12} md={3}>
                   <TextField
                     label="Modelo"
-                    value={attendanceAuditReport.report?.model || "-"}
+                    value={attendanceAuditReports[0]?.data?.report?.model || "-"}
                     fullWidth
                     variant="outlined"
                     margin="dense"
@@ -869,7 +918,15 @@ const OpenAI = ({ embedded = false }) => {
                 <Grid item xs={12}>
                   <TextField
                     label="Relatorio gerado"
-                    value={attendanceAuditReport.report?.content || ""}
+                    value={attendanceAuditReports
+                      .map(reportItem =>
+                        [
+                          `Usuario: ${reportItem.user?.name || reportItem.user?.email || reportItem.user?.id}`,
+                          "",
+                          reportItem.data?.report?.content || ""
+                        ].join("\n")
+                      )
+                      .join("\n\n------------------------------\n\n") || ""}
                     fullWidth
                     variant="outlined"
                     margin="dense"
