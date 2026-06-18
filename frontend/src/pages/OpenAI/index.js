@@ -428,7 +428,7 @@ const OpenAI = ({ embedded = false }) => {
           <style>
             @page {
               size: A4;
-              margin: 18mm;
+              margin: 10mm;
             }
 
             * {
@@ -440,14 +440,14 @@ const OpenAI = ({ embedded = false }) => {
               color: #111827;
               background: #ffffff;
               font-family: Arial, Helvetica, sans-serif;
-              font-size: 12px;
-              line-height: 1.5;
+              font-size: 10px;
+              line-height: 1.35;
             }
 
             .cover {
               border-bottom: 3px solid #D90000;
-              padding-bottom: 18px;
-              margin-bottom: 22px;
+              padding-bottom: 10px;
+              margin-bottom: 12px;
             }
 
             .eyebrow {
@@ -461,22 +461,22 @@ const OpenAI = ({ embedded = false }) => {
 
             h1 {
               margin: 0;
-              font-size: 26px;
+              font-size: 20px;
               line-height: 1.15;
             }
 
             .subtitle {
               color: #4b5563;
-              margin-top: 8px;
-              font-size: 13px;
+              margin-top: 4px;
+              font-size: 10px;
             }
 
             .meta-grid {
               display: grid;
               grid-template-columns: repeat(2, 1fr);
-              gap: 8px 16px;
-              margin-top: 18px;
-              padding: 14px;
+              gap: 5px 10px;
+              margin-top: 10px;
+              padding: 8px;
               border: 1px solid #e5e7eb;
               border-radius: 10px;
               background: #f9fafb;
@@ -493,14 +493,14 @@ const OpenAI = ({ embedded = false }) => {
             .cards {
               display: grid;
               grid-template-columns: repeat(4, 1fr);
-              gap: 10px;
-              margin: 18px 0 22px;
+              gap: 6px;
+              margin: 10px 0 12px;
             }
 
             .card {
               border: 1px solid #e5e7eb;
               border-radius: 10px;
-              padding: 12px;
+              padding: 7px;
               background: #ffffff;
             }
 
@@ -514,31 +514,32 @@ const OpenAI = ({ embedded = false }) => {
             .card-value {
               margin-top: 5px;
               color: #111827;
-              font-size: 19px;
+              font-size: 15px;
               font-weight: 700;
             }
 
             .report-section {
-              page-break-inside: avoid;
+              break-inside: auto;
+              page-break-inside: auto;
               border-top: 1px solid #e5e7eb;
-              padding-top: 16px;
-              margin-top: 18px;
+              padding-top: 8px;
+              margin-top: 10px;
             }
 
             .section-meta {
               display: flex;
               flex-wrap: wrap;
-              gap: 8px;
-              margin-bottom: 10px;
+              gap: 5px;
+              margin-bottom: 6px;
             }
 
             .section-meta span {
               border: 1px solid #e5e7eb;
               border-radius: 999px;
-              padding: 5px 9px;
+              padding: 3px 6px;
               background: #f9fafb;
               color: #374151;
-              font-size: 11px;
+              font-size: 9px;
             }
 
             pre {
@@ -546,13 +547,13 @@ const OpenAI = ({ embedded = false }) => {
               word-break: break-word;
               margin: 0;
               font-family: Arial, Helvetica, sans-serif;
-              font-size: 12px;
-              line-height: 1.55;
+              font-size: 9px;
+              line-height: 1.28;
             }
 
             .footer {
-              margin-top: 26px;
-              padding-top: 12px;
+              margin-top: 12px;
+              padding-top: 7px;
               border-top: 1px solid #e5e7eb;
               color: #6b7280;
               font-size: 10px;
