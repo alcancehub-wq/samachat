@@ -172,11 +172,23 @@ const BuildAttendanceAuditDossierService = async ({
     .map((message: any) => Number(message.ticketId))
     .filter(Boolean);
 
+  const auditedUser = await User.findByPk(Number(userId), {
+    attributes: ["id", "whatsappId"]
+  });
+
+  const auditedUserWhatsappId = auditedUser?.whatsappId || null;
+
+  const ownershipConditions: WhereOptions[] = [{ userId: Number(userId) }];
+
+  if (auditedUserWhatsappId) {
+    ownershipConditions.push({ whatsappId: Number(auditedUserWhatsappId) });
+  }
+
   const whereCondition: WhereOptions = {
-    userId: Number(userId),
     id: {
       [Op.in]: activityTicketIds
-    }
+    },
+    [Op.or]: ownershipConditions
   };
 
   if (status) {
