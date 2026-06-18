@@ -1,4 +1,4 @@
-﻿import { Request, Response } from "express";
+import { Request, Response } from "express";
 import * as Yup from "yup";
 
 import AppError from "../errors/AppError";
@@ -11,7 +11,8 @@ const filterSchema = Yup.object().shape({
   dateFrom: Yup.string().required(),
   dateTo: Yup.string().required(),
   status: Yup.string().nullable(),
-  limit: Yup.number().nullable()
+  limit: Yup.number().nullable(),
+  offset: Yup.number().nullable()
 });
 
 const buildDossierFromQuery = async (req: Request): Promise<any> => {
@@ -28,7 +29,8 @@ const buildDossierFromQuery = async (req: Request): Promise<any> => {
     dateFrom: String(req.query.dateFrom),
     dateTo: String(req.query.dateTo),
     status: req.query.status ? String(req.query.status) : undefined,
-    limit: req.query.limit ? Number(req.query.limit) : undefined
+    limit: req.query.limit ? Number(req.query.limit) : undefined,
+    offset: req.query.offset ? Number(req.query.offset) : undefined
   });
 };
 

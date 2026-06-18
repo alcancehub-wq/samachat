@@ -17,6 +17,7 @@ interface Request {
   dateTo: string;
   status?: string;
   limit?: number;
+  offset?: number;
 }
 
 interface MessageSample {
@@ -48,6 +49,14 @@ const normalizeLimit = (limit?: number): number => {
   }
 
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_LIMIT);
+};
+
+const normalizeOffset = (offset?: number): number => {
+  if (!offset || Number.isNaN(offset)) {
+    return 0;
+  }
+
+  return Math.max(Math.trunc(offset), 0);
 };
 
 const secondsBetween = (start?: Date | null, end?: Date | null): number | null => {
@@ -122,7 +131,8 @@ const BuildAttendanceAuditDossierService = async ({
   dateFrom,
   dateTo,
   status,
-  limit
+  limit,
+  offset
 }: Request): Promise<any> => {
   if (status && !allowedStatuses.includes(status)) {
     throw new AppError("ERR_INVALID_STATUS", 400);
@@ -144,6 +154,7 @@ const BuildAttendanceAuditDossierService = async ({
   }
 
   const normalizedLimit = normalizeLimit(limit);
+  const normalizedOffset = normalizeOffset(offset);
 
   const whereCondition: WhereOptions = {
     userId: Number(userId),
@@ -156,7 +167,7 @@ const BuildAttendanceAuditDossierService = async ({
     Object.assign(whereCondition, { status });
   }
 
-  const tickets = await Ticket.findAll({
+  const { count, rows: tickets } = await Ticket.findAndCountAll({
     where: whereCondition,
     include: [
       {
@@ -190,7 +201,9 @@ const BuildAttendanceAuditDossierService = async ({
       }
     ],
     order: [["updatedAt", "DESC"]],
-    limit: normalizedLimit
+    limit: normalizedLimit,
+    offset: normalizedOffset,
+    distinct: true
   });
 
   const dossierTickets = tickets.map(ticket => {
@@ -271,7 +284,19 @@ const BuildAttendanceAuditDossierService = async ({
       dateFrom: parsedDateFrom,
       dateTo: parsedDateTo,
       status: status || null,
-      limit: normalizedLimit
+      limit: normalizedLimit,
+      offset: normalizedOffset
+    },
+    pagination: {
+      totalTickets: count,
+      limit: normalizedLimit,
+      offset: normalizedOffset,
+      returnedTickets: dossierTickets.length,
+      hasMore: normalizedOffset + dossierTickets.length < count,
+      nextOffset:
+        normalizedOffset + dossierTickets.length < count
+          ? normalizedOffset + dossierTickets.length
+          : null
     },
     summary: {
       ticketsAnalyzed: dossierTickets.length,
