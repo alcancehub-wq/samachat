@@ -12,4 +12,11 @@ attendanceAuditRoutes.get(
   AttendanceAuditController.dossier
 );
 
+attendanceAuditRoutes.get(
+  "/attendance-audit/report",
+  isAuth,
+  checkSectorPermission("openai.use"),
+  AttendanceAuditController.report
+);
+
 export default attendanceAuditRoutes;
