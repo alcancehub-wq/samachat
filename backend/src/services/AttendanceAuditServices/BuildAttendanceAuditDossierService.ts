@@ -156,10 +156,26 @@ const BuildAttendanceAuditDossierService = async ({
   const normalizedLimit = normalizeLimit(limit);
   const normalizedOffset = normalizeOffset(offset);
 
+  const activityMessages = await Message.findAll({
+    attributes: ["ticketId"],
+    where: {
+      isDeleted: false,
+      createdAt: {
+        [Op.between]: [parsedDateFromTimestamp, parsedDateToTimestamp]
+      }
+    },
+    group: ["ticketId"],
+    raw: true
+  });
+
+  const activityTicketIds = activityMessages
+    .map((message: any) => Number(message.ticketId))
+    .filter(Boolean);
+
   const whereCondition: WhereOptions = {
     userId: Number(userId),
-    createdAt: {
-      [Op.between]: [parsedDateFromTimestamp, parsedDateToTimestamp]
+    id: {
+      [Op.in]: activityTicketIds
     }
   };
 
@@ -193,8 +209,14 @@ const BuildAttendanceAuditDossierService = async ({
       {
         model: Message,
         as: "messages",
-        where: { isDeleted: false },
+        where: {
+          isDeleted: false,
+          createdAt: {
+            [Op.between]: [parsedDateFromTimestamp, parsedDateToTimestamp]
+          }
+        },
         required: false,
+        attributes: ["id", "body", "fromMe", "isInternal", "mediaType", "createdAt"],
         separate: true,
         order: [["createdAt", "ASC"]],
         limit: 300
