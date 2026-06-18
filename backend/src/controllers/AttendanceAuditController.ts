@@ -54,6 +54,7 @@ export const report = async (req: Request, res: Response): Promise<Response> => 
 
   return res.status(200).json({
     requested: dossierResult.requested,
+    pagination: dossierResult.pagination,
     summary: dossierResult.summary,
     report: result
   });
