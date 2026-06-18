@@ -334,6 +334,298 @@ const OpenAI = ({ embedded = false }) => {
     setAttendanceAuditLoading(false);
   };
 
+  const getAttendanceAuditTotals = () =>
+    attendanceAuditReports.reduce(
+      (totals, reportItem) => ({
+        ticketsAnalyzed:
+          totals.ticketsAnalyzed + (reportItem.data?.summary?.ticketsAnalyzed || 0),
+        totalCustomerMessages:
+          totals.totalCustomerMessages +
+          (reportItem.data?.summary?.totalCustomerMessages || 0),
+        totalAgentMessages:
+          totals.totalAgentMessages +
+          (reportItem.data?.summary?.totalAgentMessages || 0)
+      }),
+      {
+        ticketsAnalyzed: 0,
+        totalCustomerMessages: 0,
+        totalAgentMessages: 0
+      }
+    );
+
+  const escapeAttendanceAuditHtml = value =>
+    String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  const handleAttendanceAuditPdfExport = () => {
+    if (!attendanceAuditReports.length) {
+      toast.error("Gere uma auditoria antes de exportar o PDF.");
+      return;
+    }
+
+    const totals = getAttendanceAuditTotals();
+    const generatedAt = new Date().toLocaleString("pt-BR");
+    const selectedUsers = attendanceAuditSelectedUsers
+      .map(user => user?.name || user?.email || user?.id)
+      .filter(Boolean)
+      .join(", ");
+
+    const reportSections = attendanceAuditReports
+      .map(reportItem => {
+        const userName =
+          reportItem.user?.name || reportItem.user?.email || reportItem.user?.id || "-";
+        const returnedTickets =
+          reportItem.data?.pagination?.returnedTickets ??
+          reportItem.data?.summary?.ticketsAnalyzed ??
+          0;
+        const totalTickets =
+          reportItem.data?.pagination?.totalTickets ??
+          reportItem.data?.summary?.ticketsAnalyzed ??
+          0;
+        const content = escapeAttendanceAuditHtml(
+          reportItem.data?.report?.content || "Relatorio indisponivel."
+        );
+
+        return `
+          <section class="report-section">
+            <div class="section-meta">
+              <span>Usuario: ${escapeAttendanceAuditHtml(userName)}</span>
+              <span>Lote: ${reportItem.batchNumber || 1}</span>
+              <span>Atendimentos neste lote: ${returnedTickets} de ${totalTickets}</span>
+            </div>
+            <pre>${content}</pre>
+          </section>
+        `;
+      })
+      .join("");
+
+    const html = `
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Auditoria IA de Atendimento</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 18mm;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            body {
+              margin: 0;
+              color: #111827;
+              background: #ffffff;
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 12px;
+              line-height: 1.5;
+            }
+
+            .cover {
+              border-bottom: 3px solid #D90000;
+              padding-bottom: 18px;
+              margin-bottom: 22px;
+            }
+
+            .eyebrow {
+              color: #D90000;
+              font-size: 11px;
+              font-weight: 700;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              margin-bottom: 8px;
+            }
+
+            h1 {
+              margin: 0;
+              font-size: 26px;
+              line-height: 1.15;
+            }
+
+            .subtitle {
+              color: #4b5563;
+              margin-top: 8px;
+              font-size: 13px;
+            }
+
+            .meta-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 8px 16px;
+              margin-top: 18px;
+              padding: 14px;
+              border: 1px solid #e5e7eb;
+              border-radius: 10px;
+              background: #f9fafb;
+            }
+
+            .meta-item strong {
+              display: block;
+              color: #374151;
+              font-size: 10px;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            }
+
+            .cards {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 10px;
+              margin: 18px 0 22px;
+            }
+
+            .card {
+              border: 1px solid #e5e7eb;
+              border-radius: 10px;
+              padding: 12px;
+              background: #ffffff;
+            }
+
+            .card-label {
+              color: #6b7280;
+              font-size: 10px;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            }
+
+            .card-value {
+              margin-top: 5px;
+              color: #111827;
+              font-size: 19px;
+              font-weight: 700;
+            }
+
+            .report-section {
+              page-break-inside: avoid;
+              border-top: 1px solid #e5e7eb;
+              padding-top: 16px;
+              margin-top: 18px;
+            }
+
+            .section-meta {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 8px;
+              margin-bottom: 10px;
+            }
+
+            .section-meta span {
+              border: 1px solid #e5e7eb;
+              border-radius: 999px;
+              padding: 5px 9px;
+              background: #f9fafb;
+              color: #374151;
+              font-size: 11px;
+            }
+
+            pre {
+              white-space: pre-wrap;
+              word-break: break-word;
+              margin: 0;
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 12px;
+              line-height: 1.55;
+            }
+
+            .footer {
+              margin-top: 26px;
+              padding-top: 12px;
+              border-top: 1px solid #e5e7eb;
+              color: #6b7280;
+              font-size: 10px;
+              text-align: center;
+            }
+
+            @media print {
+              .no-print {
+                display: none;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <main>
+            <section class="cover">
+              <div class="eyebrow">SamaChat | Auditoria IA</div>
+              <h1>Relatorio de Auditoria de Atendimento</h1>
+              <div class="subtitle">
+                Relatorio gerencial gerado a partir dos atendimentos selecionados no SamaChat.
+              </div>
+
+              <div class="meta-grid">
+                <div class="meta-item">
+                  <strong>Usuarios</strong>
+                  ${escapeAttendanceAuditHtml(selectedUsers || "-")}
+                </div>
+                <div class="meta-item">
+                  <strong>Gerado em</strong>
+                  ${escapeAttendanceAuditHtml(generatedAt)}
+                </div>
+                <div class="meta-item">
+                  <strong>Periodo</strong>
+                  ${escapeAttendanceAuditHtml(attendanceAuditFilters.dateFrom || "-")} ate ${escapeAttendanceAuditHtml(attendanceAuditFilters.dateTo || "-")}
+                </div>
+                <div class="meta-item">
+                  <strong>Status</strong>
+                  ${escapeAttendanceAuditHtml(attendanceAuditFilters.status || "Todos")}
+                </div>
+              </div>
+            </section>
+
+            <section class="cards">
+              <div class="card">
+                <div class="card-label">Tickets analisados</div>
+                <div class="card-value">${totals.ticketsAnalyzed}</div>
+              </div>
+              <div class="card">
+                <div class="card-label">Mensagens cliente</div>
+                <div class="card-value">${totals.totalCustomerMessages}</div>
+              </div>
+              <div class="card">
+                <div class="card-label">Mensagens atendente</div>
+                <div class="card-value">${totals.totalAgentMessages}</div>
+              </div>
+              <div class="card">
+                <div class="card-label">Lotes</div>
+                <div class="card-value">${attendanceAuditReports.length}</div>
+              </div>
+            </section>
+
+            ${reportSections}
+
+            <div class="footer">
+              Documento gerado automaticamente pelo SamaChat. Revise tickets criticos antes de decisoes operacionais sensiveis.
+            </div>
+          </main>
+
+          <script>
+            window.onload = function() {
+              window.focus();
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank");
+
+    if (!printWindow) {
+      toast.error("Nao foi possivel abrir a janela de exportacao. Verifique o bloqueador de pop-ups.");
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
   const handleSandboxAction = async action => {
     if (!sandboxText && action !== "summarize") {
       toast.error(i18n.t("openai.sandbox.emptyText"));
@@ -900,6 +1192,16 @@ const OpenAI = ({ embedded = false }) => {
                 }
               >
                 {attendanceAuditLoading ? "Gerando relatorio..." : "Gerar auditoria"}
+              </Button>
+
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={handleAttendanceAuditPdfExport}
+                disabled={attendanceAuditLoading || attendanceAuditReports.length === 0}
+                style={{ marginLeft: 12 }}
+              >
+                Exportar PDF
               </Button>
             </Grid>
 
