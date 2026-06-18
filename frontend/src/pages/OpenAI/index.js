@@ -908,7 +908,11 @@ const OpenAI = ({ embedded = false }) => {
                 <Grid item xs={12} md={3}>
                   <TextField
                     label="Tickets analisados"
-                    value={attendanceAuditReports[0]?.data?.summary?.ticketsAnalyzed ?? 0}
+                    value={attendanceAuditReports.reduce(
+                        (sum, reportItem) =>
+                          sum + (reportItem.data?.summary?.ticketsAnalyzed || 0),
+                        0
+                      )}
                     fullWidth
                     variant="outlined"
                     margin="dense"
@@ -918,7 +922,11 @@ const OpenAI = ({ embedded = false }) => {
                 <Grid item xs={12} md={3}>
                   <TextField
                     label="Mensagens do cliente"
-                    value={attendanceAuditReports[0]?.data?.summary?.totalCustomerMessages ?? 0}
+                    value={attendanceAuditReports.reduce(
+                        (sum, reportItem) =>
+                          sum + (reportItem.data?.summary?.totalCustomerMessages || 0),
+                        0
+                      )}
                     fullWidth
                     variant="outlined"
                     margin="dense"
@@ -928,7 +936,11 @@ const OpenAI = ({ embedded = false }) => {
                 <Grid item xs={12} md={3}>
                   <TextField
                     label="Mensagens do atendente"
-                    value={attendanceAuditReports[0]?.data?.summary?.totalAgentMessages ?? 0}
+                    value={attendanceAuditReports.reduce(
+                        (sum, reportItem) =>
+                          sum + (reportItem.data?.summary?.totalAgentMessages || 0),
+                        0
+                      )}
                     fullWidth
                     variant="outlined"
                     margin="dense"
