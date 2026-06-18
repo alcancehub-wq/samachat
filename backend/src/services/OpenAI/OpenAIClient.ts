@@ -8,7 +8,7 @@ const buildClient = (apiKey: string): AxiosInstance => {
     headers: {
       Authorization: `Bearer ${apiKey}`
     },
-    timeout: 15000
+    timeout: Number(process.env.OPENAI_REQUEST_TIMEOUT_MS || "60000")
   });
 };
 
