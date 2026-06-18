@@ -7,6 +7,7 @@ import {
   FormControlLabel,
   Grid,
   InputAdornment,
+  MenuItem,
   Switch,
   TextField,
   Typography,
@@ -99,6 +100,16 @@ const OpenAI = ({ embedded = false }) => {
   const [sandboxResult, setSandboxResult] = useState("");
 
   const [logs, setLogs] = useState([]);
+
+  const [attendanceAuditLoading, setAttendanceAuditLoading] = useState(false);
+  const [attendanceAuditFilters, setAttendanceAuditFilters] = useState({
+    userId: "",
+    dateFrom: "",
+    dateTo: "",
+    status: "",
+    limit: 10
+  });
+  const [attendanceAuditReport, setAttendanceAuditReport] = useState(null);
 
   const hasValidKey = useMemo(() => {
     if (clearApiKey) {
@@ -211,6 +222,54 @@ const OpenAI = ({ embedded = false }) => {
     }
     setTesting(false);
   };
+  const handleAttendanceAuditFilterChange = event => {
+    const { name, value } = event.target;
+
+    setAttendanceAuditFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleAttendanceAuditReport = async () => {
+    if (!attendanceAuditFilters.userId) {
+      toast.error("Informe o ID do usuario para auditar.");
+      return;
+    }
+
+    if (!attendanceAuditFilters.dateFrom || !attendanceAuditFilters.dateTo) {
+      toast.error("Informe o periodo da auditoria.");
+      return;
+    }
+
+    setAttendanceAuditLoading(true);
+
+    try {
+      setAttendanceAuditReport(null);
+
+      const params = {
+        userId: Number(attendanceAuditFilters.userId),
+        dateFrom: attendanceAuditFilters.dateFrom,
+        dateTo: attendanceAuditFilters.dateTo,
+        limit: Number(attendanceAuditFilters.limit) || 10
+      };
+
+      if (attendanceAuditFilters.status) {
+        params.status = attendanceAuditFilters.status;
+      }
+
+      const { data } = await api.get("/attendance-audit/report", { params });
+
+      setAttendanceAuditReport(data);
+      toast.success("Relatorio de auditoria gerado com sucesso.");
+      await loadLogs();
+    } catch (err) {
+      toastError(err);
+    }
+
+    setAttendanceAuditLoading(false);
+  };
+
 
   const handleSandboxAction = async action => {
     if (!sandboxText && action !== "summarize") {
@@ -664,6 +723,163 @@ const OpenAI = ({ embedded = false }) => {
                 InputProps={{ readOnly: true }}
               />
             </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      <Card className={classes.card} variant="outlined">
+        <CardContent>
+          <Typography variant="h6" className={classes.sectionTitle}>
+            Auditoria IA de Atendimento
+          </Typography>
+          <Typography variant="body2" className={classes.muted}>
+            Gere um relatorio gerencial sobre os atendimentos de um usuario em um periodo.
+          </Typography>
+
+          <Grid container spacing={2} style={{ marginTop: 8 }}>
+            <Grid item xs={12} md={2}>
+              <TextField
+                label="ID do usuario"
+                name="userId"
+                value={attendanceAuditFilters.userId}
+                onChange={handleAttendanceAuditFilterChange}
+                fullWidth
+                variant="outlined"
+                margin="dense"
+                type="number"
+                InputProps={{ inputProps: { min: 1, step: 1 } }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                label="Data inicial"
+                name="dateFrom"
+                value={attendanceAuditFilters.dateFrom}
+                onChange={handleAttendanceAuditFilterChange}
+                fullWidth
+                variant="outlined"
+                margin="dense"
+                type="date"
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                label="Data final"
+                name="dateTo"
+                value={attendanceAuditFilters.dateTo}
+                onChange={handleAttendanceAuditFilterChange}
+                fullWidth
+                variant="outlined"
+                margin="dense"
+                type="date"
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <TextField
+                select
+                label="Status"
+                name="status"
+                value={attendanceAuditFilters.status}
+                onChange={handleAttendanceAuditFilterChange}
+                fullWidth
+                variant="outlined"
+                margin="dense"
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="open">Aberto</MenuItem>
+                <MenuItem value="pending">Pendente</MenuItem>
+                <MenuItem value="closed">Resolvido</MenuItem>
+                <MenuItem value="lost">Perdido</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <TextField
+                label="Limite"
+                name="limit"
+                value={attendanceAuditFilters.limit}
+                onChange={handleAttendanceAuditFilterChange}
+                fullWidth
+                variant="outlined"
+                margin="dense"
+                type="number"
+                InputProps={{ inputProps: { min: 1, max: 50, step: 1 } }}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleAttendanceAuditReport}
+                disabled={
+                  attendanceAuditLoading ||
+                  loading ||
+                  !settings.isActive ||
+                  !hasValidKey
+                }
+              >
+                {attendanceAuditLoading ? "Gerando relatorio..." : "Gerar auditoria"}
+              </Button>
+            </Grid>
+
+            {attendanceAuditReport && (
+              <>
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    label="Tickets analisados"
+                    value={attendanceAuditReport.summary?.ticketsAnalyzed ?? 0}
+                    fullWidth
+                    variant="outlined"
+                    margin="dense"
+                    InputProps={{ readOnly: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    label="Mensagens do cliente"
+                    value={attendanceAuditReport.summary?.totalCustomerMessages ?? 0}
+                    fullWidth
+                    variant="outlined"
+                    margin="dense"
+                    InputProps={{ readOnly: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    label="Mensagens do atendente"
+                    value={attendanceAuditReport.summary?.totalAgentMessages ?? 0}
+                    fullWidth
+                    variant="outlined"
+                    margin="dense"
+                    InputProps={{ readOnly: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    label="Modelo"
+                    value={attendanceAuditReport.report?.model || "-"}
+                    fullWidth
+                    variant="outlined"
+                    margin="dense"
+                    InputProps={{ readOnly: true }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Relatorio gerado"
+                    value={attendanceAuditReport.report?.content || ""}
+                    fullWidth
+                    variant="outlined"
+                    margin="dense"
+                    multiline
+                    minRows={12}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Grid>
+              </>
+            )}
           </Grid>
         </CardContent>
       </Card>
