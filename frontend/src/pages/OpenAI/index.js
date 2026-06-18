@@ -843,9 +843,9 @@ const OpenAI = ({ embedded = false }) => {
                 <MenuItem value="lost">Perdido</MenuItem>
               </TextField>
             </Grid>
-            <Grid item xs={12} md={2}>
+            <Grid item xs={12} md={3}>
               <TextField
-                label="Limite de atendimentos por usuário"
+                label="Limite por usuário"
                 name="limit"
                 value={attendanceAuditFilters.limit}
                 onChange={handleAttendanceAuditFilterChange}
@@ -853,6 +853,7 @@ const OpenAI = ({ embedded = false }) => {
                 variant="outlined"
                 margin="dense"
                 type="number"
+                helperText="Máximo de atendimentos/tickets analisados por usuário no período."
                 InputProps={{ inputProps: { min: 1, max: 50, step: 1 } }}
               />
             </Grid>
