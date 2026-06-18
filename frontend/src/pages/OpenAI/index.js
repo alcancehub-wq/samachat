@@ -274,25 +274,54 @@ const OpenAI = ({ embedded = false }) => {
       setAttendanceAuditReports([]);
 
       const reportResults = [];
+      const limit = Number(attendanceAuditFilters.limit) || 10;
+      const maxBatchesPerUser = 20;
 
       for (const selectedUser of attendanceAuditSelectedUsers) {
-        const params = {
-          userId: Number(selectedUser.id),
-          dateFrom: attendanceAuditFilters.dateFrom,
-          dateTo: attendanceAuditFilters.dateTo,
-          limit: Number(attendanceAuditFilters.limit) || 10
-        };
+        let offset = 0;
+        let batchNumber = 1;
+        let hasMore = true;
 
-        if (attendanceAuditFilters.status) {
-          params.status = attendanceAuditFilters.status;
+        while (hasMore && batchNumber <= maxBatchesPerUser) {
+          const params = {
+            userId: Number(selectedUser.id),
+            dateFrom: attendanceAuditFilters.dateFrom,
+            dateTo: attendanceAuditFilters.dateTo,
+            limit,
+            offset
+          };
+
+          if (attendanceAuditFilters.status) {
+            params.status = attendanceAuditFilters.status;
+          }
+
+          const { data } = await api.get("/attendance-audit/report", { params });
+          const pagination = data?.pagination || {};
+
+          reportResults.push({
+            user: selectedUser,
+            batchNumber,
+            offset,
+            data
+          });
+
+          hasMore = Boolean(
+            pagination.hasMore &&
+              pagination.nextOffset !== null &&
+              pagination.nextOffset !== undefined
+          );
+
+          if (hasMore) {
+            offset = Number(pagination.nextOffset);
+            batchNumber += 1;
+          }
         }
 
-        const { data } = await api.get("/attendance-audit/report", { params });
-
-        reportResults.push({
-          user: selectedUser,
-          data
-        });
+        if (hasMore) {
+          toast.warn(
+            `Auditoria de ${selectedUser.name || selectedUser.email || selectedUser.id} pausada no limite seguro de ${maxBatchesPerUser} lotes.`
+          );
+        }
       }
 
       setAttendanceAuditReports(reportResults);
@@ -845,7 +874,7 @@ const OpenAI = ({ embedded = false }) => {
             </Grid>
             <Grid item xs={12} md={3}>
               <TextField
-                label="Limite por usuário"
+                label="Limite por usuario"
                 name="limit"
                 value={attendanceAuditFilters.limit}
                 onChange={handleAttendanceAuditFilterChange}
@@ -853,7 +882,7 @@ const OpenAI = ({ embedded = false }) => {
                 variant="outlined"
                 margin="dense"
                 type="number"
-                helperText="Máximo de atendimentos/tickets analisados por usuário no período."
+                helperText="Maximo de atendimentos/tickets analisados por usuario no periodo."
                 InputProps={{ inputProps: { min: 1, max: 50, step: 1 } }}
               />
             </Grid>
@@ -923,6 +952,8 @@ const OpenAI = ({ embedded = false }) => {
                       .map(reportItem =>
                         [
                           `Usuario: ${reportItem.user?.name || reportItem.user?.email || reportItem.user?.id}`,
+                          `Lote: ${reportItem.batchNumber || 1}`,
+                          `Atendimentos neste lote: ${reportItem.data?.pagination?.returnedTickets ?? reportItem.data?.summary?.ticketsAnalyzed ?? 0} de ${reportItem.data?.pagination?.totalTickets ?? reportItem.data?.summary?.ticketsAnalyzed ?? 0}`,
                           "",
                           reportItem.data?.report?.content || ""
                         ].join("\n")
