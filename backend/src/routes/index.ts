@@ -28,6 +28,7 @@ import flowExecutionRoutes from "./flowExecutionRoutes";
 import adminRoutes from "./adminRoutes";
 import openAIRoutes from "./openAIRoutes";
 import aiRoutes from "./aiRoutes";
+import attendanceAuditRoutes from "./attendanceAuditRoutes";
 
 const routes = Router();
 
@@ -58,6 +59,7 @@ routes.use(flowExecutionRoutes);
 routes.use(adminRoutes);
 routes.use(openAIRoutes);
 routes.use(aiRoutes);
+routes.use(attendanceAuditRoutes);
 routes.use("/api/messages", apiRoutes);
 
 export default routes;
