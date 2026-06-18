@@ -274,20 +274,30 @@ const OpenAI = ({ embedded = false }) => {
       setAttendanceAuditReports([]);
 
       const reportResults = [];
-      const limit = Number(attendanceAuditFilters.limit) || 10;
-      const maxBatchesPerUser = 20;
+      const totalLimitPerUser = Math.min(
+        Math.max(Number(attendanceAuditFilters.limit) || 10, 1),
+        50
+      );
+      const safeBatchSize = Math.min(totalLimitPerUser, 5);
+      const maxBatchesPerUser = Math.ceil(totalLimitPerUser / safeBatchSize);
 
       for (const selectedUser of attendanceAuditSelectedUsers) {
         let offset = 0;
         let batchNumber = 1;
+        let processedTickets = 0;
         let hasMore = true;
 
-        while (hasMore && batchNumber <= maxBatchesPerUser) {
+        while (
+          hasMore &&
+          processedTickets < totalLimitPerUser &&
+          batchNumber <= maxBatchesPerUser
+        ) {
+          const remainingTickets = totalLimitPerUser - processedTickets;
           const params = {
             userId: Number(selectedUser.id),
             dateFrom: attendanceAuditFilters.dateFrom,
             dateTo: attendanceAuditFilters.dateTo,
-            limit,
+            limit: Math.min(safeBatchSize, remainingTickets),
             offset
           };
 
@@ -297,6 +307,8 @@ const OpenAI = ({ embedded = false }) => {
 
           const { data } = await api.get("/attendance-audit/report", { params });
           const pagination = data?.pagination || {};
+          const returnedTickets =
+            pagination.returnedTickets ?? data?.summary?.ticketsAnalyzed ?? 0;
 
           reportResults.push({
             user: selectedUser,
@@ -305,10 +317,14 @@ const OpenAI = ({ embedded = false }) => {
             data
           });
 
+          processedTickets += returnedTickets;
+
           hasMore = Boolean(
-            pagination.hasMore &&
+            returnedTickets > 0 &&
+              pagination.hasMore &&
               pagination.nextOffset !== null &&
-              pagination.nextOffset !== undefined
+              pagination.nextOffset !== undefined &&
+              processedTickets < totalLimitPerUser
           );
 
           if (hasMore) {
