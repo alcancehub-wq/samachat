@@ -845,7 +845,7 @@ const OpenAI = ({ embedded = false }) => {
             </Grid>
             <Grid item xs={12} md={2}>
               <TextField
-                label="Limite"
+                label="Limite de atendimentos por usuário"
                 name="limit"
                 value={attendanceAuditFilters.limit}
                 onChange={handleAttendanceAuditFilterChange}
