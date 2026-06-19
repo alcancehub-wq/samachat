@@ -377,6 +377,305 @@ const OpenAI = ({ embedded = false }) => {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
 
+  const normalizeAttendanceAuditText = value =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
+  const truncateAttendanceAuditText = (value, maxLength = 180) => {
+    const text = String(value || "").replace(/\s+/g, " ").trim();
+
+    if (text.length <= maxLength) {
+      return text;
+    }
+
+    return `${text.slice(0, maxLength).trim()}...`;
+  };
+
+  const getAttendanceAuditReportModel = () =>
+    attendanceAuditReports.find(reportItem => reportItem.data?.report?.model)?.data
+      ?.report?.model || "-";
+
+  const getAttendanceAuditSectionKey = line => {
+    const normalized = normalizeAttendanceAuditText(line);
+
+    if (/resumo executivo/.test(normalized)) return "summary";
+    if (/pontos positivos|pontos fortes/.test(normalized)) return "strengths";
+    if (/pontos de atencao|pontos criticos|fragilidades/.test(normalized))
+      return "attention";
+    if (/possiveis motivos|motivos de perda|silencio do cliente/.test(normalized))
+      return "lossReasons";
+    if (/tickets que merecem|tickets para revisao|revisao manual/.test(normalized))
+      return "tickets";
+    if (/recomendacoes praticas|recomendacoes/.test(normalized))
+      return "recommendations";
+    if (/plano de acao/.test(normalized)) return "actionPlan";
+    if (/conclusao/.test(normalized)) return "conclusion";
+
+    return null;
+  };
+
+  const cleanAttendanceAuditLine = line =>
+    String(line || "")
+      .replace(/^\s*[-*]\s*/, "")
+      .replace(/^\s*\d+[\).]\s*/, "")
+      .replace(/^\s*[-]\s*/, "")
+      .trim();
+
+  const parseAttendanceAuditContent = content => {
+    const sections = {
+      summary: [],
+      strengths: [],
+      attention: [],
+      lossReasons: [],
+      tickets: [],
+      recommendations: [],
+      actionPlan: [],
+      conclusion: []
+    };
+
+    let currentSection = null;
+
+    String(content || "")
+      .split(/\r?\n/)
+      .forEach(rawLine => {
+        const line = String(rawLine || "").trim();
+
+        if (!line || /^---+$/.test(line)) {
+          return;
+        }
+
+        const sectionKey = getAttendanceAuditSectionKey(line);
+
+        if (sectionKey) {
+          currentSection = sectionKey;
+          return;
+        }
+
+        if (!currentSection) {
+          return;
+        }
+
+        const cleaned = cleanAttendanceAuditLine(line);
+
+        if (!cleaned || cleaned.length < 4) {
+          return;
+        }
+
+        sections[currentSection].push(cleaned);
+      });
+
+    return sections;
+  };
+
+  const getUniqueAttendanceAuditItems = (items, limit = 6) => {
+    const seen = new Set();
+
+    return items
+      .map(item => String(item || "").replace(/\s+/g, " ").trim())
+      .filter(Boolean)
+      .filter(item => {
+        const key = normalizeAttendanceAuditText(item)
+          .replace(/ticket\s*#?\d+/g, "ticket")
+          .replace(/#\d+/g, "#")
+          .slice(0, 90);
+
+        if (seen.has(key)) {
+          return false;
+        }
+
+        seen.add(key);
+        return true;
+      })
+      .slice(0, limit);
+  };
+
+  const splitAttendanceAuditSentences = text => {
+    const normalizedText = String(text || "").replace(/\s+/g, " ").trim();
+    const sentences = normalizedText.match(/[^.!?]+[.!?]+/g);
+
+    return (sentences || [normalizedText])
+      .map(sentence => sentence.trim())
+      .filter(sentence => sentence.length > 20);
+  };
+
+  const getAttendanceAuditConsolidation = () => {
+    const parsedReports = attendanceAuditReports.map(reportItem => ({
+      reportItem,
+      sections: parseAttendanceAuditContent(reportItem.data?.report?.content || "")
+    }));
+
+    const allText = attendanceAuditReports
+      .map(reportItem => reportItem.data?.report?.content || "")
+      .join("\n");
+    const normalizedAllText = normalizeAttendanceAuditText(allText);
+
+    const summaries = parsedReports.flatMap(item => item.sections.summary);
+    const strengths = getUniqueAttendanceAuditItems(
+      parsedReports.flatMap(item => item.sections.strengths),
+      5
+    );
+    const attention = getUniqueAttendanceAuditItems(
+      parsedReports.flatMap(item => item.sections.attention),
+      6
+    );
+    const lossReasons = getUniqueAttendanceAuditItems(
+      parsedReports.flatMap(item => item.sections.lossReasons),
+      5
+    );
+    const recommendations = getUniqueAttendanceAuditItems(
+      parsedReports.flatMap(item => item.sections.recommendations),
+      5
+    );
+    const actionPlan = getUniqueAttendanceAuditItems(
+      parsedReports.flatMap(item => item.sections.actionPlan),
+      5
+    );
+
+    const summarySentences = getUniqueAttendanceAuditItems(
+      splitAttendanceAuditSentences(summaries.join(" ")),
+      5
+    );
+
+    const ticketRows = [];
+    const ticketSeen = new Set();
+
+    parsedReports.forEach(({ sections }) => {
+      sections.tickets.forEach(line => {
+        const matches = [...line.matchAll(/#(\d+)/g)];
+
+        matches.forEach(match => {
+          const ticketId = match[1];
+
+          if (ticketSeen.has(ticketId)) {
+            return;
+          }
+
+          ticketSeen.add(ticketId);
+
+          const normalized = normalizeAttendanceAuditText(line);
+          const priority =
+            /sem resposta|abandono|extrem|muito alto|dias|tardia|demora|longo intervalo|critico|inaceitavel/.test(
+              normalized
+            )
+              ? "Alta"
+              : "Media";
+
+          ticketRows.push({
+            ticket: `#${ticketId}`,
+            reason: truncateAttendanceAuditText(
+              line.replace(new RegExp(`#${ticketId}:?`, "g"), "").trim() ||
+                "Revisao manual recomendada",
+              130
+            ),
+            priority
+          });
+        });
+      });
+    });
+
+    const delayMentions = (normalizedAllText.match(
+      /tempo|demora|atras|primeira resposta|intervalo/g
+    ) || []).length;
+    const followUpMentions = (normalizedAllText.match(
+      /follow-up|retomar|reengaj|sem retorno|silencio/g
+    ) || []).length;
+    const clarityMentions = (normalizedAllText.match(
+      /clareza|objetiv|perguntas|repetitiv|confus/g
+    ) || []).length;
+    const highTickets = ticketRows.filter(row => row.priority === "Alta").length;
+
+    const riskLevel =
+      highTickets >= 3 || delayMentions >= attendanceAuditReports.length * 5
+        ? "Alto"
+        : highTickets >= 1 || attention.length >= 4
+          ? "Medio"
+          : "Baixo";
+
+    const attentionMetrics = [
+      {
+        label: "Tempo de 1a resposta",
+        value: Math.min(92, 38 + delayMentions * 4)
+      },
+      {
+        label: "Follow-up",
+        value: Math.min(86, 34 + followUpMentions * 5)
+      },
+      {
+        label: "Objetividade",
+        value: Math.min(78, 30 + clarityMentions * 4)
+      }
+    ];
+
+    const operationalScores = {
+      agility: Math.max(18, 88 - delayMentions * 3 - highTickets * 7),
+      clarity: Math.max(28, 82 - clarityMentions * 4),
+      engagement: Math.max(24, 80 - followUpMentions * 3)
+    };
+
+    return {
+      summarySentences,
+      strengths,
+      attention,
+      lossReasons,
+      recommendations,
+      actionPlan,
+      ticketRows: ticketRows.slice(0, 8),
+      attentionMetrics,
+      operationalScores,
+      riskLevel
+    };
+  };
+
+  const renderAttendanceAuditBullets = (items, variant = "neutral") => {
+    if (!items.length) {
+      return `<div class="empty-state">Nenhum item consolidado nesta secao.</div>`;
+    }
+
+    return items
+      .map(
+        item => `
+          <div class="bullet-row ${variant}">
+            <span></span>
+            <p>${escapeAttendanceAuditHtml(item)}</p>
+          </div>
+        `
+      )
+      .join("");
+  };
+
+  const renderAttendanceAuditDetailContent = content =>
+    String(content || "")
+      .split(/\r?\n/)
+      .map(rawLine => {
+        const line = String(rawLine || "").trim();
+
+        if (!line) {
+          return "";
+        }
+
+        const escaped = escapeAttendanceAuditHtml(line);
+        const sectionKey = getAttendanceAuditSectionKey(line);
+
+        if (sectionKey || /^\d+[\).]\s+/.test(line)) {
+          return `<h4>${escaped}</h4>`;
+        }
+
+        if (/^[-*]\s+/.test(line)) {
+          return `<div class="detail-bullet"><span></span><p>${escapeAttendanceAuditHtml(
+            cleanAttendanceAuditLine(line)
+          )}</p></div>`;
+        }
+
+        if (/^---+$/.test(line)) {
+          return `<hr />`;
+        }
+
+        return `<p>${escaped}</p>`;
+      })
+      .join("");
+
   const handleAttendanceAuditPdfExport = () => {
     if (!attendanceAuditReports.length) {
       toast.error("Gere uma auditoria antes de exportar o PDF.");
@@ -389,8 +688,57 @@ const OpenAI = ({ embedded = false }) => {
       .map(user => user?.name || user?.email || user?.id)
       .filter(Boolean)
       .join(", ");
+    const model = getAttendanceAuditReportModel();
+    const totalMessages =
+      totals.totalCustomerMessages + totals.totalAgentMessages || 1;
+    const customerPercent = Math.round(
+      (totals.totalCustomerMessages / totalMessages) * 100
+    );
+    const agentPercent = Math.max(0, 100 - customerPercent);
+    const consolidation = getAttendanceAuditConsolidation();
 
-    const reportSections = attendanceAuditReports
+    const summaryHtml = consolidation.summarySentences.length
+      ? consolidation.summarySentences
+          .map(sentence => `<p>${escapeAttendanceAuditHtml(sentence)}</p>`)
+          .join("")
+      : `
+        <p>A auditoria analisou ${totals.ticketsAnalyzed} tickets, totalizando ${totalMessages} mensagens trocadas entre clientes e atendentes.</p>
+        <p>O relatorio consolidado preserva os lotes completos no anexo tecnico e destaca os principais pontos de gestao para decisao rapida.</p>
+      `;
+
+    const attentionBars = consolidation.attentionMetrics
+      .map(
+        metric => `
+          <div class="bar-row">
+            <div class="bar-label">${escapeAttendanceAuditHtml(metric.label)}</div>
+            <div class="bar-track">
+              <div style="width: ${metric.value}%"></div>
+            </div>
+            <strong>${metric.value}%</strong>
+          </div>
+        `
+      )
+      .join("");
+
+    const ticketRowsHtml = consolidation.ticketRows.length
+      ? consolidation.ticketRows
+          .map(
+            row => `
+              <tr>
+                <td><strong>${escapeAttendanceAuditHtml(row.ticket)}</strong></td>
+                <td>${escapeAttendanceAuditHtml(row.reason)}</td>
+                <td><span class="priority ${row.priority === "Alta" ? "high" : "medium"}">${escapeAttendanceAuditHtml(row.priority)}</span></td>
+              </tr>
+            `
+          )
+          .join("")
+      : `
+        <tr>
+          <td colspan="3">Nenhum ticket especifico foi consolidado para revisao manual.</td>
+        </tr>
+      `;
+
+    const technicalSections = attendanceAuditReports
       .map(reportItem => {
         const userName =
           reportItem.user?.name || reportItem.user?.email || reportItem.user?.id || "-";
@@ -402,18 +750,23 @@ const OpenAI = ({ embedded = false }) => {
           reportItem.data?.pagination?.totalTickets ??
           reportItem.data?.summary?.ticketsAnalyzed ??
           0;
-        const content = escapeAttendanceAuditHtml(
-          reportItem.data?.report?.content || "Relatorio indisponivel."
-        );
 
         return `
-          <section class="report-section">
-            <div class="section-meta">
-              <span>Usuario: ${escapeAttendanceAuditHtml(userName)}</span>
-              <span>Lote: ${reportItem.batchNumber || 1}</span>
-              <span>Atendimentos neste lote: ${returnedTickets} de ${totalTickets}</span>
+          <section class="detail-section">
+            <div class="detail-header">
+              <div>
+                <span class="section-kicker">Anexo tecnico</span>
+                <h3>${escapeAttendanceAuditHtml(userName)} - Lote ${reportItem.batchNumber || 1}</h3>
+              </div>
+              <div class="detail-meta">
+                ${returnedTickets} de ${totalTickets} atendimentos
+              </div>
             </div>
-            <pre>${content}</pre>
+            <div class="detail-content">
+              ${renderAttendanceAuditDetailContent(
+                reportItem.data?.report?.content || "Relatorio indisponivel."
+              )}
+            </div>
           </section>
         `;
       })
@@ -428,7 +781,7 @@ const OpenAI = ({ embedded = false }) => {
           <style>
             @page {
               size: A4;
-              margin: 10mm;
+              margin: 9mm;
             }
 
             * {
@@ -444,120 +797,631 @@ const OpenAI = ({ embedded = false }) => {
               line-height: 1.35;
             }
 
-            .cover {
-              border-bottom: 3px solid #D90000;
-              padding-bottom: 10px;
-              margin-bottom: 12px;
+            .pdf-page {
+              page-break-after: always;
             }
 
-            .eyebrow {
+            .pdf-page:last-child {
+              page-break-after: auto;
+            }
+
+            .brand {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              color: #111827;
+              font-weight: 800;
+              font-size: 16px;
+              margin-bottom: 10px;
+            }
+
+            .brand-mark {
+              width: 22px;
+              height: 22px;
+              border: 3px solid #D90000;
+              border-radius: 999px;
+              position: relative;
+            }
+
+            .brand-mark:after {
+              content: "";
+              position: absolute;
+              left: 2px;
+              bottom: -6px;
+              width: 8px;
+              height: 8px;
+              border-left: 3px solid #D90000;
+              border-bottom: 3px solid #D90000;
+              transform: rotate(-20deg);
+              background: #ffffff;
+            }
+
+            .brand strong {
               color: #D90000;
-              font-size: 11px;
-              font-weight: 700;
-              letter-spacing: 0.08em;
-              text-transform: uppercase;
-              margin-bottom: 8px;
             }
 
             h1 {
               margin: 0;
-              font-size: 20px;
-              line-height: 1.15;
+              font-size: 30px;
+              line-height: 1.05;
+              letter-spacing: -0.04em;
             }
 
             .subtitle {
               color: #4b5563;
-              margin-top: 4px;
-              font-size: 10px;
+              margin-top: 6px;
+              font-size: 11px;
+              font-weight: 600;
             }
 
-            .meta-grid {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 5px 10px;
-              margin-top: 10px;
-              padding: 8px;
+            .red-dot {
+              display: inline-block;
+              width: 5px;
+              height: 5px;
+              margin: 0 7px 2px;
+              border-radius: 999px;
+              background: #D90000;
+              vertical-align: middle;
+            }
+
+            .meta-pills {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 7px;
+              margin-top: 14px;
+            }
+
+            .pill {
               border: 1px solid #e5e7eb;
-              border-radius: 10px;
-              background: #f9fafb;
-            }
-
-            .meta-item strong {
-              display: block;
-              color: #374151;
-              font-size: 10px;
-              text-transform: uppercase;
-              letter-spacing: 0.05em;
-            }
-
-            .cards {
-              display: grid;
-              grid-template-columns: repeat(4, 1fr);
-              gap: 6px;
-              margin: 10px 0 12px;
-            }
-
-            .card {
-              border: 1px solid #e5e7eb;
-              border-radius: 10px;
-              padding: 7px;
+              border-radius: 8px;
+              padding: 6px 8px;
               background: #ffffff;
-            }
-
-            .card-label {
-              color: #6b7280;
-              font-size: 10px;
-              text-transform: uppercase;
-              letter-spacing: 0.05em;
-            }
-
-            .card-value {
-              margin-top: 5px;
-              color: #111827;
-              font-size: 15px;
+              color: #374151;
+              font-size: 9px;
               font-weight: 700;
             }
 
-            .report-section {
-              break-inside: auto;
-              page-break-inside: auto;
-              border-top: 1px solid #e5e7eb;
-              padding-top: 8px;
-              margin-top: 10px;
+            .pill b {
+              color: #111827;
             }
 
-            .section-meta {
-              display: flex;
-              flex-wrap: wrap;
-              gap: 5px;
-              margin-bottom: 6px;
+            .pill .status-open {
+              color: #047857;
             }
 
-            .section-meta span {
+            .kpi-grid {
+              display: grid;
+              grid-template-columns: repeat(5, 1fr);
+              gap: 9px;
+              margin-top: 16px;
+            }
+
+            .kpi-card {
+              min-height: 86px;
               border: 1px solid #e5e7eb;
+              border-radius: 12px;
+              padding: 11px;
+              background: linear-gradient(180deg, #ffffff 0%, #fbfbfc 100%);
+            }
+
+            .kpi-icon {
+              width: 25px;
+              height: 25px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
               border-radius: 999px;
-              padding: 3px 6px;
+              background: #fee2e2;
+              color: #D90000;
+              font-size: 13px;
+              font-weight: 900;
+              margin-bottom: 12px;
+            }
+
+            .kpi-label {
+              color: #4b5563;
+              font-size: 10px;
+              font-weight: 700;
+              min-height: 25px;
+            }
+
+            .kpi-value {
+              margin-top: 2px;
+              color: #030712;
+              font-size: 27px;
+              line-height: 1;
+              font-weight: 900;
+              letter-spacing: -0.04em;
+            }
+
+            .kpi-value.risk {
+              color: #D90000;
+              font-size: 25px;
+            }
+
+            .dashboard-grid {
+              display: grid;
+              grid-template-columns: 1.05fr 1.1fr 1fr;
+              border: 1px solid #e5e7eb;
+              border-radius: 14px;
+              overflow: hidden;
+              margin-top: 13px;
+            }
+
+            .dashboard-panel {
+              padding: 12px;
+              min-height: 150px;
+              border-right: 1px solid #e5e7eb;
+            }
+
+            .dashboard-panel:last-child {
+              border-right: 0;
+            }
+
+            .panel-title {
+              margin: 0 0 10px;
+              color: #111827;
+              font-size: 12px;
+              font-weight: 800;
+            }
+
+            .donut-wrap {
+              display: grid;
+              grid-template-columns: 0.75fr 1fr 0.75fr;
+              align-items: center;
+              gap: 8px;
+            }
+
+            .donut {
+              width: 94px;
+              height: 94px;
+              border-radius: 999px;
+              background: conic-gradient(#D90000 0 ${agentPercent}%, #d1d5db ${agentPercent}% 100%);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0 auto;
+            }
+
+            .donut-inner {
+              width: 58px;
+              height: 58px;
+              border-radius: 999px;
+              background: #ffffff;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+              color: #111827;
+              font-size: 9px;
+              font-weight: 700;
+            }
+
+            .donut-inner strong {
+              display: block;
+              font-size: 16px;
+              line-height: 1.05;
+            }
+
+            .legend-box {
+              color: #4b5563;
+              font-size: 9px;
+              font-weight: 700;
+            }
+
+            .legend-box strong {
+              display: block;
+              color: #111827;
+              font-size: 16px;
+              margin-top: 4px;
+            }
+
+            .legend-dot {
+              display: inline-block;
+              width: 7px;
+              height: 7px;
+              border-radius: 999px;
+              margin-right: 4px;
+              background: #d1d5db;
+            }
+
+            .legend-dot.red {
+              background: #D90000;
+            }
+
+            .bar-row {
+              display: grid;
+              grid-template-columns: 72px 1fr 30px;
+              align-items: center;
+              gap: 8px;
+              margin: 10px 0;
+            }
+
+            .bar-label {
+              color: #374151;
+              font-size: 9px;
+              font-weight: 700;
+            }
+
+            .bar-track {
+              height: 18px;
+              border-radius: 4px;
+              background: #f3f4f6;
+              overflow: hidden;
+            }
+
+            .bar-track div {
+              height: 100%;
+              border-radius: 4px;
+              background: linear-gradient(90deg, #ef4444, #D90000);
+            }
+
+            .bar-row strong {
+              color: #111827;
+              font-size: 10px;
+              text-align: right;
+            }
+
+            .score-row {
+              display: grid;
+              grid-template-columns: 26px 1fr 32px;
+              align-items: center;
+              gap: 8px;
+              padding: 7px 0;
+              border-bottom: 1px solid #f3f4f6;
+            }
+
+            .score-row:last-child {
+              border-bottom: 0;
+            }
+
+            .score-icon {
+              width: 23px;
+              height: 23px;
+              border-radius: 999px;
+              background: #fee2e2;
+              color: #D90000;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: 900;
+            }
+
+            .score-label {
+              color: #374151;
+              font-size: 10px;
+              font-weight: 800;
+            }
+
+            .spark {
+              height: 12px;
+              margin-top: 4px;
+              background:
+                linear-gradient(135deg, transparent 0 18%, #ef4444 18% 22%, transparent 22% 40%, #ef4444 40% 44%, transparent 44% 60%, #ef4444 60% 64%, transparent 64% 100%);
+              opacity: 0.9;
+            }
+
+            .score-value {
+              font-size: 20px;
+              line-height: 1;
+              font-weight: 900;
+              text-align: right;
+            }
+
+            .score-value.alert {
+              color: #D90000;
+            }
+
+            .summary-card {
+              display: grid;
+              grid-template-columns: 36px 1fr;
+              gap: 12px;
+              margin-top: 14px;
+              padding: 14px;
+              border: 1px solid #e5e7eb;
+              border-radius: 14px;
+              background: #ffffff;
+            }
+
+            .section-icon {
+              width: 32px;
+              height: 32px;
+              border-radius: 999px;
+              background: #D90000;
+              color: #ffffff;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 17px;
+              font-weight: 900;
+            }
+
+            .summary-card h2,
+            .compact-section h2 {
+              margin: 0 0 6px;
+              color: #111827;
+              font-size: 15px;
+              line-height: 1.1;
+            }
+
+            .summary-card p {
+              margin: 2px 0;
+              color: #1f2937;
+              font-size: 10.5px;
+              line-height: 1.38;
+            }
+
+            .insights-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 12px;
+              margin-top: 14px;
+            }
+
+            .compact-section {
+              border: 1px solid #e5e7eb;
+              border-radius: 14px;
+              padding: 13px;
+              background: #ffffff;
+            }
+
+            .compact-section.good h2 {
+              color: #047857;
+            }
+
+            .compact-section.warning h2 {
+              color: #D90000;
+            }
+
+            .bullet-row {
+              display: grid;
+              grid-template-columns: 12px 1fr;
+              gap: 7px;
+              margin: 6px 0;
+              align-items: start;
+            }
+
+            .bullet-row span {
+              width: 8px;
+              height: 8px;
+              margin-top: 4px;
+              border-radius: 999px;
+              background: #9ca3af;
+            }
+
+            .bullet-row.good span {
+              background: #047857;
+            }
+
+            .bullet-row.warning span {
+              background: #D90000;
+            }
+
+            .bullet-row p {
+              margin: 0;
+              color: #1f2937;
+              font-size: 10px;
+              line-height: 1.35;
+            }
+
+            .audit-table {
+              width: 100%;
+              border-collapse: separate;
+              border-spacing: 0;
+              overflow: hidden;
+              border: 1px solid #e5e7eb;
+              border-radius: 10px;
+              margin-top: 8px;
+              font-size: 9.5px;
+            }
+
+            .audit-table th {
               background: #f9fafb;
               color: #374151;
               font-size: 9px;
+              text-transform: uppercase;
+              letter-spacing: 0.04em;
             }
 
-            pre {
-              white-space: pre-wrap;
-              word-break: break-word;
-              margin: 0;
-              font-family: Arial, Helvetica, sans-serif;
+            .audit-table th,
+            .audit-table td {
+              padding: 7px 8px;
+              border-bottom: 1px solid #e5e7eb;
+              vertical-align: top;
+            }
+
+            .audit-table tr:last-child td {
+              border-bottom: 0;
+            }
+
+            .priority {
+              display: inline-block;
+              min-width: 44px;
+              padding: 2px 7px;
+              border-radius: 999px;
+              text-align: center;
               font-size: 9px;
-              line-height: 1.28;
+              font-weight: 800;
+            }
+
+            .priority.high {
+              background: #D90000;
+              color: #ffffff;
+            }
+
+            .priority.medium {
+              background: #fff7ed;
+              color: #c2410c;
+              border: 1px solid #fdba74;
+            }
+
+            .action-grid {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 10px;
+              margin-top: 9px;
+            }
+
+            .action-card {
+              display: grid;
+              grid-template-columns: 24px 1fr;
+              gap: 8px;
+              align-items: start;
+              padding: 11px;
+              border: 1px solid #e5e7eb;
+              border-radius: 12px;
+              background: #ffffff;
+            }
+
+            .action-number {
+              width: 21px;
+              height: 21px;
+              border-radius: 999px;
+              background: #D90000;
+              color: #ffffff;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: 900;
+              font-size: 11px;
+            }
+
+            .action-card strong {
+              display: block;
+              color: #111827;
+              font-size: 11px;
+              line-height: 1.2;
+              margin-bottom: 3px;
+            }
+
+            .action-card p {
+              margin: 0;
+              color: #4b5563;
+              font-size: 9px;
+              line-height: 1.25;
             }
 
             .footer {
-              margin-top: 12px;
-              padding-top: 7px;
+              margin-top: 14px;
+              padding-top: 8px;
+              border-top: 2px solid #D90000;
+              color: #6b7280;
+              font-size: 9px;
+              text-align: center;
+            }
+
+            .page-title {
+              margin: 0 0 10px;
+              font-size: 18px;
+              letter-spacing: -0.02em;
+            }
+
+            .consolidated-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 11px;
+            }
+
+            .detail-section {
+              page-break-inside: auto;
+              break-inside: auto;
+              margin-bottom: 12px;
+              border: 1px solid #e5e7eb;
+              border-radius: 12px;
+              overflow: hidden;
+            }
+
+            .detail-header {
+              display: flex;
+              justify-content: space-between;
+              gap: 10px;
+              align-items: center;
+              padding: 10px 12px;
+              background: #111827;
+              color: #ffffff;
+            }
+
+            .section-kicker {
+              display: block;
+              color: #fca5a5;
+              font-size: 8px;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              font-weight: 800;
+              margin-bottom: 2px;
+            }
+
+            .detail-header h3 {
+              margin: 0;
+              color: #ffffff;
+              font-size: 13px;
+              line-height: 1.15;
+            }
+
+            .detail-meta {
+              color: #ffffff;
+              border: 1px solid rgba(255,255,255,0.25);
+              border-radius: 999px;
+              padding: 4px 8px;
+              font-size: 9px;
+              white-space: nowrap;
+            }
+
+            .detail-content {
+              padding: 10px 12px 12px;
+            }
+
+            .detail-content h4 {
+              margin: 10px 0 5px;
+              color: #D90000;
+              font-size: 11px;
+              line-height: 1.2;
+              border-bottom: 1px solid #fee2e2;
+              padding-bottom: 3px;
+            }
+
+            .detail-content h4:first-child {
+              margin-top: 0;
+            }
+
+            .detail-content p {
+              margin: 3px 0;
+              color: #1f2937;
+              font-size: 9.2px;
+              line-height: 1.32;
+            }
+
+            .detail-bullet {
+              display: grid;
+              grid-template-columns: 10px 1fr;
+              gap: 6px;
+              margin: 3px 0;
+            }
+
+            .detail-bullet span {
+              width: 5px;
+              height: 5px;
+              border-radius: 999px;
+              background: #D90000;
+              margin-top: 5px;
+            }
+
+            .detail-bullet p {
+              margin: 0;
+            }
+
+            .detail-content hr {
+              border: 0;
               border-top: 1px solid #e5e7eb;
+              margin: 7px 0;
+            }
+
+            .empty-state {
               color: #6b7280;
               font-size: 10px;
-              text-align: center;
+              padding: 8px;
+              background: #f9fafb;
+              border-radius: 8px;
             }
 
             @media print {
@@ -569,57 +1433,224 @@ const OpenAI = ({ embedded = false }) => {
         </head>
         <body>
           <main>
-            <section class="cover">
-              <div class="eyebrow">SamaChat | Auditoria IA</div>
-              <h1>Relatorio de Auditoria de Atendimento</h1>
+            <section class="pdf-page">
+              <div class="brand">
+                <span class="brand-mark"></span>
+                <span><strong>Sama</strong>Chat</span>
+              </div>
+
+              <h1>Auditoria IA de Atendimento</h1>
               <div class="subtitle">
-                Relatorio gerencial gerado a partir dos atendimentos selecionados no SamaChat.
+                Relatorio Gerencial <span class="red-dot"></span> Periodo ${escapeAttendanceAuditHtml(attendanceAuditFilters.dateFrom || "-")} a ${escapeAttendanceAuditHtml(attendanceAuditFilters.dateTo || "-")}
               </div>
 
-              <div class="meta-grid">
-                <div class="meta-item">
-                  <strong>Usuarios</strong>
-                  ${escapeAttendanceAuditHtml(selectedUsers || "-")}
+              <div class="meta-pills">
+                <div class="pill">Usuario: <b>${escapeAttendanceAuditHtml(selectedUsers || "-")}</b></div>
+                <div class="pill">Status: <b class="status-open">${escapeAttendanceAuditHtml(attendanceAuditFilters.status || "Todos")}</b></div>
+                <div class="pill">Gerado em: <b>${escapeAttendanceAuditHtml(generatedAt)}</b></div>
+                <div class="pill">Modelo: <b>${escapeAttendanceAuditHtml(model)}</b></div>
+              </div>
+
+              <section class="kpi-grid">
+                <div class="kpi-card">
+                  <div class="kpi-icon">T</div>
+                  <div class="kpi-label">Tickets analisados</div>
+                  <div class="kpi-value">${totals.ticketsAnalyzed}</div>
                 </div>
-                <div class="meta-item">
-                  <strong>Gerado em</strong>
-                  ${escapeAttendanceAuditHtml(generatedAt)}
+                <div class="kpi-card">
+                  <div class="kpi-icon">C</div>
+                  <div class="kpi-label">Mensagens cliente</div>
+                  <div class="kpi-value">${totals.totalCustomerMessages}</div>
                 </div>
-                <div class="meta-item">
-                  <strong>Periodo</strong>
-                  ${escapeAttendanceAuditHtml(attendanceAuditFilters.dateFrom || "-")} ate ${escapeAttendanceAuditHtml(attendanceAuditFilters.dateTo || "-")}
+                <div class="kpi-card">
+                  <div class="kpi-icon">A</div>
+                  <div class="kpi-label">Mensagens atendente</div>
+                  <div class="kpi-value">${totals.totalAgentMessages}</div>
                 </div>
-                <div class="meta-item">
-                  <strong>Status</strong>
-                  ${escapeAttendanceAuditHtml(attendanceAuditFilters.status || "Todos")}
+                <div class="kpi-card">
+                  <div class="kpi-icon">L</div>
+                  <div class="kpi-label">Lotes analisados</div>
+                  <div class="kpi-value">${attendanceAuditReports.length}</div>
                 </div>
+                <div class="kpi-card">
+                  <div class="kpi-icon">!</div>
+                  <div class="kpi-label">Risco geral</div>
+                  <div class="kpi-value risk">${escapeAttendanceAuditHtml(consolidation.riskLevel)}</div>
+                </div>
+              </section>
+
+              <section class="dashboard-grid">
+                <div class="dashboard-panel">
+                  <h2 class="panel-title">Volume de mensagens</h2>
+                  <div class="donut-wrap">
+                    <div class="legend-box">
+                      <span class="legend-dot"></span>Cliente
+                      <strong>${totals.totalCustomerMessages}</strong>
+                      ${customerPercent}%
+                    </div>
+                    <div class="donut">
+                      <div class="donut-inner">
+                        <div>Total<strong>${totalMessages}</strong>mensagens</div>
+                      </div>
+                    </div>
+                    <div class="legend-box">
+                      <span class="legend-dot red"></span>Atendente
+                      <strong>${totals.totalAgentMessages}</strong>
+                      ${agentPercent}%
+                    </div>
+                  </div>
+                </div>
+
+                <div class="dashboard-panel">
+                  <h2 class="panel-title">Principais pontos de atencao</h2>
+                  ${attentionBars}
+                </div>
+
+                <div class="dashboard-panel">
+                  <h2 class="panel-title">Score operacional</h2>
+                  <div class="score-row">
+                    <div class="score-icon">A</div>
+                    <div>
+                      <div class="score-label">Agilidade</div>
+                      <div class="spark"></div>
+                    </div>
+                    <div class="score-value alert">${consolidation.operationalScores.agility}</div>
+                  </div>
+                  <div class="score-row">
+                    <div class="score-icon">C</div>
+                    <div>
+                      <div class="score-label">Clareza</div>
+                      <div class="spark"></div>
+                    </div>
+                    <div class="score-value">${consolidation.operationalScores.clarity}</div>
+                  </div>
+                  <div class="score-row">
+                    <div class="score-icon">E</div>
+                    <div>
+                      <div class="score-label">Engajamento</div>
+                      <div class="spark"></div>
+                    </div>
+                    <div class="score-value">${consolidation.operationalScores.engagement}</div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="summary-card">
+                <div class="section-icon">R</div>
+                <div>
+                  <h2>Resumo Executivo</h2>
+                  ${summaryHtml}
+                </div>
+              </section>
+
+              <section class="insights-grid">
+                <div class="compact-section good">
+                  <h2>Pontos Fortes</h2>
+                  ${renderAttendanceAuditBullets(consolidation.strengths, "good")}
+                </div>
+
+                <div class="compact-section warning">
+                  <h2>Pontos de Atencao</h2>
+                  ${renderAttendanceAuditBullets(consolidation.attention.slice(0, 4), "warning")}
+                </div>
+              </section>
+
+              <section class="compact-section" style="margin-top: 13px;">
+                <h2>Tickets para revisao manual</h2>
+                <table class="audit-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 18%;">Ticket</th>
+                      <th>Motivo</th>
+                      <th style="width: 18%;">Prioridade</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${ticketRowsHtml}
+                  </tbody>
+                </table>
+              </section>
+
+              <section class="compact-section" style="margin-top: 13px;">
+                <h2>Plano de Acao Recomendado</h2>
+                <div class="action-grid">
+                  <div class="action-card">
+                    <div class="action-number">1</div>
+                    <div>
+                      <strong>Reduzir tempo de 1a resposta.</strong>
+                      <p>Estabelecer metas e acompanhar tickets recentes com prioridade operacional.</p>
+                    </div>
+                  </div>
+                  <div class="action-card">
+                    <div class="action-number">2</div>
+                    <div>
+                      <strong>Reforcar follow-up estruturado.</strong>
+                      <p>Padronizar cadencias, proximos passos e retomadas de clientes silenciosos.</p>
+                    </div>
+                  </div>
+                  <div class="action-card">
+                    <div class="action-number">3</div>
+                    <div>
+                      <strong>Padronizar conducao objetiva.</strong>
+                      <p>Reduzir excesso de perguntas e orientar mensagens claras para avancar o atendimento.</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <div class="footer">
+                Documento gerado automaticamente pelo SamaChat para apoio gerencial.
               </div>
             </section>
 
-            <section class="cards">
-              <div class="card">
-                <div class="card-label">Tickets analisados</div>
-                <div class="card-value">${totals.ticketsAnalyzed}</div>
+            <section class="pdf-page">
+              <h2 class="page-title">Consolidado gerencial dos lotes</h2>
+
+              <div class="consolidated-grid">
+                <div class="compact-section good">
+                  <h2>Pontos fortes recorrentes</h2>
+                  ${renderAttendanceAuditBullets(consolidation.strengths, "good")}
+                </div>
+
+                <div class="compact-section warning">
+                  <h2>Pontos de atencao recorrentes</h2>
+                  ${renderAttendanceAuditBullets(consolidation.attention, "warning")}
+                </div>
+
+                <div class="compact-section warning">
+                  <h2>Possiveis motivos de perda ou silencio</h2>
+                  ${renderAttendanceAuditBullets(consolidation.lossReasons, "warning")}
+                </div>
+
+                <div class="compact-section">
+                  <h2>Recomendacoes praticas</h2>
+                  ${renderAttendanceAuditBullets(consolidation.recommendations, "neutral")}
+                </div>
+
+                <div class="compact-section" style="grid-column: 1 / -1;">
+                  <h2>Plano de acao consolidado para o gestor</h2>
+                  ${renderAttendanceAuditBullets(
+                    consolidation.actionPlan.length
+                      ? consolidation.actionPlan
+                      : [
+                          "Monitorar diariamente tickets com alto tempo de resposta.",
+                          "Realizar feedback individual com base nos tickets de maior risco.",
+                          "Padronizar follow-up e criterios de encerramento ou reengajamento."
+                        ],
+                    "neutral"
+                  )}
+                </div>
               </div>
-              <div class="card">
-                <div class="card-label">Mensagens cliente</div>
-                <div class="card-value">${totals.totalCustomerMessages}</div>
-              </div>
-              <div class="card">
-                <div class="card-label">Mensagens atendente</div>
-                <div class="card-value">${totals.totalAgentMessages}</div>
-              </div>
-              <div class="card">
-                <div class="card-label">Lotes</div>
-                <div class="card-value">${attendanceAuditReports.length}</div>
+
+              <div class="footer">
+                Os itens acima sao consolidados a partir dos lotes analisados. O anexo tecnico preserva o conteudo completo.
               </div>
             </section>
 
-            ${reportSections}
-
-            <div class="footer">
-              Documento gerado automaticamente pelo SamaChat. Revise tickets criticos antes de decisoes operacionais sensiveis.
-            </div>
+            <section>
+              <h2 class="page-title">Anexo tecnico completo por lote</h2>
+              ${technicalSections}
+            </section>
           </main>
 
           <script>
@@ -642,8 +1673,7 @@ const OpenAI = ({ embedded = false }) => {
     printWindow.document.open();
     printWindow.document.write(html);
     printWindow.document.close();
-  };
-  const handleSandboxAction = async action => {
+  };  const handleSandboxAction = async action => {
     if (!sandboxText && action !== "summarize") {
       toast.error(i18n.t("openai.sandbox.emptyText"));
       return;
