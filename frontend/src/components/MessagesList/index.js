@@ -663,44 +663,35 @@ const MessagesList = ({ ticketId, isGroup }) => {
   };
 
   const renderDailyTimestamps = (message, index) => {
-    if (index === 0) {
-      return (
-        <span
-          className={classes.dailyTimestamp}
-          key={`timestamp-${message.id}`}
-        >
-          <div className={classes.dailyTimestampText}>
-            {format(parseISO(messagesList[index].createdAt), "dd/MM/yyyy")}
-          </div>
-        </span>
-      );
-    }
-    if (index < messagesList.length - 1) {
-      let messageDay = parseISO(messagesList[index].createdAt);
-      let previousMessageDay = parseISO(messagesList[index - 1].createdAt);
+    const messageDay = parseISO(message.createdAt);
+    const previousMessage = index > 0 ? messagesList[index - 1] : null;
+    const shouldRenderDate =
+      index === 0 ||
+      (previousMessage &&
+        !isSameDay(messageDay, parseISO(previousMessage.createdAt)));
+    const shouldRenderLastRef = index === messagesList.length - 1;
 
-      if (!isSameDay(messageDay, previousMessageDay)) {
-        return (
+    return (
+      <>
+        {shouldRenderDate && (
           <span
             className={classes.dailyTimestamp}
             key={`timestamp-${message.id}`}
           >
             <div className={classes.dailyTimestampText}>
-              {format(parseISO(messagesList[index].createdAt), "dd/MM/yyyy")}
+              {format(messageDay, "dd/MM/yyyy")}
             </div>
           </span>
-        );
-      }
-    }
-    if (index === messagesList.length - 1) {
-      return (
-        <div
-          key={`ref-${message.createdAt}`}
-          ref={lastMessageRef}
-          style={{ float: "left", clear: "both" }}
-        />
-      );
-    }
+        )}
+        {shouldRenderLastRef && (
+          <div
+            key={`ref-${message.createdAt}`}
+            ref={lastMessageRef}
+            style={{ float: "left", clear: "both" }}
+          />
+        )}
+      </>
+    );
   };
 
   const renderMessageDivider = (message, index) => {
@@ -732,7 +723,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
           {message.quotedMsg?.isInternal ? (
             <span className={classes.messageContactName}>
               {`${i18n.t("messagesInput.internalModeLabel")}${
-                message.quotedMsg?.senderName ? ` • ${message.quotedMsg.senderName}` : ""
+                message.quotedMsg?.senderName ? ` ${String.fromCharCode(8226)} ${message.quotedMsg.senderName}` : ""
               }`}
             </span>
           ) : !message.quotedMsg?.fromMe && (
