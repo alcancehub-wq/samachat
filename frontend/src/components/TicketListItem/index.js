@@ -469,7 +469,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 		if (taskSummary.status === "scheduled") {
 			return {
 				className: classes.taskIndicatorScheduled,
-				label: "✓",
+				label: "◷",
 				title: "Atividade agendada",
 				text: taskSummary.nextTask
 					? `${taskSummary.nextTask.title} - Prazo ${formatTaskDate(taskSummary.nextTask.dueAt)}`
@@ -480,7 +480,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 		if (taskSummary.status === "unscheduled") {
 			return {
 				className: classes.taskIndicatorNone,
-				label: "•",
+				label: "⚠",
 				title: "Tarefa sem prazo",
 				text: taskSummary.nextTask
 					? `${taskSummary.nextTask.title} - Sem data definida`
@@ -490,7 +490,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 
 		return {
 			className: classes.taskIndicatorNone,
-			label: "•",
+			label: "⚠",
 			title: "Sem tarefa",
 			text: "Nenhuma tarefa aberta vinculada a este atendimento."
 		};
