@@ -346,21 +346,19 @@ const useStyles = makeStyles(theme => ({
 		border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 90, 95, 0.18)" : "rgba(229, 57, 53, 0.10)"}`,
 	},
 	taskIndicator: {
-		width: 18,
-		height: 18,
-		borderRadius: 999,
-		display: "inline-flex",
-		alignItems: "center",
-		justifyContent: "center",
-		flexShrink: 0,
-		border: "2px solid rgba(255,255,255,0.95)",
-		boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.08)",
-		fontSize: 10,
-		fontWeight: 800,
-		lineHeight: 1,
-		color: "#fff",
-		cursor: "default",
-	},
+        width: 22,
+        height: 22,
+        minWidth: 22,
+        borderRadius: "50%",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginLeft: 6,
+        color: "#fff",
+        boxSizing: "border-box",
+        border: "2px solid #fff",
+        boxShadow: "0 0 0 1px rgba(0,0,0,0.08)",
+    },
 	taskIndicatorNone: {
 		backgroundColor: "#F59E0B",
 	},
@@ -385,17 +383,10 @@ const useStyles = makeStyles(theme => ({
 		opacity: 0.95,
 	},
     taskIndicatorIcon: {
-        fontSize: 14,
-        lineHeight: 1,
+        fontSize: 15,
+        color: "#fff",
+        display: "block",
     },
-	tagButton: {
-		padding: 6,
-		backgroundColor: theme.custom.softBackground,
-		border: `1px solid ${theme.palette.divider}`,
-		[theme.breakpoints.down("sm")]: {
-			display: "none",
-		},
-	},
 	ticketDivider: {
 		marginLeft: 32,
 		marginRight: 24,
@@ -462,7 +453,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 		if (taskSummary.status === "overdue") {
 			return {
 				className: classes.taskIndicatorOverdue,
-				icon: <ErrorOutlineRoundedIcon className={classes.taskIndicatorIcon} />,
+				iconType: "overdue",
 				title: taskSummary.overdueCount === 1 ? "1 atividade vencida" : `${taskSummary.overdueCount} atividades vencidas`,
 				text: taskSummary.nextTask
 					? `${taskSummary.nextTask.title} - Venceu em ${formatTaskDate(taskSummary.nextTask.dueAt)}`
@@ -501,6 +492,18 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 	};
 
 	const taskIndicatorMeta = getTaskIndicatorMeta();
+
+    const renderTaskIndicatorIcon = () => {
+        if (taskIndicatorMeta.iconType === "scheduled") {
+            return <AccessTimeRoundedIcon className={classes.taskIndicatorIcon} />;
+        }
+
+        if (taskIndicatorMeta.iconType === "overdue") {
+            return <ErrorOutlineRoundedIcon className={classes.taskIndicatorIcon} />;
+        }
+
+        return <WarningRoundedIcon className={classes.taskIndicatorIcon} />;
+    };
 
 	useEffect(() => {
 		return () => {
@@ -601,7 +604,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 									)}
 									onClick={e => e.stopPropagation()}
 								>
-									{taskIndicatorMeta.icon}
+									{renderTaskIndicatorIcon()}
 								</span>
 							</Tooltip>
 							{ticket.status === "closed" && (
