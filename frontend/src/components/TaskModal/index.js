@@ -578,8 +578,8 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
                   anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
                   transformOrigin={{ vertical: "top", horizontal: "left" }}
                 >
-                  <div style={{ display: "flex", gap: 8, padding: 10, maxHeight: 280 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 48px)", gap: 6 }}>
+                  <div style={{ display: "flex", gap: 10, padding: 10, maxHeight: 280, alignItems: "stretch" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 48px)", gap: 6, alignContent: "start" }}>
                       {Array.from({ length: 24 }, (_, hour) => padDateNumber(hour)).map(hour => {
                         const selectedHour = (getTimePart(values.dueAt) || "").split(":")[0] === hour;
 
@@ -602,7 +602,16 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
                       })}
                     </div>
 
-                    <div style={{ maxHeight: 260, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 48px)", gap: 6 }}>
+                    <div
+                      style={{
+                        width: 1,
+                        backgroundColor: "rgba(17, 24, 39, 0.10)",
+                        margin: "2px 4px",
+                        borderRadius: 999
+                      }}
+                    />
+
+                    <div style={{ maxHeight: 260, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 48px)", gap: 6, alignContent: "start", paddingLeft: 2 }}>
                       {Array.from({ length: 60 }, (_, minute) => padDateNumber(minute)).map(minute => {
                         const selectedMinute = (getTimePart(values.dueAt) || "").split(":")[1] === minute;
 
