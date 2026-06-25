@@ -44,6 +44,44 @@ const toInputDateTime = value => {
   )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
+
+const getDatePart = value => {
+  if (!value || !value.includes("T")) {
+    return "";
+  }
+
+  return value.split("T")[0];
+};
+
+const getTimePart = value => {
+  if (!value || !value.includes("T")) {
+    return "";
+  }
+
+  return value.split("T")[1] || "";
+};
+
+const joinDateTimeParts = (datePart, timePart) => {
+  if (!datePart) {
+    return "";
+  }
+
+  return datePart + "T" + (timePart || "00:00");
+};
+
+const toPayloadDateTime = value => {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+};
+
 const TaskModal = ({ open, onClose, taskId, initialValues }) => {
   const isMounted = useRef(true);
 
@@ -217,7 +255,7 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
       description: values.description,
       status: values.status,
       priority: values.priority,
-      dueAt: values.dueAt || null,
+      dueAt: toPayloadDateTime(values.dueAt),
       assigneeId: normalizeId(values.assigneeId),
       ticketId: normalizeId(values.ticketId),
       contactId: normalizeId(values.contactId)
@@ -325,16 +363,40 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
                 </Select>
               </FormControl>
 
-              <TextField
-                label={i18n.t("taskModal.form.dueAt")}
-                type="datetime-local"
-                fullWidth
-                variant="outlined"
-                margin="dense"
-                value={values.dueAt || ""}
-                onChange={event => setFieldValue("dueAt", event.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
+              <div style={{ display: "flex", gap: 12, marginTop: 8, marginBottom: 4 }}>
+                <TextField
+                  label="Data de vencimento"
+                  type="date"
+                  variant="outlined"
+                  margin="dense"
+                  value={getDatePart(values.dueAt)}
+                  onChange={event => {
+                    setFieldValue(
+                      "dueAt",
+                      joinDateTimeParts(event.target.value, getTimePart(values.dueAt))
+                    );
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                  style={{ flex: 1 }}
+                />
+
+                <TextField
+                  label="Hora"
+                  type="time"
+                  variant="outlined"
+                  margin="dense"
+                  value={getTimePart(values.dueAt)}
+                  onChange={event => {
+                    setFieldValue(
+                      "dueAt",
+                      joinDateTimeParts(getDatePart(values.dueAt), event.target.value)
+                    );
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ step: 60 }}
+                  style={{ width: 150 }}
+                />
+              </div>
 
               <FormControl fullWidth margin="dense" variant="outlined">
                 <InputLabel>{i18n.t("taskModal.form.assignee")}</InputLabel>
