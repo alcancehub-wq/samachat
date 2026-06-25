@@ -15,7 +15,10 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  TextField
+  TextField,
+  Popover,
+  Typography,
+  IconButton
 } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 
@@ -82,6 +85,84 @@ const toPayloadDateTime = value => {
   return date.toISOString();
 };
 
+
+const padDateNumber = value => String(value).padStart(2, "0");
+
+const getTodayInputDate = () => {
+  const today = new Date();
+  return today.getFullYear() + "-" + padDateNumber(today.getMonth() + 1) + "-" + padDateNumber(today.getDate());
+};
+
+const formatDateLabel = value => {
+  const datePart = getDatePart(value);
+  if (!datePart) {
+    return "";
+  }
+
+  const [year, month, day] = datePart.split("-");
+  return day + "/" + month + "/" + year;
+};
+
+const parseCalendarMonth = value => {
+  const datePart = getDatePart(value);
+  if (!datePart) {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  }
+
+  const [year, month] = datePart.split("-").map(Number);
+  return new Date(year, month - 1, 1);
+};
+
+const buildCalendarDays = monthDate => {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const days = [];
+
+  for (let i = 0; i < firstDay.getDay(); i += 1) {
+    days.push(null);
+  }
+
+  for (let day = 1; day <= lastDay.getDate(); day += 1) {
+    days.push({
+      day,
+      value: year + "-" + padDateNumber(month + 1) + "-" + padDateNumber(day)
+    });
+  }
+
+  return days;
+};
+
+const monthNames = [
+  "janeiro",
+  "fevereiro",
+  "março",
+  "abril",
+  "maio",
+  "junho",
+  "julho",
+  "agosto",
+  "setembro",
+  "outubro",
+  "novembro",
+  "dezembro"
+];
+
+const dayNames = ["D", "S", "T", "Q", "Q", "S", "S"];
+
+const redPickerButtonStyle = active => ({
+  border: 0,
+  borderRadius: 8,
+  minWidth: 36,
+  height: 36,
+  cursor: "pointer",
+  color: active ? "#fff" : "#111827",
+  backgroundColor: active ? "#ff1f1f" : "transparent",
+  fontWeight: active ? 800 : 500
+});
+
 const TaskModal = ({ open, onClose, taskId, initialValues }) => {
   const isMounted = useRef(true);
 
@@ -101,6 +182,9 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
   const [tickets, setTickets] = useState([]);
   const [ticketSearchParam, setTicketSearchParam] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [dateAnchorEl, setDateAnchorEl] = useState(null);
+  const [timeAnchorEl, setTimeAnchorEl] = useState(null);
+  const [calendarMonth, setCalendarMonth] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
   useEffect(() => {
     return () => {
@@ -366,36 +450,183 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
               <div style={{ display: "flex", gap: 12, marginTop: 8, marginBottom: 4 }}>
                 <TextField
                   label="Data de vencimento"
-                  type="date"
                   variant="outlined"
                   margin="dense"
-                  value={getDatePart(values.dueAt)}
-                  onChange={event => {
-                    setFieldValue(
-                      "dueAt",
-                      joinDateTimeParts(event.target.value, getTimePart(values.dueAt))
-                    );
+                  value={formatDateLabel(values.dueAt)}
+                  onClick={event => {
+                    setCalendarMonth(parseCalendarMonth(values.dueAt));
+                    setDateAnchorEl(event.currentTarget);
                   }}
                   InputLabelProps={{ shrink: true }}
-                  style={{ flex: 1 }}
+                  inputProps={{ readOnly: true }}
+                  style={{ flex: 1, cursor: "pointer" }}
                 />
 
                 <TextField
                   label="Hora"
-                  type="time"
                   variant="outlined"
                   margin="dense"
                   value={getTimePart(values.dueAt)}
+                  onClick={event => setTimeAnchorEl(event.currentTarget)}
                   onChange={event => {
-                    setFieldValue(
-                      "dueAt",
-                      joinDateTimeParts(getDatePart(values.dueAt), event.target.value)
-                    );
+                    const nextTime = event.target.value;
+                    if (/^\d{0,2}:?\d{0,2}$/.test(nextTime)) {
+                      setFieldValue(
+                        "dueAt",
+                        joinDateTimeParts(getDatePart(values.dueAt) || getTodayInputDate(), nextTime)
+                      );
+                    }
                   }}
                   InputLabelProps={{ shrink: true }}
-                  inputProps={{ step: 60 }}
                   style={{ width: 150 }}
                 />
+
+                <Popover
+                  open={Boolean(dateAnchorEl)}
+                  anchorEl={dateAnchorEl}
+                  onClose={() => setDateAnchorEl(null)}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                  transformOrigin={{ vertical: "top", horizontal: "left" }}
+                >
+                  <div style={{ width: 292, padding: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                      <Typography style={{ fontWeight: 800, color: "#111827" }}>
+                        {monthNames[calendarMonth.getMonth()]} de {calendarMonth.getFullYear()}
+                      </Typography>
+                      <div>
+                        <IconButton
+                          size="small"
+                          onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
+                        >
+                          ↑
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
+                        >
+                          ↓
+                        </IconButton>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+                      {dayNames.map((dayName, index) => (
+                        <div key={dayName + index} style={{ textAlign: "center", fontWeight: 700, fontSize: 13 }}>
+                          {dayName}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                      {buildCalendarDays(calendarMonth).map((day, index) => {
+                        const selected = day && getDatePart(values.dueAt) === day.value;
+
+                        return day ? (
+                          <button
+                            key={day.value}
+                            type="button"
+                            style={redPickerButtonStyle(selected)}
+                            onClick={() => {
+                              setFieldValue(
+                                "dueAt",
+                                joinDateTimeParts(day.value, getTimePart(values.dueAt))
+                              );
+                              setDateAnchorEl(null);
+                            }}
+                          >
+                            {day.day}
+                          </button>
+                        ) : (
+                          <span key={"empty-" + index} />
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14 }}>
+                      <Button
+                        size="small"
+                        style={{ color: "#ff1f1f", fontWeight: 700 }}
+                        onClick={() => {
+                          setFieldValue("dueAt", "");
+                          setDateAnchorEl(null);
+                        }}
+                      >
+                        Limpar
+                      </Button>
+                      <Button
+                        size="small"
+                        style={{ color: "#ff1f1f", fontWeight: 700 }}
+                        onClick={() => {
+                          setFieldValue(
+                            "dueAt",
+                            joinDateTimeParts(getTodayInputDate(), getTimePart(values.dueAt))
+                          );
+                          setCalendarMonth(parseCalendarMonth(getTodayInputDate() + "T00:00"));
+                          setDateAnchorEl(null);
+                        }}
+                      >
+                        Hoje
+                      </Button>
+                    </div>
+                  </div>
+                </Popover>
+
+                <Popover
+                  open={Boolean(timeAnchorEl)}
+                  anchorEl={timeAnchorEl}
+                  onClose={() => setTimeAnchorEl(null)}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                  transformOrigin={{ vertical: "top", horizontal: "left" }}
+                >
+                  <div style={{ display: "flex", gap: 8, padding: 10, maxHeight: 280 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 48px)", gap: 6 }}>
+                      {Array.from({ length: 24 }, (_, hour) => padDateNumber(hour)).map(hour => {
+                        const selectedHour = (getTimePart(values.dueAt) || "").split(":")[0] === hour;
+
+                        return (
+                          <button
+                            key={hour}
+                            type="button"
+                            style={redPickerButtonStyle(selectedHour)}
+                            onClick={() => {
+                              const currentMinute = (getTimePart(values.dueAt) || "00:00").split(":")[1] || "00";
+                              setFieldValue(
+                                "dueAt",
+                                joinDateTimeParts(getDatePart(values.dueAt) || getTodayInputDate(), hour + ":" + currentMinute)
+                              );
+                            }}
+                          >
+                            {hour}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ maxHeight: 260, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 48px)", gap: 6 }}>
+                      {Array.from({ length: 60 }, (_, minute) => padDateNumber(minute)).map(minute => {
+                        const selectedMinute = (getTimePart(values.dueAt) || "").split(":")[1] === minute;
+
+                        return (
+                          <button
+                            key={minute}
+                            type="button"
+                            style={redPickerButtonStyle(selectedMinute)}
+                            onClick={() => {
+                              const currentHour = (getTimePart(values.dueAt) || "00:00").split(":")[0] || "00";
+                              setFieldValue(
+                                "dueAt",
+                                joinDateTimeParts(getDatePart(values.dueAt) || getTodayInputDate(), currentHour + ":" + minute)
+                              );
+                              setTimeAnchorEl(null);
+                            }}
+                          >
+                            {minute}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </Popover>
               </div>
 
               <FormControl fullWidth margin="dense" variant="outlined">
