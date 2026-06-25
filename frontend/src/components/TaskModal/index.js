@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 
 import * as Yup from "yup";
 import { Formik, Form, Field } from "formik";
@@ -11,11 +11,13 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  FormHelperText,
   InputLabel,
   MenuItem,
   Select,
   TextField
 } from "@material-ui/core";
+import Autocomplete from "@material-ui/lab/Autocomplete";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -58,6 +60,9 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
 
   const [task, setTask] = useState(initialState);
   const [users, setUsers] = useState([]);
+  const [tickets, setTickets] = useState([]);
+  const [ticketSearchParam, setTicketSearchParam] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState(null);
 
   useEffect(() => {
     return () => {
@@ -100,13 +105,54 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
   }, [open]);
 
   useEffect(() => {
+    const loadTickets = async () => {
+      if (!open) {
+        return;
+      }
+
+      try {
+        const { data } = await api.get("/tickets", {
+          params: {
+            searchParam: ticketSearchParam,
+            pageNumber: 1,
+            status: ["open", "pending"]
+          }
+        });
+
+        if (isMounted.current) {
+          setTickets(data.tickets || []);
+        }
+      } catch (err) {
+        toastError(err);
+      }
+    };
+
+    loadTickets();
+  }, [open, ticketSearchParam]);
+
+  useEffect(() => {
     const fetchTask = async () => {
       if (!open) {
         return;
       }
 
       if (!taskId) {
-        setTask({ ...initialState, ...(initialValues || {}) });
+        const nextTask = { ...initialState, ...(initialValues || {}) };
+        setTask(nextTask);
+
+        if (nextTask.ticketId) {
+          try {
+            const { data } = await api.get(`/tickets/${nextTask.ticketId}`);
+            if (isMounted.current) {
+              setSelectedTicket(data);
+            }
+          } catch (err) {
+            setSelectedTicket(null);
+          }
+        } else {
+          setSelectedTicket(null);
+        }
+
         return;
       }
 
@@ -124,6 +170,8 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
             ticketId: data.ticketId || "",
             contactId: data.contactId || ""
           });
+
+          setSelectedTicket(data.ticket || null);
         }
       } catch (err) {
         toastError(err);
@@ -136,6 +184,9 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
   const handleClose = () => {
     onClose();
     setTask(initialState);
+    setTickets([]);
+    setTicketSearchParam("");
+    setSelectedTicket(null);
   };
 
   const normalizeId = value => {
@@ -145,6 +196,19 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
 
     const parsed = Number(value);
     return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const getTicketLabel = ticket => {
+    if (!ticket) {
+      return "";
+    }
+
+    const contactName = ticket.contact?.name || ticket.contact?.number || "Contato";
+    const contactNumber = ticket.contact?.number ? ` - ${ticket.contact.number}` : "";
+    const ticketIdLabel = ticket.id ? `#${ticket.id}` : "";
+    const status = ticket.status ? ` - ${ticket.status}` : "";
+
+    return `${contactName}${contactNumber} ${ticketIdLabel}${status}`.trim();
   };
 
   const handleSaveTask = async values => {
@@ -205,6 +269,7 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
                 error={touched.title && Boolean(errors.title)}
                 helperText={touched.title && errors.title ? errors.title : ""}
               />
+
               <Field
                 as={TextField}
                 label={i18n.t("taskModal.form.description")}
@@ -215,6 +280,7 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
                 multiline
                 rows={3}
               />
+
               <FormControl fullWidth margin="dense" variant="outlined">
                 <InputLabel>{i18n.t("taskModal.form.status")}</InputLabel>
                 <Select
@@ -230,6 +296,7 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
                   </MenuItem>
                 </Select>
               </FormControl>
+
               <FormControl fullWidth margin="dense" variant="outlined">
                 <InputLabel>{i18n.t("taskModal.form.priority")}</InputLabel>
                 <Select
@@ -248,6 +315,7 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
                   </MenuItem>
                 </Select>
               </FormControl>
+
               <TextField
                 label={i18n.t("taskModal.form.dueAt")}
                 type="datetime-local"
@@ -258,6 +326,7 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
                 onChange={event => setFieldValue("dueAt", event.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
+
               <FormControl fullWidth margin="dense" variant="outlined">
                 <InputLabel>{i18n.t("taskModal.form.assignee")}</InputLabel>
                 <Select
@@ -275,27 +344,38 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
                   ))}
                 </Select>
               </FormControl>
-              <TextField
-                label={i18n.t("taskModal.form.ticketId")}
-                type="number"
-                fullWidth
-                variant="outlined"
-                margin="dense"
-                value={values.ticketId}
-                onChange={event => setFieldValue("ticketId", event.target.value)}
-                InputLabelProps={{ shrink: true }}
+
+              <Autocomplete
+                options={tickets}
+                value={selectedTicket}
+                getOptionLabel={getTicketLabel}
+                getOptionSelected={(option, value) => option.id === value.id}
+                onInputChange={(event, newInputValue) => {
+                  setTicketSearchParam(newInputValue);
+                }}
+                onChange={(event, newValue) => {
+                  setSelectedTicket(newValue);
+                  setFieldValue("ticketId", newValue?.id || "");
+                  setFieldValue(
+                    "contactId",
+                    newValue?.contactId || newValue?.contact?.id || ""
+                  );
+                }}
+                renderInput={params => (
+                  <TextField
+                    {...params}
+                    label="Cliente / atendimento"
+                    fullWidth
+                    variant="outlined"
+                    margin="dense"
+                  />
+                )}
               />
-              <TextField
-                label={i18n.t("taskModal.form.contactId")}
-                type="number"
-                fullWidth
-                variant="outlined"
-                margin="dense"
-                value={values.contactId}
-                onChange={event => setFieldValue("contactId", event.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
+              <FormHelperText>
+                Pesquise em atendimentos abertos e pendentes visíveis para você.
+              </FormHelperText>
             </DialogContent>
+
             <DialogActions>
               <Button onClick={handleClose} color="secondary" variant="outlined">
                 {i18n.t("taskModal.buttons.cancel")}
