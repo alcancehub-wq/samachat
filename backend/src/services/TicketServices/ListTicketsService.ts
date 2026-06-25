@@ -432,17 +432,7 @@ const ListTicketsService = async ({
         summary.noDueCount += 1;
       }
 
-      const currentNextDue = summary.nextTask?.dueAt
-        ? new Date(summary.nextTask.dueAt).getTime()
-        : null;
-      const taskDue = dueAt ? dueAt.getTime() : null;
-
-      const shouldReplaceNextTask =
-        !summary.nextTask ||
-        (isOverdue && summary.status !== "overdue") ||
-        (taskDue !== null && (currentNextDue === null || taskDue < currentNextDue));
-
-      if (shouldReplaceNextTask) {
+      if (!summary.nextTask) {
         summary.nextTask = {
           id: task.id,
           title: task.title,
@@ -451,9 +441,13 @@ const ListTicketsService = async ({
         };
       }
 
-      if (summary.overdueCount > 0) {
+      const latestDueAt = summary.nextTask?.dueAt
+        ? new Date(summary.nextTask.dueAt)
+        : null;
+
+      if (latestDueAt && latestDueAt.getTime() < now.getTime()) {
         summary.status = "overdue";
-      } else if (summary.scheduledCount > 0) {
+      } else if (latestDueAt) {
         summary.status = "scheduled";
       } else if (summary.openCount > 0) {
         summary.status = "unscheduled";
