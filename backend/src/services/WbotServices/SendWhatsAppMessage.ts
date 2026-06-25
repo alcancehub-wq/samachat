@@ -16,6 +16,7 @@ import ResolveMessageVariablesService from "../Variables/ResolveMessageVariables
 import { StartWhatsAppSession } from "./StartWhatsAppSession";
 import { sleep } from "../../utils/sleep";
 import { logger } from "../../utils/logger";
+import CloudApiClient from "../CloudApiServices/CloudApiClient";
 
 interface Request {
   body: string;
