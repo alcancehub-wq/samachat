@@ -17,6 +17,15 @@ import { logger } from "./utils/logger";
 
 Sentry.init({ dsn: process.env.SENTRY_DSN });
 
+const cloudApiRawBodyCapture = (
+  req: express.Request & { rawBody?: Buffer },
+  _res: express.Response,
+  buf: Buffer
+): void => {
+  if (req.originalUrl && req.originalUrl.includes("/cloud-api/webhook/")) {
+    req.rawBody = Buffer.from(buf);
+  }
+};
 const app = express();
 
 const inferPublicContentType = (filePath: string): string => {
@@ -130,7 +139,7 @@ const corsOptions = {
 app.options("*", cors(corsOptions));
 app.use(cors(corsOptions));
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({ verify: cloudApiRawBodyCapture }));
 app.use(Sentry.Handlers.requestHandler());
 app.get("/health", (_req: Request, res: Response) => {
   return res.status(200).json({ status: "ok" });
