@@ -3,6 +3,11 @@ import * as CloudApiWebhookController from "../controllers/CloudApiWebhookContro
 
 const cloudApiWebhookRoutes = Router();
 
+cloudApiWebhookRoutes.post(
+  "/cloud-api/webhook/:whatsappId",
+  CloudApiWebhookController.receive
+);
+
 cloudApiWebhookRoutes.get(
   "/cloud-api/webhook/:whatsappId",
   CloudApiWebhookController.verify

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Whatsapp from "../models/Whatsapp";
 import AppError from "../errors/AppError";
+import VerifyCloudApiSignature from "../services/CloudApiWebhookServices/VerifyCloudApiSignature";
 
 const getQueryValue = (value: unknown): string => {
   if (Array.isArray(value)) {
@@ -36,4 +37,43 @@ export const verify = async (req: Request, res: Response): Promise<Response> => 
   }
 
   return res.status(200).send(challenge);
+};
+
+export const receive = async (req: Request, res: Response): Promise<Response> => {
+  const whatsappId = Number(req.params.whatsappId);
+
+  if (!whatsappId || Number.isNaN(whatsappId)) {
+    throw new AppError("ERR_CLOUD_API_INVALID_WHATSAPP_ID", 400);
+  }
+
+  const whatsapp = await Whatsapp.findByPk(whatsappId);
+
+  if (!whatsapp || whatsapp.providerType !== "official") {
+    throw new AppError("ERR_CLOUD_API_WHATSAPP_NOT_FOUND", 404);
+  }
+
+  const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+  const signature = req.headers["x-hub-signature-256"];
+
+  const validSignature = VerifyCloudApiSignature({
+    appSecret: whatsapp.appSecret,
+    rawBody,
+    signature
+  });
+
+  if (!validSignature) {
+    await whatsapp.update({
+      cloudApiStatus: "signature_error",
+      cloudApiLastError: "ERR_CLOUD_API_INVALID_SIGNATURE"
+    });
+
+    throw new AppError("ERR_CLOUD_API_INVALID_SIGNATURE", 403);
+  }
+
+  await whatsapp.update({
+    cloudApiStatus: "webhook_received",
+    cloudApiLastError: null
+  });
+
+  return res.status(200).send("EVENT_RECEIVED");
 };
