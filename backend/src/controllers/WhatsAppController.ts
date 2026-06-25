@@ -54,7 +54,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     ? await ShowWhatsAppService(oldDefaultWhatsapp.id)
     : null;
 
-  StartWhatsAppSession(formattedWhatsApp, { reason: "create" });
+  if (formattedWhatsApp.providerType !== "official") {
+    StartWhatsAppSession(formattedWhatsApp, { reason: "create" });
+  }
 
   const io = getIO();
   io.emit("whatsapp", {
