@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import Whatsapp from "../models/Whatsapp";
 import AppError from "../errors/AppError";
 import VerifyCloudApiSignature from "../services/CloudApiWebhookServices/VerifyCloudApiSignature";
+import NormalizeCloudApiWebhook from "../services/CloudApiWebhookServices/NormalizeCloudApiWebhook";
+import { handleMessage } from "../handlers/handleWhatsappEvents";
 
 const getQueryValue = (value: unknown): string => {
   if (Array.isArray(value)) {
@@ -70,8 +72,23 @@ export const receive = async (req: Request, res: Response): Promise<Response> =>
     throw new AppError("ERR_CLOUD_API_INVALID_SIGNATURE", 403);
   }
 
+  const normalizedMessages = NormalizeCloudApiWebhook(
+    req.body,
+    whatsapp.id
+  );
+
+  for (const normalizedMessage of normalizedMessages) {
+    await handleMessage(
+      normalizedMessage.messagePayload,
+      normalizedMessage.contactPayload,
+      normalizedMessage.contextPayload
+    );
+  }
+
   await whatsapp.update({
-    cloudApiStatus: "webhook_received",
+    cloudApiStatus: normalizedMessages.length > 0
+      ? "message_received"
+      : "webhook_received",
     cloudApiLastError: null
   });
 
