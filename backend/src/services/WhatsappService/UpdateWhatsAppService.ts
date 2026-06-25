@@ -17,6 +17,14 @@ interface WhatsappData {
   queueIds?: number[];
   linkedUserId?: number | null;
   linkedUserSignMessages?: boolean;
+  providerType?: string;
+  wabaId?: string;
+  phoneNumberId?: string;
+  businessAccountId?: string;
+  accessToken?: string;
+  verifyToken?: string;
+  appSecret?: string;
+  apiVersion?: string;
 }
 
 interface Request {
@@ -36,7 +44,8 @@ const UpdateWhatsAppService = async ({
   const schema = Yup.object().shape({
     name: Yup.string().min(2),
     status: Yup.string(),
-    isDefault: Yup.boolean()
+    isDefault: Yup.boolean(),
+    providerType: Yup.string().oneOf(["web", "official"])
   });
 
   const {
@@ -48,13 +57,28 @@ const UpdateWhatsAppService = async ({
     farewellMessage,
     queueIds = [],
     linkedUserId,
-    linkedUserSignMessages
+    linkedUserSignMessages,
+    providerType,
+    wabaId,
+    phoneNumberId,
+    businessAccountId,
+    accessToken,
+    verifyToken,
+    appSecret,
+    apiVersion
   } = whatsappData;
 
   try {
-    await schema.validate({ name, status, isDefault });
+    await schema.validate({ name, status, isDefault, providerType });
   } catch (err) {
     throw new AppError(err.message);
+  }
+
+  if (
+    providerType === "official" &&
+    (!phoneNumberId || !accessToken || !verifyToken)
+  ) {
+    throw new AppError("ERR_CLOUD_API_REQUIRED_FIELDS");
   }
 
   if (queueIds.length > 1 && !greetingMessage) {
@@ -74,14 +98,29 @@ const UpdateWhatsAppService = async ({
 
   const whatsapp = await ShowWhatsAppService(whatsappId);
 
-  await whatsapp.update({
+  const updateData: Partial<Whatsapp> = {
     name,
     status,
     session,
     greetingMessage,
     farewellMessage,
     isDefault
-  });
+  };
+
+  if (providerType !== undefined) {
+    updateData.providerType = providerType;
+    updateData.wabaId = wabaId;
+    updateData.phoneNumberId = phoneNumberId;
+    updateData.businessAccountId = businessAccountId;
+    updateData.accessToken = accessToken;
+    updateData.verifyToken = verifyToken;
+    updateData.appSecret = appSecret;
+    updateData.apiVersion = apiVersion || "v20.0";
+    updateData.cloudApiStatus = providerType === "official" ? "configured" : undefined;
+    updateData.cloudApiLastError = undefined;
+  }
+
+  await whatsapp.update(updateData);
 
   await AssociateWhatsappQueue(whatsapp, queueIds);
   await SyncWhatsAppLinkedUserService({
