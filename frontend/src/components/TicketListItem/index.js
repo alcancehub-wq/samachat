@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 
 import { useHistory, useParams } from "react-router-dom";
 import { parseISO, format, isSameDay } from "date-fns";
@@ -384,10 +384,6 @@ const useStyles = makeStyles(theme => ({
 		lineHeight: 1.35,
 		opacity: 0.95,
 	},
-    taskIndicatorIcon: {
-        fontSize: 14,
-        lineHeight: 1,
-    },
 	tagButton: {
 		padding: 6,
 		backgroundColor: theme.custom.softBackground,
@@ -462,7 +458,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 		if (taskSummary.status === "overdue") {
 			return {
 				className: classes.taskIndicatorOverdue,
-				icon: <ErrorOutlineRoundedIcon className={classes.taskIndicatorIcon} />,
+				label: "!",
 				title: taskSummary.overdueCount === 1 ? "1 atividade vencida" : `${taskSummary.overdueCount} atividades vencidas`,
 				text: taskSummary.nextTask
 					? `${taskSummary.nextTask.title} - Venceu em ${formatTaskDate(taskSummary.nextTask.dueAt)}`
@@ -473,7 +469,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 		if (taskSummary.status === "scheduled") {
 			return {
 				className: classes.taskIndicatorScheduled,
-				label: "âœ“",
+				label: "✓",
 				title: "Atividade agendada",
 				text: taskSummary.nextTask
 					? `${taskSummary.nextTask.title} - Prazo ${formatTaskDate(taskSummary.nextTask.dueAt)}`
@@ -484,7 +480,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 		if (taskSummary.status === "unscheduled") {
 			return {
 				className: classes.taskIndicatorNone,
-				label: "â€¢",
+				label: "•",
 				title: "Tarefa sem prazo",
 				text: taskSummary.nextTask
 					? `${taskSummary.nextTask.title} - Sem data definida`
@@ -494,7 +490,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 
 		return {
 			className: classes.taskIndicatorNone,
-			label: "â€¢",
+			label: "•",
 			title: "Sem tarefa",
 			text: "Nenhuma tarefa aberta vinculada a este atendimento."
 		};
@@ -601,7 +597,7 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 									)}
 									onClick={e => e.stopPropagation()}
 								>
-									{taskIndicatorMeta.icon}
+									{taskIndicatorMeta.label}
 								</span>
 							</Tooltip>
 							{ticket.status === "closed" && (
