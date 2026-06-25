@@ -1,7 +1,8 @@
-import { Op, fn, where, col, Includeable, WhereOptions, Order } from "sequelize";
+﻿import { Op, fn, where, col, Includeable, WhereOptions, Order } from "sequelize";
 import { startOfDay, endOfDay, parseISO } from "date-fns";
 
 import Ticket from "../../models/Ticket";
+import Task from "../../models/Task";
 import Contact from "../../models/Contact";
 import Message from "../../models/Message";
 import Queue from "../../models/Queue";
@@ -383,6 +384,96 @@ const ListTicketsService = async ({
     offset,
     order
   });
+
+  const ticketIds = tickets.map(ticket => ticket.id);
+
+  if (ticketIds.length) {
+    const taskRows = await Task.findAll({
+      where: {
+        ticketId: { [Op.in]: ticketIds },
+        status: { [Op.ne]: "completed" }
+      },
+      attributes: ["id", "title", "status", "dueAt", "ticketId", "updatedAt"],
+      order: [["updatedAt", "DESC"]]
+    });
+
+    const now = new Date();
+    const summaries = new Map<number, any>();
+
+    ticketIds.forEach(ticketId => {
+      summaries.set(ticketId, {
+        status: "none",
+        openCount: 0,
+        overdueCount: 0,
+        scheduledCount: 0,
+        noDueCount: 0,
+        nextTask: null
+      });
+    });
+
+    taskRows.forEach(task => {
+      const summary = summaries.get(task.ticketId);
+
+      if (!summary) {
+        return;
+      }
+
+      const dueAt = task.dueAt ? new Date(task.dueAt) : null;
+      const isOverdue = Boolean(dueAt && dueAt.getTime() < now.getTime());
+      const isScheduled = Boolean(dueAt && dueAt.getTime() >= now.getTime());
+
+      summary.openCount += 1;
+
+      if (isOverdue) {
+        summary.overdueCount += 1;
+      } else if (isScheduled) {
+        summary.scheduledCount += 1;
+      } else {
+        summary.noDueCount += 1;
+      }
+
+      const currentNextDue = summary.nextTask?.dueAt
+        ? new Date(summary.nextTask.dueAt).getTime()
+        : null;
+      const taskDue = dueAt ? dueAt.getTime() : null;
+
+      const shouldReplaceNextTask =
+        !summary.nextTask ||
+        (isOverdue && summary.status !== "overdue") ||
+        (taskDue !== null && (currentNextDue === null || taskDue < currentNextDue));
+
+      if (shouldReplaceNextTask) {
+        summary.nextTask = {
+          id: task.id,
+          title: task.title,
+          dueAt: task.dueAt,
+          status: task.status
+        };
+      }
+
+      if (summary.overdueCount > 0) {
+        summary.status = "overdue";
+      } else if (summary.scheduledCount > 0) {
+        summary.status = "scheduled";
+      } else if (summary.openCount > 0) {
+        summary.status = "unscheduled";
+      }
+    });
+
+    tickets.forEach(ticket => {
+      (ticket as any).setDataValue(
+        "taskSummary",
+        summaries.get(ticket.id) || {
+          status: "none",
+          openCount: 0,
+          overdueCount: 0,
+          scheduledCount: 0,
+          noDueCount: 0,
+          nextTask: null
+        }
+      );
+    });
+  }
 
   const hasMore = count > offset + tickets.length;
 

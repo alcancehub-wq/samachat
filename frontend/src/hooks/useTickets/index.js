@@ -21,11 +21,24 @@ const useTickets = ({
     const [hasMore, setHasMore] = useState(false);
     const [tickets, setTickets] = useState([]);
     const [count, setCount] = useState(0);
+    const [refreshToken, setRefreshToken] = useState(0);
     const { isAuth, loading: authLoading, user } = useContext(AuthContext);
     const canViewTickets = userHasPermission(user, "tickets.view");
 
     useEffect(() => {
-		if (authLoading || !isAuth || !canViewTickets) {
+        const handleTaskUpdated = () => {
+            setRefreshToken(current => current + 1);
+        };
+
+        window.addEventListener("samachat:task-updated", handleTaskUpdated);
+
+        return () => {
+            window.removeEventListener("samachat:task-updated", handleTaskUpdated);
+        };
+    }, []);
+
+    useEffect(() => {
+                if (authLoading || !isAuth || !canViewTickets) {
 			setTickets([]);
 			setHasMore(false);
 			setCount(0);
@@ -103,6 +116,7 @@ const useTickets = ({
         withUnreadMessages,
         tagIds,
         followUp,
+        refreshToken,
     ])
 
     return { tickets, loading, hasMore, count };

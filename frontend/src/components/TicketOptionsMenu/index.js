@@ -8,6 +8,7 @@ import SwapHorizIcon from "@material-ui/icons/SwapHoriz";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import MarkunreadOutlinedIcon from "@material-ui/icons/MarkunreadOutlined";
 import EventNoteOutlinedIcon from "@material-ui/icons/EventNoteOutlined";
+import AssignmentTurnedInOutlinedIcon from "@material-ui/icons/AssignmentTurnedInOutlined";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
 import ReplayIcon from "@material-ui/icons/Replay";
 import MergeTypeIcon from "@material-ui/icons/MergeType";
@@ -16,6 +17,7 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import TransferTicketModal from "../TransferTicketModal";
 import ScheduleModal from "../ScheduleModal";
+import TaskModal from "../TaskModal";
 import MergeContactModal from "../MergeContactModal";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -56,12 +58,14 @@ const TicketOptionsMenu = ({
         const classes = useStyles();
         const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
         const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+        const [taskModalOpen, setTaskModalOpen] = useState(false);
         const [mergeContactModalOpen, setMergeContactModalOpen] = useState(false);
         const [loading, setLoading] = useState(false);
         const isMounted = useRef(true);
         const { user } = useContext(AuthContext);
         const history = useHistory();
         const canCreateSchedules = userHasPermission(user, "schedules.create");
+        const canCreateTasks = userHasPermission(user, "tasks.create");
 
         useEffect(() => {
                 return () => {
@@ -174,6 +178,21 @@ const TicketOptionsMenu = ({
                 }
         };
 
+        const handleOpenTaskModal = () => {
+                if (loading || !ticket?.id) {
+                        return;
+                }
+
+                handleClose();
+                setTaskModalOpen(true);
+        };
+
+        const handleCloseTaskModal = () => {
+                if (isMounted.current) {
+                        setTaskModalOpen(false);
+                }
+        };
+
         const handleOpenMergeContactModal = () => {
                 if (loading || !ticket?.contactId) {
                         return;
@@ -254,6 +273,13 @@ const TicketOptionsMenu = ({
                                         "Mesclar contato duplicado",
                                         handleOpenMergeContactModal
                                 )}
+                                {canCreateTasks && ticket?.id && (
+                                        renderMenuItem(
+                                                AssignmentTurnedInOutlinedIcon,
+                                                "Criar tarefa",
+                                                handleOpenTaskModal
+                                        )
+                                )}
                                 {canCreateSchedules && ticket?.id && (
                                         renderMenuItem(
                                                 EventNoteOutlinedIcon,
@@ -284,6 +310,15 @@ const TicketOptionsMenu = ({
                                 targetAllowMultipleConversations={ticket?.contact?.allowMultipleConversations}
                                 targetUserId={ticket?.userId}
                                 onMerged={handleContactMerged}
+                        />
+                        <TaskModal
+                                open={taskModalOpen}
+                                onClose={handleCloseTaskModal}
+                                initialValues={{
+                                        assigneeId: ticket?.userId || user?.id || "",
+                                        ticketId: ticket?.id || "",
+                                        contactId: contactId || ticket?.contactId || ticket?.contact?.id || ""
+                                }}
                         />
                         <ScheduleModal
                                 open={scheduleModalOpen}

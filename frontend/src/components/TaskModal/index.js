@@ -230,6 +230,15 @@ const TaskModal = ({ open, onClose, taskId, initialValues }) => {
         await api.post("/tasks", payload);
       }
 
+      window.dispatchEvent(
+        new CustomEvent("samachat:task-updated", {
+          detail: {
+            ticketId: payload.ticketId,
+            contactId: payload.contactId
+          }
+        })
+      );
+
       toast.success(i18n.t("taskModal.success"));
       handleClose();
     } catch (err) {

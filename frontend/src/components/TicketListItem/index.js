@@ -345,6 +345,45 @@ const useStyles = makeStyles(theme => ({
 		fontWeight: 600,
 		border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 90, 95, 0.18)" : "rgba(229, 57, 53, 0.10)"}`,
 	},
+	taskIndicator: {
+		width: 18,
+		height: 18,
+		borderRadius: 999,
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
+		border: "2px solid rgba(255,255,255,0.95)",
+		boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.08)",
+		fontSize: 10,
+		fontWeight: 800,
+		lineHeight: 1,
+		color: "#fff",
+		cursor: "default",
+	},
+	taskIndicatorNone: {
+		backgroundColor: "#F59E0B",
+	},
+	taskIndicatorScheduled: {
+		backgroundColor: "#22C55E",
+	},
+	taskIndicatorOverdue: {
+		backgroundColor: "#EF4444",
+	},
+	taskIndicatorTooltip: {
+		padding: theme.spacing(0.75, 0.25),
+		maxWidth: 260,
+	},
+	taskIndicatorTooltipTitle: {
+		fontWeight: 800,
+		fontSize: "0.82rem",
+		marginBottom: 4,
+	},
+	taskIndicatorTooltipText: {
+		fontSize: "0.76rem",
+		lineHeight: 1.35,
+		opacity: 0.95,
+	},
 	tagButton: {
 		padding: 6,
 		backgroundColor: theme.custom.softBackground,
@@ -394,6 +433,70 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 				? format(parseISO(ticketTimestamp), "HH:mm")
 				: format(parseISO(ticketTimestamp), "dd/MM/yyyy")
 		: null;
+
+	const taskSummary = ticket.taskSummary || {
+		status: "none",
+		openCount: 0,
+		overdueCount: 0,
+		scheduledCount: 0,
+		noDueCount: 0,
+		nextTask: null
+	};
+
+	const formatTaskDate = value => {
+		if (!value) {
+			return "";
+		}
+
+		const date = parseISO(value);
+		return isSameDay(date, new Date())
+			? format(date, "HH:mm")
+			: format(date, "dd/MM HH:mm");
+	};
+
+	const getTaskIndicatorMeta = () => {
+		if (taskSummary.status === "overdue") {
+			return {
+				className: classes.taskIndicatorOverdue,
+				label: "!",
+				title: taskSummary.overdueCount === 1 ? "1 atividade vencida" : `${taskSummary.overdueCount} atividades vencidas`,
+				text: taskSummary.nextTask
+					? `${taskSummary.nextTask.title} - Venceu em ${formatTaskDate(taskSummary.nextTask.dueAt)}`
+					: "Existe tarefa vencida vinculada a este atendimento."
+			};
+		}
+
+		if (taskSummary.status === "scheduled") {
+			return {
+				className: classes.taskIndicatorScheduled,
+				label: "✓",
+				title: "Atividade agendada",
+				text: taskSummary.nextTask
+					? `${taskSummary.nextTask.title} - Prazo ${formatTaskDate(taskSummary.nextTask.dueAt)}`
+					: "Existe tarefa aberta dentro do prazo neste atendimento."
+			};
+		}
+
+		if (taskSummary.status === "unscheduled") {
+			return {
+				className: classes.taskIndicatorNone,
+				label: "•",
+				title: "Tarefa sem prazo",
+				text: taskSummary.nextTask
+					? `${taskSummary.nextTask.title} - Sem data definida`
+					: "Existe tarefa aberta sem data definida."
+			};
+		}
+
+		return {
+			className: classes.taskIndicatorNone,
+			label: "•",
+			title: "Sem tarefa",
+			text: "Nenhuma tarefa aberta vinculada a este atendimento."
+		};
+	};
+
+	const taskIndicatorMeta = getTaskIndicatorMeta();
 
 	useEffect(() => {
 		return () => {
@@ -473,6 +576,30 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 							>
 								{ticket.contact.name}
 							</Typography>
+							<Tooltip
+								arrow
+								placement="top"
+								title={
+									<div className={classes.taskIndicatorTooltip}>
+										<div className={classes.taskIndicatorTooltipTitle}>
+											{taskIndicatorMeta.title}
+										</div>
+										<div className={classes.taskIndicatorTooltipText}>
+											{taskIndicatorMeta.text}
+										</div>
+									</div>
+								}
+							>
+								<span
+									className={clsx(
+										classes.taskIndicator,
+										taskIndicatorMeta.className
+									)}
+									onClick={e => e.stopPropagation()}
+								>
+									{taskIndicatorMeta.label}
+								</span>
+							</Tooltip>
 							{ticket.status === "closed" && (
 								<Badge
 									className={classes.closedBadge}
