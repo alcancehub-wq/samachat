@@ -18,6 +18,14 @@ interface WhatsappData {
   isDefault?: boolean;
   linkedUserId?: number | null;
   linkedUserSignMessages?: boolean;
+  providerType?: string;
+  wabaId?: string;
+  phoneNumberId?: string;
+  businessAccountId?: string;
+  accessToken?: string;
+  verifyToken?: string;
+  appSecret?: string;
+  apiVersion?: string;
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -35,7 +43,15 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     farewellMessage,
     queueIds,
     linkedUserId,
-    linkedUserSignMessages
+    linkedUserSignMessages,
+    providerType,
+    wabaId,
+    phoneNumberId,
+    businessAccountId,
+    accessToken,
+    verifyToken,
+    appSecret,
+    apiVersion
   }: WhatsappData = req.body;
 
   const { whatsapp, oldDefaultWhatsapp } = await CreateWhatsAppService({
@@ -46,7 +62,15 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     farewellMessage,
     queueIds,
     linkedUserId,
-    linkedUserSignMessages
+    linkedUserSignMessages,
+    providerType,
+    wabaId,
+    phoneNumberId,
+    businessAccountId,
+    accessToken,
+    verifyToken,
+    appSecret,
+    apiVersion
   });
 
   const formattedWhatsApp = await ShowWhatsAppService(whatsapp.id);
@@ -54,7 +78,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     ? await ShowWhatsAppService(oldDefaultWhatsapp.id)
     : null;
 
-  StartWhatsAppSession(formattedWhatsApp, { reason: "create" });
+  if (formattedWhatsApp.providerType !== "official") {
+    StartWhatsAppSession(formattedWhatsApp, { reason: "create" });
+  }
 
   const io = getIO();
   io.emit("whatsapp", {
@@ -137,6 +163,12 @@ export const restart = async (
 ): Promise<Response> => {
   const { whatsappId } = req.params;
   const whatsapp = await ShowWhatsAppService(whatsappId);
+
+  if (whatsapp.providerType === "official") {
+    return res.status(400).json({
+      message: "Official Cloud API connections do not use QR sessions."
+    });
+  }
 
   await whatsappProvider.removeSession(whatsapp.id);
   void StartWhatsAppSession(whatsapp, { reason: "manual_restart" });

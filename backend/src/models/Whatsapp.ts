@@ -57,6 +57,48 @@ class Whatsapp extends Model<Whatsapp> {
   @Column(DataType.TEXT)
   phoneNumber: string;
 
+  @Default("web")
+  @AllowNull(false)
+  @Column(DataType.STRING)
+  providerType: string;
+
+  @AllowNull
+  @Column(DataType.TEXT)
+  wabaId: string;
+
+  @AllowNull
+  @Column(DataType.TEXT)
+  phoneNumberId: string;
+
+  @AllowNull
+  @Column(DataType.TEXT)
+  businessAccountId: string;
+
+  @AllowNull
+  @Column(DataType.TEXT)
+  accessToken: string;
+
+  @AllowNull
+  @Column(DataType.TEXT)
+  verifyToken: string;
+
+  @AllowNull
+  @Column(DataType.TEXT)
+  appSecret: string;
+
+  @Default("v20.0")
+  @AllowNull
+  @Column(DataType.STRING)
+  apiVersion: string;
+
+  @AllowNull
+  @Column(DataType.STRING)
+  cloudApiStatus: string;
+
+  @AllowNull
+  @Column(DataType.TEXT)
+  cloudApiLastError: string;
+
   @Default(false)
   @AllowNull
   @Column

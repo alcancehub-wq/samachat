@@ -66,6 +66,13 @@ const useStyles = makeStyles(theme => ({
 	signatureHelper: {
 		marginTop: 0,
 	},
+
+	cloudApiSection: {
+		marginTop: theme.spacing(2),
+		display: "flex",
+		flexDirection: "column",
+		gap: theme.spacing(1),
+	},
 }));
 
 const SessionSchema = Yup.object().shape({
@@ -81,6 +88,14 @@ const INITIAL_STATE = {
 	farewellMessage: "",
 	isDefault: false,
 	linkedUserId: "",
+	providerType: "web",
+	wabaId: "",
+	phoneNumberId: "",
+	businessAccountId: "",
+	accessToken: "",
+	verifyToken: "",
+	appSecret: "",
+	apiVersion: "v20.0",
 };
 
 const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
@@ -105,6 +120,14 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 					...INITIAL_STATE,
 					...data,
 					linkedUserId: linkedUser?.id || "",
+					providerType: data.providerType || "web",
+					wabaId: data.wabaId || "",
+					phoneNumberId: data.phoneNumberId || "",
+					businessAccountId: data.businessAccountId || "",
+					accessToken: data.accessToken || "",
+					verifyToken: data.verifyToken || "",
+					appSecret: data.appSecret || "",
+					apiVersion: data.apiVersion || "v20.0",
 				});
 
 				const whatsQueueIds = data.queues?.map(queue => queue.id);
@@ -176,6 +199,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 	const handleSaveWhatsApp = async values => {
 		const whatsappData = {
 			...values,
+			providerType: values.providerType || "web",
 			queueIds: selectedQueueIds,
 			linkedUserId: values.linkedUserId ? Number(values.linkedUserId) : null,
 		};
@@ -251,6 +275,93 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 										label={i18n.t("whatsappModal.form.default")}
 									/>
 								</div>
+								<div className={classes.cloudApiSection}>
+									<FormControl variant="outlined" margin="dense" fullWidth>
+										<InputLabel>Tipo de conexão</InputLabel>
+										<Field
+											as={Select}
+											name="providerType"
+											value={values.providerType || "web"}
+											label="Tipo de conexão"
+										>
+											<MenuItem value="web">WhatsApp Web (QR Code)</MenuItem>
+											<MenuItem value="official">API Oficial (Cloud API)</MenuItem>
+										</Field>
+										<FormHelperText>
+											Use API Oficial somente com credenciais da Meta.
+										</FormHelperText>
+									</FormControl>
+
+									{values.providerType === "official" && (
+										<>
+											<Field
+												as={TextField}
+												label="Phone Number ID"
+												name="phoneNumberId"
+												fullWidth
+												variant="outlined"
+												margin="dense"
+												helperText="ID do número no WhatsApp Business Platform."
+											/>
+											<Field
+												as={TextField}
+												label="Access Token"
+												name="accessToken"
+												fullWidth
+												multiline
+												rows={3}
+												variant="outlined"
+												margin="dense"
+											/>
+											<Field
+												as={TextField}
+												label="Verify Token"
+												name="verifyToken"
+												fullWidth
+												variant="outlined"
+												margin="dense"
+												helperText="Token usado na validação GET do webhook."
+											/>
+											<Field
+												as={TextField}
+												label="App Secret"
+												name="appSecret"
+												fullWidth
+												variant="outlined"
+												margin="dense"
+												helperText="Opcional, usado para validar assinatura do webhook."
+											/>
+											<div className={classes.multFieldLine}>
+												<Field
+													as={TextField}
+													label="WABA ID"
+													name="wabaId"
+													fullWidth
+													variant="outlined"
+													margin="dense"
+												/>
+												<Field
+													as={TextField}
+													label="Business Account ID"
+													name="businessAccountId"
+													fullWidth
+													variant="outlined"
+													margin="dense"
+												/>
+											</div>
+											<Field
+												as={TextField}
+												label="API Version"
+												name="apiVersion"
+												fullWidth
+												variant="outlined"
+												margin="dense"
+												placeholder="v20.0"
+											/>
+										</>
+									)}
+								</div>
+
 								<div>
 									<Field
 										as={TextField}

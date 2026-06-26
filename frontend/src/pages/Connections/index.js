@@ -330,9 +330,24 @@ const Connections = () => {
 		const isRestarting = Boolean(restartingIds[whatsApp.id]);
 		const hasQrCode = Boolean(whatsApp.qrcode);
 		const isQrPending = whatsApp.status === "qrcode" || hasQrCode;
+		const isOfficialProvider = whatsApp.providerType === "official";
 
 		if (!canManageSession && !canManageOwnSession(whatsApp)) {
 			return null;
+		}
+
+		if (isOfficialProvider) {
+			return (
+				<Button
+					size="small"
+					variant="outlined"
+					color="primary"
+					className={classes.actionButton}
+					disabled
+				>
+					API Oficial
+				</Button>
+			);
 		}
 
 		return (

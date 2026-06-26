@@ -16,6 +16,7 @@ import ResolveMessageVariablesService from "../Variables/ResolveMessageVariables
 import { StartWhatsAppSession } from "./StartWhatsAppSession";
 import { sleep } from "../../utils/sleep";
 import { logger } from "../../utils/logger";
+import CloudApiClient from "../CloudApiServices/CloudApiClient";
 
 interface Request {
   body: string;
@@ -197,6 +198,10 @@ const ensureWhatsappSession = async (
     throw new AppError("ERR_WAPP_NOT_INITIALIZED");
   }
 
+  if (whatsapp.providerType === "official") {
+    return whatsapp;
+  }
+
   if (forceStart || !whatsappProvider.hasSession(whatsapp.id)) {
     triggerWhatsappSessionStart(whatsapp);
   }
@@ -244,13 +249,59 @@ const ensureWhatsappReady = async (
   throw new AppError("ERR_WAPP_NOT_INITIALIZED");
 };
 
+const sendOfficialCloudApiTextMessage = async ({
+  whatsapp,
+  ticket,
+  payload,
+  resolvedBody
+}: {
+  whatsapp: Whatsapp;
+  ticket: Ticket;
+  payload: string;
+  resolvedBody: string;
+}): Promise<ProviderMessage> => {
+  const storedNumber = ticket.contact.number || "";
+
+  if (!storedNumber) {
+    throw new AppError("ERR_WAPP_INVALID_CONTACT");
+  }
+
+  const client = new CloudApiClient({
+    accessToken: whatsapp.accessToken,
+    phoneNumberId: whatsapp.phoneNumberId,
+    apiVersion: whatsapp.apiVersion
+  });
+
+  const result = await client.sendText({
+    to: storedNumber,
+    body: payload,
+    previewUrl: false
+  });
+
+  await ticket.update({ lastMessage: resolvedBody });
+
+  return {
+    id: result.messages?.[0]?.id || `cloudapi-${ticket.id}-${Date.now()}`,
+    ack: 1,
+    body: payload,
+    fromMe: true,
+    hasMedia: false,
+    type: "chat" as any,
+    timestamp: Math.floor(Date.now() / 1000),
+    from: whatsapp.phoneNumber || whatsapp.phoneNumberId || "",
+    to: storedNumber
+  } as ProviderMessage;
+};
 const SendWhatsAppMessage = async ({
   body,
   ticket,
   quotedMsg
 }: Request): Promise<ProviderMessage> => {
   const whatsapp = await ensureWhatsappSession(ticket);
-  await ensureWhatsappReady(ticket, whatsapp);
+
+  if (whatsapp.providerType !== "official") {
+    await ensureWhatsappReady(ticket, whatsapp);
+  }
 
   const storedNumber = ticket.contact.number || "";
   const storedLid = normalizeLid(ticket.contact.lid || "");
@@ -314,6 +365,15 @@ const SendWhatsAppMessage = async ({
     user: ticket.user
   });
   const payload = formatBody(resolvedBody, ticket.contact);
+
+  if (whatsapp.providerType === "official") {
+    return sendOfficialCloudApiTextMessage({
+      whatsapp,
+      ticket,
+      payload,
+      resolvedBody
+    });
+  }
 
   const sendWithChatId = async (targetChatId: string): Promise<ProviderMessage> =>
     whatsappProvider.sendMessage(ticket.whatsappId as number, targetChatId, payload, {

@@ -14,6 +14,14 @@ interface Request {
   isDefault?: boolean;
   linkedUserId?: number | null;
   linkedUserSignMessages?: boolean;
+  providerType?: string;
+  wabaId?: string;
+  phoneNumberId?: string;
+  businessAccountId?: string;
+  accessToken?: string;
+  verifyToken?: string;
+  appSecret?: string;
+  apiVersion?: string;
 }
 
 interface Response {
@@ -29,7 +37,15 @@ const CreateWhatsAppService = async ({
   farewellMessage,
   isDefault = false,
   linkedUserId,
-  linkedUserSignMessages
+  linkedUserSignMessages,
+  providerType = "web",
+  wabaId,
+  phoneNumberId,
+  businessAccountId,
+  accessToken,
+  verifyToken,
+  appSecret,
+  apiVersion = "v20.0"
 }: Request): Promise<Response> => {
   const schema = Yup.object().shape({
     name: Yup.string()
@@ -46,11 +62,12 @@ const CreateWhatsAppService = async ({
           return !nameExists;
         }
       ),
-    isDefault: Yup.boolean().required()
+    isDefault: Yup.boolean().required(),
+    providerType: Yup.string().oneOf(["web", "official"])
   });
 
   try {
-    await schema.validate({ name, status, isDefault });
+    await schema.validate({ name, status, isDefault, providerType });
   } catch (err) {
     throw new AppError(err.message);
   }
@@ -70,6 +87,13 @@ const CreateWhatsAppService = async ({
     }
   }
 
+  if (
+    providerType === "official" &&
+    (!phoneNumberId || !accessToken || !verifyToken)
+  ) {
+    throw new AppError("ERR_CLOUD_API_REQUIRED_FIELDS");
+  }
+
   if (queueIds.length > 1 && !greetingMessage) {
     throw new AppError("ERR_WAPP_GREETING_REQUIRED");
   }
@@ -80,7 +104,17 @@ const CreateWhatsAppService = async ({
       status,
       greetingMessage,
       farewellMessage,
-      isDefault
+      isDefault,
+      providerType,
+      wabaId,
+      phoneNumberId,
+      businessAccountId,
+      accessToken,
+      verifyToken,
+      appSecret,
+      apiVersion,
+      cloudApiStatus: providerType === "official" ? "configured" : undefined,
+      cloudApiLastError: null
     },
     { include: ["queues"] }
   );
