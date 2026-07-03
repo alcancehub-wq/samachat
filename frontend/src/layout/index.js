@@ -499,24 +499,20 @@ const LoggedInLayout = ({ children }) => {
               </Typography>
             </div>
           </div>
-
-          <IconButton
-            aria-label={autoCorrectTextEnabled ? "Desligar correção automática" : "Ligar correção automática"}
-            title={autoCorrectTextEnabled ? "Correção IA ligada" : "Correção IA desligada"}
-            onClick={handleToggleAutoCorrectText}
-            className={classes.iconButton}
-            style={
-              autoCorrectTextEnabled
-                ? { color: "#ff1919", backgroundColor: "rgba(255, 25, 25, 0.08)" }
-                : undefined
-            }
-          >
-            <SpellcheckIcon fontSize="small" />
-          </IconButton>
-
           <div className={classes.topActions}>
             {user?.id && canViewTickets && (
+              <>
+              <IconButton
+                aria-label={autoCorrectTextEnabled ? "Desligar correção automática" : "Ligar correção automática"}
+                title={autoCorrectTextEnabled ? "Correção IA ligada" : "Correção IA desligada"}
+                onClick={handleToggleAutoCorrectText}
+                className={classes.iconButton}
+                style={autoCorrectTextEnabled ? { color: "#ff1919" } : undefined}
+              >
+                <SpellcheckIcon fontSize="small" />
+              </IconButton>
               <NotificationsPopOver className={classes.iconButton} />
+              </>
             )}
 
             <div>
