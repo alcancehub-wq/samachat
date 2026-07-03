@@ -57,4 +57,10 @@ openAIRoutes.post(
 	OpenAIController.classify
 );
 
+openAIRoutes.post(
+  "/openai/correct-text",
+  isAuth,
+  OpenAIController.correctText
+);
+
 export default openAIRoutes;

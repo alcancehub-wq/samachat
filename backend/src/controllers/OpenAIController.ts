@@ -109,6 +109,30 @@ export const summarize = async (req: Request, res: Response): Promise<Response> 
   return res.status(200).json(result);
 };
 
+export const correctText = async (req: Request, res: Response): Promise<Response> => {
+  if (!req.body.text) {
+    throw new AppError("ERR_OPENAI_TEXT_REQUIRED", 400);
+  }
+
+  const prompt = [
+    "Corrija apenas ortografia, acentos, pontuacao, capitalizacao e concordancia do texto abaixo em portugues do Brasil.",
+    "Preserve o sentido, tom, quebras de linha, emojis, nomes, numeros, links, telefones, codigos e valores.",
+    "Nao reescreva como mensagem comercial. Nao acrescente informacoes.",
+    "Nao explique. Retorne somente o texto corrigido.",
+    "",
+    req.body.text
+  ].join("\n");
+
+  const result = await RunOpenAICompletionService({
+    action: "rewrite",
+    userPrompt: prompt,
+    ticketId: req.body.ticketId,
+    userId: Number(req.user.id)
+  });
+
+  return res.status(200).json(result);
+};
+
 export const classify = async (req: Request, res: Response): Promise<Response> => {
   const schema = Yup.object().shape({
     ticketId: Yup.number().nullable(),

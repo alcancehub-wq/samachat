@@ -434,6 +434,7 @@ const MessageInput = ({ ticketStatus }) => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [loading, setLoading] = useState(false);
   const [correctingText, setCorrectingText] = useState(false);
+  const [autoCorrectTextEnabled, setAutoCorrectTextEnabled] = useState(false);
   const [recording, setRecording] = useState(false);
   const [isInternalMessage, setIsInternalMessage] = useState(false);
   const [quickAnswers, setQuickAnswer] = useState([]);
@@ -518,6 +519,16 @@ const MessageInput = ({ ticketStatus }) => {
     mediaStreamRef.current = null;
   };
 
+  const getAutoCorrectTextStorageKey = () =>
+    user?.id
+      ? `samachat:autoCorrectTextEnabled:${user.id}`
+      : "samachat:autoCorrectTextEnabled";
+
+  useEffect(() => {
+    const storedValue = localStorage.getItem(getAutoCorrectTextStorageKey());
+    setAutoCorrectTextEnabled(storedValue === "true");
+  }, [user?.id]);
+
   const handleChangeInput = e => {
     setInputMessage(e.target.value);
     handleLoadQuickAnswer(e.target.value);
@@ -528,55 +539,34 @@ const MessageInput = ({ ticketStatus }) => {
     setTypeBar(false);
   };
 
-  const buildCorrectTextPrompt = textToCorrect =>
-    [
-      "Corrija apenas ortografia, acentos, pontuacao, capitalizacao e concordancia do texto abaixo em portugues do Brasil.",
-      "Preserve o sentido, tom, quebras de linha, emojis, nomes, numeros, links, telefones e codigos.",
-      "Nao explique. Retorne somente o texto corrigido.",
-      "",
-      textToCorrect
-    ].join("\n");
-
   const extractCorrectedText = data => {
     if (typeof data === "string") return data;
 
     return (
+      data?.content ||
       data?.text ||
       data?.result ||
       data?.response ||
-      data?.content ||
       data?.message ||
       ""
     );
   };
 
-  const handleCorrectText = async ({ internalMode = isInternalMessage } = {}) => {
-    const currentMessage = internalMode ? internalInputMessage : inputMessage;
+  const correctTextValue = async textToCorrect => {
+    const { data } = await api.post("/openai/correct-text", {
+      ticketId,
+      text: textToCorrect
+    });
 
-    if (currentMessage.trim() === "" || correctingText || loading) return;
+    return extractCorrectedText(data).trim();
+  };
 
-    setCorrectingText(true);
-
-    try {
-      const { data } = await api.post("/openai/rewrite", {
-        ticketId,
-        text: buildCorrectTextPrompt(currentMessage)
-      });
-
-      const correctedText = extractCorrectedText(data).trim();
-
-      if (!correctedText) return;
-
-      if (internalMode) {
-        setInternalInputMessage(correctedText);
-      } else {
-        setInputMessage(correctedText);
-      }
-    } catch (err) {
-      toastError(err);
-    } finally {
-      setCorrectingText(false);
-    }
+  const handleToggleAutoCorrectText = () => {
+    setAutoCorrectTextEnabled(prevState => {
+      const nextState = !prevState;
+      localStorage.setItem(getAutoCorrectTextStorageKey(), String(nextState));
+      return nextState;
+    });
   };
 
   const handleAddEmoji = e => {
@@ -706,11 +696,30 @@ const MessageInput = ({ ticketStatus }) => {
   };
 
   const handleSendMessage = async ({ internalMode = isInternalMessage } = {}) => {
-    const currentMessage = internalMode ? internalInputMessage : inputMessage;
+    let currentMessage = internalMode ? internalInputMessage : inputMessage;
 
     if (currentMessage.trim() === "") return;
 
     setLoading(true);
+
+    if (autoCorrectTextEnabled) {
+      setCorrectingText(true);
+
+      try {
+        const correctedText = await correctTextValue(currentMessage.trim());
+        if (correctedText) {
+          currentMessage = correctedText;
+        }
+      } catch (err) {
+        toastError(err);
+        setLoading(false);
+        setCorrectingText(false);
+        return;
+      } finally {
+        setCorrectingText(false);
+      }
+    }
+
     const shouldSignMessages = user?.signMessages !== false;
     const trimmedMessage = currentMessage.trim();
 
@@ -974,17 +983,6 @@ const MessageInput = ({ ticketStatus }) => {
             }
           }}
         />
-        {internalInputMessage.trim() && (
-          <Button
-            size="small"
-            variant="outlined"
-            className={classes.correctTextButton}
-            onClick={() => handleCorrectText({ internalMode: true })}
-            disabled={loading || correctingText || recording || ticketStatus !== "open"}
-          >
-            {correctingText ? "Corrigindo..." : "Corrigir texto"}
-          </Button>
-        )}
         {(mentionLoading || mentionOptions.length > 0) && (
           <Paper elevation={0} className={classes.internalComposerSuggestions}>
             {mentionLoading ? (
@@ -1247,6 +1245,21 @@ const MessageInput = ({ ticketStatus }) => {
               )}
             </IconButton>
           </Hidden>
+          <Button
+            size="small"
+            variant={autoCorrectTextEnabled ? "contained" : "outlined"}
+            color={autoCorrectTextEnabled ? "primary" : "default"}
+            className={classes.correctTextButton}
+            onClick={handleToggleAutoCorrectText}
+            disabled={loading || correctingText || recording || ticketStatus !== "open"}
+            title="Liga ou desliga a correção automática de texto para este usuário"
+          >
+            {correctingText
+              ? "Corrigindo..."
+              : autoCorrectTextEnabled
+              ? "Correção IA: ligada"
+              : "Correção IA: desligada"}
+          </Button>
           <div className={classes.messageInputWrapper}>
             <InputBase
               inputRef={input => {
@@ -1287,17 +1300,6 @@ const MessageInput = ({ ticketStatus }) => {
                 }
               }}
             />
-            {inputMessage.trim() && !isInternalMessage && (
-              <Button
-                size="small"
-                variant="outlined"
-                className={classes.correctTextButton}
-                onClick={() => handleCorrectText()}
-                disabled={loading || correctingText || recording || ticketStatus !== "open"}
-              >
-                {correctingText ? "Corrigindo..." : "Corrigir texto"}
-              </Button>
-            )}
             {typeBar ? (
               <ul className={classes.messageQuickAnswersWrapper}>
                 {quickAnswers.map((value, index) => {
