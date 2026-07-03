@@ -525,8 +525,18 @@ const MessageInput = ({ ticketStatus }) => {
       : "samachat:autoCorrectTextEnabled";
 
   useEffect(() => {
-    const storedValue = localStorage.getItem(getAutoCorrectTextStorageKey());
-    setAutoCorrectTextEnabled(storedValue === "true");
+    const refreshAutoCorrectTextEnabled = () => {
+      const storedValue = localStorage.getItem(getAutoCorrectTextStorageKey());
+      setAutoCorrectTextEnabled(storedValue === "true");
+    };
+
+    refreshAutoCorrectTextEnabled();
+
+    window.addEventListener("samachat:auto-correct-text-toggle", refreshAutoCorrectTextEnabled);
+
+    return () => {
+      window.removeEventListener("samachat:auto-correct-text-toggle", refreshAutoCorrectTextEnabled);
+    };
   }, [user?.id]);
 
   const handleChangeInput = e => {
@@ -561,13 +571,6 @@ const MessageInput = ({ ticketStatus }) => {
     return extractCorrectedText(data).trim();
   };
 
-  const handleToggleAutoCorrectText = () => {
-    setAutoCorrectTextEnabled(prevState => {
-      const nextState = !prevState;
-      localStorage.setItem(getAutoCorrectTextStorageKey(), String(nextState));
-      return nextState;
-    });
-  };
 
   const handleAddEmoji = e => {
     let emoji = e.native;
@@ -1245,21 +1248,6 @@ const MessageInput = ({ ticketStatus }) => {
               )}
             </IconButton>
           </Hidden>
-          <Button
-            size="small"
-            variant={autoCorrectTextEnabled ? "contained" : "outlined"}
-            color={autoCorrectTextEnabled ? "primary" : "default"}
-            className={classes.correctTextButton}
-            onClick={handleToggleAutoCorrectText}
-            disabled={loading || correctingText || recording || ticketStatus !== "open"}
-            title="Liga ou desliga a correção automática de texto para este usuário"
-          >
-            {correctingText
-              ? "Corrigindo..."
-              : autoCorrectTextEnabled
-              ? "Correção IA: ligada"
-              : "Correção IA: desligada"}
-          </Button>
           <div className={classes.messageInputWrapper}>
             <InputBase
               inputRef={input => {

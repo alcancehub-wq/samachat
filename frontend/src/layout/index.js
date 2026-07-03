@@ -19,7 +19,7 @@ import {
 import MenuIcon from "@material-ui/icons/Menu";
 import AccountCircle from "@material-ui/icons/AccountCircle";
 import Brightness4Icon from "@material-ui/icons/Brightness4";
-import SearchIcon from "@material-ui/icons/Search";
+import SpellcheckIcon from "@material-ui/icons/Spellcheck";
 import InfoOutlinedIcon from "@material-ui/icons/InfoOutlined";
 import DescriptionOutlinedIcon from "@material-ui/icons/DescriptionOutlined";
 import PersonOutlineOutlinedIcon from "@material-ui/icons/PersonOutlineOutlined";
@@ -341,6 +341,7 @@ const LoggedInLayout = ({ children }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   const { darkMode, toggleTheme } = useThemeContext();
+  const [autoCorrectTextEnabled, setAutoCorrectTextEnabled] = useState(false);
   const [menuSearch, setMenuSearch] = useState("");
   const canViewTickets = userHasPermission(user, "tickets.view");
   const isFocusRoute =
@@ -451,6 +452,25 @@ const LoggedInLayout = ({ children }) => {
     setDrawerOpen(true);
   };
 
+  const getAutoCorrectTextStorageKey = () =>
+    user?.id
+      ? `samachat:autoCorrectTextEnabled:${user.id}`
+      : "samachat:autoCorrectTextEnabled";
+
+  useEffect(() => {
+    const storedValue = localStorage.getItem(getAutoCorrectTextStorageKey());
+    setAutoCorrectTextEnabled(storedValue === "true");
+  }, [user?.id]);
+
+  const handleToggleAutoCorrectText = () => {
+    setAutoCorrectTextEnabled(prevState => {
+      const nextState = !prevState;
+      localStorage.setItem(getAutoCorrectTextStorageKey(), String(nextState));
+      window.dispatchEvent(new CustomEvent("samachat:auto-correct-text-toggle"));
+      return nextState;
+    });
+  };
+
   if (loading) {
     return <BackdropLoading />;
   }
@@ -480,22 +500,19 @@ const LoggedInLayout = ({ children }) => {
             </div>
           </div>
 
-          <TextField
-            value={menuSearch}
-            onChange={(event) => setMenuSearch(event.target.value)}
-            placeholder={i18n.t("mainDrawer.search.placeholder")}
-            size="small"
-            variant="outlined"
-            className={classes.searchField}
-            InputProps={{
-              className: classes.searchInput,
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" className={classes.searchAdornment} />
-                </InputAdornment>
-              ),
-            }}
-          />
+          <IconButton
+            aria-label={autoCorrectTextEnabled ? "Desligar correção automática" : "Ligar correção automática"}
+            title={autoCorrectTextEnabled ? "Correção IA ligada" : "Correção IA desligada"}
+            onClick={handleToggleAutoCorrectText}
+            className={classes.iconButton}
+            style={
+              autoCorrectTextEnabled
+                ? { color: "#ff1919", backgroundColor: "rgba(255, 25, 25, 0.08)" }
+                : undefined
+            }
+          >
+            <SpellcheckIcon fontSize="small" />
+          </IconButton>
 
           <div className={classes.topActions}>
             {user?.id && canViewTickets && (
