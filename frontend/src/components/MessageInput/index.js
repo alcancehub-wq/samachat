@@ -38,6 +38,12 @@ import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
+const nativeSpellCheckInputProps = {
+  spellCheck: true,
+  autoCorrect: "on",
+  autoCapitalize: "sentences",
+  lang: "pt-BR",
+};
 
 const audioToastIds = {
   permissionDenied: "messageInput-audio-permission-denied",
@@ -889,6 +895,7 @@ const MessageInput = ({ ticketStatus }) => {
           maxRows={4}
           fullWidth
           autoFocus
+          inputProps={nativeSpellCheckInputProps}
           value={internalInputMessage}
           placeholder={i18n.t("messagesInput.placeholderInternal")}
           onChange={handleChangeInternalInput}
@@ -1173,6 +1180,7 @@ const MessageInput = ({ ticketStatus }) => {
                 input && (inputRef.current = input);
               }}
               className={classes.messageInput}
+              inputProps={nativeSpellCheckInputProps}
               placeholder={
                 ticketStatus !== "open"
                   ? i18n.t("messagesInput.placeholderClosed")
