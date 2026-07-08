@@ -339,12 +339,7 @@ const SendWhatsAppMedia = async ({
       sendAudioAsVoice: effectiveSendAsVoice,
       sendMediaAsDocument: effectiveSendMediaAsDocument
     };
-    const providerMediaInput = composerRecordedAudio
-      ? {
-          ...mediaInput,
-          filename: ""
-        }
-      : mediaInput;
+    const providerMediaInput = mediaInput;
 
     const sendWithChatId = async (targetChatId: string): Promise<ProviderMessage> => {
       if (shouldAuditAudio) {
