@@ -7,6 +7,7 @@ import ShowTicketService from "../ShowTicketService";
 
 jest.mock("../../../models/Ticket", () => ({
   findOne: jest.fn(),
+  findAll: jest.fn(),
   create: jest.fn()
 }));
 
@@ -25,6 +26,7 @@ jest.mock("../../../libs/socket", () => ({
 jest.mock("../ShowTicketService");
 
 const ticketFindOneMock = Ticket.findOne as jest.Mock;
+const ticketFindAllMock = Ticket.findAll as jest.Mock;
 const ticketCreateMock = Ticket.create as jest.Mock;
 const tagFindOneMock = Tag.findOne as jest.Mock;
 const ticketTagDestroyMock = TicketTag.destroy as jest.Mock;
@@ -41,6 +43,7 @@ describe("FindOrCreateTicketService", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    ticketFindAllMock.mockResolvedValue([]);
     toMock.mockReturnThis();
     getIOMock.mockReturnValue(ioMock);
     tagFindOneMock.mockResolvedValue(null);

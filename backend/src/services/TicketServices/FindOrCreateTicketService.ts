@@ -6,8 +6,11 @@ import Tag from "../../models/Tag";
 import Ticket from "../../models/Ticket";
 import TicketTag from "../../models/TicketTag";
 import { getScopedNotificationRoom, getScopedTicketsRoom } from "../../helpers/socketRooms";
+import BuildEquivalentContactNumberCandidates from "../../helpers/BuildEquivalentContactNumberCandidates";
 import { FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag";
 import ShowTicketService from "./ShowTicketService";
+
+const ACTIVE_TICKET_STATUSES = ["open", "pending"];
 
 const removeAutomaticFollowUpTag = async (
   ticketId: number,
@@ -82,6 +85,89 @@ const resolveNextUnreadMessages = (
   return currentUnreadMessages + 1;
 };
 
+const getActiveTicketPriority = (ticket: Ticket): number => {
+  if (ticket.status === "open" && ticket.userId) {
+    return 0;
+  }
+
+  if (ticket.status === "open") {
+    return 1;
+  }
+
+  if (ticket.status === "pending" && ticket.userId) {
+    return 2;
+  }
+
+  return 3;
+};
+
+const sortActiveTicketsByBusinessPriority = (left: Ticket, right: Ticket): number => {
+  const priorityDiff = getActiveTicketPriority(left) - getActiveTicketPriority(right);
+
+  if (priorityDiff !== 0) {
+    return priorityDiff;
+  }
+
+  const leftUpdatedAt = left.updatedAt ? new Date(left.updatedAt).getTime() : 0;
+  const rightUpdatedAt = right.updatedAt ? new Date(right.updatedAt).getTime() : 0;
+
+  if (rightUpdatedAt !== leftUpdatedAt) {
+    return rightUpdatedAt - leftUpdatedAt;
+  }
+
+  return Number(right.id || 0) - Number(left.id || 0);
+};
+
+const findActiveTicketByContactNumberEquivalence = async (
+  contact: Contact,
+  whatsappId: number,
+  ticketContactId: number
+): Promise<Ticket | null> => {
+  const numberCandidates = BuildEquivalentContactNumberCandidates(contact.number || "");
+
+  const equivalentContacts = numberCandidates.length
+    ? await Contact.findAll({
+        where: {
+          number: {
+            [Op.in]: numberCandidates
+          }
+        },
+        attributes: ["id"]
+      })
+    : [];
+
+  const contactIds = Array.from(
+    new Set([
+      ticketContactId,
+      contact.id,
+      ...equivalentContacts.map(equivalentContact => equivalentContact.id)
+    ].filter(Boolean))
+  );
+
+  if (!contactIds.length) {
+    return null;
+  }
+
+  const activeTickets = await Ticket.findAll({
+    where: {
+      status: {
+        [Op.in]: ACTIVE_TICKET_STATUSES
+      },
+      contactId: {
+        [Op.in]: contactIds
+      },
+      whatsappId
+    },
+    order: [["updatedAt", "DESC"], ["id", "DESC"]]
+  });
+
+  if (!activeTickets.length) {
+    return null;
+  }
+
+  return [...activeTickets].sort(sortActiveTicketsByBusinessPriority)[0];
+};
+
 const FindOrCreateTicketService = async (
   contact: Contact,
   whatsappId: number,
@@ -93,16 +179,28 @@ const FindOrCreateTicketService = async (
   let transitionedFromStatus: string | null = null;
   let transitionedFromWhatsappId: number | null = null;
 
-  let ticket = await Ticket.findOne({
-    where: {
-      status: {
-        [Op.or]: ["open", "pending"]
+  let ticket: Ticket | null = null;
+
+  if (!groupContact) {
+    ticket = await findActiveTicketByContactNumberEquivalence(
+      contact,
+      whatsappId,
+      ticketContactId
+    );
+  }
+
+  if (!ticket) {
+    ticket = await Ticket.findOne({
+      where: {
+        status: {
+          [Op.or]: ACTIVE_TICKET_STATUSES
+        },
+        contactId: ticketContactId,
+        whatsappId
       },
-      contactId: ticketContactId,
-      whatsappId
-    },
-    order: [["updatedAt", "DESC"]]
-  });
+      order: [["updatedAt", "DESC"]]
+    });
+  }
 
   if (ticket) {
     await ticket.update({ unreadMessages: resolveNextUnreadMessages(ticket, unreadMessages) });
@@ -167,7 +265,7 @@ const FindOrCreateTicketService = async (
       status: "pending",
       isGroup: !!groupContact,
       unreadMessages,
-		pendingSince: new Date(),
+      pendingSince: new Date(),
       whatsappId
     });
   }
