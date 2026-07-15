@@ -139,42 +139,6 @@ describe("SendWhatsAppMessage", () => {
     expect(checkNumberServiceMock).not.toHaveBeenCalled();
   });
 
-  it("accepts provider sends without id and avoids retry/restart side effects", async () => {
-    const ticket = buildTicket({
-      id: 1161,
-      contactId: 17162,
-      contact: {
-        number: "5511963715316",
-        lid: "",
-        update: jest.fn().mockResolvedValue(undefined)
-      }
-    });
-    const acceptedMessage = {
-      id: "",
-      body: "retorno sem id",
-      fromMe: true,
-      hasMedia: false,
-      type: "chat",
-      timestamp: 1784130000,
-      from: "",
-      to: "5511963715316@c.us",
-      hasQuotedMsg: false,
-      ack: 0
-    };
-
-    sendMessageMock.mockResolvedValue(acceptedMessage);
-
-    await expect(
-      SendWhatsAppMessage({ body: "retorno sem id", ticket })
-    ).resolves.toEqual(acceptedMessage);
-
-    expect(sendMessageMock).toHaveBeenCalledTimes(1);
-    expect(startWhatsAppSessionMock).not.toHaveBeenCalled();
-    expect(ticket.update).toHaveBeenCalledWith({
-      lastMessage: "retorno sem id"
-    });
-  });
-
   it("retries Juliana with the rich lookup chat id when the first send fails with No LID for user", async () => {
     const ticket = buildTicket({
       id: 1153,

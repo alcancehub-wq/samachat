@@ -103,22 +103,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       })
     );
   } else {
-    const sentMessage = await SendWhatsAppMessage({ body, ticket, quotedMsg });
-
-    await CreateMessageService({
-      messageData: {
-        id: sentMessage.id || `local-send-${uuidv4()}`,
-        ticketId: ticket.id,
-        body: sentMessage.body || body.trim(),
-        fromMe: true,
-        read: true,
-        quotedMsgId: quotedMsg?.id,
-        mediaType: sentMessage.type || "chat",
-        ack: sentMessage.ack !== undefined ? sentMessage.ack : 1
-      },
-      broadcastToStatus: false,
-      broadcastToNotification: false
-    });
+    await SendWhatsAppMessage({ body, ticket, quotedMsg });
   }
 
   await emitTicketUpdate(ticket);
