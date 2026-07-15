@@ -42,6 +42,11 @@ import {
   resolvePersistedStatusFromChangeState
 } from "./wwebjsSessionRuntime";
 import { revokeMessageWithLookupFallback } from "./wwebjsDeleteLookup";
+import {
+  buildAcceptedWwebjsProviderMessage,
+  resolveWwebjsChatWithFallback,
+  resolveWwebjsContactPayloadWithFallback
+} from "./wwebjsMessageRecovery";
 import type {
   WbotGroupContextChat,
   WbotGroupContextSource
@@ -519,11 +524,13 @@ const getMessageData = async (
   contextPayload: WhatsappContextPayload;
   mediaPayload: MediaPayload | undefined;
 }> => {
-  let msgContact: WbotContact;
   let contactPayload: ContactPayload;
   let groupContact: ContactPayload | undefined;
 
-  const chat = await msg.getChat();
+  const chat = await resolveWwebjsChatWithFallback(
+    msg as any,
+    logger as any
+  );
   const groupContext = deriveWwebjsGroupContext(
     msg as WbotGroupContextSource,
     chat as WbotGroupContextChat
@@ -547,21 +554,21 @@ const getMessageData = async (
     groupContact = resolvedGroupContact;
     contactPayload = resolvedGroupContact;
   } else {
-    if (msg.fromMe) {
-      try {
-        msgContact = await wbot.getContactById(msg.to);
-      } catch (err) {
-        logger.warn(err, "Unable to resolve contact by id, falling back to message contact");
-        msgContact = await msg.getContact();
-      }
-    } else {
-      msgContact = await msg.getContact();
-    }
-
-    contactPayload = await convertToContactPayload(msgContact);
+    contactPayload = await resolveWwebjsContactPayloadWithFallback({
+      msg: msg as any,
+      wbot: wbot as any,
+      convertContactPayload: contact =>
+        convertToContactPayload(contact as WbotContact),
+      logger: logger as any
+    });
   }
 
-  const unreadMessages = msg.fromMe ? 0 : Math.max(Number(chat.unreadCount) || 0, 1);
+  const unreadMessages = msg.fromMe
+    ? 0
+    : Math.max(
+        Number((chat as { unreadCount?: number }).unreadCount) || 0,
+        1
+      );
 
   const messagePayload = await convertToMessagePayload(msg);
   const mediaPayload = await convertToMediaPayload(msg);
@@ -688,6 +695,22 @@ const sendMessage = async (
       quotedMessageId: quotedMsgSerializedId,
       linkPreview: options?.linkPreview
     });
+
+    if (!sentMessage?.id?.id) {
+      logger.warn(
+        {
+          sessionId,
+          to
+        },
+        "wwebjs sendMessage accepted without returning a message result"
+      );
+
+      return buildAcceptedWwebjsProviderMessage({
+        sessionId,
+        to,
+        body
+      });
+    }
 
     return convertToProviderMessage(sentMessage);
   } catch (err) {
