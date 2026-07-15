@@ -817,6 +817,18 @@ const sendMessage = async (
       linkPreview: options?.linkPreview
     });
 
+    if (!sentMessage) {
+      logger.warn(
+        {
+          sessionId,
+          to
+        },
+        "wwebjs sendMessage accepted without provider payload"
+      );
+
+      return buildAcceptedSendProviderMessage(to, body);
+    }
+
     const providerMessage = convertToProviderMessage(sentMessage as WbotMessage);
 
     if (!providerMessage.id) {

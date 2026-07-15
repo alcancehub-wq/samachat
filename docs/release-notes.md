@@ -1,5 +1,13 @@
 # Release Notes
 
+## 2026-07-15
+
+### legacy-prod
+
+- Chats/WhatsApp: o provider `wwebjs` deixa de quebrar o fluxo quando `wbot.sendMessage()` retorna payload vazio em envios aceitos pelo provider; nesse cenario o backend passa a retornar um fallback de mensagem aceita, evitando erro falso de envio no painel e reduzindo risco de retry duplicado pelo fluxo de mensagens.
+- Escopo desta correcao: `backend/src/providers/WhatsApp/Implementations/wwebjs.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao: `npm run build` aprovado em `backend`; `npx jest --runInBand src/__tests__/unit/WbotServices/SendWhatsAppMessage.spec.ts src/handlers/__tests__/handleWhatsappEvents.spec.ts src/handlers/__tests__/handleWhatsappEvents.manualContactEcho.spec.ts src/providers/WhatsApp/Implementations/__tests__/wwebjs.sessionRuntime.spec.ts src/providers/WhatsApp/Implementations/__tests__/wwebjs.groupDetection.spec.ts src/providers/WhatsApp/Implementations/__tests__/wwebjsNumberLookup.spec.ts src/providers/WhatsApp/Implementations/__tests__/wwebjs.deleteMessage.spec.ts` aprovado em `backend`.
+
 ## 2026-05-27
 
 ### legacy-prod
