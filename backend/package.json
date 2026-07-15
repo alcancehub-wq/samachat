@@ -52,7 +52,7 @@
                          "socket.io":  "^3.0.5",
                          "uuid":  "^8.3.2",
                          "whaileys":  "^6.4.3",
-                         "whatsapp-web.js":  "github:pedroslopez/whatsapp-web.js#11594b28878276c433af3f046ed169f03d9a7a93",
+                         "whatsapp-web.js":  "github:wwebjs/whatsapp-web.js#f935b500117e264c2b3abc25b63a280bd98182a7",
                          "yup":  "^0.32.8"
                      },
     "devDependencies":  {
