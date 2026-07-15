@@ -31,6 +31,8 @@ const CreateMessageService = async ({
   broadcastToStatus = true,
   broadcastToNotification = true
 }: Request): Promise<Message> => {
+  const existingMessage = await Message.findByPk(messageData.id);
+
   await Message.upsert(messageData);
 
   const message = await Message.findByPk(messageData.id, {
@@ -62,8 +64,9 @@ const CreateMessageService = async ({
   }
 
   const io = getIO();
+  const action = existingMessage ? "update" : "create";
   const payload = {
-    action: "create",
+    action,
     message,
     ticket: message.ticket,
     contact: message.ticket.contact

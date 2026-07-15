@@ -308,20 +308,67 @@ const mapMessageAck = (wbotAck: any): MessageAck => {
   return ackMap[wbotAck] || 0;
 };
 
+const buildFallbackProviderMessageId = (message: {
+  timestamp?: number;
+  from?: string;
+  to?: string;
+}): string => {
+  const safeTimestamp = Number(message.timestamp) || Math.floor(Date.now() / 1000);
+  const safeFrom = (message.from || "unknown").replace(/[^a-zA-Z0-9@._-]/g, "");
+  const safeTo = (message.to || "unknown").replace(/[^a-zA-Z0-9@._-]/g, "");
+  const suffix = Math.random().toString(36).slice(2, 8);
+
+  return `fallback_${safeTimestamp}_${safeFrom}_${safeTo}_${suffix}`;
+};
+
+const resolveProviderMessageId = (wbotMessage: any): string => {
+  const candidates = [
+    wbotMessage?.id?.id,
+    wbotMessage?.id?._serialized,
+    wbotMessage?._data?.id?.id,
+    wbotMessage?._data?.id?._serialized,
+    typeof wbotMessage?.id === "string" ? wbotMessage.id : ""
+  ];
+
+  const resolved = candidates.find(value => typeof value === "string" && value.length > 0);
+  if (resolved) {
+    return resolved;
+  }
+
+  logger.warn(
+    {
+      from: wbotMessage?.from,
+      to: wbotMessage?.to,
+      fromMe: wbotMessage?.fromMe,
+      type: wbotMessage?.type,
+      hasMedia: wbotMessage?.hasMedia
+    },
+    "wwebjs sendMessage returned payload without message id; using fallback id"
+  );
+
+  return buildFallbackProviderMessageId({
+    timestamp: Number(wbotMessage?.timestamp) || undefined,
+    from: typeof wbotMessage?.from === "string" ? wbotMessage.from : undefined,
+    to: typeof wbotMessage?.to === "string" ? wbotMessage.to : undefined
+  });
+};
+
 const convertToProviderMessage = (
   wbotMessage: WbotMessage
 ): ProviderMessage => {
+  const message = wbotMessage as any;
+
   return {
-    id: wbotMessage.id.id,
-    body: wbotMessage.body,
-    fromMe: wbotMessage.fromMe,
-    hasMedia: wbotMessage.hasMedia,
-    type: mapMessageType(wbotMessage.type),
-    timestamp: wbotMessage.timestamp,
-    from: wbotMessage.from,
-    to: wbotMessage.to,
-    hasQuotedMsg: wbotMessage.hasQuotedMsg,
-    ack: mapMessageAck(wbotMessage.ack)
+    id: resolveProviderMessageId(message),
+    body: typeof message.body === "string" ? message.body : "",
+    fromMe: Boolean(message.fromMe),
+    hasMedia: Boolean(message.hasMedia),
+    type: mapMessageType(message.type),
+    timestamp: Number(message.timestamp) || Math.floor(Date.now() / 1000),
+    from: typeof message.from === "string" ? message.from : "",
+    to: typeof message.to === "string" ? message.to : "",
+    hasQuotedMsg: Boolean(message.hasQuotedMsg),
+    ack: mapMessageAck(message.ack)
   };
 };
 
@@ -688,6 +735,26 @@ const sendMessage = async (
       quotedMessageId: quotedMsgSerializedId,
       linkPreview: options?.linkPreview
     });
+
+    if (!sentMessage) {
+      logger.warn(
+        {
+          sessionId,
+          to
+        },
+        "wwebjs sendMessage returned empty payload; using fallback provider message"
+      );
+
+      return convertToProviderMessage({
+        body,
+        fromMe: true,
+        hasMedia: false,
+        type: "chat",
+        timestamp: Math.floor(Date.now() / 1000),
+        from: "",
+        to
+      } as WbotMessage);
+    }
 
     return convertToProviderMessage(sentMessage);
   } catch (err) {
