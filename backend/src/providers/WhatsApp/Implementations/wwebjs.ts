@@ -42,7 +42,6 @@ import {
   resolvePersistedStatusFromChangeState
 } from "./wwebjsSessionRuntime";
 import { revokeMessageWithLookupFallback } from "./wwebjsDeleteLookup";
-import BuildAcceptedWwebjsMessageResult from "./wwebjsSendResult";
 import type {
   WbotGroupContextChat,
   WbotGroupContextSource
@@ -689,23 +688,6 @@ const sendMessage = async (
       quotedMessageId: quotedMsgSerializedId,
       linkPreview: options?.linkPreview
     });
-
-    if (!sentMessage?.id?.id) {
-      logger.warn(
-        {
-          sessionId,
-          to
-        },
-        "wwebjs sendMessage returned no message object after provider acceptance"
-      );
-
-      return BuildAcceptedWwebjsMessageResult({
-        sessionId,
-        to,
-        body,
-        sentMessage
-      });
-    }
 
     return convertToProviderMessage(sentMessage);
   } catch (err) {
