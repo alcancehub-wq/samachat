@@ -396,6 +396,22 @@ const convertToProviderMessage = (
   };
 };
 
+const isAcceptedSendWithoutPayloadError = (err: unknown): boolean => {
+  const message =
+    err instanceof Error
+      ? err.message
+      : typeof err === "object" && err !== null && "message" in err
+        ? String((err as { message?: unknown }).message || "")
+        : typeof err === "string"
+          ? err
+          : "";
+
+  return (
+    /Cannot read properties of undefined \(reading 'id'\)/i.test(message) ||
+    /Cannot read properties of undefined \(reading '_serialized'\)/i.test(message)
+  );
+};
+
 const buildAcceptedSendProviderMessage = (
   to: string,
   body: string
@@ -845,6 +861,19 @@ const sendMessage = async (
 
     return providerMessage;
   } catch (err) {
+    if (isAcceptedSendWithoutPayloadError(err)) {
+      logger.warn(
+        {
+          err,
+          sessionId,
+          to
+        },
+        "wwebjs sendMessage accepted but provider payload was incomplete"
+      );
+
+      return buildAcceptedSendProviderMessage(to, body);
+    }
+
     logger.error(
       {
         err,
