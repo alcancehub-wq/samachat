@@ -308,11 +308,82 @@ const mapMessageAck = (wbotAck: any): MessageAck => {
   return ackMap[wbotAck] || 0;
 };
 
+const MESSAGE_EVENT_TTL_MS = 30000;
+const processedMessageEvents = new Map<string, number>();
+
+const cleanupProcessedMessageEvents = (): void => {
+  const now = Date.now();
+
+  processedMessageEvents.forEach((expiresAt, key) => {
+    if (expiresAt <= now) {
+      processedMessageEvents.delete(key);
+    }
+  });
+};
+
+const resolveMessageId = (wbotMessage: WbotMessage): string => {
+  const directId = (wbotMessage.id as any)?.id;
+  if (typeof directId === "string" && directId.trim().length > 0) {
+    return directId;
+  }
+
+  const serializedId = (wbotMessage.id as any)?._serialized;
+  if (typeof serializedId === "string" && serializedId.trim().length > 0) {
+    const parts = serializedId.split("_");
+    if (parts.length >= 3) {
+      return parts.slice(2).join("_");
+    }
+
+    return serializedId;
+  }
+
+  return "";
+};
+
+const buildMessageEventKey = (wbotMessage: WbotMessage): string => {
+  const providerId = resolveMessageId(wbotMessage);
+  if (providerId) {
+    return providerId;
+  }
+
+  return [
+    wbotMessage.fromMe ? "1" : "0",
+    wbotMessage.from || "",
+    wbotMessage.to || "",
+    String(wbotMessage.timestamp || 0),
+    wbotMessage.body || ""
+  ].join("|");
+};
+
+const buildFallbackContactPayloadFromRemoteId = (
+  remoteId: string,
+  fromMe: boolean
+): ContactPayload => {
+  const normalizedRemoteId = typeof remoteId === "string" ? remoteId : "";
+  const rawUser = normalizedRemoteId.includes("@")
+    ? normalizedRemoteId.split("@")[0]
+    : normalizedRemoteId;
+  const digits = rawUser.replace(/\D/g, "");
+  const isLid = /@lid$/i.test(normalizedRemoteId);
+
+  return {
+    name: digits || rawUser || "WhatsApp Contact",
+    number: isLid ? "" : digits,
+    lid: isLid
+      ? normalizedRemoteId.includes("@")
+        ? normalizedRemoteId
+        : `${digits}@lid`
+      : undefined,
+    profilePicUrl: undefined,
+    isGroup: /@g\.us$/i.test(normalizedRemoteId) && !fromMe
+  };
+};
+
 const convertToProviderMessage = (
   wbotMessage: WbotMessage
 ): ProviderMessage => {
   return {
-    id: wbotMessage.id.id,
+    id: resolveMessageId(wbotMessage),
     body: wbotMessage.body,
     fromMe: wbotMessage.fromMe,
     hasMedia: wbotMessage.hasMedia,
@@ -461,7 +532,7 @@ const convertToMessagePayload = async (
   const quotedMsgId = await verifyQuotedMessage(processedMsg);
 
   return {
-    id: processedMsg.id.id,
+    id: resolveMessageId(processedMsg),
     body: processedMsg.body,
     fromMe: processedMsg.fromMe,
     hasMedia: processedMsg.hasMedia,
@@ -509,7 +580,9 @@ const shouldHandleMessage = (msg: WbotMessage): boolean => {
   }
 
   // Check for Unicode direction mark
-  if (/\u200e/.test(msg.body[0])) return false;
+  const firstBodyChar =
+    typeof msg.body === "string" && msg.body.length > 0 ? msg.body[0] : "";
+  if (firstBodyChar && /\u200e/.test(firstBodyChar)) return false;
 
   // Additional validation for messages from me
   if (msg.fromMe) {
@@ -535,11 +608,34 @@ const getMessageData = async (
   contextPayload: WhatsappContextPayload;
   mediaPayload: MediaPayload | undefined;
 }> => {
-  let msgContact: WbotContact;
+  let msgContact: WbotContact | undefined;
   let contactPayload: ContactPayload;
   let groupContact: ContactPayload | undefined;
 
-  const chat = await msg.getChat();
+  let chat: any;
+  try {
+    chat = await msg.getChat();
+  } catch (err) {
+    logger.warn(
+      {
+        err,
+        from: msg.from,
+        to: msg.to,
+        fromMe: msg.fromMe
+      },
+      "Unable to resolve WhatsApp chat from message, using fallback chat context"
+    );
+
+    chat = {
+      unreadCount: msg.fromMe ? 0 : 1,
+      isGroup: false,
+      id: {
+        _serialized: msg.fromMe ? msg.to : msg.from
+      },
+      name: ""
+    };
+  }
+
   const groupContext = deriveWwebjsGroupContext(
     msg as WbotGroupContextSource,
     chat as WbotGroupContextChat
@@ -568,13 +664,29 @@ const getMessageData = async (
         msgContact = await wbot.getContactById(msg.to);
       } catch (err) {
         logger.warn(err, "Unable to resolve contact by id, falling back to message contact");
-        msgContact = await msg.getContact();
+        try {
+          msgContact = await msg.getContact();
+        } catch (innerErr) {
+          logger.warn(innerErr, "Unable to resolve outgoing message contact");
+        }
       }
     } else {
-      msgContact = await msg.getContact();
+      try {
+        msgContact = await msg.getContact();
+      } catch (err) {
+        logger.warn(err, "Unable to resolve incoming message contact");
+      }
     }
 
-    contactPayload = await convertToContactPayload(msgContact);
+    if (msgContact) {
+      contactPayload = await convertToContactPayload(msgContact);
+    } else {
+      const fallbackRemoteId = msg.fromMe ? msg.to || "" : msg.from || "";
+      contactPayload = buildFallbackContactPayloadFromRemoteId(
+        fallbackRemoteId,
+        Boolean(msg.fromMe)
+      );
+    }
   }
 
   const unreadMessages = msg.fromMe ? 0 : Math.max(Number(chat.unreadCount) || 0, 1);
@@ -705,7 +817,9 @@ const sendMessage = async (
       linkPreview: options?.linkPreview
     });
 
-    if (!sentMessage?.id?.id) {
+    const providerMessage = convertToProviderMessage(sentMessage as WbotMessage);
+
+    if (!providerMessage.id) {
       logger.warn(
         {
           sessionId,
@@ -717,7 +831,7 @@ const sendMessage = async (
       return buildAcceptedSendProviderMessage(to, body);
     }
 
-    return convertToProviderMessage(sentMessage);
+    return providerMessage;
   } catch (err) {
     logger.error(
       {
@@ -1102,8 +1216,22 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
     clearReconnectTimers(whatsapp.id);
     scheduleConnectingTimeout(whatsapp, "initialize", CONNECTING_TIMEOUT_MS);
 
-    wbot.on("message_create", async msg => {
-      if (!shouldHandleMessage(msg)) return;
+    const processMessageEvent = async (
+      msg: WbotMessage,
+      eventName: "message" | "message_create" | "media_uploaded"
+    ): Promise<void> => {
+      if (!shouldHandleMessage(msg)) {
+        return;
+      }
+
+      const eventKey = buildMessageEventKey(msg);
+      cleanupProcessedMessageEvents();
+
+      if (processedMessageEvents.has(eventKey)) {
+        return;
+      }
+
+      processedMessageEvents.set(eventKey, Date.now() + MESSAGE_EVENT_TTL_MS);
 
       try {
         const { messagePayload, contactPayload, contextPayload, mediaPayload } =
@@ -1116,30 +1244,40 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
           mediaPayload
         );
       } catch (err) {
-        logger.error(err, "Error on whatsapp message create event");
+        processedMessageEvents.delete(eventKey);
+        logger.error(
+          {
+            err,
+            eventName,
+            whatsappId: whatsapp.id,
+            from: msg.from,
+            to: msg.to,
+            fromMe: msg.fromMe
+          },
+          "Error on whatsapp message event"
+        );
       }
+    };
+
+    wbot.on("message", async msg => {
+      await processMessageEvent(msg, "message");
+    });
+
+    wbot.on("message_create", async msg => {
+      await processMessageEvent(msg, "message_create");
     });
 
     wbot.on("media_uploaded", async msg => {
-      if (!shouldHandleMessage(msg)) return;
-
-      try {
-        const { messagePayload, contactPayload, contextPayload, mediaPayload } =
-          await getMessageData(msg, wbot);
-
-        await handleMessage(
-          messagePayload,
-          contactPayload,
-          contextPayload,
-          mediaPayload
-        );
-      } catch (err) {
-        logger.error(err, "Error on whatsapp media uploaded event");
-      }
+      await processMessageEvent(msg, "media_uploaded");
     });
 
     wbot.on("message_ack", async (msg, ack) => {
-      handleMessageAck(msg.id.id, mapMessageAck(ack));
+      const messageId = resolveMessageId(msg);
+      if (!messageId) {
+        return;
+      }
+
+      handleMessageAck(messageId, mapMessageAck(ack));
     });
 
     await wbot.initialize();
