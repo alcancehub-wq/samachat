@@ -44,9 +44,11 @@ import {
 import { revokeMessageWithLookupFallback } from "./wwebjsDeleteLookup";
 import {
   buildAcceptedWwebjsProviderMessage,
+  buildWwebjsFallbackContactPayload,
   resolveWwebjsChatWithFallback,
   resolveWwebjsContactPayloadWithFallback
 } from "./wwebjsMessageRecovery";
+import WwebjsMessageEventBridge from "./wwebjsMessageEventBridge";
 import type {
   WbotGroupContextChat,
   WbotGroupContextSource
@@ -65,6 +67,7 @@ const reconnectTimers: Record<number, ReturnType<typeof setTimeout> | null> = {}
 const reconnectAttempts: Record<number, number> = {};
 const connectingTimers: Record<number, ReturnType<typeof setTimeout> | null> = {};
 const profileLockRetries: Record<number, number> = {};
+const messageEventBridge = new WwebjsMessageEventBridge();
 const MAX_PROFILE_LOCK_RETRIES = 3;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY_MS = 5000;
@@ -588,6 +591,61 @@ const getMessageData = async (
   };
 };
 
+const processWwebjsMessageEvent = async (
+  msg: WbotMessage,
+  wbot: Session,
+  eventName: string
+): Promise<void> => {
+  if (!shouldHandleMessage(msg)) {
+    return;
+  }
+
+  const eventId =
+    (msg.id as any)?._serialized ||
+    (msg.id as any)?.id ||
+    "";
+
+  try {
+    await messageEventBridge.processEvent({
+      sessionId: wbot.id!,
+      eventId,
+      fromMe: Boolean(msg.fromMe),
+      from: msg.from,
+      to: msg.to,
+      body: msg.body || "",
+      timestamp: Number(msg.timestamp) || 0,
+      process: async () => {
+        const {
+          messagePayload,
+          contactPayload,
+          contextPayload,
+          mediaPayload
+        } = await getMessageData(msg, wbot);
+
+        await handleMessage(
+          messagePayload,
+          contactPayload,
+          contextPayload,
+          mediaPayload
+        );
+      }
+    });
+  } catch (err) {
+    logger.error(
+      {
+        err,
+        eventName,
+        whatsappId: wbot.id,
+        eventId,
+        from: msg.from,
+        to: msg.to,
+        fromMe: msg.fromMe
+      },
+      "Error processing WhatsApp message event"
+    );
+  }
+};
+
 const syncUnreadMessages = async (wbot: Session) => {
   try {
     const chats = await wbot.getChats();
@@ -690,6 +748,12 @@ const sendMessage = async (
       )
     : "";
 
+  const outgoingState = messageEventBridge.beginOutgoing(
+    sessionId,
+    to,
+    body
+  );
+
   try {
     const sentMessage = await wbot.sendMessage(to, body, {
       quotedMessageId: quotedMsgSerializedId,
@@ -705,15 +769,53 @@ const sendMessage = async (
         "wwebjs sendMessage accepted without returning a message result"
       );
 
-      return buildAcceptedWwebjsProviderMessage({
-        sessionId,
-        to,
-        body
-      });
+      const acceptedMessage =
+        buildAcceptedWwebjsProviderMessage({
+          sessionId,
+          to,
+          body
+        });
+
+      const shouldPersistSynthetic =
+        await messageEventBridge.shouldPersistSynthetic(
+          outgoingState
+        );
+
+      if (shouldPersistSynthetic) {
+        const contactPayload =
+          buildWwebjsFallbackContactPayload({
+            fromMe: true,
+            from: "",
+            to,
+            _data: {
+              to
+            }
+          });
+
+        await handleMessage(
+          {
+            ...acceptedMessage
+          },
+          contactPayload,
+          {
+            whatsappId: sessionId,
+            unreadMessages: 0,
+            isGroupMessage: contactPayload.isGroup
+          }
+        );
+      }
+
+      messageEventBridge.finishOutgoing(outgoingState);
+
+      return acceptedMessage;
     }
+
+    messageEventBridge.finishOutgoing(outgoingState);
 
     return convertToProviderMessage(sentMessage);
   } catch (err) {
+    messageEventBridge.failOutgoing(outgoingState);
+
     logger.error(
       {
         err,
@@ -722,6 +824,7 @@ const sendMessage = async (
       },
       "wwebjs sendMessage failed"
     );
+
     throw err;
   }
 };
@@ -1097,40 +1200,28 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
     clearReconnectTimers(whatsapp.id);
     scheduleConnectingTimeout(whatsapp, "initialize", CONNECTING_TIMEOUT_MS);
 
+    wbot.on("message", async msg => {
+      await processWwebjsMessageEvent(
+        msg,
+        wbot,
+        "message"
+      );
+    });
+
     wbot.on("message_create", async msg => {
-      if (!shouldHandleMessage(msg)) return;
-
-      try {
-        const { messagePayload, contactPayload, contextPayload, mediaPayload } =
-          await getMessageData(msg, wbot);
-
-        await handleMessage(
-          messagePayload,
-          contactPayload,
-          contextPayload,
-          mediaPayload
-        );
-      } catch (err) {
-        logger.error(err, "Error on whatsapp message create event");
-      }
+      await processWwebjsMessageEvent(
+        msg,
+        wbot,
+        "message_create"
+      );
     });
 
     wbot.on("media_uploaded", async msg => {
-      if (!shouldHandleMessage(msg)) return;
-
-      try {
-        const { messagePayload, contactPayload, contextPayload, mediaPayload } =
-          await getMessageData(msg, wbot);
-
-        await handleMessage(
-          messagePayload,
-          contactPayload,
-          contextPayload,
-          mediaPayload
-        );
-      } catch (err) {
-        logger.error(err, "Error on whatsapp media uploaded event");
-      }
+      await processWwebjsMessageEvent(
+        msg,
+        wbot,
+        "media_uploaded"
+      );
     });
 
     wbot.on("message_ack", async (msg, ack) => {
