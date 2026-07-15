@@ -3,6 +3,7 @@ import { join } from "path";
 import { promisify } from "util";
 import { unlink, writeFile } from "fs";
 import * as Sentry from "@sentry/node";
+import { Op } from "sequelize";
 
 import { getIO } from "../libs/socket";
 import { logger } from "../utils/logger";
@@ -118,6 +119,8 @@ export interface WhatsappContextPayload {
 }
 
 const GROUP_CHAT_SUFFIX = "@g.us";
+const OPTIMISTIC_OUTBOUND_MESSAGE_ID_PREFIX = "local-send-";
+const OUTBOUND_RECONCILIATION_WINDOW_MS = 2 * 60 * 1000;
 
 const isGroupChatId = (value?: string): boolean => {
   return typeof value === "string" && value.endsWith(GROUP_CHAT_SUFFIX);
@@ -387,6 +390,38 @@ export const handleMessage = async (
       contextPayload.unreadMessages,
       groupContact
     );
+
+    if (processedMessage.fromMe && processedMessage.id && processedMessage.body) {
+      try {
+        const optimisticMessage = await Message.findOne({
+          where: {
+            id: {
+              [Op.like]: `${OPTIMISTIC_OUTBOUND_MESSAGE_ID_PREFIX}%`
+            },
+            ticketId: ticket.id,
+            fromMe: true,
+            body: processedMessage.body,
+            createdAt: {
+              [Op.gte]: new Date(Date.now() - OUTBOUND_RECONCILIATION_WINDOW_MS)
+            }
+          },
+          order: [["createdAt", "DESC"]]
+        });
+
+        if (optimisticMessage && optimisticMessage.id !== processedMessage.id) {
+          await optimisticMessage.update({ id: processedMessage.id });
+        }
+      } catch (promoteErr) {
+        logger.warn(
+          {
+            err: promoteErr,
+            providerMessageId: processedMessage.id,
+            ticketId: ticket.id
+          },
+          "Failed to reconcile optimistic outbound message"
+        );
+      }
+    }
 
     const messageData: any = {
       id: processedMessage.id,
