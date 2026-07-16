@@ -1,8 +1,13 @@
 import SendWhatsAppMedia from "../../../services/WbotServices/SendWhatsAppMedia";
+import Message from "../../../models/Message";
 import Whatsapp from "../../../models/Whatsapp";
 import { whatsappProvider } from "../../../providers/WhatsApp";
 import { StartWhatsAppSession } from "../../../services/WbotServices/StartWhatsAppSession";
 import { sleep } from "../../../utils/sleep";
+
+jest.mock("../../../models/Message", () => ({
+  findOne: jest.fn()
+}));
 
 jest.mock("../../../models/Whatsapp", () => ({
   findByPk: jest.fn()
@@ -55,6 +60,7 @@ jest.mock("../../../utils/logger", () => ({
 }));
 
 describe("SendWhatsAppMedia", () => {
+  const findRecentMessageMock = Message.findOne as jest.Mock;
   const findByPkMock = Whatsapp.findByPk as jest.Mock;
   const hasSessionMock = whatsappProvider.hasSession as jest.Mock;
   const isSessionReadyMock = whatsappProvider.isSessionReady as jest.Mock;
@@ -90,10 +96,11 @@ describe("SendWhatsAppMedia", () => {
     hasSessionMock.mockReturnValue(true);
     isSessionReadyMock.mockReturnValue(true);
     checkNumberMock.mockResolvedValue("");
+    findRecentMessageMock.mockResolvedValue(null);
     sleepMock.mockResolvedValue(undefined);
   });
 
-  it("keeps retry behavior for recorded composer audio on generic provider errors", async () => {
+  it("skips retry when recorded audio echo is detected after provider error", async () => {
     const media = {
       filename: "recorded_1752680000000.webm",
       originalname: "recorded_1752680000000.webm",
@@ -110,10 +117,50 @@ describe("SendWhatsAppMedia", () => {
     };
     shouldNormalizeAudioForWhatsApp.mockReturnValue(true);
 
-    const providerMessage = { id: "msg-recorded", body: "", ack: 1 };
+    sendMediaMock.mockRejectedValueOnce(new Error("provider unknown failure"));
+    findRecentMessageMock.mockResolvedValueOnce({
+      id: "msg-recorded-echo",
+      ticketId: 1001,
+      mediaType: "audio",
+      fromMe: true,
+      createdAt: new Date()
+    });
+
+    await expect(SendWhatsAppMedia({ media, ticket: ticket as any })).resolves.toMatchObject({
+      fromMe: true,
+      hasMedia: true,
+      type: "audio",
+      ack: 1
+    });
+
+    expect(sendMediaMock).toHaveBeenCalledTimes(1);
+    expect(findRecentMessageMock).toHaveBeenCalledTimes(1);
+    expect(startWhatsAppSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps retry behavior for recorded composer audio when no echo is detected", async () => {
+    const media = {
+      filename: "recorded_1752680000000.webm",
+      originalname: "recorded_1752680000000.webm",
+      mimetype: "audio/webm;codecs=opus",
+      path: "tmp/recorded_1752680000000.webm"
+    } as Express.Multer.File;
+
+    const ticket = buildTicket();
+
+    const { shouldNormalizeAudioForWhatsApp } = jest.requireMock(
+      "../../../services/WbotServices/audioNormalization"
+    ) as {
+      shouldNormalizeAudioForWhatsApp: jest.Mock;
+    };
+    shouldNormalizeAudioForWhatsApp.mockReturnValue(true);
+
+    const providerMessage = { id: "msg-recorded-retry", body: "", ack: 1 };
     sendMediaMock
       .mockRejectedValueOnce(new Error("provider unknown failure"))
       .mockResolvedValueOnce(providerMessage);
+
+    findRecentMessageMock.mockResolvedValue(null);
 
     await expect(
       SendWhatsAppMedia({ media, ticket: ticket as any })

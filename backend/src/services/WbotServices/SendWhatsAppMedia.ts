@@ -1,11 +1,13 @@
 import fs from "fs";
 import path from "path";
 import { spawn } from "child_process";
+import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import IsPlausiblePhoneNumber from "../../helpers/IsPlausiblePhoneNumber";
 import NormalizeProviderCheckNumber from "../../helpers/NormalizeProviderCheckNumber";
+import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
 import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
@@ -34,6 +36,8 @@ interface Request {
 
 const INITIAL_READY_TIMEOUT_MS = 5000;
 const RECOVERY_READY_TIMEOUT_MS = 15000;
+const RECORDED_AUDIO_ECHO_WAIT_MS = 5000;
+const RECORDED_AUDIO_ECHO_POLL_INTERVAL_MS = 500;
 const startingSessions = new Set<number>();
 const AUDIO_UPLOAD_EXTENSION_PATTERN = /\.(ogg|opus|webm|mp3|wav|m4a|aac)$/i;
 const COMPOSER_RECORDED_AUDIO_PATTERN = /^recorded_\d{10,}\.(ogg|webm)$/i;
@@ -217,6 +221,43 @@ const ensureWhatsappReady = async (
   throw new AppError("ERR_WAPP_NOT_INITIALIZED");
 };
 
+const waitForRecentRecordedAudioEcho = async (
+  ticketId: number,
+  startedAt: Date
+): Promise<boolean> => {
+  const startedAtTolerance = new Date(startedAt.getTime() - 2000);
+  const attempts = Math.max(
+    1,
+    Math.ceil(RECORDED_AUDIO_ECHO_WAIT_MS / RECORDED_AUDIO_ECHO_POLL_INTERVAL_MS)
+  );
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const recentAudioMessage = await Message.findOne({
+      where: {
+        ticketId,
+        fromMe: true,
+        mediaType: {
+          [Op.in]: ["audio", "ptt"]
+        },
+        createdAt: {
+          [Op.gte]: startedAtTolerance
+        }
+      },
+      order: [["createdAt", "DESC"]]
+    });
+
+    if (recentAudioMessage) {
+      return true;
+    }
+
+    if (attempt < attempts - 1) {
+      await sleep(RECORDED_AUDIO_ECHO_POLL_INTERVAL_MS);
+    }
+  }
+
+  return false;
+};
+
 const SendWhatsAppMedia = async ({
   media,
   ticket,
@@ -224,6 +265,7 @@ const SendWhatsAppMedia = async ({
   forceSendAudioAsVoice
 }: Request): Promise<ProviderMessage> => {
   try {
+    const requestStartedAt = new Date();
     const whatsapp = await ensureWhatsappSession(ticket);
     await ensureWhatsappReady(ticket, whatsapp);
     const shouldAuditAudio = shouldAuditAudioContract(media);
@@ -453,6 +495,47 @@ const SendWhatsAppMedia = async ({
         await sleep(2000);
         sentMessage = await sendWithChatId(chatId);
       } else if (!(err instanceof AppError)) {
+        if (composerRecordedAudio) {
+          const recordedAudioEchoDetected = await waitForRecentRecordedAudioEcho(
+            ticket.id,
+            requestStartedAt
+          );
+
+          if (recordedAudioEchoDetected) {
+            logger.warn(
+              {
+                err,
+                ticketId: ticket.id,
+                whatsappId: whatsapp.id,
+                chatId,
+                originalName: media.originalname,
+                mimetype: media.mimetype
+              },
+              "SendWhatsAppMedia detected recorded audio echo after provider error; skipping retry to avoid duplicate delivery"
+            );
+
+            await ticket.update({ lastMessage: resolvedBody || media.filename });
+            if (normalizedNumber && normalizedNumber !== storedNumber) {
+              await ticket.contact.update({ number: normalizedNumber });
+            }
+            safelyRemoveFile(media.path);
+            safelyRemoveFile(convertedPath);
+
+            return {
+              id: `recorded-audio-echo-${ticket.id}-${Date.now()}`,
+              body: resolvedBody || media.filename,
+              fromMe: true,
+              hasMedia: true,
+              type: "audio",
+              timestamp: Math.floor(Date.now() / 1000),
+              from: "",
+              to: chatId,
+              hasQuotedMsg: false,
+              ack: 1
+            } as ProviderMessage;
+          }
+        }
+
         const normalizedChatId = await resolveNormalizedChatId();
         if (normalizedChatId && normalizedChatId !== chatId) {
           try {
