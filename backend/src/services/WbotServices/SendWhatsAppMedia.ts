@@ -62,6 +62,20 @@ const getFileExtension = (fileName?: string): string => {
   return path.extname(fileName).toLowerCase();
 };
 
+const safelyRemoveFile = (filePath?: string | null): void => {
+  if (!filePath) {
+    return;
+  }
+
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (err) {
+    logger.warn({ err, filePath }, "Failed to cleanup media file after send");
+  }
+};
+
 const shouldAuditAudioContract = (media: Express.Multer.File): boolean => {
   const mimeType = (media.mimetype || "").toLowerCase();
   const originalName = media.originalname || "";
@@ -439,6 +453,21 @@ const SendWhatsAppMedia = async ({
         await sleep(2000);
         sentMessage = await sendWithChatId(chatId);
       } else if (!(err instanceof AppError)) {
+        if (composerRecordedAudio) {
+          logger.warn(
+            {
+              err,
+              ticketId: ticket.id,
+              whatsappId: whatsapp.id,
+              chatId,
+              originalName: media.originalname,
+              mimetype: media.mimetype
+            },
+            "SendWhatsAppMedia skipping retry for recorded audio to avoid duplicate delivery"
+          );
+          throw err;
+        }
+
         const normalizedChatId = await resolveNormalizedChatId();
         if (normalizedChatId && normalizedChatId !== chatId) {
           try {
@@ -448,10 +477,8 @@ const SendWhatsAppMedia = async ({
             if (normalizedNumber && normalizedNumber !== storedNumber) {
               await ticket.contact.update({ number: normalizedNumber });
             }
-            fs.unlinkSync(media.path);
-            if (convertedPath) {
-              fs.unlinkSync(convertedPath);
-            }
+            safelyRemoveFile(media.path);
+            safelyRemoveFile(convertedPath);
             return sentMessage;
           } catch (normalizedErr) {
             err = normalizedErr;
@@ -478,10 +505,8 @@ const SendWhatsAppMedia = async ({
       await ticket.contact.update({ number: normalizedNumber });
     }
 
-    fs.unlinkSync(media.path);
-    if (convertedPath) {
-      fs.unlinkSync(convertedPath);
-    }
+    safelyRemoveFile(media.path);
+    safelyRemoveFile(convertedPath);
 
     return sentMessage;
   } catch (err) {
