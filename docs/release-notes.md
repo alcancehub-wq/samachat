@@ -4,7 +4,7 @@
 
 ### legacy-prod
 
-- Chats/Audio gravado (isolado): o envio de audio gravado pelo compositor deixa de aplicar retry automatico em falhas genericas do provider, reduzindo risco de entrega duplicada para o cliente quando o primeiro envio ja foi aceito no canal.
+- Chats/Audio gravado (hotfix): o fluxo de audio gravado do compositor volta a aplicar retry de recuperacao em falhas genericas do provider para restaurar entrega efetiva quando o primeiro envio falha por instabilidade transitoria.
 - Chats/Audio gravado (isolado): a limpeza de arquivo temporario apos envio passa a ser resiliente (nao-fatal), evitando retorno de erro 400 para o frontend quando a mensagem ja foi enviada com sucesso e a falha ocorreu apenas no cleanup local.
 - Escopo desta correcao isolada: `backend/src/services/WbotServices/SendWhatsAppMedia.ts`, `backend/src/__tests__/unit/WbotServices/SendWhatsAppMedia.spec.ts` e `docs/release-notes.md`.
 - Validacao local desta correcao isolada: `npx jest src/__tests__/unit/WbotServices/SendWhatsAppMedia.spec.ts --runInBand --coverage=false` aprovado com 2 testes; `npm run test:stability` aprovado em `backend` com 7 suites e 38 testes.

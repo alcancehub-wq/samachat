@@ -3,7 +3,6 @@ import Whatsapp from "../../../models/Whatsapp";
 import { whatsappProvider } from "../../../providers/WhatsApp";
 import { StartWhatsAppSession } from "../../../services/WbotServices/StartWhatsAppSession";
 import { sleep } from "../../../utils/sleep";
-import { logger } from "../../../utils/logger";
 
 jest.mock("../../../models/Whatsapp", () => ({
   findByPk: jest.fn()
@@ -63,7 +62,6 @@ describe("SendWhatsAppMedia", () => {
   const sendMediaMock = whatsappProvider.sendMedia as jest.Mock;
   const startWhatsAppSessionMock = StartWhatsAppSession as jest.Mock;
   const sleepMock = sleep as jest.Mock;
-  const loggerWarnMock = logger.warn as jest.Mock;
 
   const whatsapp = {
     id: 35,
@@ -95,7 +93,7 @@ describe("SendWhatsAppMedia", () => {
     sleepMock.mockResolvedValue(undefined);
   });
 
-  it("does not retry recorded composer audio on generic provider errors", async () => {
+  it("keeps retry behavior for recorded composer audio on generic provider errors", async () => {
     const media = {
       filename: "recorded_1752680000000.webm",
       originalname: "recorded_1752680000000.webm",
@@ -112,21 +110,17 @@ describe("SendWhatsAppMedia", () => {
     };
     shouldNormalizeAudioForWhatsApp.mockReturnValue(true);
 
-    sendMediaMock.mockRejectedValueOnce(new Error("provider unknown failure"));
+    const providerMessage = { id: "msg-recorded", body: "", ack: 1 };
+    sendMediaMock
+      .mockRejectedValueOnce(new Error("provider unknown failure"))
+      .mockResolvedValueOnce(providerMessage);
 
-    await expect(SendWhatsAppMedia({ media, ticket: ticket as any })).rejects.toMatchObject({
-      message: "ERR_SENDING_WAPP_MSG"
-    });
+    await expect(
+      SendWhatsAppMedia({ media, ticket: ticket as any })
+    ).resolves.toEqual(providerMessage);
 
-    expect(sendMediaMock).toHaveBeenCalledTimes(1);
-    expect(loggerWarnMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ticketId: 1001,
-        whatsappId: 35,
-        originalName: "recorded_1752680000000.webm"
-      }),
-      "SendWhatsAppMedia skipping retry for recorded audio to avoid duplicate delivery"
-    );
+    expect(sendMediaMock).toHaveBeenCalledTimes(2);
+    expect(startWhatsAppSessionMock).toHaveBeenCalled();
   });
 
   it("keeps retry behavior for non-recorded media on generic provider errors", async () => {

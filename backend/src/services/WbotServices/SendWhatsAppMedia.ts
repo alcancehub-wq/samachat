@@ -453,21 +453,6 @@ const SendWhatsAppMedia = async ({
         await sleep(2000);
         sentMessage = await sendWithChatId(chatId);
       } else if (!(err instanceof AppError)) {
-        if (composerRecordedAudio) {
-          logger.warn(
-            {
-              err,
-              ticketId: ticket.id,
-              whatsappId: whatsapp.id,
-              chatId,
-              originalName: media.originalname,
-              mimetype: media.mimetype
-            },
-            "SendWhatsAppMedia skipping retry for recorded audio to avoid duplicate delivery"
-          );
-          throw err;
-        }
-
         const normalizedChatId = await resolveNormalizedChatId();
         if (normalizedChatId && normalizedChatId !== chatId) {
           try {
