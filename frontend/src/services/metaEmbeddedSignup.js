@@ -1,4 +1,4 @@
-﻿const FACEBOOK_SDK_ID = "facebook-jssdk";
+const FACEBOOK_SDK_ID = "facebook-jssdk";
 const FACEBOOK_SDK_URL =
     "https://connect.facebook.net/pt_BR/sdk.js";
 
@@ -17,11 +17,11 @@ const normalizeRequiredConfig = (value, errorCode) => {
 
 export const getMetaEmbeddedSignupConfig = () => ({
     appId: normalizeRequiredConfig(
-        import.meta.env.VITE_META_EMBEDDED_SIGNUP_APP_ID,
+        import.meta.env.VITE_META_EMBEDDED_SIGNUP_APP_ID || "1671814291237488",
         "ERR_META_EMBEDDED_SIGNUP_APP_ID_NOT_CONFIGURED"
     ),
     configId: normalizeRequiredConfig(
-        import.meta.env.VITE_META_EMBEDDED_SIGNUP_CONFIG_ID,
+        import.meta.env.VITE_META_EMBEDDED_SIGNUP_CONFIG_ID || "1051039354007289",
         "ERR_META_EMBEDDED_SIGNUP_CONFIG_ID_NOT_CONFIGURED"
     ),
     apiVersion:
@@ -32,7 +32,7 @@ export const getMetaEmbeddedSignupConfig = () => ({
 
 export const getMetaEmbeddedSignupTargetWhatsappId = () =>
     (
-        import.meta.env.VITE_META_EMBEDDED_SIGNUP_WHATSAPP_ID || ""
+        import.meta.env.VITE_META_EMBEDDED_SIGNUP_WHATSAPP_ID || "35"
     ).trim();
 export const loadMetaJavaScriptSdk = () => {
     if (window.FB) {

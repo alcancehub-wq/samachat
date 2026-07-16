@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { toast } from "react-toastify";
 
 import {
@@ -37,7 +37,7 @@ const MetaEmbeddedSignupButton = ({
         Boolean(whatsApp?.hasAccessToken);
 
     const handleEmbeddedSignup = async () => {
-        if (loading || isConfigured) {
+        if (loading) {
             return;
         }
 
@@ -84,7 +84,7 @@ const MetaEmbeddedSignupButton = ({
             variant={isConfigured ? "outlined" : "contained"}
             color="primary"
             className={className}
-            disabled={loading || isConfigured}
+            disabled={loading}
             startIcon={
                 loading
                     ? <CircularProgress size={14} />
@@ -95,7 +95,7 @@ const MetaEmbeddedSignupButton = ({
             {loading
                 ? "Conectando com a Meta..."
                 : isConfigured
-                ? "Meta conectada"
+                ? "Reconectar com a Meta"
                 : "Conectar API Oficial"}
         </Button>
     );
