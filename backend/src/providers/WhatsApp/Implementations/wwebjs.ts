@@ -502,7 +502,18 @@ const buildFallbackContactPayloadFromMessage = (
 const convertToContactPayload = async (
   msgContact: WbotContact
 ): Promise<ContactPayload> => {
-  const profilePicUrl = await msgContact.getProfilePicUrl();
+  let profilePicUrl: string | undefined;
+  try {
+    profilePicUrl = await msgContact.getProfilePicUrl();
+  } catch (err) {
+    logger.warn(
+      {
+        err,
+        contactId: msgContact?.id?._serialized
+      },
+      "Unable to load contact profile picture from WhatsApp payload"
+    );
+  }
 
   const extractContactIdentifiers = (
     contact: WbotContact
@@ -572,8 +583,19 @@ const verifyQuotedMessage = async (
 ): Promise<string | undefined> => {
   if (!msg.hasQuotedMsg) return undefined;
 
-  const wbotQuotedMsg = await msg.getQuotedMessage();
-  return wbotQuotedMsg.id.id;
+  try {
+    const wbotQuotedMsg = await msg.getQuotedMessage();
+    return wbotQuotedMsg.id.id;
+  } catch (err) {
+    logger.warn(
+      {
+        err,
+        messageId: (msg as any)?.id?._serialized || (msg as any)?.id?.id
+      },
+      "Unable to resolve quoted message from WhatsApp payload"
+    );
+    return undefined;
+  }
 };
 
 const prepareLocation = (msg: WbotMessage): WbotMessage => {
@@ -620,7 +642,21 @@ const convertToMediaPayload = async (
 ): Promise<MediaPayload | undefined> => {
   if (!msg.hasMedia) return undefined;
 
-  const media = await msg.downloadMedia();
+  let media;
+  try {
+    media = await msg.downloadMedia();
+  } catch (err) {
+    logger.warn(
+      {
+        err,
+        messageId: (msg as any)?.id?._serialized || (msg as any)?.id?.id,
+        messageType: msg.type
+      },
+      "Unable to download WhatsApp media payload"
+    );
+    return undefined;
+  }
+
   if (!media) return undefined;
 
   return {
@@ -696,7 +732,31 @@ const getMessageData = async (
   let contactPayload: ContactPayload;
   let groupContact: ContactPayload | undefined;
 
-  const chat = await msg.getChat();
+  let chat: any;
+  try {
+    chat = await msg.getChat();
+  } catch (err) {
+    logger.warn(
+      {
+        err,
+        messageId: (msg as any)?.id?._serialized || (msg as any)?.id?.id,
+        from: msg.from,
+        to: msg.to,
+        fromMe: msg.fromMe
+      },
+      "Unable to resolve chat context from WhatsApp message; using fallback context"
+    );
+
+    chat = {
+      unreadCount: msg.fromMe ? 0 : 1,
+      isGroup: (msg.from || "").endsWith("@g.us") || (msg.to || "").endsWith("@g.us"),
+      id: {
+        _serialized: msg.fromMe ? msg.to : msg.from
+      },
+      name: ""
+    };
+  }
+
   const groupContext = deriveWwebjsGroupContext(
     msg as WbotGroupContextSource,
     chat as WbotGroupContextChat
