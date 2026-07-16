@@ -1222,7 +1222,7 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
     });
 
     wbot.on("message_create", async msg => {
-      if (!msg.fromMe || !shouldHandleMessage(msg)) return;
+      if (!shouldHandleMessage(msg)) return;
 
       try {
         const { messagePayload, contactPayload, contextPayload, mediaPayload } =
