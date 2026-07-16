@@ -1241,7 +1241,11 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
 
     wbot.on("message_ack", async (msg, ack) => {
       const messageId = resolveEventMessageId(msg as any);
-      handleMessageAck(messageId, mapMessageAck(ack));
+      handleMessageAck(messageId, mapMessageAck(ack), {
+        fromMe: Boolean((msg as any)?.fromMe),
+        body: typeof (msg as any)?.body === "string" ? (msg as any).body : "",
+        timestamp: Number((msg as any)?.timestamp) || Math.floor(Date.now() / 1000)
+      });
     });
 
     await wbot.initialize();
