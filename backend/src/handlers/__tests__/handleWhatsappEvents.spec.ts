@@ -378,4 +378,53 @@ describe("handleWhatsappEvents group guard", () => {
     );
     expect(updateMock).toHaveBeenCalledWith({ ack: 2 });
   });
+
+  it("reuses serialized provider id when outbound echo arrives with raw id representation", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 118,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const duplicateCandidate = {
+      id: "true_5511999999999@c.us_3EB0SERIALIZEDCASE",
+      createdAt: new Date(nowSeconds * 1000)
+    } as any;
+
+    jest
+      .spyOn(Message, "findAll")
+      .mockResolvedValue([duplicateCandidate] as any);
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({ id: duplicateCandidate.id } as any);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "3EB0SERIALIZEDCASE",
+        body: "teste serialized id",
+        fromMe: true,
+        from: "5511888888888@c.us",
+        to: "5511999999999@c.us",
+        timestamp: nowSeconds
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 })
+    );
+
+    expect(Message.findAll).toHaveBeenCalledTimes(1);
+    expect(createMessageServiceMock).toHaveBeenCalledWith({
+      messageData: expect.objectContaining({
+        id: duplicateCandidate.id,
+        fromMe: true,
+        body: "teste serialized id"
+      })
+    });
+  });
 });

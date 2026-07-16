@@ -4,6 +4,10 @@
 
 ### legacy-prod
 
+- Chats/Duplicidade outbound (isolado): o reconciliador de outbound passa a tratar como equivalentes os dois formatos de ID do mesmo envio no `wwebjs` (formato serializado `true_<jid>_<msgId>` e formato cru `<msgId>`), evitando que o SamaChat exiba duas bolhas quando o cliente recebeu apenas uma mensagem.
+- Escopo desta correcao isolada: `backend/src/handlers/handleWhatsappEvents.ts`, `backend/src/handlers/__tests__/handleWhatsappEvents.spec.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao isolada: `npx jest src/handlers/__tests__/handleWhatsappEvents.spec.ts --runInBand --coverage=false` aprovado com 9 testes; `npm run test:stability` aprovado em `backend` com 7 suites e 38 testes.
+
 - Chats/Duplicidade outbound: o backend passa a tratar IDs temporarios `wwebjs-accepted-` com a mesma regra de reconciliacao ja aplicada aos `fallback_`, evitando duplicacao visual no SamaChat quando o envio imediato persiste um ID temporario e o eco do provider retorna depois com ID real diferente.
 - Chats/Ack outbound: a reconciliacao de `ack` tambem passa a localizar mensagens temporarias com prefixo `wwebjs-accepted-`, reduzindo risco de divergencia de status quando o evento de ack chega referenciando apenas o ID real do provider.
 - Escopo desta correcao complementar: `backend/src/handlers/handleWhatsappEvents.ts`, `backend/src/handlers/__tests__/handleWhatsappEvents.spec.ts` e `docs/release-notes.md`.

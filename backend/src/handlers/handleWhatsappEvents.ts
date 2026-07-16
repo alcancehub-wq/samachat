@@ -139,6 +139,38 @@ const isTemporaryOutboundId = (value?: string): boolean => {
   );
 };
 
+const normalizeProviderMessageId = (value?: string): string => {
+  if (!value) {
+    return "";
+  }
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return "";
+  }
+
+  const serializedMatch = trimmedValue.match(/^(?:true|false)_[^_]+_(.+)$/);
+  if (serializedMatch && serializedMatch[1]) {
+    return serializedMatch[1];
+  }
+
+  return trimmedValue;
+};
+
+const areEquivalentProviderMessageIds = (
+  first?: string,
+  second?: string
+): boolean => {
+  const normalizedFirst = normalizeProviderMessageId(first);
+  const normalizedSecond = normalizeProviderMessageId(second);
+
+  return Boolean(
+    normalizedFirst &&
+      normalizedSecond &&
+      normalizedFirst === normalizedSecond
+  );
+};
+
 const isGroupChatId = (value?: string): boolean => {
   return typeof value === "string" && value.endsWith(GROUP_CHAT_SUFFIX);
 };
@@ -465,8 +497,12 @@ export const handleMessage = async (
           const candidateId = duplicateCandidate.id || "";
           const currentIsFallback = isTemporaryOutboundId(currentId);
           const candidateIsFallback = isTemporaryOutboundId(candidateId);
+          const idsAreEquivalent = areEquivalentProviderMessageIds(
+            currentId,
+            candidateId
+          );
 
-          if (currentIsFallback || candidateIsFallback) {
+          if (currentIsFallback || candidateIsFallback || idsAreEquivalent) {
             resolvedMessageId = duplicateCandidate.id;
 
             logger.warn(
@@ -475,7 +511,8 @@ export const handleMessage = async (
                 messageId: processedMessage.id,
                 resolvedMessageId,
                 fromMe: processedMessage.fromMe,
-                timestamp: processedMessage.timestamp
+                timestamp: processedMessage.timestamp,
+                idsAreEquivalent
               },
               "Reconciling outbound message event with existing persisted message"
             );
