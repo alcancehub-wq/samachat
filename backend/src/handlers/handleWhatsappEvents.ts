@@ -157,6 +157,13 @@ const normalizeProviderMessageId = (value?: string): string => {
   return trimmedValue;
 };
 
+  const buildEquivalentOutboundMediaTypes = (mediaType?: string): string[] => {
+    if (mediaType === "audio" || mediaType === "ptt") {
+      return ["audio", "ptt"];
+    }
+
+    return [mediaType || "chat"];
+  };
 const areEquivalentProviderMessageIds = (
   first?: string,
   second?: string
@@ -458,7 +465,9 @@ export const handleMessage = async (
           ticketId: ticket.id,
           fromMe: true,
           body: processedMessage.body,
-          mediaType: processedMessage.type,
+            mediaType: {
+              [Op.in]: buildEquivalentOutboundMediaTypes(processedMessage.type)
+            },
           createdAt: {
             [Op.between]: [startDate, endDate]
           }

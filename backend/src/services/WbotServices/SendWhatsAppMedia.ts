@@ -32,6 +32,7 @@ interface Request {
   ticket: Ticket;
   body?: string;
   forceSendAudioAsVoice?: boolean;
+  preserveUploadedFile?: boolean;
 }
 
 const INITIAL_READY_TIMEOUT_MS = 5000;
@@ -262,7 +263,8 @@ const SendWhatsAppMedia = async ({
   media,
   ticket,
   body,
-  forceSendAudioAsVoice
+  forceSendAudioAsVoice,
+  preserveUploadedFile = false
 }: Request): Promise<ProviderMessage> => {
   try {
     const requestStartedAt = new Date();
@@ -533,7 +535,9 @@ const SendWhatsAppMedia = async ({
           if (normalizedNumber && normalizedNumber !== storedNumber) {
             await ticket.contact.update({ number: normalizedNumber });
           }
-          safelyRemoveFile(media.path);
+          if (!preserveUploadedFile) {
+            safelyRemoveFile(media.path);
+          }
           safelyRemoveFile(convertedPath);
 
           return {
@@ -561,7 +565,9 @@ const SendWhatsAppMedia = async ({
             if (normalizedNumber && normalizedNumber !== storedNumber) {
               await ticket.contact.update({ number: normalizedNumber });
             }
-            safelyRemoveFile(media.path);
+            if (!preserveUploadedFile) {
+              safelyRemoveFile(media.path);
+            }
             safelyRemoveFile(convertedPath);
             return sentMessage;
           } catch (normalizedErr) {
@@ -589,7 +595,9 @@ const SendWhatsAppMedia = async ({
       await ticket.contact.update({ number: normalizedNumber });
     }
 
-    safelyRemoveFile(media.path);
+    if (!preserveUploadedFile) {
+      safelyRemoveFile(media.path);
+    }
     safelyRemoveFile(convertedPath);
 
     return sentMessage;

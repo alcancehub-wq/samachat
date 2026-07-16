@@ -26,6 +26,19 @@ type MessageData = {
   isInternal?: boolean;
 };
 
+const COMPOSER_RECORDED_AUDIO_PATTERN = /^recorded_\d{10,}\.(ogg|webm)$/i;
+
+const isComposerRecordedAudioUpload = (media: Express.Multer.File): boolean => {
+  const mimeType = (media.mimetype || "").toLowerCase();
+  const originalName = (media.originalname || "").toLowerCase();
+
+  return (
+    mimeType.startsWith("audio/") &&
+    /(ogg|opus|webm)/i.test(mimeType) &&
+    COMPOSER_RECORDED_AUDIO_PATTERN.test(originalName)
+  );
+};
+
 const emitTicketUpdate = async (ticket: Awaited<ReturnType<typeof ShowTicketService>>): Promise<void> => {
   await ticket.reload({ include: ["contact", "queue", "whatsapp", "user", "tags"] });
 
@@ -98,8 +111,32 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   if (medias) {
     await Promise.all(
-      medias.map(async (media: Express.Multer.File) => {
-        await SendWhatsAppMedia({ media, ticket });
+      medias.map(async (media: Express.Multer.File, mediaIndex: number) => {
+        const shouldPersistRecordedAudioLocally = isComposerRecordedAudioUpload(media);
+        const providerMessage = await SendWhatsAppMedia({
+          media,
+          ticket,
+          preserveUploadedFile: shouldPersistRecordedAudioLocally
+        });
+
+        if (!shouldPersistRecordedAudioLocally) {
+          return;
+        }
+
+        await CreateMessageService({
+          messageData: {
+            id:
+              providerMessage.id ||
+              `wwebjs-accepted-${ticket.whatsappId || "na"}-${Date.now()}-${mediaIndex}`,
+            ticketId: ticket.id,
+            body: providerMessage.body || "",
+            fromMe: true,
+            read: true,
+            mediaType: providerMessage.type || "audio",
+            mediaUrl: media.filename,
+            ack: providerMessage.ack ?? 1
+          }
+        });
       })
     );
   } else {
