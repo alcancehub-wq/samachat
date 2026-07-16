@@ -41,6 +41,7 @@ import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 import toastError from "../../errors/toastError";
+import MetaEmbeddedSignupButton from "../../components/MetaEmbeddedSignupButton";
 
 const useStyles = makeStyles(theme => ({
 	mainPaper: {
@@ -332,26 +333,39 @@ const Connections = () => {
 		const isQrPending = whatsApp.status === "qrcode" || hasQrCode;
 		const isOfficialProvider = whatsApp.providerType === "official";
 
+		const embeddedSignupButton = (
+			<MetaEmbeddedSignupButton
+				whatsApp={whatsApp}
+				canEdit={canEditConnection}
+				reload={reload}
+				className={classes.actionButton}
+			/>
+		);
+
 		if (!canManageSession && !canManageOwnSession(whatsApp)) {
-			return null;
+			return embeddedSignupButton;
 		}
 
 		if (isOfficialProvider) {
 			return (
-				<Button
-					size="small"
-					variant="outlined"
-					color="primary"
-					className={classes.actionButton}
-					disabled
-				>
-					API Oficial
-				</Button>
+				<>
+					<Button
+						size="small"
+						variant="outlined"
+						color="primary"
+						className={classes.actionButton}
+						disabled
+					>
+						API Oficial
+					</Button>
+					{embeddedSignupButton}
+				</>
 			);
 		}
 
 		return (
 			<>
+				{embeddedSignupButton}
 				<Button
 					size="small"
 					variant="outlined"

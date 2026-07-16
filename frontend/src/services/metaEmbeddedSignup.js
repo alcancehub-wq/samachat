@@ -29,6 +29,11 @@ export const getMetaEmbeddedSignupConfig = () => ({
         "v25.0",
 });
 
+
+export const getMetaEmbeddedSignupTargetWhatsappId = () =>
+    (
+        import.meta.env.VITE_META_EMBEDDED_SIGNUP_WHATSAPP_ID || ""
+    ).trim();
 export const loadMetaJavaScriptSdk = () => {
     if (window.FB) {
         return Promise.resolve(window.FB);
@@ -189,3 +194,81 @@ export const launchMetaEmbeddedSignup = async ({
         window.removeEventListener("message", sessionInfoListener);
     };
 };
+export const completeMetaEmbeddedSignup = () =>
+    new Promise(async (resolve, reject) => {
+        let authorizationCode = "";
+        let sessionInfo = null;
+        let cleanup = () => {};
+        let settled = false;
+
+        const timeoutId = window.setTimeout(() => {
+            if (settled) return;
+
+            settled = true;
+            cleanup();
+            reject(
+                new Error("ERR_META_EMBEDDED_SIGNUP_TIMEOUT")
+            );
+        }, 5 * 60 * 1000);
+
+        const settleWithError = error => {
+            if (settled) return;
+
+            settled = true;
+            window.clearTimeout(timeoutId);
+            cleanup();
+            reject(error);
+        };
+
+        const tryResolve = () => {
+            if (
+                settled ||
+                !authorizationCode ||
+                !sessionInfo
+            ) {
+                return;
+            }
+
+            settled = true;
+            window.clearTimeout(timeoutId);
+            cleanup();
+
+            resolve({
+                code: authorizationCode,
+                sessionInfo,
+            });
+        };
+
+        try {
+            cleanup = await launchMetaEmbeddedSignup({
+                onAuthorizationCode: code => {
+                    authorizationCode = code;
+                    tryResolve();
+                },
+                onSessionInfo: data => {
+                    sessionInfo = data;
+                    tryResolve();
+                },
+                onCancel: data => {
+                    const reason =
+                        data?.reason ||
+                        "embedded_signup_cancelled";
+
+                    settleWithError(
+                        new Error(
+                            `ERR_META_EMBEDDED_SIGNUP_CANCELLED:${reason}`
+                        )
+                    );
+                },
+                onError: error => {
+                    settleWithError(error);
+                },
+            });
+
+            if (settled) {
+                cleanup();
+            }
+        } catch (error) {
+            settleWithError(error);
+        }
+    });
