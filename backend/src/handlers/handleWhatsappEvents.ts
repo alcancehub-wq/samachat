@@ -126,6 +126,7 @@ interface MessageAckContext {
 
 const GROUP_CHAT_SUFFIX = "@g.us";
 const ACK_RECONCILIATION_WINDOW_SECONDS = 180;
+const OUTBOUND_DUPLICATE_WINDOW_SECONDS = 20;
 
 const isGroupChatId = (value?: string): boolean => {
   return typeof value === "string" && value.endsWith(GROUP_CHAT_SUFFIX);
@@ -396,8 +397,93 @@ export const handleMessage = async (
       groupContact
     );
 
+    let resolvedMessageId = processedMessage.id;
+    if (processedMessage.fromMe) {
+      try {
+        const messageTimestampMs =
+          Number(processedMessage.timestamp) > 0
+            ? Number(processedMessage.timestamp) * 1000
+            : Date.now();
+        const startDate = new Date(
+          messageTimestampMs - OUTBOUND_DUPLICATE_WINDOW_SECONDS * 1000
+        );
+        const endDate = new Date(
+          messageTimestampMs + OUTBOUND_DUPLICATE_WINDOW_SECONDS * 1000
+        );
+
+        const outboundDeduplicationWhere: any = {
+          ticketId: ticket.id,
+          fromMe: true,
+          body: processedMessage.body,
+          mediaType: processedMessage.type,
+          createdAt: {
+            [Op.between]: [startDate, endDate]
+          }
+        };
+
+        const possibleDuplicates = await Message.findAll({
+          where: outboundDeduplicationWhere,
+          order: [["createdAt", "DESC"]],
+          limit: 5
+        });
+
+        const duplicateCandidate = possibleDuplicates.reduce<Message | null>(
+          (best, current) => {
+            if (current.id === processedMessage.id) {
+              return best;
+            }
+
+            if (!best) {
+              return current;
+            }
+
+            const bestDistance = Math.abs(
+              best.createdAt.getTime() - messageTimestampMs
+            );
+            const currentDistance = Math.abs(
+              current.createdAt.getTime() - messageTimestampMs
+            );
+
+            return currentDistance < bestDistance ? current : best;
+          },
+          null
+        );
+
+        if (duplicateCandidate) {
+          const currentId = processedMessage.id || "";
+          const candidateId = duplicateCandidate.id || "";
+          const currentIsFallback = currentId.startsWith("fallback_");
+          const candidateIsFallback = candidateId.startsWith("fallback_");
+
+          if (currentIsFallback || candidateIsFallback) {
+            resolvedMessageId = duplicateCandidate.id;
+
+            logger.warn(
+              {
+                ticketId: ticket.id,
+                messageId: processedMessage.id,
+                resolvedMessageId,
+                fromMe: processedMessage.fromMe,
+                timestamp: processedMessage.timestamp
+              },
+              "Reconciling outbound message event with existing persisted message"
+            );
+          }
+        }
+      } catch (dedupeErr) {
+        logger.warn(
+          {
+            err: dedupeErr,
+            ticketId: ticket.id,
+            messageId: processedMessage.id
+          },
+          "Skipping outbound deduplication due to lookup error"
+        );
+      }
+    }
+
     const messageData: any = {
-      id: processedMessage.id,
+      id: resolvedMessageId,
       ticketId: ticket.id,
       contactId: processedMessage.fromMe ? undefined : contact.id,
       body: processedMessage.body,
