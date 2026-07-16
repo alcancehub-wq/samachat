@@ -440,18 +440,69 @@ const getSerializedMessageId = (
   return serializedMsgId;
 };
 
+const normalizeLid = (value?: string | null): string | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  return value.includes("@") ? value : `${value}@lid`;
+};
+
+const buildFallbackContactPayloadFromMessage = (
+  msg: WbotMessage
+): ContactPayload | null => {
+  const message = msg as any;
+  const candidateIds = [
+    msg.fromMe ? msg.to : msg.from,
+    message?._data?.from,
+    message?._data?.to,
+    message?.author,
+    message?._data?.author
+  ].filter((value): value is string => typeof value === "string" && value.length > 0);
+
+  for (const candidateId of candidateIds) {
+    const isGroup = candidateId.endsWith("@g.us");
+    const raw = candidateId.split("@")[0];
+    const fallbackName =
+      message?.notifyName || message?.pushname || raw || candidateId;
+
+    if (isGroup) {
+      return {
+        name: fallbackName,
+        number: raw,
+        profilePicUrl: undefined,
+        isGroup: true
+      };
+    }
+
+    if (IsPlausiblePhoneNumber(raw)) {
+      return {
+        name: fallbackName,
+        number: raw,
+        profilePicUrl: undefined,
+        isGroup: false
+      };
+    }
+
+    const lid = normalizeLid(candidateId);
+    if (lid) {
+      return {
+        name: fallbackName,
+        number: "",
+        lid,
+        profilePicUrl: undefined,
+        isGroup: false
+      };
+    }
+  }
+
+  return null;
+};
+
 const convertToContactPayload = async (
   msgContact: WbotContact
 ): Promise<ContactPayload> => {
   const profilePicUrl = await msgContact.getProfilePicUrl();
-
-  const normalizeLid = (value?: string | null): string | undefined => {
-    if (!value) {
-      return undefined;
-    }
-
-    return value.includes("@") ? value : `${value}@lid`;
-  };
 
   const extractContactIdentifiers = (
     contact: WbotContact
@@ -582,20 +633,34 @@ const convertToMediaPayload = async (
 const shouldHandleMessage = (msg: WbotMessage): boolean => {
   if (msg.from === "status@broadcast") return false;
 
-  if (
-    !(
-      msg.type === "chat" ||
-      msg.type === "audio" ||
-      msg.type === "ptt" ||
-      msg.type === "video" ||
-      msg.type === "image" ||
-      msg.type === "document" ||
-      msg.type === "vcard" ||
-      msg.type === "sticker" ||
-      msg.type === "location"
-    )
-  ) {
-    return false;
+  const supportedMessageTypes = new Set([
+    "chat",
+    "audio",
+    "ptt",
+    "video",
+    "image",
+    "document",
+    "vcard",
+    "sticker",
+    "location"
+  ]);
+
+  if (!supportedMessageTypes.has(msg.type)) {
+    const hasTextBody =
+      typeof msg.body === "string" && msg.body.trim().length > 0;
+
+    if (!hasTextBody) {
+      return false;
+    }
+
+    logger.warn(
+      {
+        messageType: msg.type,
+        from: msg.from,
+        fromMe: msg.fromMe
+      },
+      "Processing unsupported WhatsApp message type because it carries text body"
+    );
   }
 
   // Ignore queue/menu bootstrap messages that start with direction mark.
@@ -662,11 +727,47 @@ const getMessageData = async (
         logger.warn(err, "Unable to resolve contact by id, falling back to message contact");
         msgContact = await msg.getContact();
       }
+
+      contactPayload = await convertToContactPayload(msgContact);
     } else {
-      msgContact = await msg.getContact();
+      try {
+        msgContact = await msg.getContact();
+        contactPayload = await convertToContactPayload(msgContact);
+      } catch (err) {
+        logger.warn(
+          {
+            err,
+            from: msg.from,
+            messageId: (msg as any)?.id?._serialized || (msg as any)?.id?.id
+          },
+          "Unable to resolve inbound contact from message payload"
+        );
+
+        try {
+          msgContact = await wbot.getContactById(msg.from);
+          contactPayload = await convertToContactPayload(msgContact);
+        } catch (lookupErr) {
+          logger.warn(
+            {
+              err: lookupErr,
+              from: msg.from
+            },
+            "Unable to resolve inbound contact by id, falling back to message-derived contact payload"
+          );
+
+          const fallbackContactPayload = buildFallbackContactPayloadFromMessage(msg);
+          if (!fallbackContactPayload) {
+            throw lookupErr;
+          }
+
+          contactPayload = fallbackContactPayload;
+        }
+      }
     }
 
-    contactPayload = await convertToContactPayload(msgContact);
+    if (!contactPayload) {
+      throw new Error("Unable to resolve contact payload");
+    }
   }
 
   const unreadMessages = msg.fromMe ? 0 : Math.max(Number(chat.unreadCount) || 0, 1);
