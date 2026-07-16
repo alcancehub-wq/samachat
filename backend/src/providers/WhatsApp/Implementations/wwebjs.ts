@@ -353,6 +353,60 @@ const resolveProviderMessageId = (wbotMessage: any): string => {
   });
 };
 
+const sanitizeMessageIdPart = (value: unknown, fallback: string): string => {
+  if (typeof value !== "string" || !value.trim()) {
+    return fallback;
+  }
+
+  return value.replace(/[^a-zA-Z0-9@._-]/g, "");
+};
+
+const buildFallbackEventMessageId = (wbotMessage: any): string => {
+  const safeTimestamp = Number(wbotMessage?.timestamp) || Math.floor(Date.now() / 1000);
+  const safeFrom = sanitizeMessageIdPart(wbotMessage?.from, "unknown_from");
+  const safeTo = sanitizeMessageIdPart(wbotMessage?.to, "unknown_to");
+  const safeBody = sanitizeMessageIdPart(
+    typeof wbotMessage?.body === "string" ? wbotMessage.body.slice(0, 24) : "",
+    "nobody"
+  );
+  const direction = wbotMessage?.fromMe ? "me" : "in";
+
+  return `evt_${direction}_${safeTimestamp}_${safeFrom}_${safeTo}_${safeBody}`;
+};
+
+const resolveEventMessageId = (wbotMessage: any): string => {
+  const candidates = [
+    wbotMessage?.id?.id,
+    wbotMessage?.id?._serialized,
+    wbotMessage?._data?.id?.id,
+    wbotMessage?._data?.id?._serialized,
+    typeof wbotMessage?.id === "string" ? wbotMessage.id : ""
+  ];
+
+  const resolved = candidates.find(
+    value => typeof value === "string" && value.length > 0
+  );
+
+  if (resolved) {
+    return resolved;
+  }
+
+  const fallbackId = buildFallbackEventMessageId(wbotMessage);
+
+  logger.warn(
+    {
+      fallbackId,
+      from: wbotMessage?.from,
+      to: wbotMessage?.to,
+      fromMe: wbotMessage?.fromMe,
+      type: wbotMessage?.type
+    },
+    "wwebjs event payload without message id; using deterministic fallback"
+  );
+
+  return fallbackId;
+};
+
 const convertToProviderMessage = (
   wbotMessage: WbotMessage
 ): ProviderMessage => {
@@ -490,9 +544,10 @@ const convertToMessagePayload = async (
   }
 
   const quotedMsgId = await verifyQuotedMessage(processedMsg);
+  const processedAny = processedMsg as any;
 
   return {
-    id: processedMsg.id.id,
+    id: resolveEventMessageId(processedAny),
     body: processedMsg.body,
     fromMe: processedMsg.fromMe,
     hasMedia: processedMsg.hasMedia,
@@ -539,8 +594,10 @@ const shouldHandleMessage = (msg: WbotMessage): boolean => {
     return false;
   }
 
-  // Check for Unicode direction mark
-  if (/\u200e/.test(msg.body[0])) return false;
+  // Ignore queue/menu bootstrap messages that start with direction mark.
+  const firstBodyChar =
+    typeof msg.body === "string" && msg.body.length > 0 ? msg.body[0] : "";
+  if (firstBodyChar && /\u200e/.test(firstBodyChar)) return false;
 
   // Additional validation for messages from me
   if (msg.fromMe) {
@@ -1178,7 +1235,8 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
     });
 
     wbot.on("message_ack", async (msg, ack) => {
-      handleMessageAck(msg.id.id, mapMessageAck(ack));
+      const messageId = resolveEventMessageId(msg as any);
+      handleMessageAck(messageId, mapMessageAck(ack));
     });
 
     await wbot.initialize();

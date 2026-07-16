@@ -103,7 +103,22 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       })
     );
   } else {
-    await SendWhatsAppMessage({ body, ticket, quotedMsg });
+    const providerMessage = await SendWhatsAppMessage({ body, ticket, quotedMsg });
+
+    await CreateMessageService({
+      messageData: {
+        id:
+          providerMessage.id ||
+          `wwebjs-accepted-${ticket.whatsappId || "na"}-${Date.now()}`,
+        ticketId: ticket.id,
+        body: providerMessage.body || body,
+        fromMe: true,
+        read: true,
+        mediaType: providerMessage.type || "chat",
+        quotedMsgId: quotedMsg?.id,
+        ack: providerMessage.ack ?? 0
+      }
+    });
   }
 
   await emitTicketUpdate(ticket);
