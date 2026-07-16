@@ -127,6 +127,17 @@ interface MessageAckContext {
 const GROUP_CHAT_SUFFIX = "@g.us";
 const ACK_RECONCILIATION_WINDOW_SECONDS = 180;
 const OUTBOUND_DUPLICATE_WINDOW_SECONDS = 20;
+const TEMPORARY_OUTBOUND_ID_PREFIXES = ["fallback_", "wwebjs-accepted-"];
+
+const isTemporaryOutboundId = (value?: string): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  return TEMPORARY_OUTBOUND_ID_PREFIXES.some(prefix =>
+    value.startsWith(prefix)
+  );
+};
 
 const isGroupChatId = (value?: string): boolean => {
   return typeof value === "string" && value.endsWith(GROUP_CHAT_SUFFIX);
@@ -452,8 +463,8 @@ export const handleMessage = async (
         if (duplicateCandidate) {
           const currentId = processedMessage.id || "";
           const candidateId = duplicateCandidate.id || "";
-          const currentIsFallback = currentId.startsWith("fallback_");
-          const candidateIsFallback = candidateId.startsWith("fallback_");
+          const currentIsFallback = isTemporaryOutboundId(currentId);
+          const candidateIsFallback = isTemporaryOutboundId(candidateId);
 
           if (currentIsFallback || candidateIsFallback) {
             resolvedMessageId = duplicateCandidate.id;
@@ -600,9 +611,6 @@ export const handleMessageAck = async (
         const normalizedBody = typeof context.body === "string" ? context.body.trim() : "";
         const where: any = {
           fromMe: true,
-          id: {
-            [Op.like]: "fallback_%"
-          },
           createdAt: {
             [Op.between]: [startDate, endDate]
           },
@@ -610,6 +618,12 @@ export const handleMessageAck = async (
             [Op.lt]: ack
           }
         };
+
+        where[Op.or] = TEMPORARY_OUTBOUND_ID_PREFIXES.map(prefix => ({
+          id: {
+            [Op.like]: `${prefix}%`
+          }
+        }));
 
         if (normalizedBody.length > 0) {
           where.body = normalizedBody;

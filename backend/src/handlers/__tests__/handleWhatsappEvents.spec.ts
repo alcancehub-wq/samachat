@@ -19,8 +19,19 @@ jest.mock("../../utils/logger", () => ({
     debug: jest.fn()
   }
 }));
+jest.mock("../../libs/socket", () => {
+  const io = {
+    to: jest.fn().mockReturnThis(),
+    emit: jest.fn()
+  };
+
+  return {
+    getIO: jest.fn(() => io)
+  };
+});
 
 import { handleMessage, MessagePayload, ContactPayload, WhatsappContextPayload } from "../handleWhatsappEvents";
+import { handleMessageAck } from "../handleWhatsappEvents";
 import CreateOrUpdateContactService from "../../services/ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../../services/TicketServices/FindOrCreateTicketService";
 import CreateMessageService from "../../services/MessageServices/CreateMessageService";
@@ -284,5 +295,87 @@ describe("handleWhatsappEvents group guard", () => {
         body: "teste de duplicidade"
       })
     });
+  });
+
+  it("reuses the persisted wwebjs-accepted id when provider echo arrives with a different id", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 118,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const duplicateCandidate = {
+      id: "wwebjs-accepted-35-1784161342000",
+      createdAt: new Date(nowSeconds * 1000)
+    } as any;
+
+    jest
+      .spyOn(Message, "findAll")
+      .mockResolvedValue([duplicateCandidate] as any);
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({ id: duplicateCandidate.id } as any);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "3EB0REALPROVIDERID2",
+        body: "teste de duplicidade accepted",
+        fromMe: true,
+        from: "5511888888888@c.us",
+        to: "5511999999999@c.us",
+        timestamp: nowSeconds
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 })
+    );
+
+    expect(Message.findAll).toHaveBeenCalledTimes(1);
+    expect(createMessageServiceMock).toHaveBeenCalledWith({
+      messageData: expect.objectContaining({
+        id: duplicateCandidate.id,
+        fromMe: true,
+        body: "teste de duplicidade accepted"
+      })
+    });
+  });
+
+  it("matches wwebjs-accepted id on ack reconciliation when provider ack comes with real id", async () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const updateMock = jest.fn().mockResolvedValue(undefined);
+    const matchedMessage = {
+      id: "wwebjs-accepted-35-1784161342000",
+      ack: 1,
+      ticketId: 118,
+      createdAt: new Date(nowSeconds * 1000),
+      update: updateMock
+    } as any;
+
+    jest
+      .spyOn(Message, "findByPk")
+      .mockResolvedValueOnce(null as any)
+      .mockResolvedValueOnce(matchedMessage);
+
+    jest
+      .spyOn(Message, "findAll")
+      .mockResolvedValue([matchedMessage] as any);
+
+    await handleMessageAck("3EB0REALACKID", 2 as any, {
+      fromMe: true,
+      body: "teste ack accepted",
+      timestamp: nowSeconds
+    });
+
+    expect(Message.findAll).toHaveBeenCalledTimes(1);
+    expect((Message.findByPk as jest.Mock).mock.calls[1][0]).toBe(
+      matchedMessage.id
+    );
+    expect(updateMock).toHaveBeenCalledWith({ ack: 2 });
   });
 });
