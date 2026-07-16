@@ -1,3 +1,4 @@
+import fs from "fs";
 import SendWhatsAppMedia from "../../../services/WbotServices/SendWhatsAppMedia";
 import Message from "../../../models/Message";
 import Whatsapp from "../../../models/Whatsapp";
@@ -191,5 +192,65 @@ describe("SendWhatsAppMedia", () => {
 
     expect(sendMediaMock).toHaveBeenCalledTimes(2);
     expect(startWhatsAppSessionMock).toHaveBeenCalled();
+  });
+
+  it("preserves recorded uploaded file when preserveUploadedFile is true", async () => {
+    const media = {
+      filename: "recorded_1752680000000.webm",
+      originalname: "recorded_1752680000000.webm",
+      mimetype: "audio/webm;codecs=opus",
+      path: "tmp/recorded_1752680000000.webm"
+    } as Express.Multer.File;
+
+    const ticket = buildTicket();
+    const providerMessage = { id: "msg-preserve", body: "", ack: 1 };
+
+    const existsSyncSpy = jest.spyOn(fs, "existsSync").mockReturnValue(true as any);
+    const unlinkSyncSpy = jest.spyOn(fs, "unlinkSync").mockImplementation(() => undefined as any);
+
+    sendMediaMock.mockResolvedValueOnce(providerMessage);
+
+    await expect(
+      SendWhatsAppMedia({
+        media,
+        ticket: ticket as any,
+        preserveUploadedFile: true
+      })
+    ).resolves.toEqual(providerMessage);
+
+    expect(unlinkSyncSpy).not.toHaveBeenCalledWith(media.path);
+
+    unlinkSyncSpy.mockRestore();
+    existsSyncSpy.mockRestore();
+  });
+
+  it("removes uploaded file when preserveUploadedFile is false", async () => {
+    const media = {
+      filename: "recorded_1752680000000.webm",
+      originalname: "recorded_1752680000000.webm",
+      mimetype: "audio/webm;codecs=opus",
+      path: "tmp/recorded_1752680000000.webm"
+    } as Express.Multer.File;
+
+    const ticket = buildTicket();
+    const providerMessage = { id: "msg-remove", body: "", ack: 1 };
+
+    const existsSyncSpy = jest.spyOn(fs, "existsSync").mockReturnValue(true as any);
+    const unlinkSyncSpy = jest.spyOn(fs, "unlinkSync").mockImplementation(() => undefined as any);
+
+    sendMediaMock.mockResolvedValueOnce(providerMessage);
+
+    await expect(
+      SendWhatsAppMedia({
+        media,
+        ticket: ticket as any,
+        preserveUploadedFile: false
+      })
+    ).resolves.toEqual(providerMessage);
+
+    expect(unlinkSyncSpy).toHaveBeenCalledWith(media.path);
+
+    unlinkSyncSpy.mockRestore();
+    existsSyncSpy.mockRestore();
   });
 });

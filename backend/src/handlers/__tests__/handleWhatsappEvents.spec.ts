@@ -427,4 +427,53 @@ describe("handleWhatsappEvents group guard", () => {
       })
     });
   });
+
+  it("reuses outbound candidate id when echo changes media type between ptt and audio", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 118,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const duplicateCandidate = {
+      id: "wwebjs-accepted-35-1784161342999",
+      createdAt: new Date(nowSeconds * 1000),
+      mediaType: "ptt"
+    } as any;
+
+    jest.spyOn(Message, "findAll").mockResolvedValue([duplicateCandidate] as any);
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({ id: duplicateCandidate.id } as any);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "3EB0AUDIOPTTCASE",
+        body: "",
+        fromMe: true,
+        type: "audio",
+        from: "5511888888888@c.us",
+        to: "5511999999999@c.us",
+        timestamp: nowSeconds
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 })
+    );
+
+    expect(Message.findAll).toHaveBeenCalledTimes(1);
+    expect(createMessageServiceMock).toHaveBeenCalledWith({
+      messageData: expect.objectContaining({
+        id: duplicateCandidate.id,
+        fromMe: true,
+        mediaType: "audio"
+      })
+    });
+  });
 });

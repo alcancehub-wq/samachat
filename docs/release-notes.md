@@ -4,6 +4,10 @@
 
 ### legacy-prod
 
+- Chats/Audio gravado (blindagem final): adicionados testes de regressao para garantir preservacao do arquivo enviado quando necessario ao render imediato do balao de audio e para manter deduplicacao outbound quando o provider alterna entre `audio` e `ptt` no eco do mesmo envio.
+- Escopo desta blindagem final: `backend/src/__tests__/unit/WbotServices/SendWhatsAppMedia.spec.ts`, `backend/src/handlers/__tests__/handleWhatsappEvents.spec.ts` e `docs/release-notes.md`.
+- Validacao local desta blindagem final: `npx jest src/__tests__/unit/WbotServices/SendWhatsAppMedia.spec.ts src/handlers/__tests__/handleWhatsappEvents.spec.ts --runInBand --coverage=false` aprovado com 15 testes; `npm run test:stability` aprovado em `backend` com 7 suites e 38 testes.
+
 - Chats/Audio gravado (hotfix): o fluxo de audio gravado do compositor volta a aplicar retry de recuperacao em falhas genericas do provider para restaurar entrega efetiva quando o primeiro envio falha por instabilidade transitoria.
 - Chats/Audio gravado (isolado): a limpeza de arquivo temporario apos envio passa a ser resiliente (nao-fatal), evitando retorno de erro 400 para o frontend quando a mensagem ja foi enviada com sucesso e a falha ocorreu apenas no cleanup local.
 - Escopo desta correcao isolada: `backend/src/services/WbotServices/SendWhatsAppMedia.ts`, `backend/src/__tests__/unit/WbotServices/SendWhatsAppMedia.spec.ts` e `docs/release-notes.md`.
