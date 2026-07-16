@@ -37,6 +37,17 @@ interface Response {
   oldDefaultWhatsapp: Whatsapp | null;
 }
 
+const normalizeOptionalValue = (
+  value?: string | null
+): string | undefined => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized || undefined;
+};
+
 const UpdateWhatsAppService = async ({
   whatsappData,
   whatsappId
@@ -74,9 +85,25 @@ const UpdateWhatsAppService = async ({
     throw new AppError(err.message);
   }
 
+  const whatsapp = await ShowWhatsAppService(whatsappId);
+
+  const effectiveProviderType =
+    providerType || whatsapp.providerType;
+  const effectivePhoneNumberId =
+    normalizeOptionalValue(phoneNumberId) ||
+    whatsapp.phoneNumberId;
+  const effectiveAccessToken =
+    normalizeOptionalValue(accessToken) ||
+    whatsapp.accessToken;
+  const effectiveVerifyToken =
+    normalizeOptionalValue(verifyToken) ||
+    whatsapp.verifyToken;
+
   if (
-    providerType === "official" &&
-    (!phoneNumberId || !accessToken || !verifyToken)
+    effectiveProviderType === "official" &&
+    (!effectivePhoneNumberId ||
+      !effectiveAccessToken ||
+      !effectiveVerifyToken)
   ) {
     throw new AppError("ERR_CLOUD_API_REQUIRED_FIELDS");
   }
@@ -96,8 +123,6 @@ const UpdateWhatsAppService = async ({
     }
   }
 
-  const whatsapp = await ShowWhatsAppService(whatsappId);
-
   const updateData: Partial<Whatsapp> = {
     name,
     status,
@@ -109,15 +134,53 @@ const UpdateWhatsAppService = async ({
 
   if (providerType !== undefined) {
     updateData.providerType = providerType;
-    updateData.wabaId = wabaId;
-    updateData.phoneNumberId = phoneNumberId;
-    updateData.businessAccountId = businessAccountId;
-    updateData.accessToken = accessToken;
-    updateData.verifyToken = verifyToken;
-    updateData.appSecret = appSecret;
-    updateData.apiVersion = apiVersion || "v20.0";
-    updateData.cloudApiStatus = providerType === "official" ? "configured" : undefined;
+    updateData.apiVersion =
+      normalizeOptionalValue(apiVersion) ||
+      whatsapp.apiVersion ||
+      "v20.0";
+    updateData.cloudApiStatus =
+      providerType === "official"
+        ? "configured"
+        : undefined;
     updateData.cloudApiLastError = undefined;
+  }
+
+  const normalizedWabaId =
+    normalizeOptionalValue(wabaId);
+  const normalizedPhoneNumberId =
+    normalizeOptionalValue(phoneNumberId);
+  const normalizedBusinessAccountId =
+    normalizeOptionalValue(businessAccountId);
+  const normalizedAccessToken =
+    normalizeOptionalValue(accessToken);
+  const normalizedVerifyToken =
+    normalizeOptionalValue(verifyToken);
+  const normalizedAppSecret =
+    normalizeOptionalValue(appSecret);
+
+  if (normalizedWabaId) {
+    updateData.wabaId = normalizedWabaId;
+  }
+
+  if (normalizedPhoneNumberId) {
+    updateData.phoneNumberId = normalizedPhoneNumberId;
+  }
+
+  if (normalizedBusinessAccountId) {
+    updateData.businessAccountId =
+      normalizedBusinessAccountId;
+  }
+
+  if (normalizedAccessToken) {
+    updateData.accessToken = normalizedAccessToken;
+  }
+
+  if (normalizedVerifyToken) {
+    updateData.verifyToken = normalizedVerifyToken;
+  }
+
+  if (normalizedAppSecret) {
+    updateData.appSecret = normalizedAppSecret;
   }
 
   await whatsapp.update(updateData);

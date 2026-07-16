@@ -8,6 +8,7 @@ import ListWhatsAppsService from "../services/WhatsappService/ListWhatsAppsServi
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import UpdateWhatsAppService from "../services/WhatsappService/UpdateWhatsAppService";
 import { whatsappProvider } from "../providers/WhatsApp";
+import SerializeWhatsAppForClient from "../helpers/SerializeWhatsAppForClient";
 
 interface WhatsappData {
   name: string;
@@ -31,7 +32,9 @@ interface WhatsappData {
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const whatsapps = await ListWhatsAppsService();
 
-  return res.status(200).json(whatsapps);
+  return res
+    .status(200)
+    .json(whatsapps.map(SerializeWhatsAppForClient));
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
@@ -82,20 +85,26 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     StartWhatsAppSession(formattedWhatsApp, { reason: "create" });
   }
 
+  const serializedWhatsApp =
+    SerializeWhatsAppForClient(formattedWhatsApp);
+  const serializedOldDefaultWhatsapp = formattedOldDefaultWhatsapp
+    ? SerializeWhatsAppForClient(formattedOldDefaultWhatsapp)
+    : null;
+
   const io = getIO();
   io.emit("whatsapp", {
     action: "update",
-    whatsapp: formattedWhatsApp
+    whatsapp: serializedWhatsApp
   });
 
-  if (formattedOldDefaultWhatsapp) {
+  if (serializedOldDefaultWhatsapp) {
     io.emit("whatsapp", {
       action: "update",
-      whatsapp: formattedOldDefaultWhatsapp
+      whatsapp: serializedOldDefaultWhatsapp
     });
   }
 
-  return res.status(200).json(formattedWhatsApp);
+  return res.status(200).json(serializedWhatsApp);
 };
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
@@ -103,7 +112,9 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
 
   const whatsapp = await ShowWhatsAppService(whatsappId);
 
-  return res.status(200).json(whatsapp);
+  return res
+    .status(200)
+    .json(SerializeWhatsAppForClient(whatsapp));
 };
 
 export const update = async (
@@ -123,20 +134,26 @@ export const update = async (
     ? await ShowWhatsAppService(oldDefaultWhatsapp.id)
     : null;
 
+  const serializedWhatsApp =
+    SerializeWhatsAppForClient(formattedWhatsApp);
+  const serializedOldDefaultWhatsapp = formattedOldDefaultWhatsapp
+    ? SerializeWhatsAppForClient(formattedOldDefaultWhatsapp)
+    : null;
+
   const io = getIO();
   io.emit("whatsapp", {
     action: "update",
-    whatsapp: formattedWhatsApp
+    whatsapp: serializedWhatsApp
   });
 
-  if (formattedOldDefaultWhatsapp) {
+  if (serializedOldDefaultWhatsapp) {
     io.emit("whatsapp", {
       action: "update",
-      whatsapp: formattedOldDefaultWhatsapp
+      whatsapp: serializedOldDefaultWhatsapp
     });
   }
 
-  return res.status(200).json(formattedWhatsApp);
+  return res.status(200).json(serializedWhatsApp);
 };
 
 export const remove = async (
