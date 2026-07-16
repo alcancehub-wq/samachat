@@ -1,8 +1,9 @@
-import express from "express";
+﻿import express from "express";
 import isAuth from "../middleware/isAuth";
 import checkSectorPermission from "../middleware/checkSectorPermission";
 
 import * as WhatsAppController from "../controllers/WhatsAppController";
+import * as EmbeddedSignupController from "../controllers/EmbeddedSignupController";
 
 const whatsappRoutes = express.Router();
 
@@ -34,6 +35,12 @@ whatsappRoutes.put(
   WhatsAppController.update
 );
 
+whatsappRoutes.post(
+  "/whatsapp/:whatsappId/embedded-signup",
+  isAuth,
+  checkSectorPermission("connections.update"),
+  EmbeddedSignupController.store
+);
 whatsappRoutes.post(
   "/whatsapp/:whatsappId/restart",
   isAuth,
