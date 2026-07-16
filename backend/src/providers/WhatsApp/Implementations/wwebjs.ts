@@ -1203,8 +1203,26 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
     clearReconnectTimers(whatsapp.id);
     scheduleConnectingTimeout(whatsapp, "initialize", CONNECTING_TIMEOUT_MS);
 
+    wbot.on("message", async msg => {
+      if (msg.fromMe || !shouldHandleMessage(msg)) return;
+
+      try {
+        const { messagePayload, contactPayload, contextPayload, mediaPayload } =
+          await getMessageData(msg, wbot);
+
+        await handleMessage(
+          messagePayload,
+          contactPayload,
+          contextPayload,
+          mediaPayload
+        );
+      } catch (err) {
+        logger.error(err, "Error on whatsapp message event");
+      }
+    });
+
     wbot.on("message_create", async msg => {
-      if (!shouldHandleMessage(msg)) return;
+      if (!msg.fromMe || !shouldHandleMessage(msg)) return;
 
       try {
         const { messagePayload, contactPayload, contextPayload, mediaPayload } =
