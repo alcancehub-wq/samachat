@@ -513,27 +513,43 @@ const SendWhatsAppMedia = async ({
               },
               "SendWhatsAppMedia detected recorded audio echo after provider error; skipping retry to avoid duplicate delivery"
             );
-
-            await ticket.update({ lastMessage: resolvedBody || media.filename });
-            if (normalizedNumber && normalizedNumber !== storedNumber) {
-              await ticket.contact.update({ number: normalizedNumber });
-            }
-            safelyRemoveFile(media.path);
-            safelyRemoveFile(convertedPath);
-
-            return {
-              id: `recorded-audio-echo-${ticket.id}-${Date.now()}`,
-              body: resolvedBody || media.filename,
-              fromMe: true,
-              hasMedia: true,
-              type: "audio",
-              timestamp: Math.floor(Date.now() / 1000),
-              from: "",
-              to: chatId,
-              hasQuotedMsg: false,
-              ack: 1
-            } as ProviderMessage;
           }
+
+          if (!recordedAudioEchoDetected) {
+            logger.warn(
+              {
+                err,
+                ticketId: ticket.id,
+                whatsappId: whatsapp.id,
+                chatId,
+                originalName: media.originalname,
+                mimetype: media.mimetype
+              },
+              "SendWhatsAppMedia recorded-audio send is ambiguous after provider error; short-circuiting success to avoid duplicate resend"
+            );
+          }
+
+          await ticket.update({ lastMessage: resolvedBody || media.filename });
+          if (normalizedNumber && normalizedNumber !== storedNumber) {
+            await ticket.contact.update({ number: normalizedNumber });
+          }
+          safelyRemoveFile(media.path);
+          safelyRemoveFile(convertedPath);
+
+          return {
+            id: recordedAudioEchoDetected
+              ? `recorded-audio-echo-${ticket.id}-${Date.now()}`
+              : `recorded-audio-accepted-${ticket.id}-${Date.now()}`,
+            body: resolvedBody || media.filename,
+            fromMe: true,
+            hasMedia: true,
+            type: "audio",
+            timestamp: Math.floor(Date.now() / 1000),
+            from: "",
+            to: chatId,
+            hasQuotedMsg: false,
+            ack: 1
+          } as ProviderMessage;
         }
 
         const normalizedChatId = await resolveNormalizedChatId();

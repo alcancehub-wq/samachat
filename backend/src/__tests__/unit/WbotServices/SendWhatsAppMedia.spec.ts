@@ -138,7 +138,7 @@ describe("SendWhatsAppMedia", () => {
     expect(startWhatsAppSessionMock).not.toHaveBeenCalled();
   });
 
-  it("keeps retry behavior for recorded composer audio when no echo is detected", async () => {
+  it("short-circuits recorded composer audio as accepted when no echo is detected", async () => {
     const media = {
       filename: "recorded_1752680000000.webm",
       originalname: "recorded_1752680000000.webm",
@@ -155,19 +155,19 @@ describe("SendWhatsAppMedia", () => {
     };
     shouldNormalizeAudioForWhatsApp.mockReturnValue(true);
 
-    const providerMessage = { id: "msg-recorded-retry", body: "", ack: 1 };
-    sendMediaMock
-      .mockRejectedValueOnce(new Error("provider unknown failure"))
-      .mockResolvedValueOnce(providerMessage);
+    sendMediaMock.mockRejectedValueOnce(new Error("provider unknown failure"));
 
     findRecentMessageMock.mockResolvedValue(null);
 
-    await expect(
-      SendWhatsAppMedia({ media, ticket: ticket as any })
-    ).resolves.toEqual(providerMessage);
+    await expect(SendWhatsAppMedia({ media, ticket: ticket as any })).resolves.toMatchObject({
+      fromMe: true,
+      hasMedia: true,
+      type: "audio",
+      ack: 1
+    });
 
-    expect(sendMediaMock).toHaveBeenCalledTimes(2);
-    expect(startWhatsAppSessionMock).toHaveBeenCalled();
+    expect(sendMediaMock).toHaveBeenCalledTimes(1);
+    expect(startWhatsAppSessionMock).not.toHaveBeenCalled();
   });
 
   it("keeps retry behavior for non-recorded media on generic provider errors", async () => {
