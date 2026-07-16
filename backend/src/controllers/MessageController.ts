@@ -116,7 +116,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
         read: true,
         mediaType: providerMessage.type || "chat",
         quotedMsgId: quotedMsg?.id,
-        ack: providerMessage.ack ?? 0
+        ack: providerMessage.ack ?? 1
       }
     });
   }

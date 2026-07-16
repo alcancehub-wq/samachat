@@ -411,6 +411,10 @@ const convertToProviderMessage = (
   wbotMessage: WbotMessage
 ): ProviderMessage => {
   const message = wbotMessage as any;
+  const resolvedAck =
+    message.ack === undefined && message.fromMe
+      ? 1
+      : mapMessageAck(message.ack);
 
   return {
     id: resolveProviderMessageId(message),
@@ -422,7 +426,7 @@ const convertToProviderMessage = (
     from: typeof message.from === "string" ? message.from : "",
     to: typeof message.to === "string" ? message.to : "",
     hasQuotedMsg: Boolean(message.hasQuotedMsg),
-    ack: mapMessageAck(message.ack)
+    ack: resolvedAck
   };
 };
 
@@ -807,6 +811,7 @@ const sendMessage = async (
         fromMe: true,
         hasMedia: false,
         type: "chat",
+        ack: 1,
         timestamp: Math.floor(Date.now() / 1000),
         from: "",
         to
