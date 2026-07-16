@@ -1,5 +1,16 @@
 # Release Notes
 
+## 2026-07-15
+
+### legacy-prod
+
+- Chats/Blindagem: o backend agora possui uma suite obrigatoria de regressao de estabilidade para pontos criticos do WhatsApp (`ack`, inbound e reconciliacao de duplicidade outbound), consolidada em um script unico para execucao deterministica no CI.
+- CI/Deploy backend: o workflow de build do backend passa a executar a suite de estabilidade apos o `build`, bloqueando promocao quando houver regressao funcional nas trilhas criticas.
+- CI/Publicacao de imagem: o pipeline de `push-image-backend` recebeu preflight completo (`npm install`, `npm run build`, `npm run test:stability`) antes do build/push Docker, evitando publicar imagem quebrada para a stack legada.
+- Chats/Regressao de duplicidade: foi adicionado teste dedicado para garantir que, quando o provider ecoa mensagem outbound com ID real diferente, o sistema reaproveita o ID fallback previamente persistido e evita duplicacao visual no SamaChat.
+- Escopo desta blindagem: `.github/workflows/build-backend.yaml`, `.github/workflows/push-image-backend.yaml`, `backend/package.json`, `backend/src/handlers/__tests__/handleWhatsappEvents.spec.ts` e `docs/release-notes.md`.
+- Validacao local desta blindagem: `npm run build` aprovado em `backend`; `npm run test:stability` aprovado em `backend` com 7 suites e 35 testes.
+
 ## 2026-05-27
 
 ### legacy-prod

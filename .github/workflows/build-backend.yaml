@@ -38,3 +38,7 @@ jobs:
 
       - run: npm run build
         working-directory: backend
+
+      - name: Run backend stability regression suite
+        working-directory: backend
+        run: npm run test:stability

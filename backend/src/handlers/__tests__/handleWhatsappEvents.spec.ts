@@ -26,6 +26,7 @@ import FindOrCreateTicketService from "../../services/TicketServices/FindOrCreat
 import CreateMessageService from "../../services/MessageServices/CreateMessageService";
 import ShowWhatsAppService from "../../services/WhatsappService/ShowWhatsAppService";
 import HandleIncomingFlowMessageService from "../../services/FlowExecutionServices/HandleIncomingFlowMessageService";
+import Message from "../../models/Message";
 import { logger } from "../../utils/logger";
 
 const createOrUpdateContactServiceMock = CreateOrUpdateContactService as jest.MockedFunction<
@@ -234,5 +235,54 @@ describe("handleWhatsappEvents group guard", () => {
     expect(createOrUpdateContactServiceMock).not.toHaveBeenCalled();
     expect(findOrCreateTicketServiceMock).not.toHaveBeenCalled();
     expect(createMessageServiceMock).not.toHaveBeenCalled();
+  });
+
+  it("reuses the persisted outbound fallback id when provider echo arrives with a different id", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 118,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const duplicateCandidate = {
+      id: "fallback_1784161342_unknown_554197837839@c.us_m1l2ms",
+      createdAt: new Date(nowSeconds * 1000)
+    } as any;
+
+    jest
+      .spyOn(Message, "findAll")
+      .mockResolvedValue([duplicateCandidate] as any);
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({ id: duplicateCandidate.id } as any);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "3EB0REALPROVIDERID",
+        body: "teste de duplicidade",
+        fromMe: true,
+        from: "5511888888888@c.us",
+        to: "5511999999999@c.us",
+        timestamp: nowSeconds
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 })
+    );
+
+    expect(Message.findAll).toHaveBeenCalledTimes(1);
+    expect(createMessageServiceMock).toHaveBeenCalledWith({
+      messageData: expect.objectContaining({
+        id: duplicateCandidate.id,
+        fromMe: true,
+        body: "teste de duplicidade"
+      })
+    });
   });
 });

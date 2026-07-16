@@ -25,6 +25,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Use Node.js 14.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 14.x
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Backend build preflight
+        working-directory: backend
+        run: npm run build
+
+      - name: Backend stability regression gate
+        working-directory: backend
+        run: npm run test:stability
+
       - name: Log in to the Container registry
         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
         with:

@@ -12,6 +12,7 @@
     "dev": "ts-node-dev --respawn --transpile-only --ignore node_modules src/server.ts",
     "pretest": "NODE_ENV=test sequelize db:migrate && NODE_ENV=test sequelize db:seed:all",
     "test": "NODE_ENV=test jest",
+    "test:stability": "jest --runInBand src/__tests__/unit/WbotServices/SendWhatsAppMessage.spec.ts src/handlers/__tests__/handleWhatsappEvents.spec.ts src/handlers/__tests__/handleWhatsappEvents.manualContactEcho.spec.ts src/providers/WhatsApp/Implementations/__tests__/wwebjs.sessionRuntime.spec.ts src/providers/WhatsApp/Implementations/__tests__/wwebjs.groupDetection.spec.ts src/providers/WhatsApp/Implementations/__tests__/wwebjsNumberLookup.spec.ts src/providers/WhatsApp/Implementations/__tests__/wwebjs.deleteMessage.spec.ts",
     "posttest": "NODE_ENV=test sequelize db:migrate:undo:all",
     "db:migrate": "npm run build && sequelize db:migrate",
     "db:seed": "sequelize db:seed:all",
