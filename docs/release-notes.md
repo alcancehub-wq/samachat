@@ -1,5 +1,14 @@
 # Release Notes
 
+## 2026-07-18
+
+### legacy-prod
+
+- WhatsApp/wwebjs (otimizacao isolada): eventos inbound duplicados entre `message` e `message_create` passam por deduplicacao curta por id de mensagem antes do `handleMessage`, reduzindo processamento repetido e pico de CPU/memoria em sessoes com alto volume.
+- WhatsApp/wwebjs (higiene de sessao): `removeSession` passa a limpar listeners, timers de reconnect, contadores de retry e cache de dedupe por sessao, evitando crescimento de estado em memoria durante ciclos de reconexao.
+- Escopo desta correcao isolada: `backend/src/providers/WhatsApp/Implementations/wwebjs.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao isolada: `npm run build` aprovado em `backend`; diagnosticos do editor sem erros no arquivo alterado.
+
 ## 2026-07-15
 
 ### legacy-prod

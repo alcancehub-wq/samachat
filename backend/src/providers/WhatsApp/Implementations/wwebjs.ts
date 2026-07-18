@@ -70,15 +70,24 @@ const CONNECTING_TIMEOUT_MS = Number(
 const AUTHENTICATED_TIMEOUT_MS = Number(
   process.env.WWEBJS_AUTHENTICATED_TIMEOUT_MS || "360000"
 );
+const INCOMING_EVENT_DEDUP_TTL_MS = Math.max(
+  1000,
+  Number(process.env.WWEBJS_INCOMING_EVENT_DEDUP_TTL_MS || "30000")
+);
+const INCOMING_EVENT_DEDUP_MAX_KEYS = Math.max(
+  1000,
+  Number(process.env.WWEBJS_INCOMING_EVENT_DEDUP_MAX_KEYS || "10000")
+);
+const incomingEventSeenAt = new Map<string, number>();
 
 const clearReconnectTimers = (whatsappId: number): void => {
   if (reconnectTimers[whatsappId]) {
     clearTimeout(reconnectTimers[whatsappId] as ReturnType<typeof setTimeout>);
-    reconnectTimers[whatsappId] = null;
+    delete reconnectTimers[whatsappId];
   }
   if (connectingTimers[whatsappId]) {
     clearTimeout(connectingTimers[whatsappId] as ReturnType<typeof setTimeout>);
-    connectingTimers[whatsappId] = null;
+    delete connectingTimers[whatsappId];
   }
 };
 
@@ -89,10 +98,12 @@ const scheduleConnectingTimeout = (
 ): void => {
   if (connectingTimers[whatsapp.id]) {
     clearTimeout(connectingTimers[whatsapp.id] as ReturnType<typeof setTimeout>);
-    connectingTimers[whatsapp.id] = null;
+    delete connectingTimers[whatsapp.id];
   }
 
   connectingTimers[whatsapp.id] = setTimeout(async () => {
+    delete connectingTimers[whatsapp.id];
+
     const currentWhatsapp = await Whatsapp.findByPk(whatsapp.id);
     const currentStatus = currentWhatsapp?.status;
 
@@ -230,7 +241,8 @@ const scheduleReconnect = async (
 
   clearReconnectTimers(whatsapp.id);
   reconnectTimers[whatsapp.id] = setTimeout(async () => {
-    reconnectTimers[whatsapp.id] = null;
+    delete reconnectTimers[whatsapp.id];
+
     void enqueueWhatsAppSessionStart(
       whatsapp,
       {
@@ -405,6 +417,78 @@ const resolveEventMessageId = (wbotMessage: any): string => {
   );
 
   return fallbackId;
+};
+
+const cleanupIncomingEventDedup = (now: number): void => {
+  for (const [cacheKey, seenAt] of incomingEventSeenAt.entries()) {
+    if (now - seenAt > INCOMING_EVENT_DEDUP_TTL_MS) {
+      incomingEventSeenAt.delete(cacheKey);
+      continue;
+    }
+
+    break;
+  }
+
+  if (incomingEventSeenAt.size <= INCOMING_EVENT_DEDUP_MAX_KEYS) {
+    return;
+  }
+
+  let overflow = incomingEventSeenAt.size - INCOMING_EVENT_DEDUP_MAX_KEYS;
+  for (const cacheKey of incomingEventSeenAt.keys()) {
+    incomingEventSeenAt.delete(cacheKey);
+    overflow -= 1;
+    if (overflow <= 0) {
+      break;
+    }
+  }
+};
+
+const clearIncomingEventDedupForSession = (sessionId: number): void => {
+  const keyPrefix = `${sessionId}:`;
+
+  for (const cacheKey of incomingEventSeenAt.keys()) {
+    if (cacheKey.startsWith(keyPrefix)) {
+      incomingEventSeenAt.delete(cacheKey);
+    }
+  }
+};
+
+const shouldProcessIncomingEvent = (
+  sessionId: number,
+  eventName: string,
+  msg: WbotMessage
+): boolean => {
+  const message = msg as any;
+  const messageId = resolveEventMessageId(message);
+
+  if (!messageId) {
+    return true;
+  }
+
+  const now = Date.now();
+  cleanupIncomingEventDedup(now);
+
+  const cacheKey = `${sessionId}:${messageId}:${message?.from || ""}:${message?.to || ""}`;
+  const seenAt = incomingEventSeenAt.get(cacheKey);
+
+  if (seenAt && now - seenAt <= INCOMING_EVENT_DEDUP_TTL_MS) {
+    logger.debug(
+      {
+        whatsappId: sessionId,
+        eventName,
+        messageId
+      },
+      "Skipping duplicated incoming wwebjs event"
+    );
+    return false;
+  }
+
+  if (incomingEventSeenAt.has(cacheKey)) {
+    incomingEventSeenAt.delete(cacheKey);
+  }
+  incomingEventSeenAt.set(cacheKey, now);
+
+  return true;
 };
 
 const convertToProviderMessage = (
@@ -898,6 +982,10 @@ const syncUnreadMessages = async (wbot: Session) => {
 const removeSession = async (whatsappId: number): Promise<void> => {
   clearReconnectTimers(whatsappId);
   readySessions.delete(whatsappId);
+  delete reconnectAttempts[whatsappId];
+  delete profileLockRetries[whatsappId];
+  clearIncomingEventDedupForSession(whatsappId);
+  initializingSessions.delete(whatsappId);
 
   const existingDestroy = destroyingSessions.get(whatsappId);
   if (existingDestroy) {
@@ -921,11 +1009,16 @@ const removeSession = async (whatsappId: number): Promise<void> => {
   let destroyPromise: Promise<void> | undefined;
   destroyPromise = (async () => {
     try {
+      session.removeAllListeners();
       await session.destroy();
     } catch (err) {
       logger.error({ err, whatsappId }, "Error destroying whatsapp session");
     } finally {
       await delay(SESSION_DESTROY_GRACE_MS);
+      clearReconnectTimers(whatsappId);
+      delete reconnectAttempts[whatsappId];
+      delete profileLockRetries[whatsappId];
+      clearIncomingEventDedupForSession(whatsappId);
       if (destroyPromise && destroyingSessions.get(whatsappId) === destroyPromise) {
         destroyingSessions.delete(whatsappId);
       }
@@ -1366,6 +1459,9 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
 
     wbot.on("message", async msg => {
       if (msg.fromMe || !shouldHandleMessage(msg)) return;
+      if (!shouldProcessIncomingEvent(wbot.id || whatsapp.id, "message", msg)) {
+        return;
+      }
 
       try {
         const { messagePayload, contactPayload, contextPayload, mediaPayload } =
@@ -1384,6 +1480,16 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
 
     wbot.on("message_create", async msg => {
       if (!shouldHandleMessage(msg)) return;
+      if (
+        !msg.fromMe &&
+        !shouldProcessIncomingEvent(
+          wbot.id || whatsapp.id,
+          "message_create",
+          msg
+        )
+      ) {
+        return;
+      }
 
       try {
         const { messagePayload, contactPayload, contextPayload, mediaPayload } =
