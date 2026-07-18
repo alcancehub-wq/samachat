@@ -1305,6 +1305,21 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
         },
         "WhatsApp session authenticated"
       );
+
+      try {
+        // Once QR is accepted, clear stale QR so UI can show "connecting" progress.
+        await whatsapp.update({ status: "OPENING", qrcode: "" });
+        io.emit("whatsappSession", {
+          action: "update",
+          session: whatsapp
+        });
+      } catch (err) {
+        logger.error(
+          { err, whatsappId: whatsapp.id, sessionName },
+          "Error updating whatsapp session after authentication"
+        );
+      }
+
       scheduleConnectingTimeout(
         whatsapp,
         "authenticated",
@@ -1407,7 +1422,12 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
           );
         }
 
-        await whatsapp.update({ status: persistedStatus });
+        const updatePayload: Partial<Whatsapp> = { status: persistedStatus };
+        if (newState === "CONNECTED") {
+          updatePayload.qrcode = "";
+        }
+
+        await whatsapp.update(updatePayload);
 
         io.emit("whatsappSession", {
           action: "update",
