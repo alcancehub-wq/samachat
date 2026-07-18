@@ -3,11 +3,11 @@ import { logger } from "../../utils/logger";
 
 const DEFAULT_START_DELAY_MS = 0;
 const MIN_START_DELAY_MS = 0;
-const MAX_START_DELAY_MS = 5000;
+const MAX_START_DELAY_MS = 15000;
 
-const DEFAULT_START_TIMEOUT_MS = 20000;
-const MIN_START_TIMEOUT_MS = 10000;
-const MAX_START_TIMEOUT_MS = 30000;
+const DEFAULT_START_TIMEOUT_MS = 60000;
+const MIN_START_TIMEOUT_MS = 15000;
+const MAX_START_TIMEOUT_MS = 180000;
 
 const queuedSessionStarts = new Map<number, Promise<void>>();
 
