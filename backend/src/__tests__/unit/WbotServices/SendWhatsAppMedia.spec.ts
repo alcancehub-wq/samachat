@@ -19,6 +19,7 @@ jest.mock("../../../providers/WhatsApp", () => ({
     hasSession: jest.fn(),
     isSessionReady: jest.fn(),
     checkNumber: jest.fn(),
+    checkNumberLookup: jest.fn(),
     sendMedia: jest.fn()
   }
 }));
@@ -66,6 +67,7 @@ describe("SendWhatsAppMedia", () => {
   const hasSessionMock = whatsappProvider.hasSession as jest.Mock;
   const isSessionReadyMock = whatsappProvider.isSessionReady as jest.Mock;
   const checkNumberMock = whatsappProvider.checkNumber as jest.Mock;
+  const checkNumberLookupMock = whatsappProvider.checkNumberLookup as jest.Mock;
   const sendMediaMock = whatsappProvider.sendMedia as jest.Mock;
   const startWhatsAppSessionMock = StartWhatsAppSession as jest.Mock;
   const sleepMock = sleep as jest.Mock;
@@ -97,8 +99,48 @@ describe("SendWhatsAppMedia", () => {
     hasSessionMock.mockReturnValue(true);
     isSessionReadyMock.mockReturnValue(true);
     checkNumberMock.mockResolvedValue("");
+    checkNumberLookupMock.mockResolvedValue({
+      number: "",
+      chatId: undefined,
+      lid: undefined
+    });
     findRecentMessageMock.mockResolvedValue(null);
     sleepMock.mockResolvedValue(undefined);
+  });
+
+  it("retries media send with lookup chat id when No LID is returned", async () => {
+    const media = {
+      filename: "file.pdf",
+      originalname: "file.pdf",
+      mimetype: "application/pdf",
+      path: "tmp/file.pdf"
+    } as Express.Multer.File;
+
+    const ticket = buildTicket({
+      contact: {
+        number: "5511999999999",
+        lid: "12345@lid",
+        update: jest.fn().mockResolvedValue(undefined)
+      }
+    });
+
+    checkNumberLookupMock.mockResolvedValue({
+      number: "5511999999999",
+      chatId: "5511999999999@c.us",
+      lid: "12345@lid"
+    });
+
+    sendMediaMock
+      .mockRejectedValueOnce(new Error("No LID for user"))
+      .mockResolvedValueOnce({ id: "msg-lookup", body: "", ack: 1 });
+
+    await expect(
+      SendWhatsAppMedia({ media, ticket: ticket as any })
+    ).resolves.toMatchObject({ id: "msg-lookup", ack: 1 });
+
+    expect(sendMediaMock).toHaveBeenCalledTimes(2);
+    expect(sendMediaMock.mock.calls[0][1]).toBe("12345@lid");
+    expect(sendMediaMock.mock.calls[1][1]).toBe("5511999999999@c.us");
   });
 
   it("skips retry when recorded audio echo is detected after provider error", async () => {

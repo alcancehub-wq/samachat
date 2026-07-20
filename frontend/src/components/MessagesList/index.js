@@ -602,7 +602,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
     }*/
     else if ( /^.*\.(jpe?g|png|gif)?$/i.exec(mediaUrl) && message.mediaType === "image") {
       return <ModalImageCors imageUrl={mediaUrl} />;
-    } else if (message.mediaType === "audio") {
+    } else if (message.mediaType === "audio" || message.mediaType === "ptt") {
       return <Audio url={mediaUrl} />
     } else if (message.mediaType === "video") {
       return (

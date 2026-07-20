@@ -35,6 +35,12 @@ interface Request {
   preserveUploadedFile?: boolean;
 }
 
+interface NumberLookupResult {
+  normalizedNumber: string;
+  resolvedChatId?: string;
+  resolvedLid?: string;
+}
+
 const INITIAL_READY_TIMEOUT_MS = 5000;
 const RECOVERY_READY_TIMEOUT_MS = 15000;
 const RECORDED_AUDIO_ECHO_WAIT_MS = 5000;
@@ -125,23 +131,67 @@ const normalizeLid = (value?: string | null): string => {
   return value.includes("@") ? value : `${value}@lid`;
 };
 
-const safeCheckNumber = async (
-  whatsappId: number,
-  number: string
-): Promise<string> => {
-  if (!IsPlausiblePhoneNumber(number)) {
+const buildNormalizedPhoneChatId = (value?: string | null): string => {
+  if (!value) {
     return "";
   }
 
+  const normalizedNumber = NormalizeProviderCheckNumber(value);
+  return normalizedNumber ? `${normalizedNumber}@c.us` : "";
+};
+
+const safeCheckNumber = async (
+  whatsappId: number,
+  number: string
+): Promise<NumberLookupResult> => {
+  if (!IsPlausiblePhoneNumber(number)) {
+    return {
+      normalizedNumber: ""
+    };
+  }
+
   try {
+    if (typeof whatsappProvider.checkNumberLookup === "function") {
+      const lookup = await whatsappProvider.checkNumberLookup(whatsappId, number);
+      const normalizedNumber = NormalizeProviderCheckNumber(lookup.number);
+      const resolvedLid = normalizeLid(
+        lookup.lid ||
+          (lookup.chatId && /@lid$/i.test(lookup.chatId) ? lookup.chatId : "") ||
+          (lookup.jid && /@lid$/i.test(lookup.jid) ? lookup.jid : "") ||
+          (lookup.serializedId && /@lid$/i.test(lookup.serializedId)
+            ? lookup.serializedId
+            : "")
+      );
+
+      const resolvedChatId =
+        resolvedLid ||
+        lookup.chatId ||
+        lookup.jid ||
+        lookup.serializedId ||
+        buildNormalizedPhoneChatId(normalizedNumber);
+
+      return {
+        normalizedNumber,
+        resolvedChatId: resolvedChatId || undefined,
+        resolvedLid: resolvedLid || undefined
+      };
+    }
+
     const checkedNumber = await whatsappProvider.checkNumber(whatsappId, number);
-    return NormalizeProviderCheckNumber(checkedNumber);
+    const normalizedNumber = NormalizeProviderCheckNumber(checkedNumber);
+
+    return {
+      normalizedNumber,
+      resolvedChatId: buildNormalizedPhoneChatId(normalizedNumber) || undefined
+    };
   } catch (err) {
     logger.warn(
       { err, whatsappId, number },
       "SendWhatsAppMedia checkNumber failed, falling back to raw number"
     );
-    return "";
+    return {
+      normalizedNumber: ""
+    };
   }
 };
 
@@ -278,16 +328,37 @@ const SendWhatsAppMedia = async ({
     const storedLid = normalizeLid(ticket.contact.lid || "");
 
     let normalizedNumber = "";
+    let numberLookup: NumberLookupResult | null = null;
+
+    const resolveNumberLookup = async (): Promise<NumberLookupResult> => {
+      if (!numberLookup) {
+        numberLookup = await safeCheckNumber(whatsapp.id, storedNumber);
+        normalizedNumber = numberLookup.normalizedNumber;
+      }
+
+      return numberLookup;
+    };
+
     const resolveNormalizedChatId = async (): Promise<string | null> => {
       if (ticket.isGroup || !storedNumber) {
         return null;
       }
 
-      if (!normalizedNumber) {
-        normalizedNumber = await safeCheckNumber(whatsapp.id, storedNumber);
+      const lookup = await resolveNumberLookup();
+      if (lookup.normalizedNumber) {
+        return `${lookup.normalizedNumber}@c.us`;
       }
 
-      return normalizedNumber ? `${normalizedNumber}@c.us` : null;
+      return buildNormalizedPhoneChatId(storedNumber) || null;
+    };
+
+    const resolveAlternativeChatId = async (): Promise<string | null> => {
+      if (ticket.isGroup || !storedNumber) {
+        return null;
+      }
+
+      const lookup = await resolveNumberLookup();
+      return lookup.resolvedChatId || null;
     };
 
     const chatIdentifier = storedLid || storedNumber;
@@ -471,22 +542,28 @@ const SendWhatsAppMedia = async ({
           chatId = storedLid;
           sentMessage = await sendWithChatId(chatId);
         } else {
-          const normalizedChatId = await resolveNormalizedChatId();
-          if (normalizedChatId && normalizedChatId !== chatId) {
-            chatId = normalizedChatId;
+          const alternativeChatId = await resolveAlternativeChatId();
+          if (alternativeChatId && alternativeChatId !== chatId) {
+            chatId = alternativeChatId;
             sentMessage = await sendWithChatId(chatId);
           } else {
-            console.warn("SendWhatsAppMedia blocked by No LID for user", {
-              ticketId: ticket.id,
-              whatsappId: ticket.whatsappId,
-              number: storedNumber,
-              lid: storedLid
-            });
-            throw new AppError("ERR_WAPP_INVALID_CONTACT");
+            const normalizedChatId = await resolveNormalizedChatId();
+            if (normalizedChatId && normalizedChatId !== chatId) {
+              chatId = normalizedChatId;
+              sentMessage = await sendWithChatId(chatId);
+            } else {
+              console.warn("SendWhatsAppMedia blocked by No LID for user", {
+                ticketId: ticket.id,
+                whatsappId: ticket.whatsappId,
+                number: storedNumber,
+                lid: storedLid
+              });
+              throw new AppError("ERR_WAPP_INVALID_CONTACT");
+            }
           }
         }
       }
-      if (err instanceof AppError && err.message === "ERR_WAPP_NOT_INITIALIZED") {
+      else if (err instanceof AppError && err.message === "ERR_WAPP_NOT_INITIALIZED") {
         console.error("SendWhatsAppMedia session not initialized", {
           ticketId: ticket.id,
           whatsappId: whatsapp.id,
@@ -554,6 +631,25 @@ const SendWhatsAppMedia = async ({
             hasQuotedMsg: false,
             ack: 1
           } as ProviderMessage;
+        }
+
+        const alternativeChatId = await resolveAlternativeChatId();
+        if (alternativeChatId && alternativeChatId !== chatId) {
+          try {
+            chatId = alternativeChatId;
+            sentMessage = await sendWithChatId(chatId);
+            await ticket.update({ lastMessage: resolvedBody || media.filename });
+            if (normalizedNumber && normalizedNumber !== storedNumber) {
+              await ticket.contact.update({ number: normalizedNumber });
+            }
+            if (!preserveUploadedFile) {
+              safelyRemoveFile(media.path);
+            }
+            safelyRemoveFile(convertedPath);
+            return sentMessage;
+          } catch (alternativeErr) {
+            err = alternativeErr;
+          }
         }
 
         const normalizedChatId = await resolveNormalizedChatId();

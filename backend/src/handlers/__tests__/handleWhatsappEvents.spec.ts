@@ -226,6 +226,26 @@ describe("handleWhatsappEvents group guard", () => {
     expect(handleIncomingFlowMessageServiceMock).not.toHaveBeenCalled();
   });
 
+  it("ignores outbound empty chat placeholder events", async () => {
+    await handleMessage(
+      buildMessagePayload({
+        id: "evt_me_1784161342_5511888888888@c.us_5511999999999@c.us_nobody",
+        body: "",
+        fromMe: true,
+        hasMedia: false,
+        type: "chat",
+        from: "5511888888888@c.us",
+        to: "5511999999999@c.us"
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 })
+    );
+
+    expect(createOrUpdateContactServiceMock).not.toHaveBeenCalled();
+    expect(findOrCreateTicketServiceMock).not.toHaveBeenCalled();
+    expect(createMessageServiceMock).not.toHaveBeenCalled();
+  });
+
   it("ignores group messages fromMe so they do not contaminate individual tickets", async () => {
     await handleMessage(
       buildMessagePayload({

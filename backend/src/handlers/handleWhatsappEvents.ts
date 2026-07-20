@@ -163,15 +163,39 @@ const normalizeProviderMessageId = (value?: string): string => {
   return trimmedValue;
 };
 
-  const buildEquivalentOutboundMediaTypes = (mediaType?: string): string[] => {
-    if (mediaType === "audio" || mediaType === "ptt") {
-      // Some outbound audio sends are initially persisted as "chat"
-      // before provider echo reconciles the final media type.
-      return ["audio", "ptt", "chat"];
-    }
+const buildEquivalentOutboundMediaTypes = (mediaType?: string): string[] => {
+  if (mediaType === "audio" || mediaType === "ptt") {
+    // Some outbound audio sends are initially persisted as "chat"
+    // before provider echo reconciles the final media type.
+    return ["audio", "ptt", "chat"];
+  }
 
-    return [mediaType || "chat"];
-  };
+  return [mediaType || "chat"];
+};
+
+const shouldIgnoreOutboundEmptyChatEvent = (
+  messagePayload: MessagePayload,
+  mediaPayload?: MediaPayload
+): boolean => {
+  if (!messagePayload.fromMe) {
+    return false;
+  }
+
+  if (messagePayload.type !== "chat" || messagePayload.hasMedia) {
+    return false;
+  }
+
+  const hasBody =
+    typeof messagePayload.body === "string" &&
+    messagePayload.body.trim().length > 0;
+
+  if (hasBody) {
+    return false;
+  }
+
+  return !mediaPayload;
+};
+
 const areEquivalentProviderMessageIds = (
   first?: string,
   second?: string
@@ -398,6 +422,19 @@ export const handleMessage = async (
   try {
     const processedMessage = processLocationMessage(messagePayload);
 
+    if (shouldIgnoreOutboundEmptyChatEvent(processedMessage, mediaPayload)) {
+      logger.debug(
+        {
+          whatsappId: contextPayload.whatsappId,
+          messageId: processedMessage.id,
+          from: processedMessage.from,
+          to: processedMessage.to
+        },
+        "Ignoring outbound empty chat placeholder event"
+      );
+      return;
+    }
+
     if (
       shouldIgnoreInboundGroupMessage(
         processedMessage,
@@ -473,9 +510,9 @@ export const handleMessage = async (
           ticketId: ticket.id,
           fromMe: true,
           body: processedMessage.body,
-            mediaType: {
-              [Op.in]: buildEquivalentOutboundMediaTypes(processedMessage.type)
-            },
+          mediaType: {
+            [Op.in]: buildEquivalentOutboundMediaTypes(processedMessage.type)
+          },
           createdAt: {
             [Op.between]: [startDate, endDate]
           }
