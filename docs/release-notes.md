@@ -1,5 +1,16 @@
 # Release Notes
 
+## 2026-07-20
+
+### legacy-prod
+
+- Chats/Midia outbound: o envio de midia passou a usar fallback de lookup mais robusto para resolver `chatId` quando houver erro `No LID for user`, incluindo tentativa por `chatId` alternativo retornado pelo provider e fallback por numero normalizado (`@c.us`) antes de declarar falha.
+- Chats/Midia outbound: corrigido encadeamento de tratamento de erro em `SendWhatsAppMedia` para impedir que um retry bem-sucedido no fluxo `No LID` caia novamente no bloco generico e provoque novo reenvio/erro 400 indevido no `POST /messages/:ticketId`.
+- Chats/Duplicidade audio: eventos outbound fantasmas de `chat` vazio (sem corpo e sem midia) passam a ser ignorados antes da persistencia, reduzindo o caso de bolha vazia no SamaChat durante eco de audio gravado.
+- Frontend/Audio: o renderer de mensagens passa a tratar `ptt` com o mesmo player de `audio`, mantendo consistencia visual para ecos outbound desse tipo.
+- Escopo desta correcao isolada: `backend/src/services/WbotServices/SendWhatsAppMedia.ts`, `backend/src/handlers/handleWhatsappEvents.ts`, `backend/src/__tests__/unit/WbotServices/SendWhatsAppMedia.spec.ts`, `backend/src/handlers/__tests__/handleWhatsappEvents.spec.ts`, `frontend/src/components/MessagesList/index.js` e `docs/release-notes.md`.
+- Validacao local desta correcao isolada: `npx jest --runInBand src/handlers/__tests__/handleWhatsappEvents.spec.ts src/__tests__/unit/WbotServices/SendWhatsAppMedia.spec.ts` aprovado em `backend`; `npm run build` aprovado em `backend`; `npm run build` aprovado em `frontend`.
+
 ## 2026-07-18
 
 ### legacy-prod
