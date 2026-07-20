@@ -346,6 +346,55 @@ describe("handleWhatsappEvents group guard", () => {
     });
   });
 
+  it("reuses the persisted evt_me fallback id when provider echo arrives with a different id", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 118,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const duplicateCandidate = {
+      id: "evt_me_1784161342_5511888888888@c.us_5511999999999@c.us_teste",
+      createdAt: new Date(nowSeconds * 1000)
+    } as any;
+
+    jest
+      .spyOn(Message, "findAll")
+      .mockResolvedValue([duplicateCandidate] as any);
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({ id: duplicateCandidate.id } as any);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "3EB0REALPROVIDERIDEVT",
+        body: "teste evt fallback",
+        fromMe: true,
+        from: "5511888888888@c.us",
+        to: "5511999999999@c.us",
+        timestamp: nowSeconds
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 })
+    );
+
+    expect(Message.findAll).toHaveBeenCalledTimes(1);
+    expect(createMessageServiceMock).toHaveBeenCalledWith({
+      messageData: expect.objectContaining({
+        id: duplicateCandidate.id,
+        fromMe: true,
+        body: "teste evt fallback"
+      })
+    });
+  });
+
   it("matches wwebjs-accepted id on ack reconciliation when provider ack comes with real id", async () => {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const updateMock = jest.fn().mockResolvedValue(undefined);
@@ -369,6 +418,39 @@ describe("handleWhatsappEvents group guard", () => {
     await handleMessageAck("3EB0REALACKID", 2 as any, {
       fromMe: true,
       body: "teste ack accepted",
+      timestamp: nowSeconds
+    });
+
+    expect(Message.findAll).toHaveBeenCalledTimes(1);
+    expect((Message.findByPk as jest.Mock).mock.calls[1][0]).toBe(
+      matchedMessage.id
+    );
+    expect(updateMock).toHaveBeenCalledWith({ ack: 2 });
+  });
+
+  it("matches evt_me id on ack reconciliation when provider ack comes with real id", async () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const updateMock = jest.fn().mockResolvedValue(undefined);
+    const matchedMessage = {
+      id: "evt_me_1784161342_5511888888888@c.us_5511999999999@c.us_teste",
+      ack: 1,
+      ticketId: 118,
+      createdAt: new Date(nowSeconds * 1000),
+      update: updateMock
+    } as any;
+
+    jest
+      .spyOn(Message, "findByPk")
+      .mockResolvedValueOnce(null as any)
+      .mockResolvedValueOnce(matchedMessage);
+
+    jest
+      .spyOn(Message, "findAll")
+      .mockResolvedValue([matchedMessage] as any);
+
+    await handleMessageAck("3EB0REALACKIDEVT", 2 as any, {
+      fromMe: true,
+      body: "teste ack evt",
       timestamp: nowSeconds
     });
 

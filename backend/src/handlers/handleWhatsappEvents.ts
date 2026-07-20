@@ -127,7 +127,11 @@ interface MessageAckContext {
 const GROUP_CHAT_SUFFIX = "@g.us";
 const ACK_RECONCILIATION_WINDOW_SECONDS = 180;
 const OUTBOUND_DUPLICATE_WINDOW_SECONDS = 20;
-const TEMPORARY_OUTBOUND_ID_PREFIXES = ["fallback_", "wwebjs-accepted-"];
+const TEMPORARY_OUTBOUND_ID_PREFIXES = [
+  "fallback_",
+  "wwebjs-accepted-",
+  "evt_me_"
+];
 
 const isTemporaryOutboundId = (value?: string): boolean => {
   if (!value) {
