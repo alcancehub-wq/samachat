@@ -130,7 +130,9 @@ const OUTBOUND_DUPLICATE_WINDOW_SECONDS = 20;
 const TEMPORARY_OUTBOUND_ID_PREFIXES = [
   "fallback_",
   "wwebjs-accepted-",
-  "evt_me_"
+  "evt_me_",
+  "recorded-audio-accepted-",
+  "recorded-audio-echo-"
 ];
 
 const isTemporaryOutboundId = (value?: string): boolean => {

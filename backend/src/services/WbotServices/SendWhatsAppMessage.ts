@@ -232,7 +232,7 @@ const ensureWhatsappReady = async (
   ticket: Ticket,
   whatsapp: Whatsapp
 ): Promise<void> => {
-  if (whatsappProvider.hasSession(whatsapp.id)) {
+  if (whatsappProvider.isSessionReady(whatsapp.id)) {
     return;
   }
 

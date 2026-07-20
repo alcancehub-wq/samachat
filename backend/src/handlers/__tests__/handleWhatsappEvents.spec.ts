@@ -396,6 +396,56 @@ describe("handleWhatsappEvents group guard", () => {
     });
   });
 
+  it("reuses the persisted recorded-audio synthetic id when provider echo arrives with a different id", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 118,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const duplicateCandidate = {
+      id: "recorded-audio-accepted-118-1784161342000",
+      createdAt: new Date(nowSeconds * 1000)
+    } as any;
+
+    jest
+      .spyOn(Message, "findAll")
+      .mockResolvedValue([duplicateCandidate] as any);
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({ id: duplicateCandidate.id } as any);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "3EB0REALPROVIDERIDREC",
+        body: "",
+        fromMe: true,
+        type: "audio",
+        from: "5511888888888@c.us",
+        to: "5511999999999@c.us",
+        timestamp: nowSeconds
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 })
+    );
+
+    expect(Message.findAll).toHaveBeenCalledTimes(1);
+    expect(createMessageServiceMock).toHaveBeenCalledWith({
+      messageData: expect.objectContaining({
+        id: duplicateCandidate.id,
+        fromMe: true,
+        mediaType: "audio"
+      })
+    });
+  });
+
   it("matches wwebjs-accepted id on ack reconciliation when provider ack comes with real id", async () => {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const updateMock = jest.fn().mockResolvedValue(undefined);
