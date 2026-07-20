@@ -448,6 +448,8 @@ const MessageInput = ({ ticketStatus }) => {
   const audioMimeTypeRef = useRef("audio/ogg");
   const isStoppingRef = useRef(false);
   const isCancellingAudioRef = useRef(false);
+  const sendingMessageRef = useRef(false);
+  const uploadingMediaRef = useRef(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
@@ -654,6 +656,11 @@ const MessageInput = ({ ticketStatus }) => {
   };
 
   const handleUploadMedia = async e => {
+    if (uploadingMediaRef.current || loading) {
+      return;
+    }
+
+    uploadingMediaRef.current = true;
     setLoading(true);
     e.preventDefault();
 
@@ -661,10 +668,11 @@ const MessageInput = ({ ticketStatus }) => {
       await uploadMediaFiles(medias);
     } catch (err) {
       toastError(err);
+    } finally {
+      uploadingMediaRef.current = false;
+      setLoading(false);
+      setMedias([]);
     }
-
-    setLoading(false);
-    setMedias([]);
   };
 
   const uploadMediaFiles = async files => {
@@ -699,10 +707,15 @@ const MessageInput = ({ ticketStatus }) => {
   };
 
   const handleSendMessage = async ({ internalMode = isInternalMessage } = {}) => {
+    if (sendingMessageRef.current || loading) {
+      return;
+    }
+
     let currentMessage = internalMode ? internalInputMessage : inputMessage;
 
     if (currentMessage.trim() === "") return;
 
+    sendingMessageRef.current = true;
     setLoading(true);
 
     if (autoCorrectTextEnabled) {
@@ -717,6 +730,7 @@ const MessageInput = ({ ticketStatus }) => {
         toastError(err);
         setLoading(false);
         setCorrectingText(false);
+        sendingMessageRef.current = false;
         return;
       } finally {
         setCorrectingText(false);
@@ -758,6 +772,7 @@ const MessageInput = ({ ticketStatus }) => {
     setShowEmoji(false);
     setTypeBar(false);
     setLoading(false);
+    sendingMessageRef.current = false;
     setReplyingMessage(null);
   };
 
