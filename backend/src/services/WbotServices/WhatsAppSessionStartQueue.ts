@@ -65,20 +65,26 @@ const withSessionStartTimeout = async (
   const timeoutMs = getSessionStartTimeoutMs();
 
   let timeout: ReturnType<typeof setTimeout> | undefined;
+  let timeoutWarningEmitted = false;
 
   try {
-    await Promise.race([
-      task(),
-      new Promise<void>((_, reject) => {
-        timeout = setTimeout(() => {
-          reject(
-            new Error(
-              `WhatsApp session start timeout after ${timeoutMs}ms`
-            )
-          );
-        }, timeoutMs);
-      })
-    ]);
+    timeout = setTimeout(() => {
+      timeoutWarningEmitted = true;
+
+      // Keep the queue serialized even when start is slow; releasing early
+      // can spawn many Chromium instances in parallel and spike memory usage.
+      logger.error(
+        {
+          whatsappId,
+          sessionName,
+          reason,
+          timeoutMs
+        },
+        "WhatsApp session start exceeded timeout threshold; waiting for task settlement to preserve queue serialization"
+      );
+    }, timeoutMs);
+
+    await task();
   } catch (err) {
     logger.error(
       {
@@ -88,11 +94,23 @@ const withSessionStartTimeout = async (
         reason,
         timeoutMs
       },
-      "WhatsApp session start task failed or timed out"
+      "WhatsApp session start task failed"
     );
   } finally {
     if (timeout) {
       clearTimeout(timeout);
+    }
+
+    if (timeoutWarningEmitted) {
+      logger.warn(
+        {
+          whatsappId,
+          sessionName,
+          reason,
+          timeoutMs
+        },
+        "WhatsApp session start eventually settled after timeout threshold"
+      );
     }
   }
 };

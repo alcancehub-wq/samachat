@@ -1434,11 +1434,7 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
           session: whatsapp
         });
 
-        if (
-          ["connecting", "CONNECTING", "disconnected", "DISCONNECTED", "browser_close"].includes(
-            newState
-          )
-        ) {
+        if (["disconnected", "DISCONNECTED", "browser_close"].includes(newState)) {
           await scheduleReconnect(whatsapp, `change_state:${newState}`);
         }
       } catch (err) {
