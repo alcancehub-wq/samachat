@@ -163,7 +163,9 @@ const normalizeProviderMessageId = (value?: string): string => {
 
   const buildEquivalentOutboundMediaTypes = (mediaType?: string): string[] => {
     if (mediaType === "audio" || mediaType === "ptt") {
-      return ["audio", "ptt"];
+      // Some outbound audio sends are initially persisted as "chat"
+      // before provider echo reconciles the final media type.
+      return ["audio", "ptt", "chat"];
     }
 
     return [mediaType || "chat"];

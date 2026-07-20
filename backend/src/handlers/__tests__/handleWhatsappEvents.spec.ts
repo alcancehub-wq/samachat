@@ -32,6 +32,7 @@ jest.mock("../../libs/socket", () => {
 
 import { handleMessage, MessagePayload, ContactPayload, WhatsappContextPayload } from "../handleWhatsappEvents";
 import { handleMessageAck } from "../handleWhatsappEvents";
+import { Op } from "sequelize";
 import CreateOrUpdateContactService from "../../services/ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../../services/TicketServices/FindOrCreateTicketService";
 import CreateMessageService from "../../services/MessageServices/CreateMessageService";
@@ -550,6 +551,66 @@ describe("handleWhatsappEvents group guard", () => {
     );
 
     expect(Message.findAll).toHaveBeenCalledTimes(1);
+    expect(createMessageServiceMock).toHaveBeenCalledWith({
+      messageData: expect.objectContaining({
+        id: duplicateCandidate.id,
+        fromMe: true,
+        mediaType: "audio"
+      })
+    });
+  });
+
+  it("considers chat mediaType as equivalent fallback when audio echo arrives", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 118,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const duplicateCandidate = {
+      id: "wwebjs-accepted-35-1784161343001",
+      createdAt: new Date(nowSeconds * 1000),
+      mediaType: "chat"
+    } as any;
+
+    const findAllSpy = jest
+      .spyOn(Message, "findAll")
+      .mockResolvedValue([duplicateCandidate] as any);
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({ id: duplicateCandidate.id } as any);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "3EB0AUDIOCHATFALLBACK",
+        body: "",
+        fromMe: true,
+        type: "audio",
+        from: "5511888888888@c.us",
+        to: "5511999999999@c.us",
+        timestamp: nowSeconds
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 })
+    );
+
+    expect(findAllSpy).toHaveBeenCalledTimes(1);
+    expect(findAllSpy.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          mediaType: expect.objectContaining({
+            [Op.in]: expect.arrayContaining(["audio", "ptt", "chat"])
+          })
+        })
+      })
+    );
     expect(createMessageServiceMock).toHaveBeenCalledWith({
       messageData: expect.objectContaining({
         id: duplicateCandidate.id,
