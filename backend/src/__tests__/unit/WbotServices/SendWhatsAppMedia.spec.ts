@@ -213,7 +213,7 @@ describe("SendWhatsAppMedia", () => {
     expect(startWhatsAppSessionMock).not.toHaveBeenCalled();
   });
 
-  it("keeps retry behavior for non-recorded media on generic provider errors", async () => {
+  it("does not retry non-recorded media on generic provider errors to avoid duplicate delivery", async () => {
     const media = {
       filename: "audio.mp3",
       originalname: "audio.mp3",
@@ -223,17 +223,14 @@ describe("SendWhatsAppMedia", () => {
 
     const ticket = buildTicket();
 
-    const providerMessage = { id: "msg-1", body: "", ack: 1 };
-    sendMediaMock
-      .mockRejectedValueOnce(new Error("temporary failure"))
-      .mockResolvedValueOnce(providerMessage);
+    sendMediaMock.mockRejectedValueOnce(new Error("temporary failure"));
 
     await expect(
       SendWhatsAppMedia({ media, ticket: ticket as any })
-    ).resolves.toEqual(providerMessage);
+    ).rejects.toMatchObject({ message: "ERR_SENDING_WAPP_MSG" });
 
-    expect(sendMediaMock).toHaveBeenCalledTimes(2);
-    expect(startWhatsAppSessionMock).toHaveBeenCalled();
+    expect(sendMediaMock).toHaveBeenCalledTimes(1);
+    expect(startWhatsAppSessionMock).not.toHaveBeenCalled();
   });
 
   it("preserves recorded uploaded file when preserveUploadedFile is true", async () => {

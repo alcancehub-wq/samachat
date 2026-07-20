@@ -633,54 +633,18 @@ const SendWhatsAppMedia = async ({
           } as ProviderMessage;
         }
 
-        const alternativeChatId = await resolveAlternativeChatId();
-        if (alternativeChatId && alternativeChatId !== chatId) {
-          try {
-            chatId = alternativeChatId;
-            sentMessage = await sendWithChatId(chatId);
-            await ticket.update({ lastMessage: resolvedBody || media.filename });
-            if (normalizedNumber && normalizedNumber !== storedNumber) {
-              await ticket.contact.update({ number: normalizedNumber });
-            }
-            if (!preserveUploadedFile) {
-              safelyRemoveFile(media.path);
-            }
-            safelyRemoveFile(convertedPath);
-            return sentMessage;
-          } catch (alternativeErr) {
-            err = alternativeErr;
-          }
-        }
-
-        const normalizedChatId = await resolveNormalizedChatId();
-        if (normalizedChatId && normalizedChatId !== chatId) {
-          try {
-            chatId = normalizedChatId;
-            sentMessage = await sendWithChatId(chatId);
-            await ticket.update({ lastMessage: resolvedBody || media.filename });
-            if (normalizedNumber && normalizedNumber !== storedNumber) {
-              await ticket.contact.update({ number: normalizedNumber });
-            }
-            if (!preserveUploadedFile) {
-              safelyRemoveFile(media.path);
-            }
-            safelyRemoveFile(convertedPath);
-            return sentMessage;
-          } catch (normalizedErr) {
-            err = normalizedErr;
-          }
-        }
-
-        console.warn("SendWhatsAppMedia failed, restarting session", {
-          ticketId: ticket.id,
-          whatsappId: whatsapp.id,
-          chatId,
-          error: err
-        });
-        await ensureWhatsappSession(ticket, true);
-        await ensureWhatsappReady(ticket, whatsapp);
-        await sleep(2000);
-        sentMessage = await sendWithChatId(chatId);
+        logger.warn(
+          {
+            err,
+            ticketId: ticket.id,
+            whatsappId: whatsapp.id,
+            chatId,
+            originalName: media.originalname,
+            mimetype: media.mimetype
+          },
+          "SendWhatsAppMedia generic provider error; aborting retries to avoid duplicate media delivery"
+        );
+        throw err;
       } else {
         throw err;
       }

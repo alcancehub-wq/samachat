@@ -4,6 +4,9 @@
 
 ### legacy-prod
 
+- Chats/Midia outbound (emergencial): retentativas genericas para anexos nao-gravados foram desativadas no `SendWhatsAppMedia`; agora apenas erros deterministicos (como sessao nao inicializada ou fallback de `No LID`) seguem trilhas especificas. Isso evita cascata de reenvio no mesmo clique e mitiga casos de quadruplicacao no destinatario.
+- Validacao local deste hotfix emergencial: `npx jest --runInBand src/__tests__/unit/WbotServices/SendWhatsAppMedia.spec.ts src/handlers/__tests__/handleWhatsappEvents.spec.ts` aprovado em `backend` com cobertura da nova regra anti-retry generico; `npm run build` aprovado em `backend`.
+
 - Chats/Midia outbound: o envio de midia passou a usar fallback de lookup mais robusto para resolver `chatId` quando houver erro `No LID for user`, incluindo tentativa por `chatId` alternativo retornado pelo provider e fallback por numero normalizado (`@c.us`) antes de declarar falha.
 - Chats/Midia outbound: corrigido encadeamento de tratamento de erro em `SendWhatsAppMedia` para impedir que um retry bem-sucedido no fluxo `No LID` caia novamente no bloco generico e provoque novo reenvio/erro 400 indevido no `POST /messages/:ticketId`.
 - Chats/Duplicidade audio: eventos outbound fantasmas de `chat` vazio (sem corpo e sem midia) passam a ser ignorados antes da persistencia, reduzindo o caso de bolha vazia no SamaChat durante eco de audio gravado.
