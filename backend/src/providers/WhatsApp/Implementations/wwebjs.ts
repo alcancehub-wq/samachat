@@ -217,6 +217,16 @@ const scheduleReconnect = async (
   whatsapp: Whatsapp,
   reason: string
 ): Promise<void> => {
+  if (reconnectTimers[whatsapp.id]) {
+    logger.warn({
+      info: "Reconnect already scheduled",
+      whatsappId: whatsapp.id,
+      reason,
+      attempt: reconnectAttempts[whatsapp.id] || 0
+    });
+    return;
+  }
+
   const attempt = (reconnectAttempts[whatsapp.id] || 0) + 1;
   reconnectAttempts[whatsapp.id] = attempt;
 
@@ -251,7 +261,9 @@ const scheduleReconnect = async (
       },
       async () => {
         try {
-          await removeSession(whatsapp.id);
+          await removeSession(whatsapp.id, {
+            preserveReconnectState: true
+          });
           await whatsapp.update({ status: "OPENING" });
 
           const io = getIO();
@@ -979,10 +991,19 @@ const syncUnreadMessages = async (wbot: Session) => {
   }
 };
 
-const removeSession = async (whatsappId: number): Promise<void> => {
+const removeSession = async (
+  whatsappId: number,
+  options: { preserveReconnectState?: boolean } = {}
+): Promise<void> => {
+  const preserveReconnectState = options.preserveReconnectState === true;
+
   clearReconnectTimers(whatsappId);
   readySessions.delete(whatsappId);
-  delete reconnectAttempts[whatsappId];
+
+  if (!preserveReconnectState) {
+    delete reconnectAttempts[whatsappId];
+  }
+
   delete profileLockRetries[whatsappId];
   clearIncomingEventDedupForSession(whatsappId);
   initializingSessions.delete(whatsappId);
@@ -1016,7 +1037,11 @@ const removeSession = async (whatsappId: number): Promise<void> => {
     } finally {
       await delay(SESSION_DESTROY_GRACE_MS);
       clearReconnectTimers(whatsappId);
-      delete reconnectAttempts[whatsappId];
+
+      if (!preserveReconnectState) {
+        delete reconnectAttempts[whatsappId];
+      }
+
       delete profileLockRetries[whatsappId];
       clearIncomingEventDedupForSession(whatsappId);
       if (destroyPromise && destroyingSessions.get(whatsappId) === destroyPromise) {
@@ -1453,7 +1478,7 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
       );
       readySessions.delete(whatsapp.id);
       try {
-        await whatsapp.update({ status: "OPENING", session: "" });
+        await whatsapp.update({ status: "OPENING" });
 
         io.emit("whatsappSession", {
           action: "update",
