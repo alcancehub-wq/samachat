@@ -1522,7 +1522,6 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
     wbot.on("message_create", async msg => {
       if (!shouldHandleMessage(msg)) return;
       if (
-        !msg.fromMe &&
         !shouldProcessIncomingEvent(
           wbot.id || whatsapp.id,
           "message_create",
@@ -1549,6 +1548,15 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
 
     wbot.on("media_uploaded", async msg => {
       if (!shouldHandleMessage(msg)) return;
+      if (
+        !shouldProcessIncomingEvent(
+          wbot.id || whatsapp.id,
+          "media_uploaded",
+          msg
+        )
+      ) {
+        return;
+      }
 
       try {
         const { messagePayload, contactPayload, contextPayload, mediaPayload } =
