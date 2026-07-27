@@ -11,6 +11,20 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.07.27 / Duplicidade de mensagens outbound",
+    label: "Correcao de duplicidade visual nos Chats",
+    summary:
+      "Entrega focada em impedir que uma unica mensagem enviada pelo SamaChat apareca duplicada na conversa por causa do eco assíncrono do WhatsApp Web.",
+    changes: [
+      "Adicionada uma reserva segura antes do envio de textos e midias pelo provider.",
+      "O eco outbound passa a ser ignorado somente quando corresponde ao mesmo ID real retornado pelo envio.",
+      "Mantida a compatibilidade entre o ID serializado do WhatsApp Web e sua representacao curta.",
+      "Mensagens legitimas repetidas continuam sendo preservadas quando possuem IDs diferentes.",
+      "Falhas de envio cancelam a reserva e a remocao da sessao limpa qualquer estado pendente.",
+      "Validacao local concluida em handler, guarda outbound, integracao do provider, deduplicacao, reconexao, envio de texto, envio de midia e builds do backend e frontend.",
+    ],
+  },
+  {
     version: "2026.07.27 / Estabilidade das conexoes WhatsApp",
     label: "Correcao de estabilidade e recuperacao automatica",
     summary:

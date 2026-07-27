@@ -689,4 +689,306 @@ describe("handleWhatsappEvents group guard", () => {
       })
     });
   });
+  it("does not merge legitimate repeated outbound messages when multiple candidates exist", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 1001,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const firstCandidate = {
+      id: "legitimate-real-id-1",
+      ticketId: 1001,
+      body: "ok",
+      fromMe: true,
+      mediaType: "chat",
+      createdAt: new Date("2026-07-27T11:02:00.200Z")
+    };
+
+    const secondCandidate = {
+      id: "legitimate-real-id-2",
+      ticketId: 1001,
+      body: "ok",
+      fromMe: true,
+      mediaType: "chat",
+      createdAt: new Date("2026-07-27T11:02:00.600Z")
+    };
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({
+      id: "provider-echo-legitimate-id"
+    } as any);
+
+    (Message.findAll as jest.Mock).mockResolvedValue([
+      firstCandidate,
+      secondCandidate
+    ]);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "provider-echo-legitimate-id",
+        body: "ok",
+        fromMe: true,
+        type: "chat",
+        timestamp: Math.floor(
+          new Date("2026-07-27T11:02:01.000Z").getTime() / 1000
+        )
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 })
+    );
+
+    expect(createMessageServiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageData: expect.objectContaining({
+          id: "provider-echo-legitimate-id",
+          ticketId: 1001,
+          body: "ok",
+          fromMe: true
+        })
+      })
+    );
+  });
+
+  it("does not merge real outbound text ids when candidate is more than two seconds away", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 1001,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const distantCandidate = {
+      id: "distant-real-id",
+      ticketId: 1001,
+      body: "Mensagem repetida",
+      fromMe: true,
+      mediaType: "chat",
+      createdAt: new Date("2026-07-27T11:03:00.000Z")
+    };
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({
+      id: "provider-echo-distant-id"
+    } as any);
+
+    (Message.findAll as jest.Mock).mockResolvedValue([distantCandidate]);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "provider-echo-distant-id",
+        body: "Mensagem repetida",
+        fromMe: true,
+        type: "chat",
+        timestamp: Math.floor(
+          new Date("2026-07-27T11:03:03.000Z").getTime() / 1000
+        )
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 })
+    );
+
+    expect(createMessageServiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageData: expect.objectContaining({
+          id: "provider-echo-distant-id",
+          ticketId: 1001,
+          fromMe: true
+        })
+      })
+    );
+  });
+
+  it("does not merge real outbound media ids when candidate has no persisted media url", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 1001,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const incompleteMediaCandidate = {
+      id: "incomplete-media-real-id",
+      ticketId: 1001,
+      body: "",
+      fromMe: true,
+      mediaType: "audio",
+      mediaUrl: null,
+      createdAt: new Date("2026-07-27T11:04:00.000Z")
+    };
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({
+      id: "provider-echo-incomplete-media-id"
+    } as any);
+
+    (Message.findAll as jest.Mock).mockResolvedValue([
+      incompleteMediaCandidate
+    ]);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "provider-echo-incomplete-media-id",
+        body: "audio.ogg",
+        fromMe: true,
+        hasMedia: true,
+        type: "ptt",
+        timestamp: Math.floor(
+          new Date("2026-07-27T11:04:01.000Z").getTime() / 1000
+        )
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 }),
+      {
+        filename: "audio.ogg",
+        mimetype: "audio/ogg",
+        data: Buffer.from("audio-test").toString("base64")
+      }
+    );
+
+    expect(createMessageServiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageData: expect.objectContaining({
+          id: "provider-echo-incomplete-media-id",
+          ticketId: 1001,
+          fromMe: true
+        })
+      })
+    );
+  });
+  it("does not merge a legitimate second identical outbound text sent within two seconds", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 1001,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const legitimateFirstMessage = {
+      id: "legitimate-first-real-id",
+      ticketId: 1001,
+      body: "ok",
+      fromMe: true,
+      mediaType: "chat",
+      createdAt: new Date("2026-07-27T11:05:00.000Z")
+    };
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({
+      id: "legitimate-second-real-id"
+    } as any);
+
+    (Message.findAll as jest.Mock).mockResolvedValue([
+      legitimateFirstMessage
+    ]);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "legitimate-second-real-id",
+        body: "ok",
+        fromMe: true,
+        type: "chat",
+        timestamp: Math.floor(
+          new Date("2026-07-27T11:05:01.000Z").getTime() / 1000
+        )
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 })
+    );
+
+    expect(createMessageServiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageData: expect.objectContaining({
+          id: "legitimate-second-real-id",
+          ticketId: 1001,
+          body: "ok",
+          fromMe: true
+        })
+      })
+    );
+  });
+
+  it("does not merge a legitimate second outbound media sent within two seconds", async () => {
+    const contact = { id: 16, name: "Larissa" } as any;
+    const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
+    const ticket = {
+      id: 1001,
+      status: "open",
+      whatsappId: 35,
+      queue: { id: 4 },
+      userId: 16,
+      update: ticketUpdateMock
+    } as any;
+
+    const legitimateFirstMedia = {
+      id: "legitimate-first-media-real-id",
+      ticketId: 1001,
+      body: "",
+      fromMe: true,
+      mediaType: "audio",
+      mediaUrl: "recorded_first.ogg",
+      createdAt: new Date("2026-07-27T11:06:00.000Z")
+    };
+
+    createOrUpdateContactServiceMock.mockResolvedValue(contact);
+    findOrCreateTicketServiceMock.mockResolvedValue(ticket);
+    createMessageServiceMock.mockResolvedValue({
+      id: "legitimate-second-media-real-id"
+    } as any);
+
+    (Message.findAll as jest.Mock).mockResolvedValue([
+      legitimateFirstMedia
+    ]);
+
+    await handleMessage(
+      buildMessagePayload({
+        id: "legitimate-second-media-real-id",
+        body: "audio.ogg",
+        fromMe: true,
+        hasMedia: true,
+        type: "ptt",
+        timestamp: Math.floor(
+          new Date("2026-07-27T11:06:01.000Z").getTime() / 1000
+        )
+      }),
+      buildContactPayload(),
+      buildContextPayload({ unreadMessages: 0 }),
+      {
+        filename: "audio.ogg",
+        mimetype: "audio/ogg",
+        data: Buffer.from("legitimate-second-audio").toString("base64")
+      }
+    );
+
+    expect(createMessageServiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageData: expect.objectContaining({
+          id: "legitimate-second-media-real-id",
+          ticketId: 1001,
+          fromMe: true
+        })
+      })
+    );
+  });
 });
