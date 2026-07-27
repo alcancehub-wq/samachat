@@ -11,6 +11,20 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.07.27 / Estabilidade das conexoes WhatsApp",
+    label: "Correcao de estabilidade e recuperacao automatica",
+    summary:
+      "Entrega focada em manter as conexoes WhatsApp Web mais estaveis e recuperar automaticamente sessoes travadas, reduzindo quedas e a necessidade de reconexao manual.",
+    changes: [
+      "Reforcada a recuperacao automatica de conexoes que permaneciam ativas internamente, mas ainda nao estavam prontas para enviar mensagens.",
+      "Evitado reiniciar uma conexao que tenha ficado pronta enquanto aguardava sua vez no processo de inicializacao.",
+      "Corrigida a fila global de inicializacao para que uma conexao travada nao bloqueie indefinidamente a abertura das demais conexoes.",
+      "Adicionado limite seguro para a limpeza de sessoes travadas, permitindo que o sistema continue processando outras conexoes mesmo quando uma limpeza demora alem do esperado.",
+      "Integrada a recuperacao de sessao aos envios de texto e midia, preservando as conexoes saudaveis e acionando reinicio apenas quando realmente necessario.",
+      "Validacao concluida com 28 testes automatizados, build aprovado e funcionamento confirmado em producao.",
+    ],
+  },
+  {
     version: "2026.06.10 / Operacao, atalhos e mobile",
     label: "Pacote de estabilidade e usabilidade",
     summary:
