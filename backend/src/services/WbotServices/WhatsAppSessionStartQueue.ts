@@ -56,23 +56,36 @@ const getSessionStartTimeoutMs = (): number => {
   );
 };
 
+class WhatsAppSessionStartTimeoutError extends Error {
+  constructor() {
+    super("WHATSAPP_SESSION_START_TIMEOUT");
+    this.name = "WhatsAppSessionStartTimeoutError";
+  }
+}
+
 const withSessionStartTimeout = async (
   whatsappId: number,
   sessionName: string,
   reason: string,
-  task: () => Promise<void>
+  task: () => Promise<void>,
+  onTimeout?: () => Promise<void> | void
 ): Promise<void> => {
   const timeoutMs = getSessionStartTimeoutMs();
 
   let timeout: ReturnType<typeof setTimeout> | undefined;
-  let timeoutWarningEmitted = false;
+  const taskPromise = Promise.resolve().then(task);
 
   try {
-    timeout = setTimeout(() => {
-      timeoutWarningEmitted = true;
-
-      // Keep the queue serialized even when start is slow; releasing early
-      // can spawn many Chromium instances in parallel and spike memory usage.
+    await Promise.race([
+      taskPromise,
+      new Promise<void>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(new WhatsAppSessionStartTimeoutError());
+        }, timeoutMs);
+      })
+    ]);
+  } catch (err) {
+    if (err instanceof WhatsAppSessionStartTimeoutError) {
       logger.error(
         {
           whatsappId,
@@ -80,12 +93,63 @@ const withSessionStartTimeout = async (
           reason,
           timeoutMs
         },
-        "WhatsApp session start exceeded timeout threshold; waiting for task settlement to preserve queue serialization"
+        "WhatsApp session start exceeded timeout threshold; cleaning up the stalled session and releasing the queue"
       );
-    }, timeoutMs);
 
-    await task();
-  } catch (err) {
+      if (onTimeout) {
+        const cleanupTimeoutMs = Math.min(10000, timeoutMs);
+
+        const cleanupPromise = Promise.resolve().then(onTimeout);
+
+        try {
+          await Promise.race([
+            cleanupPromise,
+            new Promise<void>(resolve => {
+              setTimeout(resolve, cleanupTimeoutMs);
+            })
+          ]);
+        } catch (cleanupError) {
+          logger.error(
+            {
+              err: cleanupError,
+              whatsappId,
+              sessionName,
+              reason,
+              timeoutMs,
+              cleanupTimeoutMs
+            },
+            "WhatsApp session timeout cleanup failed"
+          );
+        }
+
+        void cleanupPromise.catch(cleanupError => {
+          logger.warn(
+            {
+              err: cleanupError,
+              whatsappId,
+              sessionName,
+              reason
+            },
+            "WhatsApp session cleanup settled with an error after queue release"
+          );
+        });
+      }
+
+      void taskPromise.catch(taskError => {
+        logger.warn(
+          {
+            err: taskError,
+            whatsappId,
+            sessionName,
+            reason
+          },
+          "Timed-out WhatsApp session start settled with an error after queue release"
+        );
+      });
+
+      return;
+    }
+
     logger.error(
       {
         err,
@@ -100,24 +164,13 @@ const withSessionStartTimeout = async (
     if (timeout) {
       clearTimeout(timeout);
     }
-
-    if (timeoutWarningEmitted) {
-      logger.warn(
-        {
-          whatsappId,
-          sessionName,
-          reason,
-          timeoutMs
-        },
-        "WhatsApp session start eventually settled after timeout threshold"
-      );
-    }
   }
 };
 
 interface EnqueueSessionStartOptions {
   reason: string;
   sessionName?: string;
+  onTimeout?: () => Promise<void> | void;
 }
 
 export const enqueueWhatsAppSessionStart = (
@@ -188,7 +241,8 @@ export const enqueueWhatsAppSessionStart = (
         whatsapp.id,
         sessionName,
         options.reason,
-        task
+        task,
+        options.onTimeout
       );
     })
     .finally(() => {

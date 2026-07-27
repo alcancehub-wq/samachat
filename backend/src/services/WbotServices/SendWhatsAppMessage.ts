@@ -169,13 +169,19 @@ const resolveLookupFailureError = (
   return new AppError("ERR_WAPP_CHECK_CONTACT");
 };
 
-const triggerWhatsappSessionStart = (whatsapp: Whatsapp): void => {
+const triggerWhatsappSessionStart = (
+  whatsapp: Whatsapp,
+  forceRestartActive = false
+): void => {
   if (startingSessions.has(whatsapp.id)) {
     return;
   }
 
   startingSessions.add(whatsapp.id);
-  void StartWhatsAppSession(whatsapp).finally(() => {
+  void StartWhatsAppSession(whatsapp, {
+    reason: forceRestartActive ? "message_recovery" : "message_send",
+    forceRestartActive
+  }).finally(() => {
     startingSessions.delete(whatsapp.id);
   });
 };
@@ -203,7 +209,7 @@ const ensureWhatsappSession = async (
   }
 
   if (forceStart || !whatsappProvider.hasSession(whatsapp.id)) {
-    triggerWhatsappSessionStart(whatsapp);
+    triggerWhatsappSessionStart(whatsapp, forceStart);
   }
 
   return whatsapp;
