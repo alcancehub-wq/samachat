@@ -42,6 +42,11 @@ import {
   resolvePersistedStatusFromChangeState
 } from "./wwebjsSessionRuntime";
 import { revokeMessageWithLookupFallback } from "./wwebjsDeleteLookup";
+import {
+  clearOutboundEchoReservationsForSession,
+  reserveOutboundEcho,
+  shouldSuppressOutboundEcho
+} from "./wwebjsOutboundEchoGuard";
 import type {
   WbotGroupContextChat,
   WbotGroupContextSource
@@ -1006,6 +1011,7 @@ const removeSession = async (
 
   delete profileLockRetries[whatsappId];
   clearIncomingEventDedupForSession(whatsappId);
+  clearOutboundEchoReservationsForSession(whatsappId);
   initializingSessions.delete(whatsappId);
 
   const existingDestroy = destroyingSessions.get(whatsappId);
@@ -1044,6 +1050,7 @@ const removeSession = async (
 
       delete profileLockRetries[whatsappId];
       clearIncomingEventDedupForSession(whatsappId);
+      clearOutboundEchoReservationsForSession(whatsappId);
       if (destroyPromise && destroyingSessions.get(whatsappId) === destroyPromise) {
         destroyingSessions.delete(whatsappId);
       }
@@ -1070,6 +1077,8 @@ const sendMessage = async (
       )
     : "";
 
+  const outboundReservation = reserveOutboundEcho(sessionId);
+
   try {
     const sentMessage = await wbot.sendMessage(to, body, {
       quotedMessageId: quotedMsgSerializedId,
@@ -1077,6 +1086,7 @@ const sendMessage = async (
     });
 
     if (!sentMessage) {
+      outboundReservation.cancel();
       logger.warn(
         {
           sessionId,
@@ -1097,8 +1107,11 @@ const sendMessage = async (
       } as WbotMessage);
     }
 
-    return convertToProviderMessage(sentMessage);
+    const providerMessage = convertToProviderMessage(sentMessage);
+    outboundReservation.complete(providerMessage.id);
+    return providerMessage;
   } catch (err) {
+    outboundReservation.cancel();
     logger.error(
       {
         err,
@@ -1137,8 +1150,18 @@ const sendMedia = async (
     mediaOptions.sendMediaAsDocument = options.sendMediaAsDocument;
   }
 
-  const sentMessage = await wbot.sendMessage(to, messageMedia, mediaOptions);
-  return convertToProviderMessage(sentMessage);
+  const outboundReservation = reserveOutboundEcho(sessionId);
+
+  try {
+    const sentMessage = await wbot.sendMessage(to, messageMedia, mediaOptions);
+    const providerMessage = convertToProviderMessage(sentMessage);
+
+    outboundReservation.complete(providerMessage.id);
+    return providerMessage;
+  } catch (err) {
+    outboundReservation.cancel();
+    throw err;
+  }
 };
 
 const checkNumberLookup = async (
@@ -1532,6 +1555,24 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
       }
 
       try {
+        const sessionId = wbot.id || whatsapp.id;
+        const eventMessageId = resolveEventMessageId(msg as any);
+
+        if (
+          msg.fromMe &&
+          (await shouldSuppressOutboundEcho(sessionId, eventMessageId))
+        ) {
+          logger.debug(
+            {
+              whatsappId: sessionId,
+              messageId: eventMessageId,
+              eventName: "message_create"
+            },
+            "Skipping local outbound echo already reserved by provider send"
+          );
+          return;
+        }
+
         const { messagePayload, contactPayload, contextPayload, mediaPayload } =
           await getMessageData(msg, wbot);
 
@@ -1559,6 +1600,24 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
       }
 
       try {
+        const sessionId = wbot.id || whatsapp.id;
+        const eventMessageId = resolveEventMessageId(msg as any);
+
+        if (
+          msg.fromMe &&
+          (await shouldSuppressOutboundEcho(sessionId, eventMessageId))
+        ) {
+          logger.debug(
+            {
+              whatsappId: sessionId,
+              messageId: eventMessageId,
+              eventName: "media_uploaded"
+            },
+            "Skipping local outbound media echo already reserved by provider send"
+          );
+          return;
+        }
+
         const { messagePayload, contactPayload, contextPayload, mediaPayload } =
           await getMessageData(msg, wbot);
 

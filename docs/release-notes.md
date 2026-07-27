@@ -1,5 +1,14 @@
 # Release Notes
 
+## 2026-07-27
+
+### legacy-prod
+
+- Chats/Duplicidade outbound: o provider `wwebjs` passa a reservar cada envio local de texto ou midia antes do disparo fisico e a suprimir somente o eco outbound que retorna com o mesmo ID real, incluindo equivalencia entre o formato serializado `true_<jid>_<msgId>` e o formato cru `<msgId>`.
+- Chats/Seguranca da reconciliacao: mensagens repetidas legitimas permanecem isoladas por ID; a correcao nao usa heuristicas por texto, horario, corpo ou tipo de midia e, portanto, nao funde envios diferentes apenas por serem parecidos ou proximos no tempo.
+- WhatsApp/Sessao: reservas pendentes sao canceladas em falha de envio e limpas durante a remocao da sessao, evitando estado residual durante ciclos de reconexao.
+- Escopo desta correcao: `backend/src/providers/WhatsApp/Implementations/wwebjs.ts`, `backend/src/providers/WhatsApp/Implementations/wwebjsOutboundEchoGuard.ts`, `backend/src/providers/WhatsApp/Implementations/__tests__/wwebjs.outboundEchoGuard.spec.ts`, `backend/src/providers/WhatsApp/Implementations/__tests__/wwebjs.outboundEchoIntegration.spec.ts`, `backend/src/handlers/__tests__/handleWhatsappEvents.spec.ts`, `frontend/src/pages/ReleaseNotes/index.js` e `docs/release-notes.md`.
+- Validacao local desta correcao: teste do handler aprovado; guarda outbound aprovada com 8 testes; integracao estrutural do provider aprovada com 7 testes; deduplicacao de eventos aprovada com 3 testes; politica de reconexao aprovada com 3 testes; testes reais de envio de texto e midia aprovados; builds de backend e frontend aprovados.
 ## 2026-07-20
 
 ### legacy-prod
