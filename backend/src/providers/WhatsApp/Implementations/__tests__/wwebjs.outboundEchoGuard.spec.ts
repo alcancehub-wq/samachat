@@ -38,6 +38,27 @@ describe("wwebjs outbound echo guard", () => {
     ).resolves.toBe(true);
   });
 
+  it("suppresses repeated lifecycle events for the same media provider id", async () => {
+    const reservation = reserveOutboundEcho(35);
+
+    reservation.complete("3EB0MEDIAEVENT01");
+
+    await expect(
+      shouldSuppressOutboundEcho(35, "3EB0MEDIAEVENT01")
+    ).resolves.toBe(true);
+
+    await expect(
+      shouldSuppressOutboundEcho(
+        35,
+        "true_5511999999999@c.us_3EB0MEDIAEVENT01"
+      )
+    ).resolves.toBe(true);
+
+    await expect(
+      shouldSuppressOutboundEcho(35, "3EB0DIFFERENTMEDIAEVENT")
+    ).resolves.toBe(false);
+  });
+
   it("does not suppress a different outbound event", async () => {
     const reservation = reserveOutboundEcho(35);
 

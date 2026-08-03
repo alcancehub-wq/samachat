@@ -1,5 +1,14 @@
 # Release Notes
 
+## 2026-08-03
+
+### Pre-promocao controlada - fix/audio-balao-vazio-outbound-20260803
+
+- Chats/Audio outbound: a reserva concluida do `wwebjsOutboundEchoGuard` deixa de ser consumida no primeiro eco correspondente e permanece ativa ate a limpeza normal por TTL; com isso, eventos de ciclo de vida distintos do mesmo envio fisico, como `message_create` e `media_uploaded`, sao suprimidos quando carregam o mesmo ID real do provider.
+- Chats/Protecao contra duplicidade: IDs diferentes continuam independentes e nao sao suprimidos pela reserva de outro envio; a alteracao nao usa heuristicas por corpo, horario, tipo de midia ou proximidade temporal.
+- Escopo desta correcao isolada: `backend/src/providers/WhatsApp/Implementations/wwebjsOutboundEchoGuard.ts`, `backend/src/providers/WhatsApp/Implementations/__tests__/wwebjs.outboundEchoGuard.spec.ts` e `docs/release-notes.md`.
+- Validacao local desta correcao: suite unitaria do guard aprovada; testes unitario e de integracao aprovados com 2 suites e 16 testes; compilacao TypeScript completa aprovada com `tsc --noEmit`; nenhuma dependencia foi instalada, nenhuma migration ou seed foi executada e nao houve commit, push ou deploy nesta etapa.
+
 ## 2026-07-27
 
 ### legacy-prod

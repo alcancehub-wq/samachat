@@ -197,12 +197,10 @@ export const shouldSuppressOutboundEcho = async (
       reservation.messageId &&
       reservation.messageId === normalizedEventId
     ) {
-      sessionReservations.delete(reservation.token);
-
-      if (sessionReservations.size === 0) {
-        reservationsBySession.delete(sessionId);
-      }
-
+      // Media sends can emit multiple lifecycle events with the same
+      // provider message id, such as message_create and media_uploaded.
+      // Preserve the completed reservation until TTL cleanup so every
+      // echo for that same physical message is suppressed.
       return true;
     }
   }
