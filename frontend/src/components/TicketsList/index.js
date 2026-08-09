@@ -425,7 +425,17 @@ const reducer = (state, action) => {
 
                 const hasStatusMatch = ticket => matchesTicketStatus(ticket, status);
 
+		const isCurrentUsersTicket = ticket =>
+			String(ticket.userId || "") === String(user?.id || "");
+
+		const isCurrentUsersOpenTicket = ticket =>
+			ticket.status === "open" && isCurrentUsersTicket(ticket);
+
 		const hasQueueScopeMatch = ticket => {
+			if (isCurrentUsersOpenTicket(ticket)) {
+				return true;
+			}
+
 			if (selectedQueueIds.length === 0) {
 				return true;
 			}
@@ -434,6 +444,10 @@ const reducer = (state, action) => {
 		};
 
 		const canAccessTicketInCurrentList = ticket => {
+			if (isCurrentUsersOpenTicket(ticket)) {
+				return true;
+			}
+
 			if (user?.whatsappId && Number(ticket.whatsappId) !== Number(user.whatsappId)) {
 				return false;
 			}
@@ -442,11 +456,10 @@ const reducer = (state, action) => {
 				return true;
 			}
 
-			const isCurrentUsersTicket = String(ticket.userId || "") === String(user?.id || "");
 			const hasAssignedUser = ticket.userId !== null && ticket.userId !== undefined && ticket.userId !== "";
 
 			if (status === "pending") {
-				if (isCurrentUsersTicket) {
+				if (isCurrentUsersTicket(ticket)) {
 					return true;
 				}
 
@@ -463,7 +476,7 @@ const reducer = (state, action) => {
 				return true;
 			}
 
-			if (isCurrentUsersTicket) {
+			if (isCurrentUsersTicket(ticket)) {
 				return true;
 			}
 
@@ -604,7 +617,7 @@ return () => {
 
 		setBulkAccepting(true);
 		try {
-			await Promise.all(
+			const responses = await Promise.all(
 				visibleSelectedTicketIds.map(ticketId =>
 					api.put(`/tickets/${ticketId}`, {
 						status: "open",
@@ -612,6 +625,14 @@ return () => {
 					})
 				)
 			);
+
+			responses.forEach(({ data: updatedTicket }) => {
+				window.dispatchEvent(
+					new CustomEvent("samachat:ticket-updated", {
+						detail: { ticket: updatedTicket }
+					})
+				);
+			});
 
 			visibleSelectedTicketIds.forEach(ticketId => {
 				dispatch({ type: "DELETE_TICKET", payload: ticketId });

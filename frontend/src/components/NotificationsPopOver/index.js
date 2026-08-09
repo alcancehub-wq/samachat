@@ -134,6 +134,14 @@ const NotificationsPopOver = () => {
 			return false;
 		}
 
+		const isCurrentUsersOpenTicket =
+			ticket.status === "open" &&
+			Number(ticket.userId) === Number(user?.id);
+
+		if (isCurrentUsersOpenTicket) {
+			return true;
+		}
+
 		if (user?.whatsappId && Number(ticket.whatsappId) !== Number(user.whatsappId)) {
 			return false;
 		}

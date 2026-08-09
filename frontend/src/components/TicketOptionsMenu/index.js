@@ -78,9 +78,15 @@ const TicketOptionsMenu = ({
                 setLoading(true);
 
                 try {
-                        await api.put(`/tickets/${ticket.id}`, payload);
+                        const { data: updatedTicket } = await api.put(`/tickets/${ticket.id}`, payload);
 
                         if (payload.status === "open") {
+                                window.dispatchEvent(
+                                        new CustomEvent("samachat:ticket-updated", {
+                                                detail: { ticket: updatedTicket }
+                                        })
+                                );
+
                                 history.push(`/tickets/${ticket.id}`);
                         } else {
                                 history.push("/tickets");

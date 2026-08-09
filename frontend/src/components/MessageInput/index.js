@@ -698,10 +698,16 @@ const MessageInput = ({ ticketStatus }) => {
       return;
     }
 
-    await api.put(`/tickets/${ticketId}`, {
+    const { data: updatedTicket } = await api.put(`/tickets/${ticketId}`, {
       status: "open",
       userId: user.id,
     });
+
+    window.dispatchEvent(
+      new CustomEvent("samachat:ticket-updated", {
+        detail: { ticket: updatedTicket }
+      })
+    );
 
     acceptedPendingTicketRef.current = true;
   };

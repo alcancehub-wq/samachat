@@ -197,13 +197,19 @@ const TicketActionButtons = ({ ticket, contactId, contactName }) => {
   const handleUpdateTicketStatus = async (e, status, userId) => {
     setLoading(true);
     try {
-      await api.put(`/tickets/${ticket.id}`, {
+      const { data: updatedTicket } = await api.put(`/tickets/${ticket.id}`, {
         status: status,
         userId: userId || null,
       });
 
       setLoading(false);
       if (status === 'open') {
+        window.dispatchEvent(
+          new CustomEvent("samachat:ticket-updated", {
+            detail: { ticket: updatedTicket }
+          })
+        );
+
         history.push(`/tickets/${ticket.id}`);
       } else {
         history.push('/tickets');

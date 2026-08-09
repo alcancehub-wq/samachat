@@ -507,18 +507,28 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 	const handleAcepptTicket = async id => {
 		setLoading(true);
 		try {
-			await api.put(`/tickets/${id}`, {
+			const { data: updatedTicket } = await api.put(`/tickets/${id}`, {
 				status: "open",
 				userId: user?.id,
 			});
+
+			window.dispatchEvent(
+				new CustomEvent("samachat:ticket-updated", {
+					detail: { ticket: updatedTicket }
+				})
+			);
+
+			if (isMounted.current) {
+				setLoading(false);
+			}
+
+			history.push(`/tickets/${id}`);
 		} catch (err) {
-			setLoading(false);
+			if (isMounted.current) {
+				setLoading(false);
+			}
 			toastError(err);
 		}
-		if (isMounted.current) {
-			setLoading(false);
-		}
-		history.push(`/tickets/${id}`);
 	};
 
 	    const handleSelectTicket = id => {

@@ -283,7 +283,14 @@ describe("ListTicketsService visibility", () => {
     );
   });
 
-  it("keeps open tickets owner-only for non-admin users", async () => {
+  it("keeps own open tickets visible regardless of queue or whatsapp scope", async () => {
+    showUserServiceMock.mockResolvedValue({
+      id: 21,
+      whatsappId: 38,
+      whatsapp: { id: 38, name: "Inbox 38" },
+      queues: [{ id: 6 }]
+    });
+
     await ListTicketsService({
       userId: "21",
       profile: "user",
@@ -297,10 +304,18 @@ describe("ListTicketsService visibility", () => {
     expect(conditions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ userId: "21" }),
-        expect.objectContaining({ status: "open" }),
-        authorizedQueueVisibilityMatcher([6])
+        expect.objectContaining({ status: "open" })
       ])
     );
+
+    expect(conditions).not.toEqual(
+      expect.arrayContaining([authorizedQueueVisibilityMatcher([6])])
+    );
+
+    expect(conditions).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ whatsappId: 38 })])
+    );
+
     expect(conditions).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ userId: null })])
     );

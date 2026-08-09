@@ -221,6 +221,10 @@ const buildVisibilityScope = ({
     );
   }
 
+  if (status === "open") {
+    return assignedVisibilityScope || {};
+  }
+
   return combineWhere(
     assignedVisibilityScope,
     queueVisibilityScope,
