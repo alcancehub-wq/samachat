@@ -1,5 +1,20 @@
 # Release Notes
 
+## 2026-08-09
+
+### Pre-promocao controlada - fix/tickets-aceitos-visibilidade-owner-20260806
+
+- Tickets/Visibilidade apos aceite: ao aceitar um ticket, o atendimento `open` do proprio usuario passa a permanecer elegivel pela regra de owner antes dos filtros de fila e conexao, evitando que o ticket suma da lista `Atendendo` logo apos a transicao de `pending` para `open`.
+- Frontend/Atualizacao local: os pontos de aceite do ticket passam a reutilizar o ticket atualizado devolvido pela API e emitir `samachat:ticket-updated`; a `TicketsList` aplica a atualizacao por ID, preservando o comportamento de remocao quando o ticket nao pertence ao escopo atual e evitando duplicacao pela estrategia de upsert.
+- Frontend/Filtros: tickets `open` do proprio usuario recebem precedencia antes dos filtros de fila/WhatsApp em `TicketsList` e `NotificationsPopOver`, sem ampliar visibilidade para tickets pertencentes a outro owner; o comportamento compartilhado de tickets `pending` permanece separado.
+- Escopo funcional desta correcao: `backend/src/services/TicketServices/ListTicketsService.ts`, `backend/src/services/TicketServices/__tests__/ListTicketsService.spec.ts`, `frontend/src/components/MessageInput/index.js`, `frontend/src/components/NotificationsPopOver/index.js`, `frontend/src/components/TicketActionButtons/index.js`, `frontend/src/components/TicketListItem/index.js`, `frontend/src/components/TicketOptionsMenu/index.js` e `frontend/src/components/TicketsList/index.js`.
+- Commit funcional: `80a8ddee44a4fd6f51bee36514ff06f3a09727d9` (`fix: keep accepted tickets visible to owner`), baseado em `50f0648705874ca949fb2cc461d5ccac97ba1923`.
+- Validacao tecnica antes da promocao: teste focado `ListTicketsService.spec.ts` aprovado com 9/9 testes; build Vite do frontend aprovado; regressao tecnica e preflight aprovados; `git diff --check` aprovado; exatamente os 8 arquivos funcionais esperados foram alterados, sem untracked, migration, SQL, schema, RLS, policy ou lockfile.
+- Seguranca do runtime auditada: o startup normal do backend nao executa `sequelize.sync`, migration ou seed automaticamente; com `RUN_WORKERS=false`, `initRedis`, `StartAllWhatsAppsSessions`, Schedule Worker e Campaign Worker nao sao iniciados.
+- Banco/local: nenhuma migration ou seed foi executada e nenhum dado de producao foi alterado. O volume MySQL local historico foi preservado por backup frio em `D:\Samacon\auditorias\backups\samachat-mysql-pre-tickets-aceitos-20260809`, com 281 arquivos e 146557745 bytes conferidos entre origem e backup.
+- Limitacao registrada: a validacao visual/funcional pre-push nao foi executada porque frontend `localhost:3000`, backend `localhost:8080` e MySQL `localhost:3306` estavam desligados; a base local historica depende da infraestrutura containerizada existente e esta atividade nao introduziu Docker apenas para cumprir o gate.
+- Validacao obrigatoria em runtime apos promocao controlada: confirmar que o ticket aceito permanece/move para `Atendendo` do proprio owner sem `F5`, que tickets de outro owner continuam ocultos, que o compartilhamento de `pending` permanece correto, que nao ha duplicidade visual e que o comportamento de admin permanece preservado.
+
 ## 2026-08-03
 
 ### Pre-promocao controlada - fix/audio-balao-vazio-outbound-20260803
