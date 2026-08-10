@@ -393,3 +393,11 @@
 - Escopo desta promocao: somente `backend/src/services/DashboardServices/ShowDashboardService.ts`, `backend/src/services/DashboardServices/__tests__/ShowDashboardService.spec.ts` e `frontend/src/components/TicketsManager/index.js`.
 - Fora de escopo nesta versao: usuarios, conexoes, chats, fluxo de mensagens e demais telas operacionais.
 - Validacao local antes da promocao: teste focado de dashboard aprovado, endpoint local `/dashboard` com buckets reais em `20:00`, `21:00` e `22:00`, grafico renderizado no localhost e filtros `Todos`, `Tags` e `Setores` conferidos visualmente no localhost.
+
+## 2026-08-09 — Outbound text delivery contract
+
+- Prevent duplicate outbound text retry after ambiguous provider errors.
+- Generic provider failures no longer trigger a second physical send attempt.
+- Deterministic No LID retry with a proven alternate destination remains preserved.
+- Existing outbound event deduplication, echo guard, persistence reconciliation and media behavior remain unchanged.
+- Regression validation: 6 suites / 52 tests passed; backend TypeScript build passed.

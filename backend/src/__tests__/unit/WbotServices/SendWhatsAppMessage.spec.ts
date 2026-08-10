@@ -302,4 +302,31 @@ describe("SendWhatsAppMessage", () => {
     expect(startWhatsAppSessionMock).toHaveBeenCalled();
     expect(sendMessageMock).not.toHaveBeenCalled();
   });
+  it("does not retry text after an ambiguous generic provider error", async () => {
+    const ticket = buildTicket({
+      id: 1161,
+      contactId: 17162,
+      contact: {
+        number: "5511963715316",
+        lid: "",
+        update: jest.fn().mockResolvedValue(undefined)
+      }
+    });
+
+    const ambiguousError = new Error("temporary provider failure");
+
+    sendMessageMock.mockRejectedValue(ambiguousError);
+
+    await expect(
+      SendWhatsAppMessage({ body: "mensagem unica", ticket })
+    ).rejects.toMatchObject({
+      message: "ERR_SENDING_WAPP_MSG",
+      statusCode: 400
+    });
+
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    expect(startWhatsAppSessionMock).not.toHaveBeenCalled();
+    expect(checkNumberServiceMock).not.toHaveBeenCalled();
+    expect(ticket.update).not.toHaveBeenCalled();
+  });
 });

@@ -440,26 +440,11 @@ const SendWhatsAppMessage = async ({
           }
         }
       } else {
-        const normalizedChatId = await resolveNormalizedChatId();
-        if (normalizedChatId && normalizedChatId !== chatId) {
-          try {
-            chatId = normalizedChatId;
-            sentMessage = await sendWithChatId(chatId);
-            await ticket.update({ lastMessage: resolvedBody });
-            if (normalizedNumber && normalizedNumber !== storedNumber) {
-              await ticket.contact.update({ number: normalizedNumber });
-            }
-            return sentMessage;
-          } catch (normalizedErr) {
-            err = normalizedErr;
-          }
-        }
-
-        logger.warn(err, "SendWhatsAppMessage failed, restarting session");
-        triggerWhatsappSessionStart(whatsapp);
-        await ensureWhatsappReady(ticket, whatsapp);
-        await sleep(2000);
-        sentMessage = await sendWithChatId(chatId);
+        logger.warn(
+          err,
+          "SendWhatsAppMessage provider error is ambiguous; skipping retry"
+        );
+        throw err;
       }
     }
 
