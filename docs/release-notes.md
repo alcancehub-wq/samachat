@@ -414,3 +414,15 @@
 - Commit funcional local: `dc11a95fa3e74a968e36a51809dfca9822de1ea4` (`fix: correlate outbound fallback text echo`).
 - Validacao local: 5 suites / 50 testes aprovados (`wwebjs.outboundEchoGuard`, `wwebjs.outboundEchoIntegration`, `wwebjs.eventDedup`, `handleWhatsappEvents` e `SendWhatsAppMessage`); `npm run build` aprovado no backend; `git diff --check` aprovado; nenhum arquivo de banco, migration, schema, RLS, frontend ou persistencia foi alterado.
 - Status de promocao: ainda sem push e sem deploy. A validacao funcional em producao permanece pendente e devera ser feita de forma controlada com contato de teste, sem utilizar os clientes reais afetados como destinatarios de teste.
+
+## 2026-08-11 - Recorded audio echo reconciliation
+
+- Chats/Audio gravado: corrigida a duplicidade visual local em que um unico audio gravado podia aparecer no SamaChat como dois elementos distintos, embora o destinatario recebesse apenas uma mensagem de voz no WhatsApp.
+- Causa comprovada em runtime: o envio fisico do audio era concluido pelo provider, mas o adaptador `wwebjs` podia receber retorno vazio de `sendMessage` e falhar posteriormente ao tentar acessar `message.ack`; em seguida, o evento real de echo era persistido com o ID do provider enquanto o fluxo de recuperacao retornava um segundo ID sintetico `recorded-audio-echo-*`.
+- Correcao: quando o echo recente do audio gravado ja foi encontrado e persistido, `SendWhatsAppMedia` passa a reutilizar o ID real dessa mensagem em vez de criar um novo ID `recorded-audio-echo-*`. O `CreateMessageService` passa assim a atualizar a mesma mensagem local com o arquivo WebM preservado, evitando a segunda linha/balao.
+- Seguranca de entrega: o bloqueio contra retry fisico ambiguo permanece inalterado. Quando nenhum echo e encontrado apos erro ambiguo do provider, continua sendo utilizado o fallback `recorded-audio-accepted-*`, evitando um segundo envio fisico potencialmente duplicado.
+- Contratos selados preservados: P02 e P03 permanecem fechados e sem alteracao funcional. Os testes de outbound echo executados nesta rodada serviram exclusivamente como gate de nao-regressao.
+- Escopo funcional desta correcao: `backend/src/services/WbotServices/SendWhatsAppMedia.ts` e `backend/src/__tests__/unit/WbotServices/SendWhatsAppMedia.spec.ts`.
+- Commit funcional local: `793a1fca897061b87af8dcf1686ef163b88e8e96` (`fix: reconcile recorded audio echo with persisted message`).
+- Validacao local: `SendWhatsAppMedia.spec.ts` aprovado com 6/6 testes; suites de outbound echo guard/integration aprovadas com 20/20 testes; `handleWhatsappEvents.spec.ts` aprovado com 20/20 testes; `npm run build` aprovado no backend; todos os comandos finalizaram com exit code 0.
+- Status de promocao: ainda sem push e sem deploy. A validacao funcional em producao do P04 permanece pendente e devera ser realizada de forma controlada apos a promocao.
