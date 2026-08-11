@@ -47,6 +47,7 @@ import {
   reserveOutboundEcho,
   shouldSuppressOutboundEcho
 } from "./wwebjsOutboundEchoGuard";
+import { shouldProcessWwebjsIncomingEvent } from "./wwebjsEventDedup";
 import type {
   WbotGroupContextChat,
   WbotGroupContextSource
@@ -485,10 +486,18 @@ const shouldProcessIncomingEvent = (
   const now = Date.now();
   cleanupIncomingEventDedup(now);
 
-  const cacheKey = `${sessionId}:${messageId}:${message?.from || ""}:${message?.to || ""}`;
-  const seenAt = incomingEventSeenAt.get(cacheKey);
+  const shouldProcess = shouldProcessWwebjsIncomingEvent({
+    cache: incomingEventSeenAt,
+    now,
+    ttlMs: INCOMING_EVENT_DEDUP_TTL_MS,
+    sessionId,
+    eventName,
+    messageId,
+    from: message?.from || "",
+    to: message?.to || ""
+  });
 
-  if (seenAt && now - seenAt <= INCOMING_EVENT_DEDUP_TTL_MS) {
+  if (!shouldProcess) {
     logger.debug(
       {
         whatsappId: sessionId,
@@ -497,15 +506,9 @@ const shouldProcessIncomingEvent = (
       },
       "Skipping duplicated incoming wwebjs event"
     );
-    return false;
   }
 
-  if (incomingEventSeenAt.has(cacheKey)) {
-    incomingEventSeenAt.delete(cacheKey);
-  }
-  incomingEventSeenAt.set(cacheKey, now);
-
-  return true;
+  return shouldProcess;
 };
 
 const convertToProviderMessage = (

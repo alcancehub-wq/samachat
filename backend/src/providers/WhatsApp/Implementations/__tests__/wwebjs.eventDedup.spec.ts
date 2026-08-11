@@ -41,13 +41,15 @@ describe("wwebjs outbound event deduplication", () => {
     expect(listener).toContain('"media_uploaded"');
   });
 
-  it("keeps the cache key shared across event names", () => {
+  it("delegates lifecycle-aware deduplication to the dedicated helper", () => {
     expect(source).toContain(
-      'const cacheKey = `${sessionId}:${messageId}:${message?.from || ""}:${message?.to || ""}`;'
+      'import { shouldProcessWwebjsIncomingEvent } from "./wwebjsEventDedup";'
     );
 
-    expect(source).not.toContain(
-      'const cacheKey = `${sessionId}:${eventName}:'
+    expect(source).toContain(
+      "const shouldProcess = shouldProcessWwebjsIncomingEvent({"
     );
+
+    expect(source).toContain("return shouldProcess;");
   });
 });
