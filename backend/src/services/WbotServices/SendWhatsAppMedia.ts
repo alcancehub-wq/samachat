@@ -281,7 +281,7 @@ const ensureWhatsappReady = async (
 const waitForRecentRecordedAudioEcho = async (
   ticketId: number,
   startedAt: Date
-): Promise<boolean> => {
+): Promise<Message | null> => {
   const startedAtTolerance = new Date(startedAt.getTime() - 2000);
   const attempts = Math.max(
     1,
@@ -304,7 +304,7 @@ const waitForRecentRecordedAudioEcho = async (
     });
 
     if (recentAudioMessage) {
-      return true;
+      return recentAudioMessage;
     }
 
     if (attempt < attempts - 1) {
@@ -312,7 +312,7 @@ const waitForRecentRecordedAudioEcho = async (
     }
   }
 
-  return false;
+  return null;
 };
 
 const SendWhatsAppMedia = async ({
@@ -581,12 +581,12 @@ const SendWhatsAppMedia = async ({
         sentMessage = await sendWithChatId(chatId);
       } else if (!(err instanceof AppError)) {
         if (composerRecordedAudio) {
-          const recordedAudioEchoDetected = await waitForRecentRecordedAudioEcho(
+          const recordedAudioEcho = await waitForRecentRecordedAudioEcho(
             ticket.id,
             requestStartedAt
           );
 
-          if (recordedAudioEchoDetected) {
+          if (recordedAudioEcho) {
             logger.warn(
               {
                 err,
@@ -600,7 +600,7 @@ const SendWhatsAppMedia = async ({
             );
           }
 
-          if (!recordedAudioEchoDetected) {
+          if (!recordedAudioEcho) {
             logger.warn(
               {
                 err,
@@ -624,9 +624,9 @@ const SendWhatsAppMedia = async ({
           safelyRemoveFile(convertedPath);
 
           return {
-            id: recordedAudioEchoDetected
-              ? `recorded-audio-echo-${ticket.id}-${Date.now()}`
-              : `recorded-audio-accepted-${ticket.id}-${Date.now()}`,
+            id:
+              recordedAudioEcho?.id ||
+              `recorded-audio-accepted-${ticket.id}-${Date.now()}`,
             body: resolvedBody || media.filename,
             fromMe: true,
             hasMedia: true,

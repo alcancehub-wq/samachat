@@ -170,6 +170,7 @@ describe("SendWhatsAppMedia", () => {
     });
 
     await expect(SendWhatsAppMedia({ media, ticket: ticket as any })).resolves.toMatchObject({
+      id: "msg-recorded-echo",
       fromMe: true,
       hasMedia: true,
       type: "audio",
