@@ -401,3 +401,16 @@
 - Deterministic No LID retry with a proven alternate destination remains preserved.
 - Existing outbound event deduplication, echo guard, persistence reconciliation and media behavior remain unchanged.
 - Regression validation: 6 suites / 52 tests passed; backend TypeScript build passed.
+
+## 2026-08-10 - Outbound text fallback echo correlation
+
+- Chats/Duplicidade outbound de texto: confirmado em dados reais que um unico envio fisico podia gerar duas linhas locais distintas quando o envio imediato era persistido com ID sintetico `fallback_` e o evento `message_create` retornava quase simultaneamente com o ID real do provider.
+- Causa estrutural: o outbound echo guard existente suprimia ecos por igualdade de ID real; quando o retorno inicial do `wwebjs` era vazio ou nao fornecia ID utilizavel, o fallback sintetico nao podia ser associado ao ID real posterior antes da persistencia concorrente.
+- Correcao: reservas outbound de texto passam a carregar correlacao exata de destino e corpo. Quando a reserva concluida possui ID `fallback_`, um `message_create` textual com ID real diferente pode ser associado antes da persistencia somente quando existe exatamente uma reserva fallback compativel.
+- Seguranca contra falso positivo: zero candidatos ou mais de um candidato compativel nao sao suprimidos por correlacao de conteudo, preservando envios legitimos repetidos e concorrentes.
+- P03/Entrega fisica: permanece preservado o contrato do commit `5f0683ee6988fa6fb23268bb3f4d9cc6ba347710`, que impede novo envio fisico apos erro generico ambiguo do provider e mantem apenas o retry deterministico de No LID quando existe destino alternativo comprovado.
+- Midia/Audio: comportamento preservado. `sendMedia` continua usando reserva outbound simples e `media_uploaded` continua usando supressao pelo ID do provider, sem correlacao textual adicional. O pacote de audio permanece fora do escopo desta correcao.
+- Escopo funcional: `backend/src/providers/WhatsApp/Implementations/wwebjs.ts`, `backend/src/providers/WhatsApp/Implementations/wwebjsOutboundEchoGuard.ts`, `backend/src/providers/WhatsApp/Implementations/__tests__/wwebjs.outboundEchoGuard.spec.ts` e `backend/src/providers/WhatsApp/Implementations/__tests__/wwebjs.outboundEchoIntegration.spec.ts`.
+- Commit funcional local: `dc11a95fa3e74a968e36a51809dfca9822de1ea4` (`fix: correlate outbound fallback text echo`).
+- Validacao local: 5 suites / 50 testes aprovados (`wwebjs.outboundEchoGuard`, `wwebjs.outboundEchoIntegration`, `wwebjs.eventDedup`, `handleWhatsappEvents` e `SendWhatsAppMessage`); `npm run build` aprovado no backend; `git diff --check` aprovado; nenhum arquivo de banco, migration, schema, RLS, frontend ou persistencia foi alterado.
+- Status de promocao: ainda sem push e sem deploy. A validacao funcional em producao permanece pendente e devera ser feita de forma controlada com contato de teste, sem utilizar os clientes reais afetados como destinatarios de teste.
