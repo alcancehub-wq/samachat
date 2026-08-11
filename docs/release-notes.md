@@ -1,5 +1,20 @@
 # Release Notes
 
+## 2026-08-11
+
+### Pre-promocao controlada - fix/media-event-lifecycle-20260811
+
+- WhatsApp/wwebjs (lifecycle de midia): a deduplicacao curta de eventos passa a manter `message` e `message_create` na mesma familia, preservando a protecao historica contra processamento inbound repetido, enquanto `media_uploaded` passa a possuir familia propria para que um evento posterior de disponibilidade de midia nao seja descartado apenas por compartilhar o mesmo ID do provider.
+- WhatsApp/wwebjs (protecoes preservadas): repeticoes de `media_uploaded` para a mesma identidade continuam deduplicadas; mensagens com IDs distintos continuam independentes; a alteracao nao adiciona heuristica por corpo, horario, proximidade temporal ou tipo de conteudo.
+- Arquitetura/testabilidade: a decisao de familia e cache foi extraida para `backend/src/providers/WhatsApp/Implementations/wwebjsEventDedup.ts`, mantendo no provider o controle de tempo, limpeza do cache e logging.
+- Escopo funcional: `backend/src/providers/WhatsApp/Implementations/wwebjs.ts`, `backend/src/providers/WhatsApp/Implementations/wwebjsEventDedup.ts`, `backend/src/providers/WhatsApp/Implementations/__tests__/wwebjs.eventDedup.spec.ts` e `backend/src/providers/WhatsApp/Implementations/__tests__/wwebjs.mediaEventLifecycle.spec.ts`.
+- Commit funcional: `03aaebae0a514260552b0f75aafc2f3e1324460b` (`fix: separate media uploaded event lifecycle dedupe`), baseado em `21c5b0695d87c84e5aa8532e5158615999500407`.
+- Validacao causal: RED dirigido comprovou que o cache anterior compartilhava a mesma identidade entre os eventos; GREEN dirigido inicial aprovado com 5/5 testes.
+- Validacao de regressao: 15 suites e 93 testes relacionados a handler, envio de texto/midia, audio, outbound echo, sessao/reconexao e dedupe foram aprovados.
+- Validacao comportamental final: 2 suites e 7 testes aprovados, comprovando `message -> message_create` com bloqueio do segundo evento, `message_create -> media_uploaded` com permissao do lifecycle posterior e repeticao de `media_uploaded` com bloqueio do segundo evento.
+- Limite causal desta entrega: este commit corrige especificamente a colisao de lifecycle do mesmo ID entre eventos de mensagem e `media_uploaded`; nao constitui, isoladamente, prova de resolucao dos registros outbound vazios com IDs distintos nem de toda a ocorrencia de duplicidade visual P02, que permanecem sujeitos a validacao causal propria.
+- Banco/dados: nenhuma migration, SQL, schema, RLS, seed ou dado real foi alterado. Nenhum pacote foi instalado durante a validacao.
+
 ## 2026-08-09
 
 ### Pre-promocao controlada - fix/tickets-aceitos-visibilidade-owner-20260806
