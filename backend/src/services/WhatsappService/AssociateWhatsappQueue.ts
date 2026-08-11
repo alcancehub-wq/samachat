@@ -1,11 +1,25 @@
+import { Transaction } from "sequelize";
+
 import Whatsapp from "../../models/Whatsapp";
 
 const AssociateWhatsappQueue = async (
   whatsapp: Whatsapp,
-  queueIds: number[]
+  queueIds: number[],
+  transaction?: Transaction
 ): Promise<void> => {
-  await whatsapp.$set("queues", queueIds);
+  if (transaction) {
+    await whatsapp.$set("queues", queueIds, {
+      transaction
+    });
 
+    await whatsapp.reload({
+      transaction
+    });
+
+    return;
+  }
+
+  await whatsapp.$set("queues", queueIds);
   await whatsapp.reload();
 };
 

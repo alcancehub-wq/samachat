@@ -231,6 +231,22 @@ const messages = {
           linkedUserHelper:
             "Select the primary user for this connection to keep signature and own-session access in the same flow.",
           loadingLinkedUsers: "Loading users...",
+          noLinkedUser: "No user",
+          shareConnection: "Share this connection?",
+          shareConnectionHelper:
+            "Allows multiple authorized users to use the same connection without sharing ticket ownership.",
+          authorizedUsers: "Authorized users",
+          authorizedUsersHelper:
+            "Select the users allowed to use this connection. Each ticket keeps its own assignee.",
+          distributionEnabled: "Automatically distribute new leads",
+          distributionEnabledHelper:
+            "When enabled, only new unassigned tickets may be distributed automatically.",
+          distributionMode: "Distribution mode",
+          distributionModeRandom: "Random",
+          distributionModeRoundRobin: "Round-robin",
+          distributionUsers: "Users receiving new leads",
+          distributionUsersHelper:
+            "Select which authorized users may automatically receive new leads.",
           linkedUserSignMessages: "Sign messages by default",
           linkedUserSignMessagesHelper:
             "When enabled, messages sent by the linked user automatically include the name signature.",

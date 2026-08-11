@@ -1,11 +1,20 @@
 import * as Yup from "yup";
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 
+import sequelize from "../../database";
 import AppError from "../../errors/AppError";
 import Whatsapp from "../../models/Whatsapp";
 import ShowWhatsAppService from "./ShowWhatsAppService";
 import AssociateWhatsappQueue from "./AssociateWhatsappQueue";
 import SyncWhatsAppLinkedUserService from "./SyncWhatsAppLinkedUserService";
+import SyncWhatsAppSharingSettingsService from "./SyncWhatsAppSharingSettingsService";
+
+interface SharingSettingsData {
+  isShared: boolean;
+  distributionEnabled: boolean;
+  distributionMode?: string | null;
+  distributionUserIds?: number[];
+}
 
 interface WhatsappData {
   name?: string;
@@ -16,6 +25,7 @@ interface WhatsappData {
   farewellMessage?: string;
   queueIds?: number[];
   linkedUserId?: number | null;
+  linkedUserIds?: number[];
   linkedUserSignMessages?: boolean;
   providerType?: string;
   wabaId?: string;
@@ -25,6 +35,7 @@ interface WhatsappData {
   verifyToken?: string;
   appSecret?: string;
   apiVersion?: string;
+  sharingSettings?: SharingSettingsData;
 }
 
 interface Request {
@@ -48,6 +59,62 @@ const normalizeOptionalValue = (
   return normalized || undefined;
 };
 
+const normalizeIds = (values?: number[]): number[] =>
+  Array.from(
+    new Set(
+      (values || [])
+        .map(value => Number(value))
+        .filter(value => Number.isInteger(value) && value > 0)
+    )
+  );
+
+const validateSharingContract = ({
+  effectiveProviderType,
+  effectiveLinkedUserIds,
+  sharingSettings
+}: {
+  effectiveProviderType: string;
+  effectiveLinkedUserIds: number[];
+  sharingSettings?: SharingSettingsData;
+}): void => {
+  if (!sharingSettings) {
+    return;
+  }
+
+  const distributionUserIds = normalizeIds(
+    sharingSettings.distributionUserIds
+  );
+
+  if (
+    effectiveProviderType === "official" &&
+    sharingSettings.isShared
+  ) {
+    throw new AppError(
+      "ERR_OFFICIAL_CONNECTION_SHARING_NOT_ALLOWED",
+      400
+    );
+  }
+
+  if (
+    !sharingSettings.isShared &&
+    effectiveLinkedUserIds.length > 1
+  ) {
+    throw new AppError("ERR_SHARING_REQUIRED_FOR_MULTIPLE_USERS", 400);
+  }
+
+  if (
+    sharingSettings.distributionEnabled &&
+    distributionUserIds.some(
+      userId => !effectiveLinkedUserIds.includes(userId)
+    )
+  ) {
+    throw new AppError(
+      "ERR_DISTRIBUTION_USERS_MUST_BE_LINKED",
+      400
+    );
+  }
+};
+
 const UpdateWhatsAppService = async ({
   whatsappData,
   whatsappId
@@ -68,6 +135,7 @@ const UpdateWhatsAppService = async ({
     farewellMessage,
     queueIds = [],
     linkedUserId,
+    linkedUserIds,
     linkedUserSignMessages,
     providerType,
     wabaId,
@@ -76,7 +144,8 @@ const UpdateWhatsAppService = async ({
     accessToken,
     verifyToken,
     appSecret,
-    apiVersion
+    apiVersion,
+    sharingSettings
   } = whatsappData;
 
   try {
@@ -89,12 +158,47 @@ const UpdateWhatsAppService = async ({
 
   const effectiveProviderType =
     providerType || whatsapp.providerType;
+
+  const normalizedLinkedUserIds = Array.isArray(linkedUserIds)
+    ? normalizeIds(linkedUserIds)
+    : undefined;
+
+  const existingLinkedUserIds = Array.isArray(whatsapp.users)
+    ? whatsapp.users
+        .map(user => Number(user.id))
+        .filter(userId => Number.isInteger(userId) && userId > 0)
+    : [];
+
+  const effectiveLinkedUserIds =
+    normalizedLinkedUserIds !== undefined
+      ? normalizedLinkedUserIds
+      : linkedUserId !== undefined
+      ? linkedUserId === null
+        ? []
+        : normalizeIds([linkedUserId])
+      : existingLinkedUserIds;
+
+  validateSharingContract({
+    effectiveProviderType,
+    effectiveLinkedUserIds,
+    sharingSettings
+  });
+
+  if (
+    effectiveProviderType === "official" &&
+    effectiveLinkedUserIds.length > 1
+  ) {
+    throw new AppError("ERR_OFFICIAL_CONNECTION_SHARING_NOT_ALLOWED");
+  }
+
   const effectivePhoneNumberId =
     normalizeOptionalValue(phoneNumberId) ||
     whatsapp.phoneNumberId;
+
   const effectiveAccessToken =
     normalizeOptionalValue(accessToken) ||
     whatsapp.accessToken;
+
   const effectiveVerifyToken =
     normalizeOptionalValue(verifyToken) ||
     whatsapp.verifyToken;
@@ -112,17 +216,6 @@ const UpdateWhatsAppService = async ({
     throw new AppError("ERR_WAPP_GREETING_REQUIRED");
   }
 
-  let oldDefaultWhatsapp: Whatsapp | null = null;
-
-  if (isDefault) {
-    oldDefaultWhatsapp = await Whatsapp.findOne({
-      where: { isDefault: true, id: { [Op.not]: whatsappId } }
-    });
-    if (oldDefaultWhatsapp) {
-      await oldDefaultWhatsapp.update({ isDefault: false });
-    }
-  }
-
   const updateData: Partial<Whatsapp> = {
     name,
     status,
@@ -138,10 +231,12 @@ const UpdateWhatsAppService = async ({
       normalizeOptionalValue(apiVersion) ||
       whatsapp.apiVersion ||
       "v20.0";
+
     updateData.cloudApiStatus =
       providerType === "official"
         ? "configured"
         : undefined;
+
     updateData.cloudApiLastError = undefined;
   }
 
@@ -183,16 +278,79 @@ const UpdateWhatsAppService = async ({
     updateData.appSecret = normalizedAppSecret;
   }
 
-  await whatsapp.update(updateData);
+  const execute = async (
+    transaction?: Transaction
+  ): Promise<Response> => {
+    let oldDefaultWhatsapp: Whatsapp | null = null;
 
-  await AssociateWhatsappQueue(whatsapp, queueIds);
-  await SyncWhatsAppLinkedUserService({
-    whatsappId: whatsapp.id,
-    linkedUserId,
-    linkedUserSignMessages
-  });
+    if (isDefault) {
+      oldDefaultWhatsapp = transaction
+        ? await Whatsapp.findOne({
+            where: {
+              isDefault: true,
+              id: { [Op.not]: whatsappId }
+            },
+            transaction
+          })
+        : await Whatsapp.findOne({
+            where: {
+              isDefault: true,
+              id: { [Op.not]: whatsappId }
+            }
+          });
 
-  return { whatsapp, oldDefaultWhatsapp };
+      if (oldDefaultWhatsapp) {
+        if (transaction) {
+          await oldDefaultWhatsapp.update(
+            { isDefault: false },
+            { transaction }
+          );
+        } else {
+          await oldDefaultWhatsapp.update({ isDefault: false });
+        }
+      }
+    }
+
+    if (transaction) {
+      await whatsapp.update(updateData, {
+        transaction
+      });
+    } else {
+      await whatsapp.update(updateData);
+    }
+
+    await AssociateWhatsappQueue(
+      whatsapp,
+      queueIds,
+      transaction
+    );
+
+    await SyncWhatsAppLinkedUserService({
+      whatsappId: whatsapp.id,
+      linkedUserId,
+      linkedUserIds,
+      linkedUserSignMessages,
+      transaction
+    });
+
+    if (sharingSettings) {
+      await SyncWhatsAppSharingSettingsService({
+        whatsappId: whatsapp.id,
+        ...sharingSettings,
+        transaction
+      });
+    }
+
+    return { whatsapp, oldDefaultWhatsapp };
+  };
+
+  if (!sharingSettings) {
+    return execute();
+  }
+
+  return sequelize.transaction(
+    async (transaction: Transaction) => execute(transaction)
+  );
 };
 
 export default UpdateWhatsAppService;

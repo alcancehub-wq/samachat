@@ -1,9 +1,19 @@
 import * as Yup from "yup";
+import { Transaction } from "sequelize";
 
+import sequelize from "../../database";
 import AppError from "../../errors/AppError";
 import Whatsapp from "../../models/Whatsapp";
 import AssociateWhatsappQueue from "./AssociateWhatsappQueue";
 import SyncWhatsAppLinkedUserService from "./SyncWhatsAppLinkedUserService";
+import SyncWhatsAppSharingSettingsService from "./SyncWhatsAppSharingSettingsService";
+
+interface SharingSettingsData {
+  isShared: boolean;
+  distributionEnabled: boolean;
+  distributionMode?: string | null;
+  distributionUserIds?: number[];
+}
 
 interface Request {
   name: string;
@@ -13,6 +23,7 @@ interface Request {
   status?: string;
   isDefault?: boolean;
   linkedUserId?: number | null;
+  linkedUserIds?: number[];
   linkedUserSignMessages?: boolean;
   providerType?: string;
   wabaId?: string;
@@ -22,12 +33,70 @@ interface Request {
   verifyToken?: string;
   appSecret?: string;
   apiVersion?: string;
+  sharingSettings?: SharingSettingsData;
 }
 
 interface Response {
   whatsapp: Whatsapp;
   oldDefaultWhatsapp: Whatsapp | null;
 }
+
+const normalizeIds = (values?: number[]): number[] =>
+  Array.from(
+    new Set(
+      (values || [])
+        .map(value => Number(value))
+        .filter(value => Number.isInteger(value) && value > 0)
+    )
+  );
+
+const validateSharingContract = ({
+  providerType,
+  linkedUserIds,
+  sharingSettings
+}: {
+  providerType: string;
+  linkedUserIds?: number[];
+  sharingSettings?: SharingSettingsData;
+}): void => {
+  if (!sharingSettings) {
+    return;
+  }
+
+  const normalizedLinkedUserIds = normalizeIds(linkedUserIds);
+  const distributionUserIds = normalizeIds(
+    sharingSettings.distributionUserIds
+  );
+
+  if (
+    providerType === "official" &&
+    sharingSettings.isShared
+  ) {
+    throw new AppError(
+      "ERR_OFFICIAL_CONNECTION_SHARING_NOT_ALLOWED",
+      400
+    );
+  }
+
+  if (
+    !sharingSettings.isShared &&
+    normalizedLinkedUserIds.length > 1
+  ) {
+    throw new AppError("ERR_SHARING_REQUIRED_FOR_MULTIPLE_USERS", 400);
+  }
+
+  if (
+    sharingSettings.distributionEnabled &&
+    distributionUserIds.some(
+      userId => !normalizedLinkedUserIds.includes(userId)
+    )
+  ) {
+    throw new AppError(
+      "ERR_DISTRIBUTION_USERS_MUST_BE_LINKED",
+      400
+    );
+  }
+};
 
 const CreateWhatsAppService = async ({
   name,
@@ -37,6 +106,7 @@ const CreateWhatsAppService = async ({
   farewellMessage,
   isDefault = false,
   linkedUserId,
+  linkedUserIds,
   linkedUserSignMessages,
   providerType = "web",
   wabaId,
@@ -45,7 +115,8 @@ const CreateWhatsAppService = async ({
   accessToken,
   verifyToken,
   appSecret,
-  apiVersion = "v20.0"
+  apiVersion = "v20.0",
+  sharingSettings
 }: Request): Promise<Response> => {
   const schema = Yup.object().shape({
     name: Yup.string()
@@ -72,19 +143,22 @@ const CreateWhatsAppService = async ({
     throw new AppError(err.message);
   }
 
+  validateSharingContract({
+    providerType,
+    linkedUserIds,
+    sharingSettings
+  });
+
   const whatsappFound = await Whatsapp.findOne();
 
   isDefault = !whatsappFound;
 
-  let oldDefaultWhatsapp: Whatsapp | null = null;
-
-  if (isDefault) {
-    oldDefaultWhatsapp = await Whatsapp.findOne({
-      where: { isDefault: true }
-    });
-    if (oldDefaultWhatsapp) {
-      await oldDefaultWhatsapp.update({ isDefault: false });
-    }
+  if (
+    providerType === "official" &&
+    Array.isArray(linkedUserIds) &&
+    normalizeIds(linkedUserIds).length > 1
+  ) {
+    throw new AppError("ERR_OFFICIAL_CONNECTION_SHARING_NOT_ALLOWED");
   }
 
   if (
@@ -98,8 +172,34 @@ const CreateWhatsAppService = async ({
     throw new AppError("ERR_WAPP_GREETING_REQUIRED");
   }
 
-  const whatsapp = await Whatsapp.create(
-    {
+  const execute = async (
+    transaction?: Transaction
+  ): Promise<Response> => {
+    let oldDefaultWhatsapp: Whatsapp | null = null;
+
+    if (isDefault) {
+      oldDefaultWhatsapp = transaction
+        ? await Whatsapp.findOne({
+            where: { isDefault: true },
+            transaction
+          })
+        : await Whatsapp.findOne({
+            where: { isDefault: true }
+          });
+
+      if (oldDefaultWhatsapp) {
+        if (transaction) {
+          await oldDefaultWhatsapp.update(
+            { isDefault: false },
+            { transaction }
+          );
+        } else {
+          await oldDefaultWhatsapp.update({ isDefault: false });
+        }
+      }
+    }
+
+    const createData = {
       name,
       status,
       greetingMessage,
@@ -113,20 +213,52 @@ const CreateWhatsAppService = async ({
       verifyToken,
       appSecret,
       apiVersion,
-      cloudApiStatus: providerType === "official" ? "configured" : undefined,
+      cloudApiStatus:
+        providerType === "official" ? "configured" : undefined,
       cloudApiLastError: null
-    },
-    { include: ["queues"] }
+    };
+
+    const whatsapp = transaction
+      ? await Whatsapp.create(createData, {
+          include: ["queues"],
+          transaction
+        })
+      : await Whatsapp.create(createData, {
+          include: ["queues"]
+        });
+
+    await AssociateWhatsappQueue(
+      whatsapp,
+      queueIds,
+      transaction
+    );
+
+    await SyncWhatsAppLinkedUserService({
+      whatsappId: whatsapp.id,
+      linkedUserId,
+      linkedUserIds,
+      linkedUserSignMessages,
+      transaction
+    });
+
+    if (sharingSettings) {
+      await SyncWhatsAppSharingSettingsService({
+        whatsappId: whatsapp.id,
+        ...sharingSettings,
+        transaction
+      });
+    }
+
+    return { whatsapp, oldDefaultWhatsapp };
+  };
+
+  if (!sharingSettings) {
+    return execute();
+  }
+
+  return sequelize.transaction(
+    async (transaction: Transaction) => execute(transaction)
   );
-
-  await AssociateWhatsappQueue(whatsapp, queueIds);
-  await SyncWhatsAppLinkedUserService({
-    whatsappId: whatsapp.id,
-    linkedUserId,
-    linkedUserSignMessages
-  });
-
-  return { whatsapp, oldDefaultWhatsapp };
 };
 
 export default CreateWhatsAppService;

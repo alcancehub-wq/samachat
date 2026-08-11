@@ -4,6 +4,8 @@ import Setting from "../models/Setting";
 import Contact from "../models/Contact";
 import Ticket from "../models/Ticket";
 import Whatsapp from "../models/Whatsapp";
+import WhatsappSharingSetting from "../models/WhatsappSharingSetting";
+import WhatsappDistributionUser from "../models/WhatsappDistributionUser";
 import ContactCustomField from "../models/ContactCustomField";
 import Message from "../models/Message";
 import Queue from "../models/Queue";
@@ -50,6 +52,8 @@ const models = [
   Ticket,
   Message,
   Whatsapp,
+  WhatsappSharingSetting,
+  WhatsappDistributionUser,
   ContactCustomField,
   Setting,
   Queue,

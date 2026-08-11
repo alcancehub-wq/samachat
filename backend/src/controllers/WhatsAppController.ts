@@ -7,8 +7,16 @@ import DeleteWhatsAppService from "../services/WhatsappService/DeleteWhatsAppSer
 import ListWhatsAppsService from "../services/WhatsappService/ListWhatsAppsService";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import UpdateWhatsAppService from "../services/WhatsappService/UpdateWhatsAppService";
+import GetWhatsAppSharingSettingsService from "../services/WhatsappService/GetWhatsAppSharingSettingsService";
 import { whatsappProvider } from "../providers/WhatsApp";
 import SerializeWhatsAppForClient from "../helpers/SerializeWhatsAppForClient";
+
+interface SharingSettingsData {
+  isShared: boolean;
+  distributionEnabled: boolean;
+  distributionMode?: string | null;
+  distributionUserIds?: number[];
+}
 
 interface WhatsappData {
   name: string;
@@ -18,6 +26,7 @@ interface WhatsappData {
   status?: string;
   isDefault?: boolean;
   linkedUserId?: number | null;
+  linkedUserIds?: number[];
   linkedUserSignMessages?: boolean;
   providerType?: string;
   wabaId?: string;
@@ -27,6 +36,7 @@ interface WhatsappData {
   verifyToken?: string;
   appSecret?: string;
   apiVersion?: string;
+  sharingSettings?: SharingSettingsData;
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -46,6 +56,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     farewellMessage,
     queueIds,
     linkedUserId,
+    linkedUserIds,
     linkedUserSignMessages,
     providerType,
     wabaId,
@@ -54,7 +65,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     accessToken,
     verifyToken,
     appSecret,
-    apiVersion
+    apiVersion,
+    sharingSettings
   }: WhatsappData = req.body;
 
   const { whatsapp, oldDefaultWhatsapp } = await CreateWhatsAppService({
@@ -65,6 +77,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     farewellMessage,
     queueIds,
     linkedUserId,
+    linkedUserIds,
     linkedUserSignMessages,
     providerType,
     wabaId,
@@ -73,7 +86,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     accessToken,
     verifyToken,
     appSecret,
-    apiVersion
+    apiVersion,
+    sharingSettings
   });
 
   const formattedWhatsApp = await ShowWhatsAppService(whatsapp.id);
@@ -87,6 +101,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   const serializedWhatsApp =
     SerializeWhatsAppForClient(formattedWhatsApp);
+  const savedSharingSettings =
+    await GetWhatsAppSharingSettingsService(formattedWhatsApp.id);
+  const responseWhatsApp = {
+    ...serializedWhatsApp,
+    sharingSettings: savedSharingSettings
+  };
   const serializedOldDefaultWhatsapp = formattedOldDefaultWhatsapp
     ? SerializeWhatsAppForClient(formattedOldDefaultWhatsapp)
     : null;
@@ -104,17 +124,20 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     });
   }
 
-  return res.status(200).json(serializedWhatsApp);
+  return res.status(200).json(responseWhatsApp);
 };
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { whatsappId } = req.params;
 
   const whatsapp = await ShowWhatsAppService(whatsappId);
+  const sharingSettings =
+    await GetWhatsAppSharingSettingsService(whatsapp.id);
 
-  return res
-    .status(200)
-    .json(SerializeWhatsAppForClient(whatsapp));
+  return res.status(200).json({
+    ...SerializeWhatsAppForClient(whatsapp),
+    sharingSettings
+  });
 };
 
 export const update = async (
@@ -136,6 +159,12 @@ export const update = async (
 
   const serializedWhatsApp =
     SerializeWhatsAppForClient(formattedWhatsApp);
+  const savedSharingSettings =
+    await GetWhatsAppSharingSettingsService(formattedWhatsApp.id);
+  const responseWhatsApp = {
+    ...serializedWhatsApp,
+    sharingSettings: savedSharingSettings
+  };
   const serializedOldDefaultWhatsapp = formattedOldDefaultWhatsapp
     ? SerializeWhatsAppForClient(formattedOldDefaultWhatsapp)
     : null;
@@ -153,7 +182,7 @@ export const update = async (
     });
   }
 
-  return res.status(200).json(serializedWhatsApp);
+  return res.status(200).json(responseWhatsApp);
 };
 
 export const remove = async (

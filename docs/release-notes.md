@@ -443,3 +443,20 @@
 - Validacao em producao: PASS em 2026-08-11. Em teste controlado apos o deploy, um unico audio gravado gerou um unico player/balao no SamaChat e o destinatario recebeu exatamente uma mensagem de voz; o balao comprimido adicional que caracterizava o defeito nao foi reproduzido.
 - Fechamento P04: pacote aprovado em producao e selado. P02 e P03 permanecem fechados e sem reabertura; nenhuma alteracao funcional adicional foi aplicada nesses pacotes.
 - Observacao residual de performance: no teste final foi percebida espera aproximada de 10 segundos entre concluir a gravacao/clicar em enviar e o audio efetivamente ser carregado/enviado. A entrega foi correta e sem duplicidade; a latencia fica registrada como tema separado de performance, sem reabrir o P04.
+
+## 2026-08-11 - Conexao compartilhada e distribuicao automatica
+
+<!-- SAMACHAT-CONEXAO-COMPARTILHADA-DISTRIBUICAO-20260811 -->
+
+- Conexoes: adicionada configuracao opt-in para compartilhar uma mesma conexao WhatsApp entre multiplos usuarios autorizados.
+- Carteira: compartilhar a conexao nao compartilha tickets atribuidos; atendimentos open/closed continuam owner-only para usuarios nao admin.
+- Distribuicao inbound: novos tickets sem responsavel podem ser atribuidos automaticamente depois da resolucao da fila.
+- Elegibilidade: o usuario precisa estar habilitado para distribuicao, continuar vinculado ao mesmo WhatsApp e pertencer a fila resolvida.
+- Modos de distribuicao: random e round_robin.
+- Seguranca: tickets que ja possuem responsavel nao sao redistribuidos automaticamente.
+- Official: conexoes providerType official permanecem fora do compartilhamento/distribuicao deste pacote.
+- Banco: adicionadas migrations para WhatsappSharingSettings e WhatsappDistributionUsers; nenhuma migration foi executada manualmente no ambiente local.
+- Deploy: o backend/docker-entrypoint.sh executa sequelize db:migrate antes de iniciar o servidor.
+- Regressao de carteira: usuarios com o mesmo whatsappId continuam sem acesso aos tickets atribuidos uns aos outros.
+- Validacao local: 8 suites / 57 testes aprovados; backend TypeScript build PASS; frontend Vite build PASS.
+- Contratos selados de P02, P03 e P04 permanecem fora de escopo e sem alteracao funcional.

@@ -232,6 +232,22 @@ const messages = {
           linkedUserHelper:
             "Selecciona el usuario principal de esta conexión para mantener la firma y el acceso a la propia sesión en el mismo flujo.",
           loadingLinkedUsers: "Cargando usuarios...",
+          noLinkedUser: "Ningún usuario",
+          shareConnection: "¿Compartir esta conexión?",
+          shareConnectionHelper:
+            "Permite que varios usuarios autorizados utilicen la misma conexión sin compartir la propiedad de sus atenciones.",
+          authorizedUsers: "Usuarios autorizados",
+          authorizedUsersHelper:
+            "Selecciona los usuarios que pueden utilizar esta conexión. Cada atención conserva su propio responsable.",
+          distributionEnabled: "Distribución automática de nuevos leads",
+          distributionEnabledHelper:
+            "Cuando está activa, solamente las nuevas atenciones sin responsable podrán distribuirse automáticamente.",
+          distributionMode: "Modo de distribución",
+          distributionModeRandom: "Aleatoria",
+          distributionModeRoundRobin: "Round-robin",
+          distributionUsers: "Usuarios que reciben nuevos leads",
+          distributionUsersHelper:
+            "Selecciona qué usuarios autorizados podrán recibir nuevos leads automáticamente.",
           linkedUserSignMessages: "Firmar mensajes por defecto",
           linkedUserSignMessagesHelper:
             "Cuando está activo, los mensajes enviados por el usuario vinculado incluyen automáticamente la firma con el nombre.",

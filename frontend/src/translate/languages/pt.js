@@ -233,6 +233,22 @@ const messages = {
           linkedUserHelper:
             "Selecione o usuário principal desta conexão para manter assinatura e acesso da própria sessão no mesmo fluxo.",
           loadingLinkedUsers: "Carregando usuários...",
+          noLinkedUser: "Nenhum usuário",
+          shareConnection: "Compartilhar esta conexão?",
+          shareConnectionHelper:
+            "Permite que vários usuários autorizados utilizem a mesma conexão sem compartilhar a carteira de atendimentos.",
+          authorizedUsers: "Usuários autorizados",
+          authorizedUsersHelper:
+            "Selecione os usuários que podem utilizar esta conexão. Cada atendimento continua respeitando seu próprio responsável.",
+          distributionEnabled: "Distribuição automática de novos leads",
+          distributionEnabledHelper:
+            "Quando ativa, somente novos atendimentos sem responsável poderão ser distribuídos automaticamente.",
+          distributionMode: "Modo de distribuição",
+          distributionModeRandom: "Aleatória",
+          distributionModeRoundRobin: "Round-robin",
+          distributionUsers: "Usuários que recebem novos leads",
+          distributionUsersHelper:
+            "Selecione entre os usuários autorizados quem poderá receber novos leads automaticamente.",
           linkedUserSignMessages: "Assinar mensagens por padrão",
           linkedUserSignMessagesHelper:
             "Quando ativo, as mensagens enviadas pelo usuário vinculado incluem a assinatura com o nome automaticamente."

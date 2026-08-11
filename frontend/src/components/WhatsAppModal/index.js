@@ -88,6 +88,13 @@ const INITIAL_STATE = {
 	farewellMessage: "",
 	isDefault: false,
 	linkedUserId: "",
+	linkedUserIds: [],
+	sharingSettings: {
+		isShared: false,
+		distributionEnabled: false,
+		distributionMode: null,
+		distributionUserIds: [],
+	},
 	providerType: "web",
 	wabaId: "",
 	phoneNumberId: "",
@@ -113,13 +120,46 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 
 			try {
 				const { data } = await api.get(`whatsapp/${whatsAppId}`);
-				const linkedUser =
-					Array.isArray(data.users) && data.users.length === 1 ? data.users[0] : null;
+				const linkedUsers = Array.isArray(data.users) ? data.users : [];
+				const linkedUserIds = linkedUsers
+					.map(linkedUser => Number(linkedUser.id))
+					.filter(linkedUserId => Number.isInteger(linkedUserId) && linkedUserId > 0);
+				const legacyLinkedUserId =
+					linkedUserIds.length === 1 ? linkedUserIds[0] : "";
+				const sharingSettings = {
+					isShared: Boolean(data.sharingSettings?.isShared),
+					distributionEnabled: Boolean(
+						data.sharingSettings?.isShared &&
+						data.sharingSettings?.distributionEnabled
+					),
+					distributionMode:
+						data.sharingSettings?.distributionMode === "random" ||
+						data.sharingSettings?.distributionMode === "round_robin"
+							? data.sharingSettings.distributionMode
+							: null,
+					distributionUserIds: Array.isArray(
+						data.sharingSettings?.distributionUserIds
+					)
+						? data.sharingSettings.distributionUserIds
+							.map(userId => Number(userId))
+							.filter(
+								userId =>
+									Number.isInteger(userId) &&
+									userId > 0 &&
+									linkedUserIds.includes(userId)
+							)
+						: [],
+				};
 
 				setWhatsApp({
 					...INITIAL_STATE,
 					...data,
-					linkedUserId: linkedUser?.id || "",
+					linkedUserId: legacyLinkedUserId,
+					linkedUserIds,
+					sharingSettings:
+						data.providerType === "official"
+							? INITIAL_STATE.sharingSettings
+							: sharingSettings,
 					providerType: data.providerType || "web",
 					wabaId: data.wabaId || "",
 					phoneNumberId: data.phoneNumberId || "",
@@ -196,14 +236,81 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 		};
 	}, [canManageLinkedUserSignature, open]);
 
-	const handleSaveWhatsApp = async values => {
-		const whatsappData = {
-			...values,
-			providerType: values.providerType || "web",
-			queueIds: selectedQueueIds,
-			linkedUserId: values.linkedUserId ? Number(values.linkedUserId) : null,
-		};
+    const handleSaveWhatsApp = async values => {
+        const providerType = values.providerType || "web";
 
+        const normalizedLinkedUserIds = Array.from(
+            new Set(
+                (Array.isArray(values.linkedUserIds) ? values.linkedUserIds : [])
+                    .map(userId => Number(userId))
+                    .filter(userId => Number.isInteger(userId) && userId > 0)
+            )
+        );
+
+        const isShared =
+            providerType === "web" &&
+            Boolean(values.sharingSettings?.isShared);
+
+        const effectiveLinkedUserIds = isShared
+            ? normalizedLinkedUserIds
+            : normalizedLinkedUserIds.slice(0, 1);
+
+        const distributionEnabled =
+            isShared &&
+            Boolean(values.sharingSettings?.distributionEnabled);
+
+        const distributionMode =
+            distributionEnabled &&
+            (
+                values.sharingSettings?.distributionMode === "random" ||
+                values.sharingSettings?.distributionMode === "round_robin"
+            )
+                ? values.sharingSettings.distributionMode
+                : null;
+
+        const distributionUserIds = distributionEnabled
+            ? Array.from(
+                new Set(
+                    (
+                        Array.isArray(values.sharingSettings?.distributionUserIds)
+                            ? values.sharingSettings.distributionUserIds
+                            : []
+                    )
+                        .map(userId => Number(userId))
+                        .filter(
+                            userId =>
+                                Number.isInteger(userId) &&
+                                userId > 0 &&
+                                effectiveLinkedUserIds.includes(userId)
+                        )
+                )
+            )
+            : [];
+
+        const whatsappData = {
+            ...values,
+            providerType,
+            queueIds: selectedQueueIds,
+        };
+
+        if (providerType === "web") {
+            whatsappData.linkedUserIds = effectiveLinkedUserIds;
+            whatsappData.linkedUserId =
+                effectiveLinkedUserIds.length === 1
+                    ? effectiveLinkedUserIds[0]
+                    : null;
+
+            whatsappData.sharingSettings = {
+                isShared,
+                distributionEnabled,
+                distributionMode,
+                distributionUserIds,
+            };
+        } else {
+            delete whatsappData.linkedUserIds;
+            delete whatsappData.linkedUserId;
+            delete whatsappData.sharingSettings;
+        }
 		try {
 			if (whatsAppId) {
 				await api.put(`/whatsapp/${whatsAppId}`, whatsappData);
@@ -248,7 +355,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 						}, 400);
 					}}
 				>
-					{({ values, touched, errors, isSubmitting }) => (
+					{({ values, touched, errors, isSubmitting, setFieldValue }) => (
 						<Form>
 							<DialogContent dividers>
 								<div className={classes.multFieldLine}>
@@ -404,37 +511,366 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 									selectedQueueIds={selectedQueueIds}
 									onChange={selectedIds => setSelectedQueueIds(selectedIds)}
 								/>
-								{canManageLinkedUserSignature && (
-									<div className={classes.signatureSection}>
-										<FormControl
-											variant="outlined"
-											margin="dense"
-											fullWidth
-										>
-											<InputLabel>
-												{i18n.t("whatsappModal.form.linkedUser")}
-											</InputLabel>
-											<Field
-												as={Select}
-												name="linkedUserId"
-												value={values.linkedUserId}
-												label={i18n.t("whatsappModal.form.linkedUser")}
-											>
-												<MenuItem value="">&nbsp;</MenuItem>
-												{availableUsers.map(availableUser => (
-													<MenuItem key={availableUser.id} value={availableUser.id}>
-														{availableUser.name}
-													</MenuItem>
-												))}
-											</Field>
-											<FormHelperText>
-												{loadingUsers
-													? i18n.t("whatsappModal.form.loadingLinkedUsers")
-													: i18n.t("whatsappModal.form.linkedUserHelper")}
-											</FormHelperText>
-										</FormControl>
-									</div>
-								)}
+                                {canManageLinkedUserSignature && values.providerType !== "official" && (
+                                    <div className={classes.signatureSection}>
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    color="primary"
+                                                    checked={Boolean(values.sharingSettings?.isShared)}
+                                                    onChange={event => {
+                                                        const nextIsShared = event.target.checked;
+
+                                                        setFieldValue(
+                                                            "sharingSettings.isShared",
+                                                            nextIsShared
+                                                        );
+
+                                                        if (!nextIsShared) {
+                                                            const firstLinkedUser =
+                                                                Array.isArray(values.linkedUserIds) &&
+                                                                values.linkedUserIds.length > 0
+                                                                    ? [values.linkedUserIds[0]]
+                                                                    : [];
+
+                                                            setFieldValue(
+                                                                "linkedUserIds",
+                                                                firstLinkedUser
+                                                            );
+
+                                                            setFieldValue(
+                                                                "sharingSettings.distributionEnabled",
+                                                                false
+                                                            );
+
+                                                            setFieldValue(
+                                                                "sharingSettings.distributionMode",
+                                                                null
+                                                            );
+
+                                                            setFieldValue(
+                                                                "sharingSettings.distributionUserIds",
+                                                                []
+                                                            );
+                                                        }
+                                                    }}
+                                                />
+                                            }
+                                            label={i18n.t("whatsappModal.form.shareConnection")}
+                                        />
+
+                                        <FormHelperText className={classes.signatureHelper}>
+                                            {i18n.t("whatsappModal.form.shareConnectionHelper")}
+                                        </FormHelperText>
+
+                                        <FormControl
+                                            variant="outlined"
+                                            margin="dense"
+                                            fullWidth
+                                        >
+                                            <InputLabel>
+                                                {values.sharingSettings?.isShared
+                                                    ? i18n.t("whatsappModal.form.authorizedUsers")
+                                                    : i18n.t("whatsappModal.form.linkedUser")}
+                                            </InputLabel>
+
+                                            {values.sharingSettings?.isShared ? (
+                                                <Select
+                                                    multiple
+                                                    value={values.linkedUserIds || []}
+                                                    label={i18n.t("whatsappModal.form.authorizedUsers")}
+                                                    onChange={event => {
+                                                        const nextIds = Array.from(
+                                                            new Set(
+                                                                (event.target.value || [])
+                                                                    .map(userId => Number(userId))
+                                                                    .filter(
+                                                                        userId =>
+                                                                            Number.isInteger(userId) &&
+                                                                            userId > 0
+                                                                    )
+                                                            )
+                                                        );
+
+                                                        setFieldValue("linkedUserIds", nextIds);
+
+                                                        const currentDistributionUsers =
+                                                            values.sharingSettings
+                                                                ?.distributionUserIds || [];
+
+                                                        setFieldValue(
+                                                            "sharingSettings.distributionUserIds",
+                                                            currentDistributionUsers.filter(userId =>
+                                                                nextIds.includes(Number(userId))
+                                                            )
+                                                        );
+                                                    }}
+                                                    renderValue={selected =>
+                                                        (selected || [])
+                                                            .map(selectedId => {
+                                                                const selectedUser = availableUsers.find(
+                                                                    availableUser =>
+                                                                        Number(availableUser.id) ===
+                                                                        Number(selectedId)
+                                                                );
+
+                                                                return selectedUser?.name || selectedId;
+                                                            })
+                                                            .join(", ")
+                                                    }
+                                                >
+                                                    {availableUsers.map(availableUser => (
+                                                        <MenuItem
+                                                            key={availableUser.id}
+                                                            value={availableUser.id}
+                                                        >
+                                                            {availableUser.name}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            ) : (
+                                                <Select
+                                                    value={
+                                                        Array.isArray(values.linkedUserIds) &&
+                                                        values.linkedUserIds.length > 0
+                                                            ? values.linkedUserIds[0]
+                                                            : ""
+                                                    }
+                                                    label={i18n.t("whatsappModal.form.linkedUser")}
+                                                    onChange={event => {
+                                                        const selectedId = Number(event.target.value);
+
+                                                        setFieldValue(
+                                                            "linkedUserIds",
+                                                            Number.isInteger(selectedId) &&
+                                                            selectedId > 0
+                                                                ? [selectedId]
+                                                                : []
+                                                        );
+                                                    }}
+                                                >
+                                                    <MenuItem value="">
+                                                        <em>
+                                                            {i18n.t("whatsappModal.form.noLinkedUser")}
+                                                        </em>
+                                                    </MenuItem>
+
+                                                    {availableUsers.map(availableUser => (
+                                                        <MenuItem
+                                                            key={availableUser.id}
+                                                            value={availableUser.id}
+                                                        >
+                                                            {availableUser.name}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            )}
+
+                                            <FormHelperText>
+                                                {loadingUsers
+                                                    ? i18n.t("whatsappModal.form.loadingLinkedUsers")
+                                                    : values.sharingSettings?.isShared
+                                                        ? i18n.t(
+                                                            "whatsappModal.form.authorizedUsersHelper"
+                                                        )
+                                                        : i18n.t(
+                                                            "whatsappModal.form.linkedUserHelper"
+                                                        )}
+                                            </FormHelperText>
+                                        </FormControl>
+
+                                        {values.sharingSettings?.isShared && (
+                                            <>
+                                                <FormControlLabel
+                                                    control={
+                                                        <Switch
+                                                            color="primary"
+                                                            checked={Boolean(
+                                                                values.sharingSettings
+                                                                    ?.distributionEnabled
+                                                            )}
+                                                            onChange={event => {
+                                                                const enabled = event.target.checked;
+
+                                                                setFieldValue(
+                                                                    "sharingSettings.distributionEnabled",
+                                                                    enabled
+                                                                );
+
+                                                                if (enabled) {
+                                                                    setFieldValue(
+                                                                        "sharingSettings.distributionMode",
+                                                                        values.sharingSettings
+                                                                            ?.distributionMode || "random"
+                                                                    );
+                                                                } else {
+                                                                    setFieldValue(
+                                                                        "sharingSettings.distributionMode",
+                                                                        null
+                                                                    );
+
+                                                                    setFieldValue(
+                                                                        "sharingSettings.distributionUserIds",
+                                                                        []
+                                                                    );
+                                                                }
+                                                            }}
+                                                        />
+                                                    }
+                                                    label={i18n.t(
+                                                        "whatsappModal.form.distributionEnabled"
+                                                    )}
+                                                />
+
+                                                <FormHelperText className={classes.signatureHelper}>
+                                                    {i18n.t(
+                                                        "whatsappModal.form.distributionEnabledHelper"
+                                                    )}
+                                                </FormHelperText>
+
+                                                {values.sharingSettings?.distributionEnabled && (
+                                                    <>
+                                                        <FormControl
+                                                            variant="outlined"
+                                                            margin="dense"
+                                                            fullWidth
+                                                        >
+                                                            <InputLabel>
+                                                                {i18n.t(
+                                                                    "whatsappModal.form.distributionMode"
+                                                                )}
+                                                            </InputLabel>
+
+                                                            <Select
+                                                                value={
+                                                                    values.sharingSettings
+                                                                        ?.distributionMode || "random"
+                                                                }
+                                                                label={i18n.t(
+                                                                    "whatsappModal.form.distributionMode"
+                                                                )}
+                                                                onChange={event =>
+                                                                    setFieldValue(
+                                                                        "sharingSettings.distributionMode",
+                                                                        event.target.value
+                                                                    )
+                                                                }
+                                                            >
+                                                                <MenuItem value="random">
+                                                                    {i18n.t(
+                                                                        "whatsappModal.form.distributionModeRandom"
+                                                                    )}
+                                                                </MenuItem>
+
+                                                                <MenuItem value="round_robin">
+                                                                    {i18n.t(
+                                                                        "whatsappModal.form.distributionModeRoundRobin"
+                                                                    )}
+                                                                </MenuItem>
+                                                            </Select>
+                                                        </FormControl>
+
+                                                        <FormControl
+                                                            variant="outlined"
+                                                            margin="dense"
+                                                            fullWidth
+                                                        >
+                                                            <InputLabel>
+                                                                {i18n.t(
+                                                                    "whatsappModal.form.distributionUsers"
+                                                                )}
+                                                            </InputLabel>
+
+                                                            <Select
+                                                                multiple
+                                                                value={
+                                                                    values.sharingSettings
+                                                                        ?.distributionUserIds || []
+                                                                }
+                                                                label={i18n.t(
+                                                                    "whatsappModal.form.distributionUsers"
+                                                                )}
+                                                                onChange={event => {
+                                                                    const authorizedIds = (
+                                                                        values.linkedUserIds || []
+                                                                    ).map(userId => Number(userId));
+
+                                                                    const eligibleIds = Array.from(
+                                                                        new Set(
+                                                                            (event.target.value || [])
+                                                                                .map(userId =>
+                                                                                    Number(userId)
+                                                                                )
+                                                                                .filter(
+                                                                                    userId =>
+                                                                                        Number.isInteger(userId) &&
+                                                                                        userId > 0 &&
+                                                                                        authorizedIds.includes(
+                                                                                            userId
+                                                                                        )
+                                                                                )
+                                                                        )
+                                                                    );
+
+                                                                    setFieldValue(
+                                                                        "sharingSettings.distributionUserIds",
+                                                                        eligibleIds
+                                                                    );
+                                                                }}
+                                                                renderValue={selected =>
+                                                                    (selected || [])
+                                                                        .map(selectedId => {
+                                                                            const selectedUser =
+                                                                                availableUsers.find(
+                                                                                    availableUser =>
+                                                                                        Number(
+                                                                                            availableUser.id
+                                                                                        ) ===
+                                                                                        Number(selectedId)
+                                                                                );
+
+                                                                            return (
+                                                                                selectedUser?.name ||
+                                                                                selectedId
+                                                                            );
+                                                                        })
+                                                                        .join(", ")
+                                                                }
+                                                            >
+                                                                {availableUsers
+                                                                    .filter(availableUser =>
+                                                                        (values.linkedUserIds || [])
+                                                                            .map(userId =>
+                                                                                Number(userId)
+                                                                            )
+                                                                            .includes(
+                                                                                Number(
+                                                                                    availableUser.id
+                                                                                )
+                                                                            )
+                                                                    )
+                                                                    .map(availableUser => (
+                                                                        <MenuItem
+                                                                            key={availableUser.id}
+                                                                            value={availableUser.id}
+                                                                        >
+                                                                            {availableUser.name}
+                                                                        </MenuItem>
+                                                                    ))}
+                                                            </Select>
+
+                                                            <FormHelperText>
+                                                                {i18n.t(
+                                                                    "whatsappModal.form.distributionUsersHelper"
+                                                                )}
+                                                            </FormHelperText>
+                                                        </FormControl>
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                )}
 							</DialogContent>
 							<DialogActions>
 								<Button

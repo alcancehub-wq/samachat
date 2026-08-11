@@ -21,6 +21,7 @@ import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUp
 import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTicketService";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
+import AssignInboundTicketByDistributionService from "../services/WhatsappService/AssignInboundTicketByDistributionService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
 import HandleIncomingFlowMessageService from "../services/FlowExecutionServices/HandleIncomingFlowMessageService";
 
@@ -657,6 +658,20 @@ export const handleMessage = async (
         ticket,
         contactPayload
       );
+
+      await ticket.reload();
+
+      if (ticket.queueId && !ticket.userId) {
+        const distributionResult =
+          await AssignInboundTicketByDistributionService({
+            ticketId: ticket.id,
+            whatsappId: contextPayload.whatsappId
+          });
+
+        if (distributionResult) {
+          await ticket.reload();
+        }
+      }
     }
   } catch (err) {
     Sentry.captureException(err);
