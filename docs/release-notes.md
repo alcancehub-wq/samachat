@@ -425,4 +425,6 @@
 - Escopo funcional desta correcao: `backend/src/services/WbotServices/SendWhatsAppMedia.ts` e `backend/src/__tests__/unit/WbotServices/SendWhatsAppMedia.spec.ts`.
 - Commit funcional local: `793a1fca897061b87af8dcf1686ef163b88e8e96` (`fix: reconcile recorded audio echo with persisted message`).
 - Validacao local: `SendWhatsAppMedia.spec.ts` aprovado com 6/6 testes; suites de outbound echo guard/integration aprovadas com 20/20 testes; `handleWhatsappEvents.spec.ts` aprovado com 20/20 testes; `npm run build` aprovado no backend; todos os comandos finalizaram com exit code 0.
-- Status de promocao: ainda sem push e sem deploy. A validacao funcional em producao do P04 permanece pendente e devera ser realizada de forma controlada apos a promocao.
+- Validacao em producao: PASS em 2026-08-11. Em teste controlado apos o deploy, um unico audio gravado gerou um unico player/balao no SamaChat e o destinatario recebeu exatamente uma mensagem de voz; o balao comprimido adicional que caracterizava o defeito nao foi reproduzido.
+- Fechamento P04: pacote aprovado em producao e selado. P02 e P03 permanecem fechados e sem reabertura; nenhuma alteracao funcional adicional foi aplicada nesses pacotes.
+- Observacao residual de performance: no teste final foi percebida espera aproximada de 10 segundos entre concluir a gravacao/clicar em enviar e o audio efetivamente ser carregado/enviado. A entrega foi correta e sem duplicidade; a latencia fica registrada como tema separado de performance, sem reabrir o P04.
