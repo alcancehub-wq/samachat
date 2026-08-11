@@ -324,8 +324,47 @@ const SendWhatsAppMedia = async ({
 }: Request): Promise<ProviderMessage> => {
   try {
     const requestStartedAt = new Date();
+    const perfAuditAudio = shouldAuditAudioContract(media);
+
+    if (perfAuditAudio) {
+      logger.info(
+        {
+          ticketId: ticket.id,
+          whatsappId: ticket.whatsappId,
+          originalName: media.originalname,
+          mimetype: media.mimetype,
+          elapsedMs: 0
+        },
+        "Audio performance audit: request start"
+      );
+    }
+
     const whatsapp = await ensureWhatsappSession(ticket);
+
+    if (perfAuditAudio) {
+      logger.info(
+        {
+          ticketId: ticket.id,
+          whatsappId: whatsapp.id,
+          elapsedMs: Date.now() - requestStartedAt.getTime()
+        },
+        "Audio performance audit: session resolved"
+      );
+    }
+
     await ensureWhatsappReady(ticket, whatsapp);
+
+    if (perfAuditAudio) {
+      logger.info(
+        {
+          ticketId: ticket.id,
+          whatsappId: whatsapp.id,
+          elapsedMs: Date.now() - requestStartedAt.getTime()
+        },
+        "Audio performance audit: session ready"
+      );
+    }
+
     const shouldAuditAudio = shouldAuditAudioContract(media);
     const providerName = getConfiguredProviderName();
     const composerRecordedAudio = isComposerRecordedAudioUpload(media);

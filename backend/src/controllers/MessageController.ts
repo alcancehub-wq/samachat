@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getScopedNotificationRoom, getScopedTicketsRoom } from "../helpers/socketRooms";
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
+import { logger } from "../utils/logger";
 import Message from "../models/Message";
 
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
@@ -76,11 +77,36 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
   const { body, quotedMsg, isInternal }: MessageData = req.body;
   const medias = req.files as Express.Multer.File[];
+  const recordedAudioPerfStartedAt = Date.now();
+  const hasComposerRecordedAudio =
+    medias?.some(media => isComposerRecordedAudioUpload(media)) ?? false;
+
+  if (hasComposerRecordedAudio) {
+    logger.info(
+      {
+        ticketId,
+        mediaCount: medias.length,
+        elapsedMs: 0
+      },
+      "Audio performance audit: controller start"
+    );
+  }
 
   const ticket = await ShowTicketService(ticketId, {
     userId: req.user.id,
     profile: req.user.profile
   });
+
+  if (hasComposerRecordedAudio) {
+    logger.info(
+      {
+        ticketId: ticket.id,
+        whatsappId: ticket.whatsappId,
+        elapsedMs: Date.now() - recordedAudioPerfStartedAt
+      },
+      "Audio performance audit: ticket resolved"
+    );
+  }
 
   if (isInternal) {
     const senderUser = await ShowUserService(req.user.id);
@@ -119,6 +145,18 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
           preserveUploadedFile: shouldPersistRecordedAudioLocally
         });
 
+        if (shouldPersistRecordedAudioLocally) {
+          logger.info(
+            {
+              ticketId: ticket.id,
+              whatsappId: ticket.whatsappId,
+              mediaIndex,
+              elapsedMs: Date.now() - recordedAudioPerfStartedAt
+            },
+            "Audio performance audit: media send completed"
+          );
+        }
+
         if (!shouldPersistRecordedAudioLocally) {
           return;
         }
@@ -137,6 +175,16 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
             ack: providerMessage.ack ?? 1
           }
         });
+
+        logger.info(
+          {
+            ticketId: ticket.id,
+            whatsappId: ticket.whatsappId,
+            mediaIndex,
+            elapsedMs: Date.now() - recordedAudioPerfStartedAt
+          },
+          "Audio performance audit: local message persisted"
+        );
       })
     );
   } else {
@@ -159,6 +207,17 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   }
 
   await emitTicketUpdate(ticket);
+
+  if (hasComposerRecordedAudio) {
+    logger.info(
+      {
+        ticketId: ticket.id,
+        whatsappId: ticket.whatsappId,
+        elapsedMs: Date.now() - recordedAudioPerfStartedAt
+      },
+      "Audio performance audit: controller completed"
+    );
+  }
 
   return res.send();
 };
