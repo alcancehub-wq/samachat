@@ -69,6 +69,98 @@ describe("wwebjs outbound echo guard", () => {
     ).resolves.toBe(false);
   });
 
+  it("correlates one text fallback reservation with the later real provider id", async () => {
+    const correlation = {
+      kind: "text" as const,
+      to: "5511999999999@c.us",
+      body: "mensagem de controle"
+    };
+
+    const reservation = reserveOutboundEcho(35, correlation);
+
+    reservation.complete(
+      "fallback_1786383780_unknown_5511999999999@c.us_control"
+    );
+
+    await expect(
+      shouldSuppressOutboundEcho(
+        35,
+        "3EB0REALPROVIDERID",
+        1000,
+        correlation
+      )
+    ).resolves.toBe(true);
+
+    await expect(
+      shouldSuppressOutboundEcho(35, "3EB0REALPROVIDERID")
+    ).resolves.toBe(true);
+  });
+
+  it("does not correlate a text fallback when destination or body differs", async () => {
+    const reservation = reserveOutboundEcho(35, {
+      kind: "text",
+      to: "5511999999999@c.us",
+      body: "mensagem original"
+    });
+
+    reservation.complete(
+      "fallback_1786383780_unknown_5511999999999@c.us_control"
+    );
+
+    await expect(
+      shouldSuppressOutboundEcho(
+        35,
+        "3EB0DIFFERENTBODY",
+        1000,
+        {
+          kind: "text",
+          to: "5511999999999@c.us",
+          body: "outra mensagem"
+        }
+      )
+    ).resolves.toBe(false);
+
+    await expect(
+      shouldSuppressOutboundEcho(
+        35,
+        "3EB0DIFFERENTDESTINATION",
+        1000,
+        {
+          kind: "text",
+          to: "5511888888888@c.us",
+          body: "mensagem original"
+        }
+      )
+    ).resolves.toBe(false);
+  });
+
+  it("does not guess between concurrent identical text fallback reservations", async () => {
+    const correlation = {
+      kind: "text" as const,
+      to: "5511999999999@c.us",
+      body: "ok"
+    };
+
+    const first = reserveOutboundEcho(35, correlation);
+    const second = reserveOutboundEcho(35, correlation);
+
+    first.complete(
+      "fallback_1786383780_unknown_5511999999999@c.us_first1"
+    );
+    second.complete(
+      "fallback_1786383781_unknown_5511999999999@c.us_second"
+    );
+
+    await expect(
+      shouldSuppressOutboundEcho(
+        35,
+        "3EB0AMBIGUOUS",
+        1000,
+        correlation
+      )
+    ).resolves.toBe(false);
+  });
+
   it("keeps concurrent sends isolated by provider id", async () => {
     const first = reserveOutboundEcho(35);
     const second = reserveOutboundEcho(35);

@@ -63,7 +63,7 @@ describe("wwebjs outbound echo integration", () => {
     );
 
     const reservePosition = sendText.indexOf(
-      "const outboundReservation = reserveOutboundEcho(sessionId);"
+      "const outboundReservation = reserveOutboundEcho(sessionId, {"
     );
 
     const physicalSendPosition = sendText.indexOf(
@@ -84,13 +84,36 @@ describe("wwebjs outbound echo integration", () => {
       "outboundReservation.complete(providerMessage.id);"
     );
 
-    expect(sendText).toContain(
+    expect(sendText).not.toContain(
       "if (!sentMessage) {\n      outboundReservation.cancel();"
     );
 
     expect(sendText).toContain(
       "} catch (err) {\n    outboundReservation.cancel();"
     );
+  });
+
+  it("keeps empty text send payload reserved with its fallback id", () => {
+    const sendText = extractBetween(
+      "const sendMessage = async (",
+      "const sendMedia = async ("
+    );
+
+    const emptyPayloadPosition = sendText.indexOf("if (!sentMessage) {");
+
+    const fallbackPosition = sendText.indexOf(
+      "const providerMessage = convertToProviderMessage({",
+      emptyPayloadPosition
+    );
+
+    const completePosition = sendText.indexOf(
+      "outboundReservation.complete(providerMessage.id);",
+      fallbackPosition
+    );
+
+    expect(emptyPayloadPosition).toBeGreaterThanOrEqual(0);
+    expect(fallbackPosition).toBeGreaterThan(emptyPayloadPosition);
+    expect(completePosition).toBeGreaterThan(fallbackPosition);
   });
 
   it("reserves and settles media echo around the provider send", () => {
@@ -124,8 +147,12 @@ describe("wwebjs outbound echo integration", () => {
     const listener = extractListener("message_create");
 
     const suppressionPosition = listener.indexOf(
-      "await shouldSuppressOutboundEcho(sessionId, eventMessageId)"
+      "await shouldSuppressOutboundEcho("
     );
+
+    expect(listener).toContain("sessionId,");
+    expect(listener).toContain("eventMessageId,");
+    expect(listener).toContain('kind: "text"');
 
     const payloadPosition = listener.indexOf(
       "await getMessageData(msg, wbot)"

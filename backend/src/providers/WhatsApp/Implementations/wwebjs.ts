@@ -1077,7 +1077,11 @@ const sendMessage = async (
       )
     : "";
 
-  const outboundReservation = reserveOutboundEcho(sessionId);
+  const outboundReservation = reserveOutboundEcho(sessionId, {
+    kind: "text",
+    to,
+    body
+  });
 
   try {
     const sentMessage = await wbot.sendMessage(to, body, {
@@ -1086,7 +1090,6 @@ const sendMessage = async (
     });
 
     if (!sentMessage) {
-      outboundReservation.cancel();
       logger.warn(
         {
           sessionId,
@@ -1095,7 +1098,7 @@ const sendMessage = async (
         "wwebjs sendMessage returned empty payload; using fallback provider message"
       );
 
-      return convertToProviderMessage({
+      const providerMessage = convertToProviderMessage({
         body,
         fromMe: true,
         hasMedia: false,
@@ -1105,6 +1108,9 @@ const sendMessage = async (
         from: "",
         to
       } as WbotMessage);
+
+      outboundReservation.complete(providerMessage.id);
+      return providerMessage;
     }
 
     const providerMessage = convertToProviderMessage(sentMessage);
@@ -1560,7 +1566,18 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
 
         if (
           msg.fromMe &&
-          (await shouldSuppressOutboundEcho(sessionId, eventMessageId))
+          (await shouldSuppressOutboundEcho(
+            sessionId,
+            eventMessageId,
+            undefined,
+            msg.type === "chat" && !msg.hasMedia
+              ? {
+                  kind: "text",
+                  to: typeof msg.to === "string" ? msg.to : "",
+                  body: typeof msg.body === "string" ? msg.body : ""
+                }
+              : undefined
+          ))
         ) {
           logger.debug(
             {

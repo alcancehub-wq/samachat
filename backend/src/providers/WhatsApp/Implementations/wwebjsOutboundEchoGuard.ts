@@ -1,4 +1,10 @@
-﻿type ReservationState = "pending" | "completed" | "cancelled";
+interface OutboundEchoCorrelation {
+  kind: "text";
+  to: string;
+  body: string;
+}
+
+type ReservationState = "pending" | "completed" | "cancelled";
 
 interface OutboundEchoReservation {
   token: string;
@@ -8,6 +14,7 @@ interface OutboundEchoReservation {
   createdAt: number;
   completedAt?: number;
   settle: Promise<void>;
+  correlation?: OutboundEchoCorrelation;
   resolveSettle: () => void;
 }
 
@@ -40,6 +47,18 @@ const normalizeProviderMessageId = (value?: string): string => {
   const serializedMatch = trimmed.match(/^(?:true|false)_[^_]+_(.+)$/);
   return serializedMatch?.[1] || trimmed;
 };
+
+const isFallbackProviderMessageId = (value?: string): boolean =>
+  normalizeProviderMessageId(value).startsWith("fallback_");
+
+const correlationsMatch = (
+  first?: OutboundEchoCorrelation,
+  second?: OutboundEchoCorrelation
+): boolean =>
+  first?.kind === "text" &&
+  second?.kind === "text" &&
+  first.to === second.to &&
+  first.body === second.body;
 
 const getSessionReservations = (
   sessionId: number
@@ -81,7 +100,8 @@ const cleanupSessionReservations = (
 };
 
 export const reserveOutboundEcho = (
-  sessionId: number
+  sessionId: number,
+  correlation?: OutboundEchoCorrelation
 ): OutboundEchoReservationHandle => {
   cleanupSessionReservations(sessionId);
 
@@ -100,6 +120,7 @@ export const reserveOutboundEcho = (
     messageId: "",
     createdAt: Date.now(),
     settle,
+    correlation,
     resolveSettle
   };
 
@@ -172,7 +193,8 @@ const waitForPendingReservations = async (
 export const shouldSuppressOutboundEcho = async (
   sessionId: number,
   eventMessageId: string,
-  waitMs = DEFAULT_WAIT_MS
+  waitMs = DEFAULT_WAIT_MS,
+  correlation?: OutboundEchoCorrelation
 ): Promise<boolean> => {
   const normalizedEventId = normalizeProviderMessageId(eventMessageId);
 
@@ -201,6 +223,24 @@ export const shouldSuppressOutboundEcho = async (
       // provider message id, such as message_create and media_uploaded.
       // Preserve the completed reservation until TTL cleanup so every
       // echo for that same physical message is suppressed.
+      return true;
+    }
+  }
+
+  if (correlation?.kind === "text") {
+    const fallbackMatches = snapshot.filter(
+      reservation =>
+        reservation.state === "completed" &&
+        isFallbackProviderMessageId(reservation.messageId) &&
+        correlationsMatch(reservation.correlation, correlation)
+    );
+
+    if (fallbackMatches.length === 1) {
+      const [reservation] = fallbackMatches;
+
+      reservation.messageId = normalizedEventId;
+      reservation.completedAt = Date.now();
+
       return true;
     }
   }
