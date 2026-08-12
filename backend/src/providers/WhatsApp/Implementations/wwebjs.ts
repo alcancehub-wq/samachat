@@ -742,9 +742,54 @@ const convertToMessagePayload = async (
 };
 
 const convertToMediaPayload = async (
-  msg: WbotMessage
+  msg: WbotMessage,
+  eventName = "unknown"
 ): Promise<MediaPayload | undefined> => {
-  if (!msg.hasMedia) return undefined;
+  const messageId =
+    (msg as any)?.id?._serialized ||
+    (msg as any)?.id?.id ||
+    resolveEventMessageId(msg as any);
+
+  const observableMediaTypes = new Set([
+    "audio",
+    "ptt",
+    "video",
+    "image",
+    "document",
+    "sticker"
+  ]);
+  const observeInboundMedia =
+    !msg.fromMe && observableMediaTypes.has(msg.type);
+
+  if (!msg.hasMedia) {
+    if (observeInboundMedia) {
+      logger.warn(
+        {
+          eventName,
+          messageId,
+          messageType: msg.type,
+          fromMe: msg.fromMe,
+          hasMedia: false
+        },
+        "WhatsApp inbound media message arrived without available media payload"
+      );
+    }
+
+    return undefined;
+  }
+
+  if (observeInboundMedia) {
+    logger.info(
+      {
+        eventName,
+        messageId,
+        messageType: msg.type,
+        fromMe: msg.fromMe,
+        hasMedia: true
+      },
+      "Attempting WhatsApp inbound media payload download"
+    );
+  }
 
   let media;
   try {
@@ -753,15 +798,52 @@ const convertToMediaPayload = async (
     logger.warn(
       {
         err,
-        messageId: (msg as any)?.id?._serialized || (msg as any)?.id?.id,
-        messageType: msg.type
+        eventName,
+        messageId,
+        messageType: msg.type,
+        fromMe: msg.fromMe,
+        hasMedia: true
       },
       "Unable to download WhatsApp media payload"
     );
     return undefined;
   }
 
-  if (!media) return undefined;
+  if (!media) {
+    if (observeInboundMedia) {
+      logger.warn(
+        {
+          eventName,
+          messageId,
+          messageType: msg.type,
+          fromMe: msg.fromMe,
+          hasMedia: true
+        },
+        "WhatsApp inbound media download returned empty payload"
+      );
+    }
+
+    return undefined;
+  }
+
+  if (observeInboundMedia) {
+    logger.info(
+      {
+        eventName,
+        messageId,
+        messageType: msg.type,
+        fromMe: msg.fromMe,
+        hasMedia: true,
+        mimetype: media.mimetype,
+        filenamePresent: Boolean(media.filename),
+        dataLength:
+          typeof media.data === "string"
+            ? media.data.length
+            : 0
+      },
+      "WhatsApp inbound media payload download succeeded"
+    );
+  }
 
   return {
     filename: media.filename || "",
@@ -825,7 +907,8 @@ const shouldHandleMessage = (msg: WbotMessage): boolean => {
 
 const getMessageData = async (
   msg: WbotMessage,
-  wbot: Session
+  wbot: Session,
+  eventName = "unknown"
 ): Promise<{
   messagePayload: MessagePayload;
   contactPayload: ContactPayload;
@@ -937,7 +1020,7 @@ const getMessageData = async (
   const unreadMessages = msg.fromMe ? 0 : Math.max(Number(chat.unreadCount) || 0, 1);
 
   const messagePayload = await convertToMessagePayload(msg);
-  const mediaPayload = await convertToMediaPayload(msg);
+  const mediaPayload = await convertToMediaPayload(msg, eventName);
 
   const contextPayload: WhatsappContextPayload = {
     whatsappId: wbot.id!,
@@ -980,7 +1063,7 @@ const syncUnreadMessages = async (wbot: Session) => {
               contactPayload,
               contextPayload,
               mediaPayload
-            } = await getMessageData(msg, wbot);
+            } = await getMessageData(msg, wbot, "sync_unread");
 
             handleMessage(
               messagePayload,
@@ -1538,7 +1621,7 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
 
       try {
         const { messagePayload, contactPayload, contextPayload, mediaPayload } =
-          await getMessageData(msg, wbot);
+          await getMessageData(msg, wbot, "message");
 
         await handleMessage(
           messagePayload,
@@ -1594,7 +1677,7 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
         }
 
         const { messagePayload, contactPayload, contextPayload, mediaPayload } =
-          await getMessageData(msg, wbot);
+          await getMessageData(msg, wbot, "message_create");
 
         await handleMessage(
           messagePayload,
@@ -1639,7 +1722,7 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
         }
 
         const { messagePayload, contactPayload, contextPayload, mediaPayload } =
-          await getMessageData(msg, wbot);
+          await getMessageData(msg, wbot, "media_uploaded");
 
         await handleMessage(
           messagePayload,
