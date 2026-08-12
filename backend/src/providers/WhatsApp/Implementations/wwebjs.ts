@@ -777,22 +777,22 @@ const downloadInboundMediaWithSerializedCompat = async (
     return undefined;
   }
 
-  const result = await pupPage.evaluate(async (msgId: string) => {
-    const resolved = await (window as any).WWebJS.resolveMediaBlob(msgId);
+  const result = await pupPage.evaluate((msgId: string) => {
+    const wwebjs = (window as any).WWebJS;
 
-    if (!resolved) {
-      return null;
-    }
+    return wwebjs.resolveMediaBlob(msgId).then((resolved: any) => {
+      if (!resolved) {
+        return null;
+      }
 
-    const data = await (window as any).WWebJS.arrayBufferToBase64Async(
-      await resolved.blob.arrayBuffer()
-    );
-
-    return {
-      data,
-      mimetype: resolved.mimetype,
-      filename: resolved.filename || ""
-    };
+      return resolved.blob.arrayBuffer().then((buffer: ArrayBuffer) =>
+        wwebjs.arrayBufferToBase64Async(buffer).then((data: string) => ({
+          data,
+          mimetype: resolved.mimetype,
+          filename: resolved.filename || ""
+        }))
+      );
+    });
   }, serializedMessageId);
 
   if (!result) {
