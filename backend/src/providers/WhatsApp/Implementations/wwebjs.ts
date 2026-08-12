@@ -741,6 +741,66 @@ const convertToMessagePayload = async (
   };
 };
 
+const resolveWwebjsSerializedMessageId = (msg: WbotMessage): string => {
+  const message = msg as any;
+
+  return (
+    message?.id?._serialized ||
+    message?.id?.$1 ||
+    message?._data?.id?._serialized ||
+    message?._data?.id?.$1 ||
+    ""
+  );
+};
+
+const downloadInboundMediaWithSerializedCompat = async (
+  msg: WbotMessage
+): Promise<
+  | {
+      filename?: string;
+      mimetype: string;
+      data: string;
+    }
+  | undefined
+> => {
+  const message = msg as any;
+  const serializedMessageId = resolveWwebjsSerializedMessageId(msg);
+
+  if (!serializedMessageId) {
+    return undefined;
+  }
+
+  const client = message?.client;
+  const pupPage = client?.pupPage;
+
+  if (!pupPage) {
+    return undefined;
+  }
+
+  const result = await pupPage.evaluate(async (msgId: string) => {
+    const resolved = await (window as any).WWebJS.resolveMediaBlob(msgId);
+
+    if (!resolved) {
+      return null;
+    }
+
+    const data = await (window as any).WWebJS.arrayBufferToBase64Async(
+      await resolved.blob.arrayBuffer()
+    );
+
+    return {
+      data,
+      mimetype: resolved.mimetype,
+      filename: resolved.filename || ""
+    };
+  }, serializedMessageId);
+
+  if (!result) {
+    return undefined;
+  }
+
+  return result;
+};
 const convertToMediaPayload = async (
   msg: WbotMessage,
   eventName = "unknown",
@@ -806,11 +866,49 @@ const convertToMediaPayload = async (
         messageId,
         messageType: msg.type,
         fromMe: msg.fromMe,
-        hasMedia: true
+        hasMedia: true,
+        serializedMessageId: resolveWwebjsSerializedMessageId(msg)
       },
-      "Unable to download WhatsApp media payload"
+      "Unable to download WhatsApp media payload; trying serialized-id compatibility fallback"
     );
-    return undefined;
+
+    if (!msg.fromMe && observeInboundMedia) {
+      try {
+        media = await downloadInboundMediaWithSerializedCompat(msg);
+
+        if (media) {
+          logger.info(
+            {
+              eventName,
+              sessionId,
+              messageId,
+              messageType: msg.type,
+              serializedMessageId: resolveWwebjsSerializedMessageId(msg),
+              mimetype: media.mimetype,
+              dataLength:
+                typeof media.data === "string" ? media.data.length : 0
+            },
+            "WhatsApp inbound media compatibility fallback succeeded"
+          );
+        }
+      } catch (compatErr) {
+        logger.warn(
+          {
+            err: compatErr,
+            eventName,
+            sessionId,
+            messageId,
+            messageType: msg.type,
+            serializedMessageId: resolveWwebjsSerializedMessageId(msg)
+          },
+          "WhatsApp inbound media compatibility fallback failed"
+        );
+      }
+    }
+
+    if (!media) {
+      return undefined;
+    }
   }
 
   if (!media) {
@@ -1027,6 +1125,44 @@ const getMessageData = async (
 
   const messagePayload = await convertToMessagePayload(msg);
   const mediaPayload = await convertToMediaPayload(msg, eventName, wbot.id);
+
+  const inboundMediaTypes = new Set([
+    "audio",
+    "ptt",
+    "video",
+    "image",
+    "document",
+    "sticker"
+  ]);
+
+  if (
+    !msg.fromMe &&
+    msg.hasMedia &&
+    inboundMediaTypes.has(msg.type) &&
+    !mediaPayload
+  ) {
+    const mediaError = new Error(
+      `Inbound WhatsApp media payload unavailable for ${resolveWwebjsSerializedMessageId(
+        msg
+      ) || resolveEventMessageId(msg as any)}`
+    );
+
+    logger.warn(
+      {
+        eventName,
+        sessionId: wbot.id,
+        messageId:
+          resolveWwebjsSerializedMessageId(msg) ||
+          resolveEventMessageId(msg as any),
+        messageType: msg.type,
+        fromMe: false,
+        hasMedia: true
+      },
+      "Blocking persistence of inbound media message without downloaded payload"
+    );
+
+    throw mediaError;
+  }
 
   const contextPayload: WhatsappContextPayload = {
     whatsappId: wbot.id!,
