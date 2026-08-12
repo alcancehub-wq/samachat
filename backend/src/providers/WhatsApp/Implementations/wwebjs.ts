@@ -743,7 +743,8 @@ const convertToMessagePayload = async (
 
 const convertToMediaPayload = async (
   msg: WbotMessage,
-  eventName = "unknown"
+  eventName = "unknown",
+  sessionId?: number
 ): Promise<MediaPayload | undefined> => {
   const messageId =
     (msg as any)?.id?._serialized ||
@@ -766,6 +767,7 @@ const convertToMediaPayload = async (
       logger.warn(
         {
           eventName,
+          sessionId,
           messageId,
           messageType: msg.type,
           fromMe: msg.fromMe,
@@ -782,6 +784,7 @@ const convertToMediaPayload = async (
     logger.info(
       {
         eventName,
+        sessionId,
         messageId,
         messageType: msg.type,
         fromMe: msg.fromMe,
@@ -799,6 +802,7 @@ const convertToMediaPayload = async (
       {
         err,
         eventName,
+        sessionId,
         messageId,
         messageType: msg.type,
         fromMe: msg.fromMe,
@@ -814,6 +818,7 @@ const convertToMediaPayload = async (
       logger.warn(
         {
           eventName,
+          sessionId,
           messageId,
           messageType: msg.type,
           fromMe: msg.fromMe,
@@ -830,6 +835,7 @@ const convertToMediaPayload = async (
     logger.info(
       {
         eventName,
+        sessionId,
         messageId,
         messageType: msg.type,
         fromMe: msg.fromMe,
@@ -1020,7 +1026,7 @@ const getMessageData = async (
   const unreadMessages = msg.fromMe ? 0 : Math.max(Number(chat.unreadCount) || 0, 1);
 
   const messagePayload = await convertToMessagePayload(msg);
-  const mediaPayload = await convertToMediaPayload(msg, eventName);
+  const mediaPayload = await convertToMediaPayload(msg, eventName, wbot.id);
 
   const contextPayload: WhatsappContextPayload = {
     whatsappId: wbot.id!,
