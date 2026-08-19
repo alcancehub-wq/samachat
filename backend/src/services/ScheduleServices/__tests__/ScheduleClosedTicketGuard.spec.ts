@@ -512,23 +512,20 @@ describe("Schedule closed ticket guards", () => {
     }
   );
 
-  it("uses the schedule creator as message context even after ticket transfer", async () => {
-    const scheduleCreator = {
-      id: 101,
-      name: "Bruna",
-      email: "bruna@example.com",
-      whatsappId: 909,
-      whatsapp: { id: 909 }
+  it("uses the current ticket context after ticket transfer", async () => {
+    const currentTicketUser = {
+      id: 202,
+      name: "Ana Carvalho",
+      email: "ana@example.com"
     };
+
     const transferredTicket = {
       id: 70,
       status: "open",
       userId: 202,
-      user: { id: 202, name: "Ana Carvalho", email: "ana@example.com" },
-      setDataValue: jest.fn((key: string, value: unknown) => {
-        transferredTicket[key as keyof typeof transferredTicket] =
-          value as never;
-      })
+      whatsappId: 404,
+      user: currentTicketUser,
+      setDataValue: jest.fn()
     };
 
     scheduleFindByPkMock.mockResolvedValue({
@@ -537,36 +534,28 @@ describe("Schedule closed ticket guards", () => {
       ticketId: 70,
       createdById: 101,
       senderWhatsappId: 303,
-      body: "scheduled body with creator context",
+      body: "scheduled body after transfer",
       scheduledAt: new Date("2026-05-23T08:59:00.000-03:00")
     });
 
     showTicketServiceMock.mockResolvedValue(transferredTicket);
-    userFindByPkMock.mockResolvedValue(scheduleCreator);
 
     await executeSchedule(70);
 
-    expect(userFindByPkMock).toHaveBeenCalledWith(101, {
-      attributes: ["id", "name", "email", "whatsappId"],
-      include: ["whatsapp"]
-    });
+    expect(userFindByPkMock).not.toHaveBeenCalled();
 
-    expect(transferredTicket.setDataValue).toHaveBeenCalledWith(
-      "user",
-      scheduleCreator
-    );
-
-    expect(transferredTicket.setDataValue).toHaveBeenCalledWith(
+    expect(transferredTicket.setDataValue).not.toHaveBeenCalledWith(
       "whatsappId",
       303
     );
 
     expect(sendWhatsAppMessageMock).toHaveBeenCalledWith({
-      body: "scheduled body with creator context",
+      body: "scheduled body after transfer",
       ticket: expect.objectContaining({
         id: 70,
         userId: 202,
-        user: scheduleCreator
+        whatsappId: 404,
+        user: currentTicketUser
       })
     });
 
@@ -579,7 +568,6 @@ describe("Schedule closed ticket guards", () => {
       { where: { id: 70 } }
     );
   });
-
   it("returns the schedule to pending when WhatsApp is not initialized yet", async () => {
     scheduleFindByPkMock.mockResolvedValue({
       id: 35,
