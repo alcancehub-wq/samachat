@@ -20,6 +20,7 @@ import MenuIcon from "@material-ui/icons/Menu";
 import AccountCircle from "@material-ui/icons/AccountCircle";
 import Brightness4Icon from "@material-ui/icons/Brightness4";
 import SpellcheckIcon from "@material-ui/icons/Spellcheck";
+import SyncIcon from "@material-ui/icons/Sync";
 import InfoOutlinedIcon from "@material-ui/icons/InfoOutlined";
 import DescriptionOutlinedIcon from "@material-ui/icons/DescriptionOutlined";
 import PersonOutlineOutlinedIcon from "@material-ui/icons/PersonOutlineOutlined";
@@ -31,8 +32,12 @@ import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
 import UserModal from "../components/UserModal";
 import { AuthContext } from "../context/Auth/AuthContext";
+import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
 import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
+import api from "../services/api";
+import toastError from "../errors/toastError";
+import { toast } from "react-toastify";
 import { useThemeContext } from "../context/DarkMode";
 import { userHasPermission } from "../utils/permissions";
 
@@ -338,12 +343,38 @@ const LoggedInLayout = ({ children }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [drawerUserAnchorEl, setDrawerUserAnchorEl] = useState(null);
   const { handleLogout, loading, user } = useContext(AuthContext);
+  const { whatsApps } = useContext(WhatsAppsContext);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   const { darkMode, toggleTheme } = useThemeContext();
   const [autoCorrectTextEnabled, setAutoCorrectTextEnabled] = useState(false);
   const [menuSearch, setMenuSearch] = useState("");
+  const [reconciliationLoading, setReconciliationLoading] = useState(false);
+  const [reconciliationState, setReconciliationState] = useState(null);
   const canViewTickets = userHasPermission(user, "tickets.view");
+  const canViewConnections = userHasPermission(user, "connections.view");
+
+  const linkedWhatsappId = Number(
+    user?.whatsappId ||
+    user?.whatsapp?.id ||
+    0
+  );
+
+  const reconciliationWhatsApp =
+    Array.isArray(whatsApps)
+      ? whatsApps.find(
+          whatsApp =>
+            Number(whatsApp?.id) === linkedWhatsappId
+        )
+      : null;
+
+  const canUseManualReconciliation = Boolean(
+    user?.id &&
+    canViewConnections &&
+    reconciliationWhatsApp &&
+    reconciliationWhatsApp.providerType !== "official" &&
+    reconciliationWhatsApp.status === "CONNECTED"
+  );
   const isFocusRoute =
     location.pathname.startsWith("/tickets") ||
     location.pathname.startsWith("/flowbuilder");
@@ -458,6 +489,114 @@ const LoggedInLayout = ({ children }) => {
       : "samachat:autoCorrectTextEnabled";
 
   useEffect(() => {
+    let active = true;
+
+    const fetchState = async () => {
+      if (!canUseManualReconciliation) {
+        if (active) {
+          setReconciliationState(null);
+        }
+        return;
+      }
+
+      try {
+        const { data } = await api.get(
+          `/whatsapp/${reconciliationWhatsApp.id}/reconcile-state`
+        );
+
+        if (active) {
+          setReconciliationState(data || null);
+        }
+      } catch (err) {
+        if (active) {
+          setReconciliationState(null);
+        }
+      }
+    };
+
+    fetchState();
+
+    const timer = setInterval(fetchState, 15000);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [
+    canUseManualReconciliation,
+    reconciliationWhatsApp?.id
+  ]);
+
+  const manualRetryAfterMs = Number(
+    reconciliationState?.manualRetryAfterMs || 0
+  );
+
+  const reconciliationRunning = Boolean(
+    reconciliationState?.running
+  );
+
+  const reconciliationBlocked =
+    reconciliationLoading ||
+    reconciliationRunning ||
+    manualRetryAfterMs > 0;
+
+  const reconciliationTitle =
+    reconciliationLoading || reconciliationRunning
+      ? "Ressincronização do WhatsApp em andamento"
+      : manualRetryAfterMs > 0
+      ? `Ressincronizar WhatsApp disponível em ${Math.max(
+          1,
+          Math.ceil(manualRetryAfterMs / 60000)
+        )} min`
+      : "Ressincronizar WhatsApp";
+
+  const handleManualWhatsAppReconciliation = async () => {
+    if (
+      !canUseManualReconciliation ||
+      reconciliationBlocked
+    ) {
+      return;
+    }
+
+    setReconciliationLoading(true);
+
+    try {
+      const { data } = await api.post(
+        `/whatsapp/${reconciliationWhatsApp.id}/reconcile`
+      );
+
+      if (data?.state) {
+        setReconciliationState(data.state);
+      } else {
+        const { data: nextState } = await api.get(
+          `/whatsapp/${reconciliationWhatsApp.id}/reconcile-state`
+        );
+
+        setReconciliationState(nextState || null);
+      }
+
+      toast.success(
+        "WhatsApp ressincronizado com sucesso."
+      );
+    } catch (err) {
+      const retryAfterMs = Number(
+        err?.response?.data?.retryAfterMs || 0
+      );
+
+      if (retryAfterMs > 0) {
+        setReconciliationState(prev => ({
+          ...(prev || {}),
+          manualRetryAfterMs: retryAfterMs
+        }));
+      }
+
+      toastError(err);
+    } finally {
+      setReconciliationLoading(false);
+    }
+  };
+
+  useEffect(() => {
     const storedValue = localStorage.getItem(getAutoCorrectTextStorageKey());
     setAutoCorrectTextEnabled(storedValue === "true");
   }, [user?.id]);
@@ -503,14 +642,30 @@ const LoggedInLayout = ({ children }) => {
             {user?.id && canViewTickets && (
               <>
               <IconButton
-                aria-label={autoCorrectTextEnabled ? "Desligar correção automática" : "Ligar correção automática"}
-                title={autoCorrectTextEnabled ? "Correção IA ligada" : "Correção IA desligada"}
+                aria-label={autoCorrectTextEnabled ? "Desligar correÃ§Ã£o automÃ¡tica" : "Ligar correÃ§Ã£o automÃ¡tica"}
+                title={autoCorrectTextEnabled ? "CorreÃ§Ã£o IA ligada" : "CorreÃ§Ã£o IA desligada"}
                 onClick={handleToggleAutoCorrectText}
                 className={classes.iconButton}
                 style={autoCorrectTextEnabled ? { color: "#ff1919" } : undefined}
               >
                 <SpellcheckIcon fontSize="small" />
               </IconButton>
+              {canUseManualReconciliation && (
+                <IconButton
+                  aria-label="Ressincronizar WhatsApp"
+                  title={reconciliationTitle}
+                  onClick={handleManualWhatsAppReconciliation}
+                  className={classes.iconButton}
+                  disabled={reconciliationBlocked}
+                  style={
+                    reconciliationLoading || reconciliationRunning
+                      ? { color: "#ff1919" }
+                      : undefined
+                  }
+                >
+                  <SyncIcon fontSize="small" />
+                </IconButton>
+              )}
               <NotificationsPopOver className={classes.iconButton} />
               </>
             )}

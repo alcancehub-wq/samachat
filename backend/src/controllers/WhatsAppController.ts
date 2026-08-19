@@ -10,6 +10,12 @@ import UpdateWhatsAppService from "../services/WhatsappService/UpdateWhatsAppSer
 import GetWhatsAppSharingSettingsService from "../services/WhatsappService/GetWhatsAppSharingSettingsService";
 import { whatsappProvider } from "../providers/WhatsApp";
 import SerializeWhatsAppForClient from "../helpers/SerializeWhatsAppForClient";
+import { logger } from "../utils/logger";
+import RunManualWhatsAppReconciliationService from "../services/WhatsappService/RunManualWhatsAppReconciliationService";
+import {
+  getWhatsAppReconciliationRuntimeState,
+  WhatsAppReconciliationBlockedError
+} from "../services/WhatsappService/WhatsAppReconciliationRuntime";
 
 interface SharingSettingsData {
   isShared: boolean;
@@ -201,6 +207,151 @@ export const remove = async (
   });
 
   return res.status(200).json({ message: "Whatsapp deleted." });
+};
+
+export const reconciliationState = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { whatsappId } = req.params;
+  const whatsapp =
+    await ShowWhatsAppService(whatsappId);
+
+  if (whatsapp.providerType === "official") {
+    return res.status(400).json({
+      error: "ERR_WHATSAPP_RECONCILIATION_UNSUPPORTED_PROVIDER"
+    });
+  }
+
+  const configuredProvider =
+    String(
+      process.env.WHATSAPP_PROVIDER ||
+      "wwebjs"
+    ).toLowerCase();
+
+  if (configuredProvider !== "wwebjs") {
+    return res.status(400).json({
+      error: "ERR_WHATSAPP_RECONCILIATION_UNSUPPORTED_PROVIDER"
+    });
+  }
+
+  const state =
+    await getWhatsAppReconciliationRuntimeState(
+      whatsapp.id
+    );
+
+  return res.status(200).json(state);
+};
+
+export const reconcile = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { whatsappId } = req.params;
+
+  const requesterUserId =
+    Number(req.user.id);
+
+  if (
+    !Number.isInteger(requesterUserId) ||
+    requesterUserId <= 0
+  ) {
+    return res.status(401).json({
+      error: "ERR_INVALID_AUTHENTICATED_USER"
+    });
+  }
+
+  const whatsapp =
+    await ShowWhatsAppService(whatsappId);
+
+  if (whatsapp.providerType === "official") {
+    return res.status(400).json({
+      error: "ERR_WHATSAPP_RECONCILIATION_UNSUPPORTED_PROVIDER"
+    });
+  }
+
+  const configuredProvider =
+    String(
+      process.env.WHATSAPP_PROVIDER ||
+      "wwebjs"
+    ).toLowerCase();
+
+  if (configuredProvider !== "wwebjs") {
+    return res.status(400).json({
+      error: "ERR_WHATSAPP_RECONCILIATION_UNSUPPORTED_PROVIDER"
+    });
+  }
+
+  if (
+    !whatsappProvider.isSessionReady(
+      whatsapp.id
+    )
+  ) {
+    return res.status(409).json({
+      error: "ERR_WAPP_NOT_INITIALIZED"
+    });
+  }
+
+  logger.info(
+    {
+      whatsappId: whatsapp.id,
+      requestedByUserId:
+        requesterUserId
+    },
+    "Manual WhatsApp reconciliation requested"
+  );
+
+  try {
+    const result =
+      await RunManualWhatsAppReconciliationService({
+        whatsappId: whatsapp.id
+      });
+
+    const state =
+      await getWhatsAppReconciliationRuntimeState(
+        whatsapp.id
+      );
+
+    logger.info(
+      {
+        whatsappId: whatsapp.id,
+        requestedByUserId:
+          requesterUserId,
+        checkedMessages:
+          result.checkedMessages,
+        importedMessages:
+          result.importedMessages,
+        existingMessages:
+          result.existingMessages,
+        skippedMessages:
+          result.skippedMessages,
+        contactsChecked:
+          result.contactsChecked
+      },
+      "Manual WhatsApp reconciliation completed"
+    );
+
+    return res.status(200).json({
+      ...result,
+      requestedByUserId:
+        requesterUserId,
+      state
+    });
+  } catch (err) {
+    if (
+      err instanceof
+      WhatsAppReconciliationBlockedError
+    ) {
+      return res.status(409).json({
+        error: err.message,
+        reason: err.reason,
+        retryAfterMs:
+          err.retryAfterMs
+      });
+    }
+
+    throw err;
+  }
 };
 
 export const restart = async (

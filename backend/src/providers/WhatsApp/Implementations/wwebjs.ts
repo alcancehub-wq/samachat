@@ -42,6 +42,15 @@ import {
   resolvePersistedStatusFromChangeState
 } from "./wwebjsSessionRuntime";
 import { revokeMessageWithLookupFallback } from "./wwebjsDeleteLookup";
+import CollectWWebJsRawReconciliationHistory from "./wwebjsReconciliationRawCollector";
+import createWWebJsReconciliationAdapter from "./wwebjsReconciliationAdapter";
+import RunWWebJsReconciliationBridge from "./wwebjsReconciliationBridge";
+import {
+  buildWWebJsFallbackReconciliationContactMetadata,
+  mapWWebJsContactToReconciliationMetadata,
+  normalizeWWebJsReconciliationLid
+} from "./wwebjsReconciliationContactMetadata";
+import ClassifyWhatsAppReconciliationMessageService from "../../../services/WhatsappService/ClassifyWhatsAppReconciliationMessageService";
 import {
   clearOutboundEchoReservationsForSession,
   reserveOutboundEcho,
@@ -296,6 +305,33 @@ const getWbot = (whatsappId: number): Session => {
   return sessions[sessionIndex];
 };
 
+export const collectWWebJsReconciliationHistoryForSession = async ({
+  sessionId,
+  chatId,
+  lowerBoundAt
+}: {
+  sessionId: number;
+  chatId: string;
+  lowerBoundAt: Date;
+}) => {
+  const wbot = getWbot(sessionId);
+  const chat = await wbot.getChatById(chatId);
+
+  return CollectWWebJsRawReconciliationHistory({
+    chat,
+    lowerBoundAt,
+
+    resolveMessageId: message =>
+      resolveEventMessageId(message as any),
+
+    isKnownMessage: async messageId => {
+      const classification =
+        await ClassifyWhatsAppReconciliationMessageService(messageId);
+
+      return classification === "existing";
+    }
+  });
+};
 const hasSession = (sessionId: number): boolean => {
   return sessions.some(session => session.id === sessionId);
 };
@@ -544,126 +580,21 @@ const getSerializedMessageId = (
   return serializedMsgId;
 };
 
-const normalizeLid = (value?: string | null): string | undefined => {
-  if (!value) {
-    return undefined;
-  }
 
-  return value.includes("@") ? value : `${value}@lid`;
-};
 
 const buildFallbackContactPayloadFromMessage = (
   msg: WbotMessage
-): ContactPayload | null => {
-  const message = msg as any;
-  const candidateIds = [
-    msg.fromMe ? msg.to : msg.from,
-    message?._data?.from,
-    message?._data?.to,
-    message?.author,
-    message?._data?.author
-  ].filter((value): value is string => typeof value === "string" && value.length > 0);
-
-  for (const candidateId of candidateIds) {
-    const isGroup = candidateId.endsWith("@g.us");
-    const raw = candidateId.split("@")[0];
-    const fallbackName =
-      message?.notifyName || message?.pushname || raw || candidateId;
-
-    if (isGroup) {
-      return {
-        name: fallbackName,
-        number: raw,
-        profilePicUrl: undefined,
-        isGroup: true
-      };
-    }
-
-    if (IsPlausiblePhoneNumber(raw)) {
-      return {
-        name: fallbackName,
-        number: raw,
-        profilePicUrl: undefined,
-        isGroup: false
-      };
-    }
-
-    const lid = normalizeLid(candidateId);
-    if (lid) {
-      return {
-        name: fallbackName,
-        number: "",
-        lid,
-        profilePicUrl: undefined,
-        isGroup: false
-      };
-    }
-  }
-
-  return null;
-};
+): ContactPayload | null =>
+  buildWWebJsFallbackReconciliationContactMetadata(
+    msg as any
+  ) as ContactPayload | null;
 
 const convertToContactPayload = async (
   msgContact: WbotContact
-): Promise<ContactPayload> => {
-  let profilePicUrl: string | undefined;
-  try {
-    profilePicUrl = await msgContact.getProfilePicUrl();
-  } catch (err) {
-    logger.warn(
-      {
-        err,
-        contactId: msgContact?.id?._serialized
-      },
-      "Unable to load contact profile picture from WhatsApp payload"
-    );
-  }
-
-  const extractContactIdentifiers = (
-    contact: WbotContact
-  ): { number: string; lid?: string } => {
-    const direct = contact?.id?.user;
-    if (IsPlausiblePhoneNumber(direct)) {
-      return { number: direct };
-    }
-
-    const serialized = contact?.id?._serialized;
-    if (serialized) {
-      const raw = serialized.split("@")[0];
-      if (IsPlausiblePhoneNumber(raw)) {
-        return { number: raw };
-      }
-
-      const lid = normalizeLid(serialized);
-      if (lid) {
-        return { number: "", lid };
-      }
-    }
-
-    if (direct) {
-      return { number: "", lid: normalizeLid(direct) };
-    }
-
-    return { number: "" };
-  };
-
-  const { number, lid } = extractContactIdentifiers(msgContact);
-  if (!number && !lid) {
-    logger.warn(
-      { contactId: msgContact?.id?._serialized },
-      "Invalid contact number from WhatsApp payload"
-    );
-    throw new Error("Invalid contact number from WhatsApp payload");
-  }
-
-  return {
-    name: msgContact.name || msgContact.pushname || msgContact.id.user,
-    number,
-    lid,
-    profilePicUrl,
-    isGroup: msgContact.isGroup
-  };
-};
+): Promise<ContactPayload> =>
+  (await mapWWebJsContactToReconciliationMetadata(
+    msgContact as any
+  )) as ContactPayload;
 
 const extractSessionPhoneNumber = (wbot: Session): string | null => {
   const clientInfo = (wbot.info || {}) as any;
@@ -1179,6 +1110,303 @@ const getMessageData = async (
   };
 };
 
+const resolveWWebJsReconciliationMessageMetadata = async (
+  msg: WbotMessage,
+  wbot: Session
+): Promise<ContactPayload> => {
+  let chat: any;
+
+  try {
+    chat = await msg.getChat();
+  } catch (err) {
+    logger.warn(
+      {
+        err,
+        messageId:
+          (msg as any)?.id?._serialized ||
+          (msg as any)?.id?.id,
+        from: msg.from,
+        to: msg.to,
+        fromMe: msg.fromMe
+      },
+      "Unable to resolve reconciliation chat context; using fallback context"
+    );
+
+    chat = {
+      unreadCount: msg.fromMe ? 0 : 1,
+      isGroup:
+        (msg.from || "").endsWith("@g.us") ||
+        (msg.to || "").endsWith("@g.us"),
+      id: {
+        _serialized:
+          msg.fromMe
+            ? msg.to
+            : msg.from
+      },
+      name: ""
+    };
+  }
+
+  const groupContext =
+    deriveWwebjsGroupContext(
+      msg as WbotGroupContextSource,
+      chat as WbotGroupContextChat
+    );
+
+  if (groupContext.isGroupMessage) {
+    let groupContact:
+      | ContactPayload
+      | undefined;
+
+    if (groupContext.groupChatId) {
+      try {
+        const groupWbotContact =
+          await wbot.getContactById(
+            groupContext.groupChatId
+          );
+
+        groupContact =
+          await convertToContactPayload(
+            groupWbotContact
+          );
+      } catch (err) {
+        logger.warn(
+          {
+            err,
+            groupChatId:
+              groupContext.groupChatId
+          },
+          "Unable to resolve reconciliation group contact"
+        );
+      }
+    }
+
+    const resolvedGroupContact =
+      groupContact ||
+      groupContext.fallbackContactPayload;
+
+    if (!resolvedGroupContact) {
+      throw new Error(
+        "Unable to resolve reconciliation group contact metadata"
+      );
+    }
+
+    return resolvedGroupContact;
+  }
+
+  let contactPayload:
+    | ContactPayload
+    | undefined;
+
+  if (msg.fromMe) {
+    try {
+      const msgContact =
+        await wbot.getContactById(
+          msg.to
+        );
+
+      contactPayload =
+        await convertToContactPayload(
+          msgContact
+        );
+    } catch (err) {
+      logger.warn(
+        {
+          err,
+          to: msg.to
+        },
+        "Unable to resolve outbound reconciliation contact by id; falling back to message contact"
+      );
+
+      const msgContact =
+        await msg.getContact();
+
+      contactPayload =
+        await convertToContactPayload(
+          msgContact
+        );
+    }
+  } else {
+    try {
+      const msgContact =
+        await msg.getContact();
+
+      contactPayload =
+        await convertToContactPayload(
+          msgContact
+        );
+    } catch (err) {
+      logger.warn(
+        {
+          err,
+          from: msg.from,
+          messageId:
+            (msg as any)?.id?._serialized ||
+            (msg as any)?.id?.id
+        },
+        "Unable to resolve inbound reconciliation contact from message"
+      );
+
+      try {
+        const msgContact =
+          await wbot.getContactById(
+            msg.from
+          );
+
+        contactPayload =
+          await convertToContactPayload(
+            msgContact
+          );
+      } catch (lookupErr) {
+        logger.warn(
+          {
+            err: lookupErr,
+            from: msg.from
+          },
+          "Unable to resolve inbound reconciliation contact by id; using message-derived metadata"
+        );
+
+        contactPayload =
+          buildFallbackContactPayloadFromMessage(
+            msg
+          ) || undefined;
+      }
+    }
+  }
+
+  if (!contactPayload) {
+    throw new Error(
+      "Unable to resolve reconciliation contact metadata"
+    );
+  }
+
+  return contactPayload;
+};
+
+export const createWWebJsReconciliationAdapterForSession = (
+  sessionId: number
+) => {
+  const wbot =
+    getWbot(sessionId);
+
+  return createWWebJsReconciliationAdapter({
+    whatsappId: sessionId,
+
+    session: wbot as any,
+
+    resolveMessageId:
+      message =>
+        resolveEventMessageId(
+          message as any
+        ),
+
+    shouldHandleMessage:
+      message =>
+        shouldHandleMessage(
+          message as WbotMessage
+        ),
+
+    resolveMessageMetadata:
+      async message =>
+        resolveWWebJsReconciliationMessageMetadata(
+          message as WbotMessage,
+          wbot
+        ),
+
+    processNewMessage:
+      async message => {
+        const {
+          messagePayload,
+          contactPayload,
+          contextPayload,
+          mediaPayload
+        } =
+          await getMessageData(
+            message as WbotMessage,
+            wbot,
+            "reconciliation"
+          );
+
+        await handleMessage(
+          messagePayload,
+          contactPayload,
+          contextPayload,
+          mediaPayload
+        );
+      }
+  });
+};
+
+export const runManualWWebJsReconciliationForSession = async (
+  sessionId: number
+) => {
+  const reconciliation =
+    createWWebJsReconciliationAdapterForSession(
+      sessionId
+    );
+
+  return RunWWebJsReconciliationBridge({
+    whatsappId: sessionId,
+    trigger: "manual",
+    collectWork:
+      reconciliation.collectWork,
+    finalizeWork:
+      reconciliation.finalizeWork
+  });
+};
+
+const runAutomaticWWebJsReconciliationForSession = async (
+  sessionId: number
+): Promise<void> => {
+  try {
+    const reconciliation =
+      createWWebJsReconciliationAdapterForSession(
+        sessionId
+      );
+
+    const result =
+      await RunWWebJsReconciliationBridge({
+        whatsappId: sessionId,
+        trigger: "automatic",
+        collectWork:
+          reconciliation.collectWork,
+        finalizeWork:
+          reconciliation.finalizeWork
+      });
+
+    logger.info(
+      {
+        whatsappId: sessionId,
+        checkedMessages:
+          result.checkedMessages,
+        importedMessages:
+          result.importedMessages,
+        existingMessages:
+          result.existingMessages,
+        skippedMessages:
+          result.skippedMessages,
+        contactsChecked:
+          result.contactsChecked
+      },
+      "Automatic WhatsApp reconciliation completed"
+    );
+  } catch (err) {
+    /*
+     * Automatic reconciliation is best-effort relative to
+     * session readiness. A lock collision, Redis failure,
+     * provider/history error or reconciliation failure must
+     * never turn a READY WhatsApp session into a failed one.
+     */
+    logger.warn(
+      {
+        err,
+        whatsappId: sessionId
+      },
+      "Automatic WhatsApp reconciliation did not complete"
+    );
+  }
+};
+
 const syncUnreadMessages = async (wbot: Session) => {
   try {
     const chats = await wbot.getChats();
@@ -1666,9 +1894,14 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
         });
 
         wbot.sendPresenceAvailable();
+
         logger.info(
           { whatsappId: whatsapp.id },
-          "Skipping automatic unread sync on READY to avoid backfilling contacts and tickets"
+          "Starting automatic WhatsApp reconciliation after READY"
+        );
+
+        void runAutomaticWWebJsReconciliationForSession(
+          whatsapp.id
         );
       } catch (err) {
         logger.error(err, "Error on whatsapp ready event");

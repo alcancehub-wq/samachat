@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import isAuth from "../middleware/isAuth";
 import checkSectorPermission from "../middleware/checkSectorPermission";
 
@@ -41,6 +41,20 @@ whatsappRoutes.post(
   checkSectorPermission("connections.update"),
   EmbeddedSignupController.store
 );
+whatsappRoutes.get(
+  "/whatsapp/:whatsappId/reconcile-state",
+  isAuth,
+  checkSectorPermission("connections.view"),
+  WhatsAppController.reconciliationState
+);
+
+whatsappRoutes.post(
+  "/whatsapp/:whatsappId/reconcile",
+  isAuth,
+  checkSectorPermission("connections.view"),
+  WhatsAppController.reconcile
+);
+
 whatsappRoutes.post(
   "/whatsapp/:whatsappId/restart",
   isAuth,
