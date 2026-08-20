@@ -375,28 +375,41 @@ const createWWebJsReconciliationAdapter = <
 
           return contacts;
         },
+        mapContact:
+          async (
+            contact,
+            signal
+          ) => {
+            signal.throwIfAborted();
 
-      mapContact:
-        async (
-          contact,
-          signal
-        ) => {
-          signal.throwIfAborted();
+            try {
+              const metadata =
+                await mapWWebJsContactToReconciliationMetadata(
+                  contact
+                );
 
-          const metadata =
-            await mapWWebJsContactToReconciliationMetadata(
-              contact
-            );
+              signal.throwIfAborted();
 
-          signal.throwIfAborted();
+              return {
+                metadata
+              };
+            } catch (err) {
+              signal.throwIfAborted();
 
-          return {
-            metadata
-          };
-        },
+              if (
+                err instanceof Error &&
+                err.message ===
+                  "Invalid contact number from WhatsApp payload"
+              ) {
+                return null;
+              }
 
-      getContactIdentityKey:
-        getWWebJsReconciliationContactIdentityKey,
+              throw err;
+            }
+          },
+
+        getContactIdentityKey:
+          getWWebJsReconciliationContactIdentityKey,
 
       saveCheckpoint:
         async ({
