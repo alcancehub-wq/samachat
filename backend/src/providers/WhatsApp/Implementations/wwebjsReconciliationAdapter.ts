@@ -834,6 +834,485 @@ const createWWebJsReconciliationAdapter = <
                         };
                       }
 
+                      if (!chatMeta.hasGroupMetadata) {
+                        const nonGroupStepProbe: any = {
+                          rawState: null,
+                          cachedLastMessage: null,
+                          fetchedLastMessage: null,
+                          messageModel: null
+                        };
+
+                        try {
+                          nonGroupStepProbe.rawState =
+                            await pupPage.evaluate(
+                              (index: number) => {
+                                try {
+                                  const collections =
+                                    (window as any)
+                                      .require(
+                                        "WAWebCollections"
+                                      );
+
+                                  const chats =
+                                    collections.Chat
+                                      .getModelsArray();
+
+                                  const chat =
+                                    chats[index];
+
+                                  const serialized =
+                                    chat.serialize();
+
+                                  return {
+                                    ok: true,
+                                    chatId:
+                                      chat?.id?._serialized ||
+                                      null,
+                                    formattedTitle:
+                                      chat?.formattedTitle ||
+                                      null,
+                                    hasGroupMetadata:
+                                      Boolean(
+                                        chat?.groupMetadata
+                                      ),
+                                    hasNewsletterMetadata:
+                                      Boolean(
+                                        chat?.newsletterMetadata
+                                      ),
+                                    serializedMsgsLength:
+                                      Array.isArray(
+                                        serialized?.msgs
+                                      )
+                                        ? serialized.msgs.length
+                                        : 0,
+                                    hasLastReceivedKey:
+                                      Boolean(
+                                        chat?.lastReceivedKey
+                                      ),
+                                    lastReceivedKey:
+                                      chat?.lastReceivedKey
+                                        ?._serialized ||
+                                      null
+                                  };
+                                } catch (stepErr) {
+                                  return {
+                                    ok: false,
+                                    errorName:
+                                      stepErr instanceof Error
+                                        ? stepErr.name
+                                        : typeof stepErr,
+                                    errorMessage:
+                                      stepErr instanceof Error
+                                        ? stepErr.message
+                                        : String(stepErr),
+                                    errorStack:
+                                      stepErr instanceof Error
+                                        ? stepErr.stack
+                                        : null
+                                  };
+                                }
+                              },
+                              chatMeta.index
+                            );
+
+                          nonGroupStepProbe.cachedLastMessage =
+                            await pupPage.evaluate(
+                              (index: number) => {
+                                try {
+                                  const collections =
+                                    (window as any)
+                                      .require(
+                                        "WAWebCollections"
+                                      );
+
+                                  const chats =
+                                    collections.Chat
+                                      .getModelsArray();
+
+                                  const chat =
+                                    chats[index];
+
+                                  const serialized =
+                                    chat.serialize();
+
+                                  const msgsLength =
+                                    Array.isArray(
+                                      serialized?.msgs
+                                    )
+                                      ? serialized.msgs.length
+                                      : 0;
+
+                                  const key =
+                                    chat?.lastReceivedKey
+                                      ?._serialized ||
+                                    null;
+
+                                  if (
+                                    msgsLength === 0 ||
+                                    !key
+                                  ) {
+                                    return {
+                                      ok: true,
+                                      skipped: true,
+                                      reason:
+                                        msgsLength === 0
+                                          ? "NO_SERIALIZED_MSGS"
+                                          : "NO_LAST_RECEIVED_KEY"
+                                    };
+                                  }
+
+                                  const cached =
+                                    collections.Msg.get(key);
+
+                                  return {
+                                    ok: true,
+                                    skipped: false,
+                                    key,
+                                    cacheHit:
+                                      Boolean(cached),
+                                    cachedMessageId:
+                                      cached?.id?._serialized ||
+                                      null
+                                  };
+                                } catch (stepErr) {
+                                  return {
+                                    ok: false,
+                                    errorName:
+                                      stepErr instanceof Error
+                                        ? stepErr.name
+                                        : typeof stepErr,
+                                    errorMessage:
+                                      stepErr instanceof Error
+                                        ? stepErr.message
+                                        : String(stepErr),
+                                    errorStack:
+                                      stepErr instanceof Error
+                                        ? stepErr.stack
+                                        : null
+                                  };
+                                }
+                              },
+                              chatMeta.index
+                            );
+
+                          nonGroupStepProbe.fetchedLastMessage =
+                            await pupPage.evaluate(
+                              (index: number) => {
+                                try {
+                                  const collections =
+                                    (window as any)
+                                      .require(
+                                        "WAWebCollections"
+                                      );
+
+                                  const chats =
+                                    collections.Chat
+                                      .getModelsArray();
+
+                                  const chat =
+                                    chats[index];
+
+                                  const serialized =
+                                    chat.serialize();
+
+                                  const msgsLength =
+                                    Array.isArray(
+                                      serialized?.msgs
+                                    )
+                                      ? serialized.msgs.length
+                                      : 0;
+
+                                  const key =
+                                    chat?.lastReceivedKey
+                                      ?._serialized ||
+                                    null;
+
+                                  if (
+                                    msgsLength === 0 ||
+                                    !key
+                                  ) {
+                                    return Promise.resolve({
+                                      ok: true,
+                                      skipped: true,
+                                      reason:
+                                        msgsLength === 0
+                                          ? "NO_SERIALIZED_MSGS"
+                                          : "NO_LAST_RECEIVED_KEY"
+                                    });
+                                  }
+
+                                  const cached =
+                                    collections.Msg.get(key);
+
+                                  if (cached) {
+                                    return Promise.resolve({
+                                      ok: true,
+                                      skipped: true,
+                                      reason:
+                                        "CACHE_HIT",
+                                      key
+                                    });
+                                  }
+
+                                  return collections.Msg
+                                    .getMessagesById([key])
+                                    .then(
+                                      (result: any) => ({
+                                        ok: true,
+                                        skipped: false,
+                                        key,
+                                        messageCount:
+                                          Array.isArray(
+                                            result?.messages
+                                          )
+                                            ? result.messages
+                                                .length
+                                            : 0,
+                                        firstMessageId:
+                                          result
+                                            ?.messages?.[0]
+                                            ?.id
+                                            ?._serialized ||
+                                          null
+                                      }),
+                                      (stepErr: any) => ({
+                                        ok: false,
+                                        key,
+                                        errorName:
+                                          stepErr instanceof Error
+                                            ? stepErr.name
+                                            : typeof stepErr,
+                                        errorMessage:
+                                          stepErr instanceof Error
+                                            ? stepErr.message
+                                            : String(stepErr),
+                                        errorStack:
+                                          stepErr instanceof Error
+                                            ? stepErr.stack
+                                            : null
+                                      })
+                                    );
+                                } catch (stepErr) {
+                                  return {
+                                    ok: false,
+                                    errorName:
+                                      stepErr instanceof Error
+                                        ? stepErr.name
+                                        : typeof stepErr,
+                                    errorMessage:
+                                      stepErr instanceof Error
+                                        ? stepErr.message
+                                        : String(stepErr),
+                                    errorStack:
+                                      stepErr instanceof Error
+                                        ? stepErr.stack
+                                        : null
+                                  };
+                                }
+                              },
+                              chatMeta.index
+                            );
+
+                          nonGroupStepProbe.messageModel =
+                            await pupPage.evaluate(
+                              (index: number) => {
+                                try {
+                                  const collections =
+                                    (window as any)
+                                      .require(
+                                        "WAWebCollections"
+                                      );
+
+                                  const chats =
+                                    collections.Chat
+                                      .getModelsArray();
+
+                                  const chat =
+                                    chats[index];
+
+                                  const serialized =
+                                    chat.serialize();
+
+                                  const msgsLength =
+                                    Array.isArray(
+                                      serialized?.msgs
+                                    )
+                                      ? serialized.msgs.length
+                                      : 0;
+
+                                  const key =
+                                    chat?.lastReceivedKey
+                                      ?._serialized ||
+                                    null;
+
+                                  if (
+                                    msgsLength === 0 ||
+                                    !key
+                                  ) {
+                                    return Promise.resolve({
+                                      ok: true,
+                                      skipped: true,
+                                      reason:
+                                        msgsLength === 0
+                                          ? "NO_SERIALIZED_MSGS"
+                                          : "NO_LAST_RECEIVED_KEY"
+                                    });
+                                  }
+
+                                  const cached =
+                                    collections.Msg.get(key);
+
+                                  if (cached) {
+                                    try {
+                                      const model =
+                                        (window as any)
+                                          .WWebJS
+                                          .getMessageModel(
+                                            cached
+                                          );
+
+                                      return Promise.resolve({
+                                        ok: true,
+                                        source: "CACHE",
+                                        messageId:
+                                          model?.id
+                                            ?._serialized ||
+                                          model?.id ||
+                                          null
+                                      });
+                                    } catch (stepErr) {
+                                      return Promise.resolve({
+                                        ok: false,
+                                        source: "CACHE",
+                                        errorName:
+                                          stepErr instanceof Error
+                                            ? stepErr.name
+                                            : typeof stepErr,
+                                        errorMessage:
+                                          stepErr instanceof Error
+                                            ? stepErr.message
+                                            : String(stepErr),
+                                        errorStack:
+                                          stepErr instanceof Error
+                                            ? stepErr.stack
+                                            : null
+                                      });
+                                    }
+                                  }
+
+                                  return collections.Msg
+                                    .getMessagesById([key])
+                                    .then(
+                                      (result: any) => {
+                                        try {
+                                          const message =
+                                            result
+                                              ?.messages?.[0];
+
+                                          if (!message) {
+                                            return {
+                                              ok: true,
+                                              skipped: true,
+                                              reason:
+                                                "NO_FETCHED_MESSAGE"
+                                            };
+                                          }
+
+                                          const model =
+                                            (window as any)
+                                              .WWebJS
+                                              .getMessageModel(
+                                                message
+                                              );
+
+                                          return {
+                                            ok: true,
+                                            source: "FETCH",
+                                            messageId:
+                                              model?.id
+                                                ?._serialized ||
+                                              model?.id ||
+                                              null
+                                          };
+                                        } catch (stepErr) {
+                                          return {
+                                            ok: false,
+                                            source: "FETCH",
+                                            errorName:
+                                              stepErr instanceof Error
+                                                ? stepErr.name
+                                                : typeof stepErr,
+                                            errorMessage:
+                                              stepErr instanceof Error
+                                                ? stepErr.message
+                                                : String(stepErr),
+                                            errorStack:
+                                              stepErr instanceof Error
+                                                ? stepErr.stack
+                                                : null
+                                          };
+                                        }
+                                      },
+                                      (stepErr: any) => ({
+                                        ok: false,
+                                        source:
+                                          "FETCH_MESSAGES_BY_ID",
+                                        errorName:
+                                          stepErr instanceof Error
+                                            ? stepErr.name
+                                            : typeof stepErr,
+                                        errorMessage:
+                                          stepErr instanceof Error
+                                            ? stepErr.message
+                                            : String(stepErr),
+                                        errorStack:
+                                          stepErr instanceof Error
+                                            ? stepErr.stack
+                                            : null
+                                      })
+                                    );
+                                } catch (stepErr) {
+                                  return {
+                                    ok: false,
+                                    errorName:
+                                      stepErr instanceof Error
+                                        ? stepErr.name
+                                        : typeof stepErr,
+                                    errorMessage:
+                                      stepErr instanceof Error
+                                        ? stepErr.message
+                                        : String(stepErr),
+                                    errorStack:
+                                      stepErr instanceof Error
+                                        ? stepErr.stack
+                                        : null
+                                  };
+                                }
+                              },
+                              chatMeta.index
+                            );
+
+                          probe.firstFailure.nonGroupStepProbe =
+                            nonGroupStepProbe;
+                        } catch (nonGroupProbeErr) {
+                          probe.firstFailure.nonGroupStepProbe = {
+                            infrastructureFailure: true,
+                            errorName:
+                              nonGroupProbeErr instanceof Error
+                                ? nonGroupProbeErr.name
+                                : typeof nonGroupProbeErr,
+                            errorMessage:
+                              nonGroupProbeErr instanceof Error
+                                ? nonGroupProbeErr.message
+                                : String(nonGroupProbeErr),
+                            errorStack:
+                              nonGroupProbeErr instanceof Error
+                                ? nonGroupProbeErr.stack
+                                : null
+                          };
+                        }
+                      }
+
                       break;
                     }
                   }
