@@ -266,12 +266,164 @@ const createWWebJsReconciliationAdapter = <
         async signal => {
           signal.throwIfAborted();
 
-          const chats =
-            await session.getChats();
+          try {
+            const chats =
+              await session.getChats();
 
-          signal.throwIfAborted();
+            signal.throwIfAborted();
 
-          return chats;
+            return chats;
+          } catch (err) {
+            signal.throwIfAborted();
+
+            try {
+              const runtimeSession =
+                session as any;
+
+              const pupPage =
+                runtimeSession?.pupPage;
+
+              if (pupPage) {
+                const probe =
+                  await pupPage.evaluate(
+                    async () => {
+                      const result: any = {
+                        timestamp:
+                          new Date().toISOString(),
+                        collectionOk: false,
+                        collectionCount: null,
+                        successfulModelsBeforeFailure: 0,
+                        firstFailure: null,
+                        collectionError: null
+                      };
+
+                      try {
+                        const collections =
+                          (window as any).require(
+                            "WAWebCollections"
+                          );
+
+                        const rawChats =
+                          collections.Chat.getModelsArray();
+
+                        result.collectionOk = true;
+                        result.collectionCount =
+                          rawChats.length;
+
+                        for (
+                          let index = 0;
+                          index < rawChats.length;
+                          index += 1
+                        ) {
+                          const chat =
+                            rawChats[index];
+
+                          const chatId =
+                            chat?.id?._serialized ||
+                            chat?.id?.user ||
+                            `index:${index}`;
+
+                          try {
+                            await (
+                              window as any
+                            ).WWebJS.getChatModel(
+                              chat
+                            );
+
+                            result.successfulModelsBeforeFailure += 1;
+                          } catch (modelErr) {
+                            result.firstFailure = {
+                              index,
+                              chatId,
+                              hasGroupMetadata:
+                                Boolean(
+                                  chat?.groupMetadata
+                                ),
+                              formattedTitle:
+                                typeof chat?.formattedTitle ===
+                                "string"
+                                  ? chat.formattedTitle
+                                  : null,
+                              errorName:
+                                modelErr instanceof Error
+                                  ? modelErr.name
+                                  : typeof modelErr,
+                              errorMessage:
+                                modelErr instanceof Error
+                                  ? modelErr.message
+                                  : String(modelErr),
+                              errorStack:
+                                modelErr instanceof Error
+                                  ? modelErr.stack
+                                  : null
+                            };
+
+                            break;
+                          }
+                        }
+                      } catch (collectionErr) {
+                        result.collectionError = {
+                          errorName:
+                            collectionErr instanceof Error
+                              ? collectionErr.name
+                              : typeof collectionErr,
+                          errorMessage:
+                            collectionErr instanceof Error
+                              ? collectionErr.message
+                              : String(collectionErr),
+                          errorStack:
+                            collectionErr instanceof Error
+                              ? collectionErr.stack
+                              : null
+                        };
+                      }
+
+                      return result;
+                    }
+                  );
+
+                require("fs").appendFileSync(
+                  "/tmp/samachat-p05-getchats-probe.log",
+                  `${JSON.stringify({
+                    whatsappId,
+                    originalErrorName:
+                      err instanceof Error
+                        ? err.name
+                        : typeof err,
+                    originalErrorMessage:
+                      err instanceof Error
+                        ? err.message
+                        : String(err),
+                    probe
+                  })}\n`,
+                  "utf8"
+                );
+              }
+            } catch (probeErr) {
+              require("fs").appendFileSync(
+                "/tmp/samachat-p05-getchats-probe.log",
+                `${JSON.stringify({
+                  whatsappId,
+                  probeInfrastructureFailure: true,
+                  errorName:
+                    probeErr instanceof Error
+                      ? probeErr.name
+                      : typeof probeErr,
+                  errorMessage:
+                    probeErr instanceof Error
+                      ? probeErr.message
+                      : String(probeErr),
+                  errorStack:
+                    probeErr instanceof Error
+                      ? probeErr.stack
+                      : null
+                })}\n`,
+                "utf8"
+              );
+            }
+
+            throw err;
+          }
         },
 
       getChatId:
