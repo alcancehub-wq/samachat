@@ -11,6 +11,17 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.08.18 / Continuidade de transferencias",
+    label: "Correcao de continuidade do atendimento",
+    summary:
+      "Ajuste de continuidade para transferencias entre usuarios, preservando o contexto operacional atual do atendimento e evitando fragmentacao causada por agendamentos antigos.",
+    changes: [
+      "Agendamentos vinculados a um atendimento passam a usar o usuario e a conexao atuais do ticket no momento da execucao.",
+      "Transferencias continuam preservando o mesmo atendimento, historico e contexto acumulado entre os usuarios.",
+      "Mantidas as protecoes existentes contra duplicidade de mensagens e o comportamento de contatos com multiplas conversas permitidas.",
+    ],
+  },
+  {
     version: "2026.07.27 / Duplicidade de mensagens outbound",
     label: "Correcao de duplicidade visual nos Chats",
     summary:
