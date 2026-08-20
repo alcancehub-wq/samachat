@@ -915,6 +915,281 @@ const createWWebJsReconciliationAdapter = <
                               chatMeta.index
                             );
 
+                          nonGroupStepProbe.exactLastMessagePath =
+                            await pupPage.evaluate(
+                              (index: number) => {
+                                try {
+                                  const collections =
+                                    (window as any)
+                                      .require(
+                                        "WAWebCollections"
+                                      );
+
+                                  const chats =
+                                    collections.Chat
+                                      .getModelsArray();
+
+                                  const chat =
+                                    chats[index];
+
+                                  const serialized =
+                                    chat.serialize();
+
+                                  const rawKey =
+                                    chat.lastReceivedKey;
+
+                                  const keyShape = {
+                                    exists:
+                                      Boolean(rawKey),
+                                    type:
+                                      typeof rawKey,
+                                    constructorName:
+                                      rawKey?.constructor
+                                        ?.name ||
+                                      null,
+                                    keys:
+                                      rawKey
+                                        ? Object.keys(rawKey)
+                                        : [],
+                                    serialized:
+                                      rawKey?._serialized ??
+                                      null,
+                                    idSerialized:
+                                      rawKey?.id
+                                        ?._serialized ??
+                                      null,
+                                    id:
+                                      rawKey?.id ??
+                                      null,
+                                    fromSerialized:
+                                      rawKey?.from
+                                        ?._serialized ??
+                                      null,
+                                    remoteSerialized:
+                                      rawKey?.remote
+                                        ?._serialized ??
+                                      null,
+                                    stringValue:
+                                      rawKey
+                                        ? String(rawKey)
+                                        : null
+                                  };
+
+                                  if (
+                                    !serialized?.msgs ||
+                                    serialized.msgs.length === 0
+                                  ) {
+                                    return {
+                                      ok: true,
+                                      stage:
+                                        "NO_SERIALIZED_MSGS",
+                                      keyShape
+                                    };
+                                  }
+
+                                  if (!rawKey) {
+                                    return {
+                                      ok: true,
+                                      stage:
+                                        "NO_LAST_RECEIVED_KEY",
+                                      keyShape
+                                    };
+                                  }
+
+                                  const exactKey =
+                                    rawKey._serialized;
+
+                                  let cached;
+
+                                  try {
+                                    cached =
+                                      collections.Msg.get(
+                                        exactKey
+                                      );
+                                  } catch (stepErr) {
+                                    return {
+                                      ok: false,
+                                      stage: "MSG_GET",
+                                      exactKey:
+                                        exactKey ??
+                                        null,
+                                      keyShape,
+                                      errorName:
+                                        stepErr instanceof Error
+                                          ? stepErr.name
+                                          : typeof stepErr,
+                                      errorMessage:
+                                        stepErr instanceof Error
+                                          ? stepErr.message
+                                          : String(stepErr),
+                                      errorStack:
+                                        stepErr instanceof Error
+                                          ? stepErr.stack
+                                          : null
+                                    };
+                                  }
+
+                                  if (cached) {
+                                    try {
+                                      const model =
+                                        (window as any)
+                                          .WWebJS
+                                          .getMessageModel(
+                                            cached
+                                          );
+
+                                      return {
+                                        ok: true,
+                                        stage:
+                                          "CACHED_MESSAGE_MODEL",
+                                        exactKey:
+                                          exactKey ??
+                                          null,
+                                        keyShape,
+                                        messageId:
+                                          model?.id
+                                            ?._serialized ||
+                                          model?.id ||
+                                          null
+                                      };
+                                    } catch (stepErr) {
+                                      return {
+                                        ok: false,
+                                        stage:
+                                          "CACHED_GET_MESSAGE_MODEL",
+                                        exactKey:
+                                          exactKey ??
+                                          null,
+                                        keyShape,
+                                        errorName:
+                                          stepErr instanceof Error
+                                            ? stepErr.name
+                                            : typeof stepErr,
+                                        errorMessage:
+                                          stepErr instanceof Error
+                                            ? stepErr.message
+                                            : String(stepErr),
+                                        errorStack:
+                                          stepErr instanceof Error
+                                            ? stepErr.stack
+                                            : null
+                                      };
+                                    }
+                                  }
+
+                                  return collections.Msg
+                                    .getMessagesById([
+                                      exactKey
+                                    ])
+                                    .then(
+                                      (result: any) => {
+                                        const message =
+                                          result
+                                            ?.messages?.[0];
+
+                                        if (!message) {
+                                          return {
+                                            ok: true,
+                                            stage:
+                                              "NO_FETCHED_MESSAGE",
+                                            exactKey:
+                                              exactKey ??
+                                              null,
+                                            keyShape
+                                          };
+                                        }
+
+                                        try {
+                                          const model =
+                                            (window as any)
+                                              .WWebJS
+                                              .getMessageModel(
+                                                message
+                                              );
+
+                                          return {
+                                            ok: true,
+                                            stage:
+                                              "FETCHED_MESSAGE_MODEL",
+                                            exactKey:
+                                              exactKey ??
+                                              null,
+                                            keyShape,
+                                            messageId:
+                                              model?.id
+                                                ?._serialized ||
+                                              model?.id ||
+                                              null
+                                          };
+                                        } catch (stepErr) {
+                                          return {
+                                            ok: false,
+                                            stage:
+                                              "FETCHED_GET_MESSAGE_MODEL",
+                                            exactKey:
+                                              exactKey ??
+                                              null,
+                                            keyShape,
+                                            errorName:
+                                              stepErr instanceof Error
+                                                ? stepErr.name
+                                                : typeof stepErr,
+                                            errorMessage:
+                                              stepErr instanceof Error
+                                                ? stepErr.message
+                                                : String(stepErr),
+                                            errorStack:
+                                              stepErr instanceof Error
+                                                ? stepErr.stack
+                                                : null
+                                          };
+                                        }
+                                      },
+                                      (stepErr: any) => ({
+                                        ok: false,
+                                        stage:
+                                          "GET_MESSAGES_BY_ID",
+                                        exactKey:
+                                          exactKey ??
+                                          null,
+                                        keyShape,
+                                        errorName:
+                                          stepErr instanceof Error
+                                            ? stepErr.name
+                                            : typeof stepErr,
+                                        errorMessage:
+                                          stepErr instanceof Error
+                                            ? stepErr.message
+                                            : String(stepErr),
+                                        errorStack:
+                                          stepErr instanceof Error
+                                            ? stepErr.stack
+                                            : null
+                                      })
+                                    );
+                                } catch (stepErr) {
+                                  return {
+                                    ok: false,
+                                    stage:
+                                      "OUTER_EXCEPTION",
+                                    errorName:
+                                      stepErr instanceof Error
+                                        ? stepErr.name
+                                        : typeof stepErr,
+                                    errorMessage:
+                                      stepErr instanceof Error
+                                        ? stepErr.message
+                                        : String(stepErr),
+                                    errorStack:
+                                      stepErr instanceof Error
+                                        ? stepErr.stack
+                                        : null
+                                  };
+                                }
+                              },
+                              chatMeta.index
+                            );
+
                           nonGroupStepProbe.cachedLastMessage =
                             await pupPage.evaluate(
                               (index: number) => {
