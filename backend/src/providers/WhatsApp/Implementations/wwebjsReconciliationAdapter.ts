@@ -1190,6 +1190,209 @@ const createWWebJsReconciliationAdapter = <
                               chatMeta.index
                             );
 
+                          nonGroupStepProbe.stringKeyFallback =
+                            await pupPage.evaluate(
+                              (index: number) => {
+                                try {
+                                  const collections =
+                                    (window as any)
+                                      .require(
+                                        "WAWebCollections"
+                                      );
+
+                                  const chats =
+                                    collections.Chat
+                                      .getModelsArray();
+
+                                  const chat =
+                                    chats[index];
+
+                                  const rawKey =
+                                    chat.lastReceivedKey;
+
+                                  if (!rawKey) {
+                                    return {
+                                      ok: true,
+                                      skipped: true,
+                                      reason:
+                                        "NO_LAST_RECEIVED_KEY"
+                                    };
+                                  }
+
+                                  const stringKey =
+                                    String(rawKey);
+
+                                  let cached;
+
+                                  try {
+                                    cached =
+                                      collections.Msg.get(
+                                        stringKey
+                                      );
+                                  } catch (stepErr) {
+                                    return {
+                                      ok: false,
+                                      stage:
+                                        "STRING_KEY_MSG_GET",
+                                      stringKey,
+                                      errorName:
+                                        stepErr instanceof Error
+                                          ? stepErr.name
+                                          : typeof stepErr,
+                                      errorMessage:
+                                        stepErr instanceof Error
+                                          ? stepErr.message
+                                          : String(stepErr),
+                                      errorStack:
+                                        stepErr instanceof Error
+                                          ? stepErr.stack
+                                          : null
+                                    };
+                                  }
+
+                                  if (cached) {
+                                    try {
+                                      const model =
+                                        (window as any)
+                                          .WWebJS
+                                          .getMessageModel(
+                                            cached
+                                          );
+
+                                      return {
+                                        ok: true,
+                                        stage:
+                                          "STRING_KEY_CACHE_HIT",
+                                        stringKey,
+                                        messageId:
+                                          model?.id
+                                            ?._serialized ||
+                                          model?.id ||
+                                          null
+                                      };
+                                    } catch (stepErr) {
+                                      return {
+                                        ok: false,
+                                        stage:
+                                          "STRING_KEY_CACHE_MODEL",
+                                        stringKey,
+                                        errorName:
+                                          stepErr instanceof Error
+                                            ? stepErr.name
+                                            : typeof stepErr,
+                                        errorMessage:
+                                          stepErr instanceof Error
+                                            ? stepErr.message
+                                            : String(stepErr),
+                                        errorStack:
+                                          stepErr instanceof Error
+                                            ? stepErr.stack
+                                            : null
+                                      };
+                                    }
+                                  }
+
+                                  return collections.Msg
+                                    .getMessagesById([
+                                      stringKey
+                                    ])
+                                    .then(
+                                      (result: any) => {
+                                        const message =
+                                          result
+                                            ?.messages?.[0];
+
+                                        if (!message) {
+                                          return {
+                                            ok: true,
+                                            stage:
+                                              "STRING_KEY_NO_MESSAGE",
+                                            stringKey
+                                          };
+                                        }
+
+                                        try {
+                                          const model =
+                                            (window as any)
+                                              .WWebJS
+                                              .getMessageModel(
+                                                message
+                                              );
+
+                                          return {
+                                            ok: true,
+                                            stage:
+                                              "STRING_KEY_FETCH_SUCCESS",
+                                            stringKey,
+                                            messageId:
+                                              model?.id
+                                                ?._serialized ||
+                                              model?.id ||
+                                              null
+                                          };
+                                        } catch (stepErr) {
+                                          return {
+                                            ok: false,
+                                            stage:
+                                              "STRING_KEY_FETCH_MODEL",
+                                            stringKey,
+                                            errorName:
+                                              stepErr instanceof Error
+                                                ? stepErr.name
+                                                : typeof stepErr,
+                                            errorMessage:
+                                              stepErr instanceof Error
+                                                ? stepErr.message
+                                                : String(stepErr),
+                                            errorStack:
+                                              stepErr instanceof Error
+                                                ? stepErr.stack
+                                                : null
+                                          };
+                                        }
+                                      },
+                                      (stepErr: any) => ({
+                                        ok: false,
+                                        stage:
+                                          "STRING_KEY_GET_MESSAGES_BY_ID",
+                                        stringKey,
+                                        errorName:
+                                          stepErr instanceof Error
+                                            ? stepErr.name
+                                            : typeof stepErr,
+                                        errorMessage:
+                                          stepErr instanceof Error
+                                            ? stepErr.message
+                                            : String(stepErr),
+                                        errorStack:
+                                          stepErr instanceof Error
+                                            ? stepErr.stack
+                                            : null
+                                      })
+                                    );
+                                } catch (stepErr) {
+                                  return {
+                                    ok: false,
+                                    stage:
+                                      "STRING_KEY_OUTER_EXCEPTION",
+                                    errorName:
+                                      stepErr instanceof Error
+                                        ? stepErr.name
+                                        : typeof stepErr,
+                                    errorMessage:
+                                      stepErr instanceof Error
+                                        ? stepErr.message
+                                        : String(stepErr),
+                                    errorStack:
+                                      stepErr instanceof Error
+                                        ? stepErr.stack
+                                        : null
+                                  };
+                                }
+                              },
+                              chatMeta.index
+                            );
+
                           nonGroupStepProbe.cachedLastMessage =
                             await pupPage.evaluate(
                               (index: number) => {
