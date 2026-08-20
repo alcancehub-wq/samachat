@@ -412,6 +412,428 @@ const createWWebJsReconciliationAdapter = <
                             : null
                       };
 
+                      const groupStepProbe: any = {
+                        serialize: null,
+                        createWid: null,
+                        metadataCollection: null,
+                        metadataUpdate: null,
+                        lidMigrationUtils: null,
+                        metadataSerialize: null,
+                        participantToPn: null
+                      };
+
+                      try {
+                        groupStepProbe.serialize =
+                          await pupPage.evaluate(
+                            (index: number) => {
+                              try {
+                                const chats =
+                                  (window as any)
+                                    .require(
+                                      "WAWebCollections"
+                                    )
+                                    .Chat.getModelsArray();
+
+                                const chat =
+                                  chats[index];
+
+                                const serialized =
+                                  chat.serialize();
+
+                                return {
+                                  ok: true,
+                                  serializedId:
+                                    serialized?.id?._serialized ||
+                                    serialized?.id ||
+                                    null
+                                };
+                              } catch (stepErr) {
+                                return {
+                                  ok: false,
+                                  errorName:
+                                    stepErr instanceof Error
+                                      ? stepErr.name
+                                      : typeof stepErr,
+                                  errorMessage:
+                                    stepErr instanceof Error
+                                      ? stepErr.message
+                                      : String(stepErr),
+                                  errorStack:
+                                    stepErr instanceof Error
+                                      ? stepErr.stack
+                                      : null
+                                };
+                              }
+                            },
+                            chatMeta.index
+                          );
+
+                        groupStepProbe.createWid =
+                          await pupPage.evaluate(
+                            (index: number) => {
+                              try {
+                                const chats =
+                                  (window as any)
+                                    .require(
+                                      "WAWebCollections"
+                                    )
+                                    .Chat.getModelsArray();
+
+                                const chat =
+                                  chats[index];
+
+                                const wid =
+                                  (window as any)
+                                    .require(
+                                      "WAWebWidFactory"
+                                    )
+                                    .createWid(
+                                      chat.id._serialized
+                                    );
+
+                                return {
+                                  ok: true,
+                                  wid:
+                                    wid?._serialized ||
+                                    String(wid)
+                                };
+                              } catch (stepErr) {
+                                return {
+                                  ok: false,
+                                  errorName:
+                                    stepErr instanceof Error
+                                      ? stepErr.name
+                                      : typeof stepErr,
+                                  errorMessage:
+                                    stepErr instanceof Error
+                                      ? stepErr.message
+                                      : String(stepErr),
+                                  errorStack:
+                                    stepErr instanceof Error
+                                      ? stepErr.stack
+                                      : null
+                                };
+                              }
+                            },
+                            chatMeta.index
+                          );
+
+                        groupStepProbe.metadataCollection =
+                          await pupPage.evaluate(
+                            () => {
+                              try {
+                                const collections =
+                                  (window as any)
+                                    .require(
+                                      "WAWebCollections"
+                                    );
+
+                                const metadata =
+                                  collections.GroupMetadata ||
+                                  collections.WAWebGroupMetadataCollection;
+
+                                return {
+                                  ok: true,
+                                  present:
+                                    Boolean(metadata),
+                                  updateType:
+                                    typeof metadata?.update
+                                };
+                              } catch (stepErr) {
+                                return {
+                                  ok: false,
+                                  errorName:
+                                    stepErr instanceof Error
+                                      ? stepErr.name
+                                      : typeof stepErr,
+                                  errorMessage:
+                                    stepErr instanceof Error
+                                      ? stepErr.message
+                                      : String(stepErr),
+                                  errorStack:
+                                    stepErr instanceof Error
+                                      ? stepErr.stack
+                                      : null
+                                };
+                              }
+                            }
+                          );
+
+                        groupStepProbe.metadataUpdate =
+                          await pupPage.evaluate(
+                            (index: number) => {
+                              try {
+                                const collections =
+                                  (window as any)
+                                    .require(
+                                      "WAWebCollections"
+                                    );
+
+                                const chats =
+                                  collections.Chat
+                                    .getModelsArray();
+
+                                const chat =
+                                  chats[index];
+
+                                const wid =
+                                  (window as any)
+                                    .require(
+                                      "WAWebWidFactory"
+                                    )
+                                    .createWid(
+                                      chat.id._serialized
+                                    );
+
+                                const metadata =
+                                  collections.GroupMetadata ||
+                                  collections.WAWebGroupMetadataCollection;
+
+                                return metadata
+                                  .update(wid)
+                                  .then(
+                                    () => ({
+                                      ok: true
+                                    }),
+                                    (stepErr: any) => ({
+                                      ok: false,
+                                      errorName:
+                                        stepErr instanceof Error
+                                          ? stepErr.name
+                                          : typeof stepErr,
+                                      errorMessage:
+                                        stepErr instanceof Error
+                                          ? stepErr.message
+                                          : String(stepErr),
+                                      errorStack:
+                                        stepErr instanceof Error
+                                          ? stepErr.stack
+                                          : null
+                                    })
+                                  );
+                              } catch (stepErr) {
+                                return {
+                                  ok: false,
+                                  errorName:
+                                    stepErr instanceof Error
+                                      ? stepErr.name
+                                      : typeof stepErr,
+                                  errorMessage:
+                                    stepErr instanceof Error
+                                      ? stepErr.message
+                                      : String(stepErr),
+                                  errorStack:
+                                    stepErr instanceof Error
+                                      ? stepErr.stack
+                                      : null
+                                };
+                              }
+                            },
+                            chatMeta.index
+                          );
+
+                        groupStepProbe.lidMigrationUtils =
+                          await pupPage.evaluate(
+                            () => {
+                              try {
+                                const utils =
+                                  (window as any)
+                                    .require(
+                                      "WAWebLidMigrationUtils"
+                                    );
+
+                                return {
+                                  ok: true,
+                                  toPnType:
+                                    typeof utils?.toPn
+                                };
+                              } catch (stepErr) {
+                                return {
+                                  ok: false,
+                                  errorName:
+                                    stepErr instanceof Error
+                                      ? stepErr.name
+                                      : typeof stepErr,
+                                  errorMessage:
+                                    stepErr instanceof Error
+                                      ? stepErr.message
+                                      : String(stepErr),
+                                  errorStack:
+                                    stepErr instanceof Error
+                                      ? stepErr.stack
+                                      : null
+                                };
+                              }
+                            }
+                          );
+
+                        groupStepProbe.metadataSerialize =
+                          await pupPage.evaluate(
+                            (index: number) => {
+                              try {
+                                const chats =
+                                  (window as any)
+                                    .require(
+                                      "WAWebCollections"
+                                    )
+                                    .Chat.getModelsArray();
+
+                                const chat =
+                                  chats[index];
+
+                                const serialized =
+                                  chat.groupMetadata
+                                    .serialize();
+
+                                return {
+                                  ok: true,
+                                  participantCount:
+                                    Array.isArray(
+                                      serialized?.participants
+                                    )
+                                      ? serialized
+                                          .participants
+                                          .length
+                                      : 0
+                                };
+                              } catch (stepErr) {
+                                return {
+                                  ok: false,
+                                  errorName:
+                                    stepErr instanceof Error
+                                      ? stepErr.name
+                                      : typeof stepErr,
+                                  errorMessage:
+                                    stepErr instanceof Error
+                                      ? stepErr.message
+                                      : String(stepErr),
+                                  errorStack:
+                                    stepErr instanceof Error
+                                      ? stepErr.stack
+                                      : null
+                                };
+                              }
+                            },
+                            chatMeta.index
+                          );
+
+                        groupStepProbe.participantToPn =
+                          await pupPage.evaluate(
+                            (index: number) => {
+                              try {
+                                const chats =
+                                  (window as any)
+                                    .require(
+                                      "WAWebCollections"
+                                    )
+                                    .Chat.getModelsArray();
+
+                                const chat =
+                                  chats[index];
+
+                                const serialized =
+                                  chat.groupMetadata
+                                    .serialize();
+
+                                const participants =
+                                  serialized
+                                    ?.participants ||
+                                  [];
+
+                                const { toPn } =
+                                  (window as any)
+                                    .require(
+                                      "WAWebLidMigrationUtils"
+                                    );
+
+                                for (
+                                  let participantIndex = 0;
+                                  participantIndex <
+                                  participants.length;
+                                  participantIndex += 1
+                                ) {
+                                  try {
+                                    toPn(
+                                      participants[
+                                        participantIndex
+                                      ].id
+                                    );
+                                  } catch (stepErr) {
+                                    return {
+                                      ok: false,
+                                      participantIndex,
+                                      participantId:
+                                        participants[
+                                          participantIndex
+                                        ]?.id
+                                          ?._serialized ||
+                                        String(
+                                          participants[
+                                            participantIndex
+                                          ]?.id
+                                        ),
+                                      errorName:
+                                        stepErr instanceof Error
+                                          ? stepErr.name
+                                          : typeof stepErr,
+                                      errorMessage:
+                                        stepErr instanceof Error
+                                          ? stepErr.message
+                                          : String(stepErr),
+                                      errorStack:
+                                        stepErr instanceof Error
+                                          ? stepErr.stack
+                                          : null
+                                    };
+                                  }
+                                }
+
+                                return {
+                                  ok: true,
+                                  participantCount:
+                                    participants.length
+                                };
+                              } catch (stepErr) {
+                                return {
+                                  ok: false,
+                                  errorName:
+                                    stepErr instanceof Error
+                                      ? stepErr.name
+                                      : typeof stepErr,
+                                  errorMessage:
+                                    stepErr instanceof Error
+                                      ? stepErr.message
+                                      : String(stepErr),
+                                  errorStack:
+                                    stepErr instanceof Error
+                                      ? stepErr.stack
+                                      : null
+                                };
+                              }
+                            },
+                            chatMeta.index
+                          );
+
+                        probe.firstFailure.groupStepProbe =
+                          groupStepProbe;
+                      } catch (groupProbeErr) {
+                        probe.firstFailure.groupStepProbe = {
+                          infrastructureFailure: true,
+                          errorName:
+                            groupProbeErr instanceof Error
+                              ? groupProbeErr.name
+                              : typeof groupProbeErr,
+                          errorMessage:
+                            groupProbeErr instanceof Error
+                              ? groupProbeErr.message
+                              : String(groupProbeErr),
+                          errorStack:
+                            groupProbeErr instanceof Error
+                              ? groupProbeErr.stack
+                              : null
+                        };
+                      }
+
                       break;
                     }
                   }
