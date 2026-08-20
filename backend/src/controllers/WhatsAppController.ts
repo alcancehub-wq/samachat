@@ -350,6 +350,39 @@ export const reconcile = async (
       });
     }
 
+    try {
+      require("fs").appendFileSync(
+        "/tmp/samachat-p05-reconcile-error.log",
+        `${JSON.stringify({
+          timestamp: new Date().toISOString(),
+          whatsappId: whatsapp.id,
+          requestedByUserId: requesterUserId,
+          errorName:
+            err instanceof Error
+              ? err.name
+              : typeof err,
+          errorMessage:
+            err instanceof Error
+              ? err.message
+              : String(err),
+          errorStack:
+            err instanceof Error
+              ? err.stack
+              : null
+        })}\n`,
+        "utf8"
+      );
+    } catch (diagnosticErr) {
+      logger.error(
+        {
+          whatsappId: whatsapp.id,
+          requestedByUserId: requesterUserId,
+          err: diagnosticErr
+        },
+        "Unable to persist manual WhatsApp reconciliation diagnostic"
+      );
+    }
+
     throw err;
   }
 };
