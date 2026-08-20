@@ -284,19 +284,9 @@ const createWWebJsReconciliationAdapter = <
                 runtimeSession?.pupPage;
 
               if (pupPage) {
-                const probe =
+                const collectionProbe =
                   await pupPage.evaluate(
-                    async () => {
-                      const result: any = {
-                        timestamp:
-                          new Date().toISOString(),
-                        collectionOk: false,
-                        collectionCount: null,
-                        successfulModelsBeforeFailure: 0,
-                        firstFailure: null,
-                        collectionError: null
-                      };
-
+                    () => {
                       try {
                         const collections =
                           (window as any).require(
@@ -306,82 +296,126 @@ const createWWebJsReconciliationAdapter = <
                         const rawChats =
                           collections.Chat.getModelsArray();
 
-                        result.collectionOk = true;
-                        result.collectionCount =
-                          rawChats.length;
-
-                        for (
-                          let index = 0;
-                          index < rawChats.length;
-                          index += 1
-                        ) {
-                          const chat =
-                            rawChats[index];
-
-                          const chatId =
-                            chat?.id?._serialized ||
-                            chat?.id?.user ||
-                            `index:${index}`;
-
-                          try {
-                            await (
-                              window as any
-                            ).WWebJS.getChatModel(
-                              chat
-                            );
-
-                            result.successfulModelsBeforeFailure += 1;
-                          } catch (modelErr) {
-                            result.firstFailure = {
-                              index,
-                              chatId,
-                              hasGroupMetadata:
-                                Boolean(
-                                  chat?.groupMetadata
-                                ),
-                              formattedTitle:
-                                typeof chat?.formattedTitle ===
-                                "string"
-                                  ? chat.formattedTitle
-                                  : null,
-                              errorName:
-                                modelErr instanceof Error
-                                  ? modelErr.name
-                                  : typeof modelErr,
-                              errorMessage:
-                                modelErr instanceof Error
-                                  ? modelErr.message
-                                  : String(modelErr),
-                              errorStack:
-                                modelErr instanceof Error
-                                  ? modelErr.stack
-                                  : null
-                            };
-
-                            break;
-                          }
-                        }
+                        return {
+                          collectionOk: true,
+                          collectionCount:
+                            rawChats.length,
+                          collectionError: null,
+                          chats:
+                            rawChats.map(
+                              (
+                                chat: any,
+                                index: number
+                              ) => ({
+                                index,
+                                chatId:
+                                  chat?.id?._serialized ||
+                                  chat?.id?.user ||
+                                  `index:${index}`,
+                                hasGroupMetadata:
+                                  Boolean(
+                                    chat?.groupMetadata
+                                  ),
+                                formattedTitle:
+                                  typeof chat?.formattedTitle ===
+                                  "string"
+                                    ? chat.formattedTitle
+                                    : null
+                              })
+                            )
+                        };
                       } catch (collectionErr) {
-                        result.collectionError = {
-                          errorName:
-                            collectionErr instanceof Error
-                              ? collectionErr.name
-                              : typeof collectionErr,
-                          errorMessage:
-                            collectionErr instanceof Error
-                              ? collectionErr.message
-                              : String(collectionErr),
-                          errorStack:
-                            collectionErr instanceof Error
-                              ? collectionErr.stack
-                              : null
+                        return {
+                          collectionOk: false,
+                          collectionCount: null,
+                          collectionError: {
+                            errorName:
+                              collectionErr instanceof Error
+                                ? collectionErr.name
+                                : typeof collectionErr,
+                            errorMessage:
+                              collectionErr instanceof Error
+                                ? collectionErr.message
+                                : String(collectionErr),
+                            errorStack:
+                              collectionErr instanceof Error
+                                ? collectionErr.stack
+                                : null
+                          },
+                          chats: []
                         };
                       }
-
-                      return result;
                     }
                   );
 
+                const probe: any = {
+                  timestamp:
+                    new Date().toISOString(),
+                  collectionOk:
+                    collectionProbe.collectionOk,
+                  collectionCount:
+                    collectionProbe.collectionCount,
+                  successfulModelsBeforeFailure: 0,
+                  firstFailure: null,
+                  collectionError:
+                    collectionProbe.collectionError
+                };
+
+                if (
+                  collectionProbe.collectionOk &&
+                  Array.isArray(
+                    collectionProbe.chats
+                  )
+                ) {
+                  for (
+                    const chatMeta of
+                    collectionProbe.chats
+                  ) {
+                    try {
+                      await pupPage.evaluate(
+                        (index: number) => {
+                          const collections =
+                            (window as any).require(
+                              "WAWebCollections"
+                            );
+
+                          const rawChats =
+                            collections.Chat.getModelsArray();
+
+                          const chat =
+                            rawChats[index];
+
+                          return (
+                            window as any
+                          ).WWebJS.getChatModel(
+                            chat
+                          );
+                        },
+                        chatMeta.index
+                      );
+
+                      probe.successfulModelsBeforeFailure += 1;
+                    } catch (modelErr) {
+                      probe.firstFailure = {
+                        ...chatMeta,
+                        errorName:
+                          modelErr instanceof Error
+                            ? modelErr.name
+                            : typeof modelErr,
+                        errorMessage:
+                          modelErr instanceof Error
+                            ? modelErr.message
+                            : String(modelErr),
+                        errorStack:
+                          modelErr instanceof Error
+                            ? modelErr.stack
+                            : null
+                      };
+
+                      break;
+                    }
+                  }
+                }
                 require("fs").appendFileSync(
                   "/tmp/samachat-p05-getchats-probe.log",
                   `${JSON.stringify({
