@@ -1835,6 +1835,139 @@ const createWWebJsReconciliationAdapter = <
               );
             }
 
+            const fallbackSession =
+              session as any;
+
+            const fallbackPage =
+              fallbackSession?.pupPage;
+
+            if (fallbackPage) {
+              const repairedIndexes:
+                number[] =
+                await fallbackPage.evaluate(
+                  () => {
+                    const collections =
+                      (window as any)
+                        .require(
+                          "WAWebCollections"
+                        );
+
+                    const chats =
+                      collections.Chat
+                        .getModelsArray();
+
+                    const repaired:
+                      number[] = [];
+
+                    chats.forEach(
+                      (
+                        chat: any,
+                        index: number
+                      ) => {
+                        const rawKey =
+                          chat?.lastReceivedKey;
+
+                        if (
+                          !rawKey ||
+                          rawKey._serialized
+                        ) {
+                          return;
+                        }
+
+                        const stringKey =
+                          String(rawKey);
+
+                        if (
+                          !stringKey ||
+                          stringKey ===
+                            "[object Object]" ||
+                          stringKey ===
+                            "undefined" ||
+                          stringKey ===
+                            "null"
+                        ) {
+                          return;
+                        }
+
+                        try {
+                          rawKey._serialized =
+                            stringKey;
+
+                          if (
+                            rawKey._serialized ===
+                            stringKey
+                          ) {
+                            repaired.push(index);
+                          }
+                        } catch {
+                          // Unsupported provider key shape remains untouched.
+                        }
+                      }
+                    );
+
+                    return repaired;
+                  }
+                );
+
+              if (
+                Array.isArray(
+                  repairedIndexes
+                ) &&
+                repairedIndexes.length > 0
+              ) {
+                try {
+                  const recoveredChats =
+                    await session.getChats();
+
+                  signal.throwIfAborted();
+
+                  return recoveredChats;
+                } finally {
+                  try {
+                    await fallbackPage.evaluate(
+                      (
+                        indexes:
+                          number[]
+                      ) => {
+                        const collections =
+                          (window as any)
+                            .require(
+                              "WAWebCollections"
+                            );
+
+                        const chats =
+                          collections.Chat
+                            .getModelsArray();
+
+                        indexes.forEach(
+                          index => {
+                            const rawKey =
+                              chats[index]
+                                ?.lastReceivedKey;
+
+                            if (
+                              rawKey &&
+                              rawKey._serialized
+                            ) {
+                              try {
+                                delete rawKey
+                                  ._serialized;
+                              } catch {
+                                // Best-effort cleanup only.
+                              }
+                            }
+                          }
+                        );
+                      },
+                      repairedIndexes
+                    );
+                  } catch {
+                    // Cleanup failure must not replace reconciliation result.
+                  }
+                }
+              }
+            }
+
             throw err;
           }
         },
