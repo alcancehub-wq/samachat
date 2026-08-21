@@ -96,7 +96,7 @@ describe(
     );
 
     it(
-      "maps canonical contact phone identity and profile picture",
+      "maps canonical contact phone identity without profile picture lookup",
       async () => {
         const getProfilePicUrl =
           jest.fn().mockResolvedValue(
@@ -119,14 +119,13 @@ describe(
           name: "Nome salvo",
           number: "5511888888888",
           lid: undefined,
-          profilePicUrl:
-            "https://example.invalid/photo.jpg",
+          profilePicUrl: undefined,
           isGroup: false
         });
 
         expect(
           getProfilePicUrl
-        ).toHaveBeenCalledTimes(1);
+        ).not.toHaveBeenCalled();
       }
     );
 
@@ -153,7 +152,7 @@ describe(
     );
 
     it(
-      "keeps profile picture lookup failure non-fatal",
+      "does not require profile picture lookup during reconciliation",
       async () => {
         const getProfilePicUrl =
           jest.fn().mockRejectedValue(

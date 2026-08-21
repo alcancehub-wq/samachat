@@ -172,25 +172,6 @@ const extractWWebJsContactIdentifiers = (
 export const mapWWebJsContactToReconciliationMetadata = async (
   contact: WWebJsReconciliationContactLike
 ): Promise<WWebJsReconciliationContactMetadata> => {
-  let profilePicUrl:
-    | string
-    | undefined;
-
-  if (contact.getProfilePicUrl) {
-    try {
-      profilePicUrl =
-        await contact.getProfilePicUrl();
-    } catch (err) {
-      logger.warn(
-        {
-          err,
-          contactId:
-            contact?.id?._serialized
-        },
-        "Unable to load contact profile picture from WhatsApp payload"
-      );
-    }
-  }
 
   const {
     number,
@@ -222,7 +203,7 @@ export const mapWWebJsContactToReconciliationMetadata = async (
       "",
     number,
     lid,
-    profilePicUrl,
+    profilePicUrl: undefined,
     isGroup:
       Boolean(contact.isGroup)
   };
