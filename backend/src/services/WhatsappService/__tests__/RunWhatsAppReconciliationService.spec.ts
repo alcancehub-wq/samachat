@@ -261,6 +261,58 @@ describe("RunWhatsAppReconciliationService", () => {
     expect(result.contactsChecked).toBe(1);
   });
 
+  it("reconciles the same contact identity only once per execution", async () => {
+    reconcileMessageMock.mockImplementation(
+      async ({
+        messageId,
+        reconcileMetadata
+      }: any) => {
+        await reconcileMetadata();
+
+        return {
+          messageId,
+          classification: "existing",
+          metadataReconciled: true,
+          messageProcessed: false
+        };
+      }
+    );
+
+    const metadata = {
+      name: "Maria",
+      number: "5511987654321",
+      isGroup: false
+    };
+
+    const result =
+      await RunWhatsAppReconciliationService({
+        whatsappId: 101,
+        trigger: "manual",
+
+        collectWork: async () => ({
+          messages: [
+            {
+              messageId: "m1",
+              metadata,
+              processNewMessage: jest.fn()
+            },
+            {
+              messageId: "m2",
+              metadata,
+              processNewMessage: jest.fn()
+            }
+          ]
+        })
+      });
+
+    expect(
+      reconcileContactMock
+    ).toHaveBeenCalledTimes(1);
+
+    expect(result.contactsChecked).toBe(1);
+    expect(result.checkedMessages).toBe(2);
+  });
+
   it("stops before processing collected work when ownership is lost during collection", async () => {
     let aborted = false;
 

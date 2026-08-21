@@ -103,16 +103,56 @@ const RunWhatsAppReconciliationService = async ({
       let contactsCreated = 0;
       let contactsUpdated = 0;
 
+      const reconciledContactIdentities =
+        new Set<string>();
+
+      const reconcileContactMetadataOnce =
+        async (
+          metadata: WhatsAppReconciliationContactMetadata
+        ): Promise<void> => {
+          signal.throwIfAborted();
+
+          const normalizedNumber =
+            typeof metadata.number === "string"
+              ? metadata.number.trim()
+              : "";
+
+          const normalizedLid =
+            typeof metadata.lid === "string"
+              ? metadata.lid.trim()
+              : "";
+
+          const identityKey =
+            normalizedNumber
+              ? `number:${normalizedNumber}`
+              : normalizedLid
+                ? `lid:${normalizedLid}`
+                : undefined;
+
+          if (
+            identityKey &&
+            reconciledContactIdentities.has(identityKey)
+          ) {
+            return;
+          }
+
+          await ReconcileWhatsAppContactMetadataService({
+            whatsappId: normalizedWhatsappId,
+            metadata,
+            signal
+          });
+
+          if (identityKey) {
+            reconciledContactIdentities.add(identityKey);
+          }
+
+          contactsChecked += 1;
+        };
+
       for (const contactItem of resolvedContacts) {
-        signal.throwIfAborted();
-
-        await ReconcileWhatsAppContactMetadataService({
-          whatsappId: normalizedWhatsappId,
-          metadata: contactItem.metadata,
-          signal
-        });
-
-        contactsChecked += 1;
+        await reconcileContactMetadataOnce(
+          contactItem.metadata
+        );
       }
 
       for (const messageItem of resolvedMessages) {
@@ -129,13 +169,9 @@ const RunWhatsAppReconciliationService = async ({
             reconcileMetadata: async () => {
               signal.throwIfAborted();
 
-              await ReconcileWhatsAppContactMetadataService({
-                whatsappId: normalizedWhatsappId,
-                metadata: messageItem.metadata,
-                signal
-              });
-
-              contactsChecked += 1;
+              await reconcileContactMetadataOnce(
+                messageItem.metadata
+              );
             },
 
             processNewMessage:
