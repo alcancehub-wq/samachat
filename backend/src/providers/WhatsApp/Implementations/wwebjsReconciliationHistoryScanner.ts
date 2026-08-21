@@ -208,9 +208,12 @@ const ScanWWebJsReconciliationHistory = async <
       );
 
     if (upperAnchorIndex === -1) {
-      throw new Error(
-        "ERR_RECONCILIATION_UPPER_ANCHOR_NOT_FOUND"
-      );
+      if (fetched.length < requestedLimit || requestedLimit >= resolvedMaxLimit) {
+        throw new Error("ERR_RECONCILIATION_UPPER_ANCHOR_NOT_FOUND");
+      }
+      previousFetchedCount = fetched.length;
+      requestedLimit = Math.min(requestedLimit * resolvedGrowthFactor, resolvedMaxLimit);
+      continue;
     }
 
     /*
