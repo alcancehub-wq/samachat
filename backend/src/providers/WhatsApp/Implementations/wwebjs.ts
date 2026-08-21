@@ -1894,15 +1894,6 @@ const initInternal = async (whatsapp: Whatsapp): Promise<void> => {
         });
 
         wbot.sendPresenceAvailable();
-
-        logger.info(
-          { whatsappId: whatsapp.id },
-          "Starting automatic WhatsApp reconciliation after READY"
-        );
-
-        void runAutomaticWWebJsReconciliationForSession(
-          whatsapp.id
-        );
       } catch (err) {
         logger.error(err, "Error on whatsapp ready event");
       }

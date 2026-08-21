@@ -73,7 +73,7 @@ describe(
     );
 
     it(
-      "starts automatic reconciliation only after the session is registered READY",
+      "does not start automatic reconciliation from READY",
       () => {
         const readyStart =
           source.indexOf(
@@ -117,11 +117,9 @@ describe(
 
         expect(
           reconciliationIndex
-        ).toBeGreaterThan(
-          registerIndex
-        );
+        ).toBe(-1);
 
-        expect(ready).toContain(
+        expect(ready).not.toContain(
           "void runAutomaticWWebJsReconciliationForSession"
         );
 
