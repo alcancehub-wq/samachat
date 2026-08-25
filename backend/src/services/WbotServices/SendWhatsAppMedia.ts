@@ -25,6 +25,8 @@ import {
 } from "./audioNormalization";
 import { shouldSendMediaAsDocument } from "./mediaDelivery";
 import { sleep } from "../../utils/sleep";
+import { readFileSync } from "fs";
+import CloudApiClient from "../CloudApiServices/CloudApiClient";
 import { logger } from "../../utils/logger";
 
 interface Request {
@@ -230,6 +232,10 @@ const ensureWhatsappSession = async (
     throw new AppError("ERR_WAPP_NOT_INITIALIZED");
   }
 
+  if (whatsapp.providerType === "official") {
+    return whatsapp;
+  }
+
   if (forceStart || !whatsappProvider.hasSession(whatsapp.id)) {
     triggerWhatsappSessionStart(whatsapp, forceStart);
   }
@@ -352,7 +358,9 @@ const SendWhatsAppMedia = async ({
       );
     }
 
-    await ensureWhatsappReady(ticket, whatsapp);
+    if (whatsapp.providerType !== "official") {
+      await ensureWhatsappReady(ticket, whatsapp);
+    }
 
     if (perfAuditAudio) {
       logger.info(
@@ -514,6 +522,96 @@ const SendWhatsAppMedia = async ({
       sendMediaAsDocument: effectiveSendMediaAsDocument
     };
     const providerMediaInput = mediaInput;
+
+    if (whatsapp.providerType === "official") {
+      if (ticket.isGroup) {
+        throw new AppError("ERR_CLOUD_API_GROUP_MEDIA_NOT_SUPPORTED");
+      }
+
+      const officialNumber =
+        (ticket.contact.number || "").replace(/\D/g, "");
+
+      if (!officialNumber) {
+        throw new AppError("ERR_WAPP_INVALID_CONTACT");
+      }
+
+      const mimeType = (mediaInput.mimetype || "").toLowerCase();
+
+      let officialMediaType:
+        | "audio"
+        | "image"
+        | "video"
+        | "document";
+
+      if (mimeType.startsWith("audio/")) {
+        officialMediaType = "audio";
+      } else if (mimeType.startsWith("image/")) {
+        officialMediaType = "image";
+      } else if (mimeType.startsWith("video/")) {
+        officialMediaType = "video";
+      } else {
+        officialMediaType = "document";
+      }
+
+      const cloudApiClient = new CloudApiClient({
+        accessToken: whatsapp.accessToken,
+        phoneNumberId: whatsapp.phoneNumberId,
+        apiVersion: whatsapp.apiVersion
+      });
+
+      const uploadedMedia = await cloudApiClient.uploadMedia({
+        filename: mediaInput.filename,
+        mimetype: mediaInput.mimetype,
+        data: readFileSync(mediaInput.path)
+      });
+
+      if (!uploadedMedia.id) {
+        throw new AppError("ERR_CLOUD_API_MEDIA_UPLOAD_NO_ID");
+      }
+
+      const cloudResult = await cloudApiClient.sendMedia({
+        to: officialNumber,
+        mediaId: uploadedMedia.id,
+        type: officialMediaType,
+        caption:
+          officialMediaType === "audio"
+            ? undefined
+            : mediaOptions.caption,
+        filename:
+          officialMediaType === "document"
+            ? mediaInput.filename
+            : undefined,
+        voice:
+          officialMediaType === "audio"
+            ? mediaOptions.sendAudioAsVoice
+            : undefined
+      });
+
+      await ticket.update({
+        lastMessage: resolvedBody || media.filename
+      });
+
+      if (!preserveUploadedFile) {
+        safelyRemoveFile(media.path);
+      }
+
+      safelyRemoveFile(convertedPath);
+
+      return {
+        id:
+          cloudResult.messages?.[0]?.id ||
+          `cloudapi-media-${ticket.id}-${Date.now()}`,
+        body: resolvedBody || media.filename,
+        fromMe: true,
+        hasMedia: true,
+        type: officialMediaType,
+        timestamp: Math.floor(Date.now() / 1000),
+        from: whatsapp.phoneNumber || whatsapp.phoneNumberId || "",
+        to: officialNumber,
+        hasQuotedMsg: false,
+        ack: 1
+      } as ProviderMessage;
+    }
 
     const sendWithChatId = async (targetChatId: string): Promise<ProviderMessage> => {
       if (shouldAuditAudio) {

@@ -10,6 +10,31 @@ export interface CloudApiTextMessageInput {
   previewUrl?: boolean;
 }
 
+export type CloudApiMediaType =
+  | "audio"
+  | "image"
+  | "video"
+  | "document";
+
+export interface CloudApiMediaUploadInput {
+  filename: string;
+  mimetype: string;
+  data: Buffer;
+}
+
+export interface CloudApiMediaUploadResult {
+  id?: string;
+}
+
+export interface CloudApiMediaMessageInput {
+  to: string;
+  mediaId: string;
+  type: CloudApiMediaType;
+  caption?: string;
+  filename?: string;
+  voice?: boolean;
+}
+
 export interface CloudApiMessageResult {
   messagingProduct?: string;
   contacts?: Array<{

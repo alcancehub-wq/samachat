@@ -5,6 +5,7 @@ import Whatsapp from "../../../models/Whatsapp";
 import { whatsappProvider } from "../../../providers/WhatsApp";
 import { StartWhatsAppSession } from "../../../services/WbotServices/StartWhatsAppSession";
 import { sleep } from "../../../utils/sleep";
+import CloudApiClient from "../../../services/CloudApiServices/CloudApiClient";
 
 jest.mock("../../../models/Message", () => ({
   findOne: jest.fn()
@@ -26,6 +27,11 @@ jest.mock("../../../providers/WhatsApp", () => ({
 
 jest.mock("../../../services/WbotServices/StartWhatsAppSession", () => ({
   StartWhatsAppSession: jest.fn().mockResolvedValue(undefined)
+}));
+
+jest.mock("../../../services/CloudApiServices/CloudApiClient", () => ({
+  __esModule: true,
+  default: jest.fn()
 }));
 
 jest.mock("../../../services/Variables/ResolveMessageVariablesService", () =>
@@ -71,6 +77,9 @@ describe("SendWhatsAppMedia", () => {
   const sendMediaMock = whatsappProvider.sendMedia as jest.Mock;
   const startWhatsAppSessionMock = StartWhatsAppSession as jest.Mock;
   const sleepMock = sleep as jest.Mock;
+  const cloudApiClientMock = CloudApiClient as unknown as jest.Mock;
+  const uploadMediaMock = jest.fn();
+  const sendCloudMediaMock = jest.fn();
 
   const whatsapp = {
     id: 35,
@@ -106,6 +115,31 @@ describe("SendWhatsAppMedia", () => {
     });
     findRecentMessageMock.mockResolvedValue(null);
     sleepMock.mockResolvedValue(undefined);
+
+    const {
+      shouldNormalizeAudioForWhatsApp,
+      shouldSendAudioAsVoice
+    } = jest.requireMock(
+      "../../../services/WbotServices/audioNormalization"
+    );
+
+    const {
+      shouldSendMediaAsDocument
+    } = jest.requireMock(
+      "../../../services/WbotServices/mediaDelivery"
+    );
+
+    shouldNormalizeAudioForWhatsApp.mockReturnValue(false);
+    shouldSendAudioAsVoice.mockReturnValue(false);
+    shouldSendMediaAsDocument.mockReturnValue(false);
+
+    uploadMediaMock.mockReset();
+    sendCloudMediaMock.mockReset();
+
+    cloudApiClientMock.mockImplementation(() => ({
+      uploadMedia: uploadMediaMock,
+      sendMedia: sendCloudMediaMock
+    }));
   });
 
   it("retries media send with lookup chat id when No LID is returned", async () => {
@@ -292,5 +326,102 @@ describe("SendWhatsAppMedia", () => {
 
     unlinkSyncSpy.mockRestore();
     existsSyncSpy.mockRestore();
+  });
+  it("routes official media through Cloud API without legacy session or provider send", async () => {
+    const media = {
+      filename: "foto.jpg",
+      originalname: "foto.jpg",
+      mimetype: "image/jpeg",
+      path: "tmp/foto.jpg"
+    } as Express.Multer.File;
+
+    const ticket = buildTicket();
+
+    findByPkMock.mockResolvedValueOnce({
+      id: 35,
+      status: "CONNECTED",
+      providerType: "official",
+      accessToken: "official-token",
+      phoneNumberId: "629748506897910",
+      apiVersion: "v20.0",
+      phoneNumber: "5511981901577"
+    });
+
+    uploadMediaMock.mockResolvedValueOnce({
+      id: "meta-media-id-1"
+    });
+
+    sendCloudMediaMock.mockResolvedValueOnce({
+      messages: [
+        {
+          id: "wamid.official-media-1"
+        }
+      ]
+    });
+
+    const readFileSyncSpy = jest
+      .spyOn(fs, "readFileSync")
+      .mockReturnValue(Buffer.from("fake-image") as any);
+
+    const existsSyncSpy = jest
+      .spyOn(fs, "existsSync")
+      .mockReturnValue(true);
+
+    const unlinkSyncSpy = jest
+      .spyOn(fs, "unlinkSync")
+      .mockImplementation(() => undefined as any);
+
+    try {
+      const result = await SendWhatsAppMedia({
+        media,
+        ticket: ticket as any,
+        body: "Imagem oficial"
+      });
+
+      expect(cloudApiClientMock).toHaveBeenCalledTimes(1);
+
+      expect(cloudApiClientMock).toHaveBeenCalledWith({
+        accessToken: "official-token",
+        phoneNumberId: "629748506897910",
+        apiVersion: "v20.0"
+      });
+
+      expect(uploadMediaMock).toHaveBeenCalledTimes(1);
+
+      expect(uploadMediaMock).toHaveBeenCalledWith({
+        filename: "foto.jpg",
+        mimetype: "image/jpeg",
+        data: Buffer.from("fake-image")
+      });
+
+      expect(sendCloudMediaMock).toHaveBeenCalledTimes(1);
+
+      expect(sendCloudMediaMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "5511999999999",
+          mediaId: "meta-media-id-1",
+          type: "image"
+        })
+      );
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: "wamid.official-media-1",
+          fromMe: true,
+          hasMedia: true,
+          type: "image",
+          to: "5511999999999"
+        })
+      );
+
+      expect(sendMediaMock).not.toHaveBeenCalled();
+      expect(startWhatsAppSessionMock).not.toHaveBeenCalled();
+      expect(hasSessionMock).not.toHaveBeenCalled();
+      expect(isSessionReadyMock).not.toHaveBeenCalled();
+    } finally {
+      readFileSyncSpy.mockRestore();
+      existsSyncSpy.mockRestore();
+      unlinkSyncSpy.mockRestore();
+    }
   });
 });
