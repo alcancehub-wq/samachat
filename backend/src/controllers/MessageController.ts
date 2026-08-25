@@ -139,10 +139,14 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     await Promise.all(
       medias.map(async (media: Express.Multer.File, mediaIndex: number) => {
         const shouldPersistRecordedAudioLocally = isComposerRecordedAudioUpload(media);
+        const shouldPersistOfficialMediaLocally =
+          ticket.whatsapp?.providerType === "official";
+        const shouldPersistMediaLocally =
+          shouldPersistRecordedAudioLocally || shouldPersistOfficialMediaLocally;
         const providerMessage = await SendWhatsAppMedia({
           media,
           ticket,
-          preserveUploadedFile: shouldPersistRecordedAudioLocally
+          preserveUploadedFile: shouldPersistMediaLocally
         });
 
         if (shouldPersistRecordedAudioLocally) {
@@ -157,7 +161,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
           );
         }
 
-        if (!shouldPersistRecordedAudioLocally) {
+        if (!shouldPersistMediaLocally) {
           return;
         }
 
