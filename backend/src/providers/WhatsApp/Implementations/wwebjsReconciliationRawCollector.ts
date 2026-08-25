@@ -46,6 +46,10 @@ interface Request<
     messageId: string
   ) => Promise<boolean>;
 
+  findKnownMessageIds?: (
+    messageIds: string[]
+  ) => Promise<Set<string>>;
+
   initialLimit?: number;
   growthFactor?: number;
   maxLimit?: number;
@@ -82,6 +86,7 @@ const CollectWWebJsRawReconciliationHistory = async <
   signal,
   resolveMessageId,
   isKnownMessage,
+  findKnownMessageIds,
   initialLimit,
   growthFactor,
   maxLimit
@@ -128,6 +133,8 @@ const CollectWWebJsRawReconciliationHistory = async <
       resolveMessageId,
       resolveRawMessageTimestamp:
         resolveRawTimestamp,
+
+      findKnownMessageIds,
 
       isKnownMessage: async messageId => {
         signal?.throwIfAborted();

@@ -1,4 +1,6 @@
-import ClassifyWhatsAppReconciliationMessageService from "../../../services/WhatsappService/ClassifyWhatsAppReconciliationMessageService";
+import ClassifyWhatsAppReconciliationMessageService, {
+  FindKnownWhatsAppReconciliationMessageIdsService
+} from "../../../services/WhatsappService/ClassifyWhatsAppReconciliationMessageService";
 
 import ResolveWhatsAppReconciliationBoundaryService from "../../../services/WhatsappService/ResolveWhatsAppReconciliationBoundaryService";
 
@@ -68,6 +70,10 @@ interface AdapterServices {
     messageId: string
   ) => Promise<"existing" | "new">;
 
+  classifyMessages: (
+    messageIds: string[]
+  ) => Promise<Set<string>>;
+
   resolveBoundary: typeof ResolveWhatsAppReconciliationBoundaryService;
 }
 
@@ -121,6 +127,9 @@ const defaultServices: AdapterServices = {
 
   classifyMessage:
     ClassifyWhatsAppReconciliationMessageService,
+
+  classifyMessages:
+    FindKnownWhatsAppReconciliationMessageIdsService,
 
   resolveBoundary:
     ResolveWhatsAppReconciliationBoundaryService
@@ -218,6 +227,28 @@ const createWWebJsReconciliationAdapter = <
     ...defaultServices,
     ...serviceOverrides
   };
+  if (
+    serviceOverrides.classifyMessage &&
+    !serviceOverrides.classifyMessages
+  ) {
+    services.classifyMessages =
+      async messageIds => {
+        const knownIds = new Set<string>();
+
+        for (const messageId of messageIds) {
+          const classification =
+            await serviceOverrides.classifyMessage!(
+              messageId
+            );
+
+          if (classification === "existing") {
+            knownIds.add(messageId);
+          }
+        }
+
+        return knownIds;
+      };
+  }
 
   return createWWebJsReconciliationOrchestrator<
     WWebJsReconciliationAdapterChat<TMessage>,
@@ -1994,6 +2025,19 @@ const createWWebJsReconciliationAdapter = <
 
               resolveMessageId,
 
+              findKnownMessageIds:
+                async messageIds => {
+                  signal.throwIfAborted();
+
+                  const knownMessageIds =
+                    await services.classifyMessages(
+                      messageIds
+                    );
+
+                  signal.throwIfAborted();
+
+                  return knownMessageIds;
+                },
               isKnownMessage:
                 async messageId => {
                   signal.throwIfAborted();

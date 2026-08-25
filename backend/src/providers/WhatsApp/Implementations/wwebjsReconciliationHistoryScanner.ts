@@ -49,6 +49,10 @@ interface Request<TMessage extends WWebJsHistoryScannerMessage> {
     messageId: string
   ) => Promise<boolean>;
 
+  findKnownMessageIds?: (
+    messageIds: string[]
+  ) => Promise<Set<string>>;
+
   initialLimit?: number;
   growthFactor?: number;
   maxLimit?: number;
@@ -108,6 +112,7 @@ const ScanWWebJsReconciliationHistory = async <
   resolveMessageId,
   resolveRawMessageTimestamp,
   isKnownMessage,
+  findKnownMessageIds,
   initialLimit,
   growthFactor,
   maxLimit
@@ -173,6 +178,8 @@ const ScanWWebJsReconciliationHistory = async <
 
   let requestedLimit = resolvedInitialLimit;
   let previousFetchedCount = -1;
+  const checkedMessageIds = new Set<string>();
+  const knownMessageIds = new Set<string>();
 
   while (true) {
     const fetched =
@@ -228,20 +235,54 @@ const ScanWWebJsReconciliationHistory = async <
 
     let knownBoundaryIndex = -1;
 
+    const candidateIdsToCheck =
+      bounded
+        .map(item => item.id)
+        .filter(
+          candidateId =>
+            candidateId !== normalizedUpperAnchorId &&
+            !checkedMessageIds.has(candidateId)
+        );
+
+    if (candidateIdsToCheck.length > 0) {
+      if (findKnownMessageIds) {
+        const resolvedKnownIds =
+          await findKnownMessageIds(
+            candidateIdsToCheck
+          );
+
+        for (const candidateId of candidateIdsToCheck) {
+          checkedMessageIds.add(candidateId);
+        }
+
+        for (const knownId of resolvedKnownIds) {
+          if (
+            candidateIdsToCheck.includes(knownId)
+          ) {
+            knownMessageIds.add(knownId);
+          }
+        }
+      } else {
+        for (const candidateId of candidateIdsToCheck) {
+          if (await isKnownMessage(candidateId)) {
+            knownMessageIds.add(candidateId);
+          }
+
+          checkedMessageIds.add(candidateId);
+        }
+      }
+    }
+
     for (
       let index = bounded.length - 1;
       index >= 0;
       index -= 1
     ) {
-      const candidateId = bounded[index].id;
-
       if (
-        candidateId === normalizedUpperAnchorId
+        knownMessageIds.has(
+          bounded[index].id
+        )
       ) {
-        continue;
-      }
-
-      if (await isKnownMessage(candidateId)) {
         knownBoundaryIndex = index;
         break;
       }

@@ -103,6 +103,54 @@ describe(
     );
 
     it(
+      "resolves durable continuity in one batch per fetched page",
+      async () => {
+        const findKnownMessageIds =
+          jest.fn(
+            async (messageIds: string[]) =>
+              new Set(
+                messageIds.filter(
+                  id => id === "known-1"
+                )
+              )
+          );
+
+        const result =
+          await ScanWWebJsReconciliationHistory({
+            upperAnchorId: "anchor",
+            lowerBoundAt:
+              defaultLowerBound,
+            fetchMessages: async () => [
+              msg("known-1"),
+              msg("new-1"),
+              msg("anchor")
+            ],
+            resolveMessageId,
+            resolveRawMessageTimestamp,
+            isKnownMessage: async () => {
+              throw new Error(
+                "scalar resolver must not run when batch resolver exists"
+              );
+            },
+            findKnownMessageIds,
+            initialLimit: 10,
+            maxLimit: 100
+          });
+
+        expect(findKnownMessageIds)
+          .toHaveBeenCalledTimes(1);
+
+        expect(findKnownMessageIds)
+          .toHaveBeenCalledWith([
+            "known-1",
+            "new-1"
+          ]);
+
+        expect(result.knownBoundaryId)
+          .toBe("known-1");
+      }
+    );
+    it(
       "does not require raw timestamps when durable Message.id continuity exists",
       async () => {
         const invalidTimestamp =

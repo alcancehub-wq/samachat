@@ -1,11 +1,15 @@
-﻿jest.mock("../../../models/Message", () => ({
-  findByPk: jest.fn()
+jest.mock("../../../models/Message", () => ({
+  findByPk: jest.fn(),
+  findAll: jest.fn()
 }));
 
 import Message from "../../../models/Message";
-import ClassifyWhatsAppReconciliationMessageService from "../ClassifyWhatsAppReconciliationMessageService";
+import ClassifyWhatsAppReconciliationMessageService, {
+  FindKnownWhatsAppReconciliationMessageIdsService
+} from "../ClassifyWhatsAppReconciliationMessageService";
 
 const findByPkMock = Message.findByPk as jest.Mock;
+const findAllMock = Message.findAll as jest.Mock;
 
 describe("ClassifyWhatsAppReconciliationMessageService", () => {
   beforeEach(() => {
@@ -45,5 +49,24 @@ describe("ClassifyWhatsAppReconciliationMessageService", () => {
     ).rejects.toThrow("ERR_INVALID_WHATSAPP_MESSAGE_ID");
 
     expect(findByPkMock).not.toHaveBeenCalled();
+  });
+  it("finds persisted message ids in one batch query", async () => {
+    findAllMock.mockResolvedValue([
+      { id: "provider-message-2" }
+    ]);
+
+    const result =
+      await FindKnownWhatsAppReconciliationMessageIdsService([
+        "provider-message-1",
+        "provider-message-2",
+        "provider-message-2"
+      ]);
+
+    expect(findAllMock).toHaveBeenCalledTimes(1);
+    expect(result).toEqual(
+      new Set([
+        "provider-message-2"
+      ])
+    );
   });
 });
