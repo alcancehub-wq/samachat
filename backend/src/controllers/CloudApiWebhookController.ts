@@ -3,7 +3,11 @@ import Whatsapp from "../models/Whatsapp";
 import AppError from "../errors/AppError";
 import VerifyCloudApiSignature from "../services/CloudApiWebhookServices/VerifyCloudApiSignature";
 import NormalizeCloudApiWebhook from "../services/CloudApiWebhookServices/NormalizeCloudApiWebhook";
-import { handleMessage } from "../handlers/handleWhatsappEvents";
+import CloudApiClient from "../services/CloudApiServices/CloudApiClient";
+import {
+  handleMessage,
+  MediaPayload
+} from "../handlers/handleWhatsappEvents";
 
 const getQueryValue = (value: unknown): string => {
   if (Array.isArray(value)) {
@@ -78,10 +82,43 @@ export const receive = async (req: Request, res: Response): Promise<Response> =>
   );
 
   for (const normalizedMessage of normalizedMessages) {
+    let mediaPayload: MediaPayload | undefined;
+
+    if (normalizedMessage.cloudMedia) {
+      const cloudApiClient = new CloudApiClient({
+        accessToken: whatsapp.accessToken,
+        phoneNumberId: whatsapp.phoneNumberId,
+        apiVersion: whatsapp.apiVersion
+      });
+
+      const mediaMetadata = await cloudApiClient.retrieveMedia(
+        normalizedMessage.cloudMedia.id
+      );
+
+      if (!mediaMetadata.url) {
+        throw new AppError("ERR_CLOUD_API_MEDIA_URL_REQUIRED");
+      }
+
+      const downloadedMedia = await cloudApiClient.downloadMedia(
+        mediaMetadata.url
+      );
+
+      mediaPayload = {
+        filename: normalizedMessage.cloudMedia.filename || "",
+        mimetype:
+          downloadedMedia.mimetype ||
+          mediaMetadata.mime_type ||
+          normalizedMessage.cloudMedia.mimetype ||
+          "application/octet-stream",
+        data: downloadedMedia.data.toString("base64")
+      };
+    }
+
     await handleMessage(
       normalizedMessage.messagePayload,
       normalizedMessage.contactPayload,
-      normalizedMessage.contextPayload
+      normalizedMessage.contextPayload,
+      mediaPayload
     );
   }
 

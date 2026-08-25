@@ -11,7 +11,22 @@ interface CloudApiContact {
   wa_id?: string;
 }
 
-interface CloudApiTextMessage {
+export type CloudApiInboundMediaType =
+  | "audio"
+  | "image"
+  | "video"
+  | "document";
+
+interface CloudApiMediaObject {
+  id?: string;
+  mime_type?: string;
+  sha256?: string;
+  caption?: string;
+  filename?: string;
+  voice?: boolean;
+}
+
+interface CloudApiMessage {
   id?: string;
   from?: string;
   timestamp?: string;
@@ -19,11 +34,15 @@ interface CloudApiTextMessage {
   text?: {
     body?: string;
   };
+  audio?: CloudApiMediaObject;
+  image?: CloudApiMediaObject;
+  video?: CloudApiMediaObject;
+  document?: CloudApiMediaObject;
 }
 
 interface CloudApiChangeValue {
   contacts?: CloudApiContact[];
-  messages?: CloudApiTextMessage[];
+  messages?: CloudApiMessage[];
   metadata?: {
     phone_number_id?: string;
     display_phone_number?: string;
@@ -44,10 +63,19 @@ export interface CloudApiWebhookPayload {
   entry?: CloudApiEntry[];
 }
 
-export interface NormalizedCloudApiTextMessage {
+export interface NormalizedCloudApiMedia {
+  id: string;
+  type: CloudApiInboundMediaType;
+  mimetype?: string;
+  filename?: string;
+  caption?: string;
+}
+
+export interface NormalizedCloudApiMessage {
   contactPayload: ContactPayload;
   messagePayload: MessagePayload;
   contextPayload: WhatsappContextPayload;
+  cloudMedia?: NormalizedCloudApiMedia;
 }
 
 const resolveContactName = (
@@ -74,11 +102,44 @@ const normalizeTimestamp = (timestamp?: string): number => {
   return parsed;
 };
 
+const resolveMedia = (
+  message: CloudApiMessage
+): NormalizedCloudApiMedia | undefined => {
+  const supportedTypes: CloudApiInboundMediaType[] = [
+    "audio",
+    "image",
+    "video",
+    "document"
+  ];
+
+  if (
+    !message.type ||
+    !supportedTypes.includes(message.type as CloudApiInboundMediaType)
+  ) {
+    return undefined;
+  }
+
+  const type = message.type as CloudApiInboundMediaType;
+  const media = message[type];
+
+  if (!media?.id) {
+    return undefined;
+  }
+
+  return {
+    id: media.id,
+    type,
+    mimetype: media.mime_type,
+    filename: media.filename,
+    caption: media.caption
+  };
+};
+
 const NormalizeCloudApiWebhook = (
   payload: CloudApiWebhookPayload,
   whatsappId: number
-): NormalizedCloudApiTextMessage[] => {
-  const normalizedMessages: NormalizedCloudApiTextMessage[] = [];
+): NormalizedCloudApiMessage[] => {
+  const normalizedMessages: NormalizedCloudApiMessage[] = [];
 
   for (const entry of payload.entry || []) {
     for (const change of entry.changes || []) {
@@ -89,7 +150,18 @@ const NormalizeCloudApiWebhook = (
       }
 
       for (const message of value.messages) {
-        if (message.type !== "text" || !message.text?.body || !message.from) {
+        if (!message.from) {
+          continue;
+        }
+
+        const isText =
+          message.type === "text" &&
+          typeof message.text?.body === "string" &&
+          message.text.body.length > 0;
+
+        const cloudMedia = resolveMedia(message);
+
+        if (!isText && !cloudMedia) {
           continue;
         }
 
@@ -100,6 +172,10 @@ const NormalizeCloudApiWebhook = (
           ? `${value.metadata.phone_number_id}@c.us`
           : "";
 
+        const body = isText
+          ? message.text?.body || ""
+          : cloudMedia?.caption || cloudMedia?.filename || "";
+
         normalizedMessages.push({
           contactPayload: {
             name: contactName,
@@ -107,11 +183,15 @@ const NormalizeCloudApiWebhook = (
             isGroup: false
           },
           messagePayload: {
-            id: message.id || `cloudapi-${message.from}-${message.timestamp}`,
-            body: message.text.body,
+            id:
+              message.id ||
+              `cloudapi-${message.from}-${message.timestamp}`,
+            body,
             fromMe: false,
-            hasMedia: false,
-            type: "chat" as any,
+            hasMedia: Boolean(cloudMedia),
+            type: cloudMedia
+              ? (cloudMedia.type as any)
+              : ("chat" as any),
             timestamp: normalizeTimestamp(message.timestamp),
             from: fromChatId,
             to: toChatId,
@@ -120,7 +200,8 @@ const NormalizeCloudApiWebhook = (
           contextPayload: {
             whatsappId,
             unreadMessages: 1
-          }
+          },
+          ...(cloudMedia ? { cloudMedia } : {})
         });
       }
     }

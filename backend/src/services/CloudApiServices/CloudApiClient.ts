@@ -21,6 +21,30 @@ type CloudApiRequestExecutor = (
   payload: unknown
 ) => Promise<CloudApiHttpResponse>;
 
+interface CloudApiGetResponse {
+  statusCode: number;
+  body: Buffer;
+  contentType?: string;
+}
+
+type CloudApiGetExecutor = (
+  url: string,
+  accessToken: string
+) => Promise<CloudApiGetResponse>;
+
+export interface CloudApiRetrievedMedia {
+  url?: string;
+  mime_type?: string;
+  sha256?: string;
+  file_size?: string;
+  id?: string;
+}
+
+export interface CloudApiDownloadedMedia {
+  data: Buffer;
+  mimetype: string;
+}
+
 const normalizeApiVersion = (apiVersion?: string | null): string => {
   const value = (apiVersion || DEFAULT_API_VERSION).trim();
   return value.startsWith("v") ? value : `v${value}`;
@@ -60,6 +84,30 @@ export const buildCloudApiMediaUrl = (
 
   const version = normalizeApiVersion(apiVersion);
   return `${GRAPH_BASE_URL}/${version}/${cleanPhoneNumberId}/media`;
+};
+
+export const buildCloudApiMediaMetadataUrl = (
+  mediaId: string,
+  phoneNumberId: string,
+  apiVersion?: string | null
+): string => {
+  const cleanMediaId = (mediaId || "").trim();
+  const cleanPhoneNumberId = sanitizePhoneNumberId(phoneNumberId);
+
+  if (!cleanMediaId) {
+    throw new AppError("ERR_CLOUD_API_MEDIA_ID_REQUIRED");
+  }
+
+  if (!cleanPhoneNumberId) {
+    throw new AppError("ERR_CLOUD_API_PHONE_NUMBER_ID_REQUIRED");
+  }
+
+  const version = normalizeApiVersion(apiVersion);
+
+  return (
+    `${GRAPH_BASE_URL}/${version}/${encodeURIComponent(cleanMediaId)}` +
+    `?phone_number_id=${encodeURIComponent(cleanPhoneNumberId)}`
+  );
 };
 
 export const buildCloudApiTextPayload = ({
@@ -158,16 +206,67 @@ const buildCloudApiErrorMessage = (
   return `ERR_CLOUD_API_REQUEST_FAILED: ${statusCode}`;
 };
 
+const defaultGetExecutor: CloudApiGetExecutor = (
+  url,
+  accessToken
+) =>
+  new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+
+    const request = https.request(
+      {
+        protocol: parsedUrl.protocol,
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port || undefined,
+        path: `${parsedUrl.pathname}${parsedUrl.search}`,
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      },
+      responseMessage => {
+        const chunks: Buffer[] = [];
+
+        responseMessage.on("data", chunk => {
+          chunks.push(
+            Buffer.isBuffer(chunk)
+              ? chunk
+              : Buffer.from(chunk)
+          );
+        });
+
+        responseMessage.on("end", () => {
+          const header = responseMessage.headers["content-type"];
+          const contentType = Array.isArray(header)
+            ? header[0]
+            : header;
+
+          resolve({
+            statusCode: responseMessage.statusCode || 0,
+            body: Buffer.concat(chunks),
+            contentType
+          });
+        });
+      }
+    );
+
+    request.on("error", reject);
+    request.end();
+  });
+
 export class CloudApiClient {
   private readonly credentials: CloudApiCredentials;
   private readonly requestExecutor: CloudApiRequestExecutor;
+  private readonly getExecutor: CloudApiGetExecutor;
 
   constructor(
     credentials: CloudApiCredentials,
-    requestExecutor: CloudApiRequestExecutor = defaultRequestExecutor
+    requestExecutor: CloudApiRequestExecutor = defaultRequestExecutor,
+    getExecutor: CloudApiGetExecutor = defaultGetExecutor
   ) {
     this.credentials = credentials;
     this.requestExecutor = requestExecutor;
+    this.getExecutor = getExecutor;
   }
 
   async sendText(
@@ -291,6 +390,80 @@ export class CloudApiClient {
     }
 
     return parsedBody as CloudApiMediaUploadResult;
+  }
+
+  async retrieveMedia(
+    mediaId: string
+  ): Promise<CloudApiRetrievedMedia> {
+    const accessToken = sanitizeAccessToken(this.credentials.accessToken);
+    const phoneNumberId = sanitizePhoneNumberId(this.credentials.phoneNumberId);
+
+    if (!accessToken) {
+      throw new AppError("ERR_CLOUD_API_ACCESS_TOKEN_REQUIRED");
+    }
+
+    if (!phoneNumberId) {
+      throw new AppError("ERR_CLOUD_API_PHONE_NUMBER_ID_REQUIRED");
+    }
+
+    const url = buildCloudApiMediaMetadataUrl(
+      mediaId,
+      phoneNumberId,
+      this.credentials.apiVersion
+    );
+
+    const response = await this.getExecutor(url, accessToken);
+    const parsedBody = parseResponseBody(response.body.toString("utf8"));
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw new AppError(
+        buildCloudApiErrorMessage(response.statusCode, parsedBody)
+      );
+    }
+
+    return parsedBody as CloudApiRetrievedMedia;
+  }
+
+  async downloadMedia(
+    mediaUrl: string
+  ): Promise<CloudApiDownloadedMedia> {
+    const accessToken = sanitizeAccessToken(this.credentials.accessToken);
+    const cleanUrl = (mediaUrl || "").trim();
+
+    if (!accessToken) {
+      throw new AppError("ERR_CLOUD_API_ACCESS_TOKEN_REQUIRED");
+    }
+
+    if (!cleanUrl) {
+      throw new AppError("ERR_CLOUD_API_MEDIA_URL_REQUIRED");
+    }
+
+    let parsedUrl: URL;
+
+    try {
+      parsedUrl = new URL(cleanUrl);
+    } catch {
+      throw new AppError("ERR_CLOUD_API_MEDIA_URL_INVALID");
+    }
+
+    if (parsedUrl.protocol !== "https:") {
+      throw new AppError("ERR_CLOUD_API_MEDIA_URL_INVALID");
+    }
+
+    const response = await this.getExecutor(cleanUrl, accessToken);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw new AppError(
+        `ERR_CLOUD_API_MEDIA_DOWNLOAD_HTTP_${response.statusCode}`
+      );
+    }
+
+    return {
+      data: response.body,
+      mimetype: (response.contentType || "application/octet-stream")
+        .split(";")[0]
+        .trim()
+    };
   }
 
   async sendMedia(
