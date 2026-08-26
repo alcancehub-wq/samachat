@@ -511,6 +511,16 @@ const Connections = () => {
 			return (
 				<div className={classes.connectionSession}>
 					{renderConnectionChip("Iniciando", "warning")}
+					<Button
+						size="small"
+						variant="outlined"
+						color="primary"
+						className={classes.connectionAction}
+						disabled={isRestarting}
+						onClick={() => handleRestartWhatsAppSession(whatsApp.id)}
+					>
+						{isRestarting ? "Reconectando..." : "Reconectar"}
+					</Button>
 				</div>
 			);
 		}
