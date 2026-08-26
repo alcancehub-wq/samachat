@@ -1,8 +1,17 @@
 ﻿import AppError from "../../errors/AppError";
-import { MetaMessageTemplateCredentials } from "./types";
+import {
+  MetaMessageTemplateCredentials,
+  MetaMessageTemplateHttpResponse,
+  MetaMessageTemplateListResponse
+} from "./types";
 
 const GRAPH_BASE_URL = "https://graph.facebook.com";
 const DEFAULT_API_VERSION = "v20.0";
+
+export type MetaMessageTemplateGetExecutor = (
+  url: string,
+  accessToken: string
+) => Promise<MetaMessageTemplateHttpResponse>;
 
 const normalizeApiVersion = (
   apiVersion?: string | null
@@ -26,6 +35,28 @@ const sanitizeAccessToken = (
   return (accessToken || "").trim();
 };
 
+const parseListResponse = (
+  body: string
+): MetaMessageTemplateListResponse => {
+  try {
+    const parsed = JSON.parse(body || "{}");
+
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      Array.isArray(parsed)
+    ) {
+      throw new Error("invalid response");
+    }
+
+    return parsed as MetaMessageTemplateListResponse;
+  } catch {
+    throw new AppError(
+      "ERR_META_TEMPLATE_INVALID_RESPONSE"
+    );
+  }
+};
+
 export const buildMetaMessageTemplatesUrl = (
   wabaId: string,
   apiVersion?: string | null
@@ -33,7 +64,9 @@ export const buildMetaMessageTemplatesUrl = (
   const cleanWabaId = sanitizeWabaId(wabaId);
 
   if (!cleanWabaId) {
-    throw new AppError("ERR_META_TEMPLATE_WABA_ID_REQUIRED");
+    throw new AppError(
+      "ERR_META_TEMPLATE_WABA_ID_REQUIRED"
+    );
   }
 
   const version = normalizeApiVersion(apiVersion);
@@ -46,14 +79,20 @@ export const buildMetaMessageTemplatesUrl = (
 
 export class MetaMessageTemplateClient {
   private readonly credentials: MetaMessageTemplateCredentials;
+  private readonly getExecutor?: MetaMessageTemplateGetExecutor;
 
   constructor(
-    credentials: MetaMessageTemplateCredentials
+    credentials: MetaMessageTemplateCredentials,
+    getExecutor?: MetaMessageTemplateGetExecutor
   ) {
     this.credentials = credentials;
+    this.getExecutor = getExecutor;
   }
 
-  getTemplatesUrl(): string {
+  private getValidatedContext(): {
+    accessToken: string;
+    url: string;
+  } {
     const wabaId = sanitizeWabaId(
       this.credentials.wabaId
     );
@@ -74,10 +113,46 @@ export class MetaMessageTemplateClient {
       );
     }
 
-    return buildMetaMessageTemplatesUrl(
-      wabaId,
-      this.credentials.apiVersion
+    return {
+      accessToken,
+      url: buildMetaMessageTemplatesUrl(
+        wabaId,
+        this.credentials.apiVersion
+      )
+    };
+  }
+
+  getTemplatesUrl(): string {
+    return this.getValidatedContext().url;
+  }
+
+  async listTemplates(): Promise<MetaMessageTemplateListResponse> {
+    if (!this.getExecutor) {
+      throw new AppError(
+        "ERR_META_TEMPLATE_GET_EXECUTOR_REQUIRED"
+      );
+    }
+
+    const {
+      accessToken,
+      url
+    } = this.getValidatedContext();
+
+    const response = await this.getExecutor(
+      url,
+      accessToken
     );
+
+    if (
+      response.statusCode < 200 ||
+      response.statusCode >= 300
+    ) {
+      throw new AppError(
+        `ERR_META_TEMPLATE_LIST_FAILED: ${response.statusCode}`
+      );
+    }
+
+    return parseListResponse(response.body);
   }
 }
 

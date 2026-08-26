@@ -37,3 +37,8 @@ export interface MetaMessageTemplateListResponse {
     previous?: string;
   };
 }
+
+export interface MetaMessageTemplateHttpResponse {
+  statusCode: number;
+  body: string;
+}
