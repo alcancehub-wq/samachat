@@ -549,9 +549,9 @@ const LoggedInLayout = ({ children }) => {
 
   const reconciliationTitle =
     reconciliationLoading || reconciliationRunning
-      ? "RessincronizaÃ§Ã£o do WhatsApp em andamento"
+      ? "Ressincronização do WhatsApp em andamento"
       : manualRetryAfterMs > 0
-      ? `Ressincronizar WhatsApp disponÃ­vel em ${Math.max(
+      ? `Ressincronizar WhatsApp disponível em ${Math.max(
           1,
           Math.ceil(manualRetryAfterMs / 60000)
         )} min`
@@ -649,8 +649,8 @@ const LoggedInLayout = ({ children }) => {
             {user?.id && canViewTickets && (
               <>
               <IconButton
-                aria-label={autoCorrectTextEnabled ? "Desligar correÃƒÂ§ÃƒÂ£o automÃƒÂ¡tica" : "Ligar correÃƒÂ§ÃƒÂ£o automÃƒÂ¡tica"}
-                title={autoCorrectTextEnabled ? "CorreÃƒÂ§ÃƒÂ£o IA ligada" : "CorreÃƒÂ§ÃƒÂ£o IA desligada"}
+                aria-label={autoCorrectTextEnabled ? "Desligar correÃ§Ã£o automÃ¡tica" : "Ligar correÃ§Ã£o automÃ¡tica"}
+                title={autoCorrectTextEnabled ? "CorreÃ§Ã£o IA ligada" : "CorreÃ§Ã£o IA desligada"}
                 onClick={handleToggleAutoCorrectText}
                 className={classes.iconButton}
                 style={autoCorrectTextEnabled ? { color: "#ff1919" } : undefined}
