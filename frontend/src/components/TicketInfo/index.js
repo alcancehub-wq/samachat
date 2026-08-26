@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Avatar, CardHeader } from "@material-ui/core";
+import { Avatar, Button, Chip, CardHeader } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
 
 import { i18n } from "../../translate/i18n";
@@ -47,8 +47,13 @@ const useStyles = makeStyles((theme) => ({
 	},
 }));
 
-const TicketInfo = ({ contact, ticket, onClick }) => {
+const TicketInfo = ({ contact, ticket, onClick, onConnectionDetails }) => {
 	const classes = useStyles();
+	const isOfficial = ticket?.whatsapp?.providerType === "official";
+	const isConnected = ticket?.whatsapp?.status === "CONNECTED";
+	const isActive = ["configured", "webhook_received", "message_received"].includes(
+		String(ticket?.whatsapp?.cloudApiStatus || "")
+	);
 	return (
 		<CardHeader
 			onClick={onClick}
@@ -59,8 +64,38 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 			avatar={<Avatar src={contact.profilePicUrl} alt="contact_image" className={classes.avatar} />}
 			title={contact.name}
 			subheader={
-				ticket.user &&
-				`${i18n.t("messagesList.header.assignedTo")} ${ticket.user.name}`
+				<>
+					{ticket.user && `${i18n.t("messagesList.header.assignedTo")} ${ticket.user.name}`}
+					{isOfficial && (
+						<div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+							{isConnected && (
+								<Chip
+									size="small"
+									label="Conectado"
+									style={{ backgroundColor: "#e8f5e9", color: "#237a3b", fontWeight: 600 }}
+								/>
+							)}
+							{isActive && (
+								<Chip
+									size="small"
+									label="Ativa"
+									style={{ backgroundColor: "#e8f5e9", color: "#237a3b", fontWeight: 600 }}
+								/>
+							)}
+							<Button
+								variant="outlined"
+								size="small"
+								style={{ textTransform: "none", minWidth: 0, height: 24, fontSize: "0.72rem" }}
+								onClick={(event) => {
+									event.stopPropagation();
+									if (onConnectionDetails) onConnectionDetails();
+								}}
+							>
+								Ver detalhes
+							</Button>
+						</div>
+					)}
+				</>
 			}
 		/>
 	);
