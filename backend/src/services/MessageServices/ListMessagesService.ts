@@ -22,90 +22,72 @@ interface Response {
   hasMore: boolean;
 }
 
-const resolveMessageTicketIds = async (ticket: Ticket): Promise<number[]> => {
+const resolveMessageTicketIds = async (
+  ticket: Ticket
+): Promise<number[]> => {
   const primaryTicketId = Number(ticket.id);
-  const primaryMessageCount = await Message.count({
-    where: { ticketId: primaryTicketId }
-  });
 
-  if (primaryMessageCount > 0) {
+  if (
+    ticket.isGroup ||
+    !ticket.contactId ||
+    ticket.contact?.allowMultipleConversations
+  ) {
     return [primaryTicketId];
   }
 
-  if (ticket.isGroup || !ticket.whatsappId || !ticket.contactId) {
+  const canonicalContactId =
+    Number(ticket.contactId);
+
+  if (!canonicalContactId) {
     return [primaryTicketId];
   }
 
-  const currentNumber = ticket.contact?.number || "";
-  const numberCandidates = BuildEquivalentContactNumberCandidates(currentNumber);
-
-  if (numberCandidates.length < 2) {
-    return [primaryTicketId];
-  }
-
-  const equivalentContacts = await Contact.findAll({
-    where: {
-      number: {
-        [Op.in]: numberCandidates
-      }
-    },
-    attributes: ["id"],
-    order: [["createdAt", "ASC"], ["id", "ASC"]]
-  });
-
-  const equivalentContactIds = equivalentContacts
-    .map(contact => Number(contact.id))
-    .filter(contactId => contactId && contactId !== Number(ticket.contactId));
-
-  if (!equivalentContactIds.length) {
-    return [primaryTicketId];
-  }
-
-  const fallbackTickets = await Ticket.findAll({
-    where: {
-      id: {
-        [Op.ne]: primaryTicketId
+  /*
+   * P05 repair timeline:
+   *
+   * ShowTicketService remains the access-control anchor for the
+   * currently opened ticket. Once access is authorized, messages
+   * from historical tickets belonging to this exact Contact may
+   * be rendered in one chronology.
+   *
+   * Message.ticketId is never changed here.
+   */
+  const historicalTickets =
+    await Ticket.findAll({
+      where: {
+        contactId: canonicalContactId
       },
-      contactId: {
-        [Op.in]: equivalentContactIds
-      },
-      whatsappId: ticket.whatsappId,
-      status: "pending",
-      userId: null,
-      queueId: null
-    },
-    attributes: ["id", "contactId"],
-    order: [["updatedAt", "DESC"], ["id", "DESC"]]
-  });
+      attributes: ["id"],
+      order: [
+        ["createdAt", "ASC"],
+        ["id", "ASC"]
+      ]
+    });
 
-  const fallbackTicketIds = fallbackTickets
-    .map(relatedTicket => Number(relatedTicket.id))
-    .filter(Boolean);
+  const resolvedTicketIds =
+    Array.from(
+      new Set([
+        primaryTicketId,
+        ...historicalTickets
+          .map(item => Number(item.id))
+          .filter(Boolean)
+      ])
+    );
 
-  if (!fallbackTicketIds.length) {
-    return [primaryTicketId];
+  if (resolvedTicketIds.length > 1) {
+    logger.warn({
+      info:
+        "Listing messages with canonical contact history aggregation",
+      ticketId: primaryTicketId,
+      contactId: canonicalContactId,
+      relatedTicketIds:
+        resolvedTicketIds.filter(
+          id => id !== primaryTicketId
+        )
+    });
   }
 
-  const fallbackMessageCount = await Message.count({
-    where: {
-      ticketId: {
-        [Op.in]: fallbackTicketIds
-      }
-    }
-  });
-
-  if (!fallbackMessageCount) {
-    return [primaryTicketId];
-  }
-
-  logger.warn({
-    info: "Listing messages with equivalent pending ticket fallback",
-    ticketId: primaryTicketId,
-    fallbackTicketIds,
-    numberCandidates
-  });
-
-  return [primaryTicketId, ...fallbackTicketIds];
+  return resolvedTicketIds;
 };
 
 const ListMessagesService = async ({
