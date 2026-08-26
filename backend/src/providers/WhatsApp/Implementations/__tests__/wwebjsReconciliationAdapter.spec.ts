@@ -111,7 +111,7 @@ describe(
     );
 
     it(
-      "collects real-shaped chat history and contacts while preserving lazy message processing",
+      "collects bounded chat history without enumerating the global contact catalog",
       async () => {
         const rawMessage: any = {
           id: {
@@ -248,7 +248,7 @@ describe(
 
         expect(
           session.getContacts
-        ).toHaveBeenCalledTimes(1);
+        ).not.toHaveBeenCalled();
 
         expect(
           chat.fetchMessages
@@ -260,7 +260,7 @@ describe(
 
         expect(
           work.contacts
-        ).toHaveLength(1);
+        ).toHaveLength(0);
 
         expect(
           processNewMessage
@@ -294,6 +294,116 @@ describe(
       }
     );
 
+
+    it(
+      "skips provider history fetch when the chat upper anchor predates the bounded window",
+      async () => {
+        const oldMessage: any = {
+          id: {
+            id: "old-message"
+          },
+          timestamp:
+            Math.floor(
+              new Date(
+                "2026-08-01T12:00:00.000Z"
+              ).getTime() / 1000
+            ),
+          type: "chat",
+          body: "old"
+        };
+
+        const fetchMessages =
+          jest.fn(
+            async () => [
+              oldMessage
+            ]
+          );
+
+        const getContacts =
+          jest.fn(
+            async () => []
+          );
+
+        const orchestrator =
+          createWWebJsReconciliationAdapter({
+            whatsappId: 101,
+
+            session: {
+              getChats:
+                async () => [
+                  {
+                    id: {
+                      _serialized:
+                        "5511999999999@c.us"
+                    },
+                    lastMessage:
+                      oldMessage,
+                    fetchMessages
+                  }
+                ],
+
+              getContacts
+            },
+
+            captureBoundaryAt:
+              () =>
+                new Date(
+                  "2026-08-25T12:00:00.000Z"
+                ),
+
+            resolveMessageId:
+              message =>
+                (message as any).id.id,
+
+            shouldHandleMessage:
+              () => true,
+
+            resolveMessageMetadata:
+              async () => ({
+                number:
+                  "5511999999999",
+                isGroup: false
+              }),
+
+            processNewMessage:
+              async () =>
+                undefined,
+
+            services: {
+              getCheckpoint:
+                async () =>
+                  new Date(
+                    "2026-08-01T00:00:00.000Z"
+                  ),
+
+              saveCheckpoint:
+                async () =>
+                  undefined,
+
+              classifyMessage:
+                async () =>
+                  "new"
+            }
+          });
+
+        const work =
+          await orchestrator.collectWork(
+            makeSignal() as any
+          );
+
+        expect(fetchMessages)
+          .not.toHaveBeenCalled();
+
+        expect(getContacts)
+          .not.toHaveBeenCalled();
+
+        expect(work.messages)
+          .toHaveLength(0);
+
+        expect(work.contacts)
+          .toHaveLength(0);
+      }
+    );
     it(
       "filters message work through the injected production eligibility policy",
       async () => {

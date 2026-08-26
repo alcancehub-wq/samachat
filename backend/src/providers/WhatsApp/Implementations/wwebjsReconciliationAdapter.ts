@@ -2017,6 +2017,36 @@ const createWWebJsReconciliationAdapter = <
         }) => {
           signal.throwIfAborted();
 
+          /*
+           * Manual P05 reconciliation is hard-bounded by time.
+           *
+           * If the provider already tells us that the newest
+           * message in this chat is older than lowerBoundAt,
+           * there is nothing eligible to reconcile and calling
+           * fetchMessages would be pure historical I/O.
+           *
+           * Invalid/unknown timestamps deliberately fall through
+           * to the scanner so existing fail-closed validation is
+           * preserved.
+           */
+          const lastMessageTimestamp =
+            Number(chat.lastMessage?.timestamp);
+
+          const lowerBoundUnixSeconds =
+            Math.floor(
+              lowerBoundAt.getTime() / 1000
+            );
+
+          if (
+            Number.isFinite(lastMessageTimestamp) &&
+            Number.isInteger(lastMessageTimestamp) &&
+            lastMessageTimestamp > 0 &&
+            lastMessageTimestamp <
+              lowerBoundUnixSeconds
+          ) {
+            return [];
+          }
+
           const collection =
             await CollectWWebJsRawReconciliationHistory({
               chat,
@@ -2110,12 +2140,18 @@ const createWWebJsReconciliationAdapter = <
         async signal => {
           signal.throwIfAborted();
 
-          const contacts =
-            await session.getContacts();
-
-          signal.throwIfAborted();
-
-          return contacts;
+          /*
+           * P05 manual reconciliation is scoped to messages from
+           * the bounded history window, not to a full WhatsApp
+           * address-book import.
+           *
+           * Message metadata is reconciled downstream for every
+           * discovered conversation/message, so a global
+           * session.getContacts() here is unnecessary and was
+           * keeping the manual run blocked before any message
+           * could be processed.
+           */
+          return [];
         },
         mapContact:
           async (
