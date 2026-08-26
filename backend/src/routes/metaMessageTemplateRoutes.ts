@@ -7,6 +7,12 @@ import * as MetaMessageTemplateController from "../controllers/MetaMessageTempla
 const metaMessageTemplateRoutes = express.Router();
 
 metaMessageTemplateRoutes.get(
+  "/meta-message-templates/authorized-connections",
+  isAuth,
+  checkSectorPermission("metaTemplates.view"),
+  MetaMessageTemplateController.authorizedConnections
+);
+metaMessageTemplateRoutes.get(
   "/meta-message-templates/:whatsappId",
   isAuth,
   checkSectorPermission("metaTemplates.view"),

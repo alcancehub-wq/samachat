@@ -551,6 +551,7 @@ const messages = {
           contactLists: "Listas",
           dialogs: "Dialogos",
           campaigns: "Campañas",
+          metaTemplates: "Templates",
           kanban: "Kanban",
           informatives: "Informativos",
           integrations: "Integraciones",
@@ -800,6 +801,22 @@ const messages = {
           goodEvening: "Texto fijo Buenas noches",
           currentDate: "Fecha actual",
           currentTime: "Hora actual",
+        },
+      },
+      metaTemplates: {
+        title: "Templates",
+        subtitle: "Consulta los templates oficiales de Meta por conexi\u00f3n.",
+        connection: "Conexi\u00f3n oficial",
+        refresh: "Actualizar",
+        table: {
+          name: "Nombre",
+          category: "Categor\u00eda",
+          language: "Idioma",
+          status: "Estado",
+        },
+        empty: {
+          noOfficialConnection: "No hay ninguna conexi\u00f3n oficial disponible.",
+          noTemplates: "No se encontraron templates para esta conexi\u00f3n.",
         },
       },
       campaigns: {

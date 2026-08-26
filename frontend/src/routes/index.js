@@ -18,6 +18,7 @@ import Tags from "../pages/Tags/";
 import ContactLists from "../pages/ContactLists/";
 import Dialogs from "../pages/Dialogs/";
 import Campaigns from "../pages/Campaigns/";
+import MetaTemplates from "../pages/MetaTemplates/";
 import Integrations from "../pages/Integrations/";
 import Informatives from "../pages/Informatives/";
 import Kanban from "../pages/Kanban/";
@@ -70,6 +71,7 @@ const Routes = () => {
                 <Route exact path="/contactLists" component={ContactLists} isPrivate />
                 <Route exact path="/dialogs" component={Dialogs} isPrivate />
                 <Route exact path="/campaigns" component={Campaigns} isPrivate />
+                <Route exact path="/meta-templates" component={MetaTemplates} isPrivate />
                 <Route exact path="/kanban" component={Kanban} isPrivate />
                 <Route exact path="/tasks" component={Tasks} isPrivate />
                 <Route exact path="/files" component={Files} isPrivate />

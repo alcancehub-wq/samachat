@@ -4,11 +4,13 @@ import ShowUserService from "../../services/UserServices/ShowUserService";
 import AuthorizeMetaMessageTemplateConnectionService from "../../services/MetaMessageTemplateServices/AuthorizeMetaMessageTemplateConnectionService";
 import ListMetaMessageTemplatesService from "../../services/MetaMessageTemplateServices/ListMetaMessageTemplatesService";
 import LoadMetaMessageTemplateConnectionService from "../../services/MetaMessageTemplateServices/LoadMetaMessageTemplateConnectionService";
+import ListAuthorizedMetaTemplateConnectionsService from "../../services/MetaMessageTemplateServices/ListAuthorizedMetaTemplateConnectionsService";
 
 jest.mock("../../services/UserServices/ShowUserService");
 jest.mock("../../services/MetaMessageTemplateServices/AuthorizeMetaMessageTemplateConnectionService");
 jest.mock("../../services/MetaMessageTemplateServices/ListMetaMessageTemplatesService");
 jest.mock("../../services/MetaMessageTemplateServices/LoadMetaMessageTemplateConnectionService");
+jest.mock("../../services/MetaMessageTemplateServices/ListAuthorizedMetaTemplateConnectionsService");
 
 const mockShowUser =
   ShowUserService as jest.MockedFunction<typeof ShowUserService>;
@@ -19,6 +21,10 @@ const mockAuthorize =
 const mockList =
   ListMetaMessageTemplatesService as jest.MockedFunction<
     typeof ListMetaMessageTemplatesService
+  >;
+const mockListAuthorized =
+  ListAuthorizedMetaTemplateConnectionsService as jest.MockedFunction<
+    typeof ListAuthorizedMetaTemplateConnectionsService
   >;
 const mockLoadConnection =
   LoadMetaMessageTemplateConnectionService as jest.MockedFunction<
@@ -32,6 +38,52 @@ const buildResponse = (): Response => {
   return res;
 };
 
+describe("MetaMessageTemplateController.authorizedConnections", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("returns only authorized official connections for authenticated user sectors", async () => {
+    mockShowUser.mockResolvedValue({
+      queues: [{ id: 10 }, { id: 20 }]
+    } as any);
+    mockListAuthorized.mockResolvedValue([
+      { id: 35, name: "Official", providerType: "official" }
+    ]);
+
+    const req = {
+      user: { id: "9", profile: "user" }
+    } as unknown as Request;
+    const res = buildResponse();
+
+    await MetaMessageTemplateController.authorizedConnections(req, res);
+
+    expect(mockShowUser).toHaveBeenCalledWith("9");
+    expect(mockListAuthorized).toHaveBeenCalledWith({
+      profile: "user",
+      userQueueIds: [10, 20]
+    });
+    expect((res.status as jest.Mock)).toHaveBeenCalledWith(200);
+    expect((res.json as jest.Mock)).toHaveBeenCalledWith([
+      { id: 35, name: "Official", providerType: "official" }
+    ]);
+  });
+
+  it("rethrows service errors", async () => {
+    mockShowUser.mockResolvedValue({ queues: [{ id: 10 }] } as any);
+    const error = new Error("unexpected");
+    mockListAuthorized.mockRejectedValue(error);
+
+    const req = {
+      user: { id: "9", profile: "user" }
+    } as unknown as Request;
+    const res = buildResponse();
+
+    await expect(
+      MetaMessageTemplateController.authorizedConnections(req, res)
+    ).rejects.toBe(error);
+  });
+});
 describe("MetaMessageTemplateController.index", () => {
   beforeEach(() => {
     jest.clearAllMocks();

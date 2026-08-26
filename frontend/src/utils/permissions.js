@@ -27,6 +27,7 @@ export const getDefaultRouteForUser = user => {
 		{ path: "/connections", permissions: ["connections.view"] },
 		{ path: "/quickAnswers", permissions: ["messages.view", "tickets.view"] },
 		{ path: "/campaigns", permissions: ["campaigns.view"] },
+        { path: "/meta-templates", permissions: ["metaTemplates.view"] },
 		{ path: "/dialogs", permissions: ["dialogs.view"] },
 		{ path: "/flows", permissions: ["flows.view"] },
 		{ path: "/tags", permissions: ["tags.view"] },

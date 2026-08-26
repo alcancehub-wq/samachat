@@ -24,6 +24,7 @@ import LocalOfferOutlinedIcon from "@material-ui/icons/LocalOfferOutlined";
 import ListAltOutlinedIcon from "@material-ui/icons/ListAltOutlined";
 import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
 import FlagOutlinedIcon from "@material-ui/icons/FlagOutlined";
+import DescriptionOutlinedIcon from "@material-ui/icons/DescriptionOutlined";
 import LinkOutlinedIcon from "@material-ui/icons/LinkOutlined";
 import AnnouncementOutlinedIcon from "@material-ui/icons/AnnouncementOutlined";
 import ViewColumnOutlinedIcon from "@material-ui/icons/ViewColumnOutlined";
@@ -268,6 +269,7 @@ const MainListItems = (props) => {
 
   const canAccessCommunication = canAccessAny([
     "campaigns.view",
+    "metaTemplates.view",
     "dialogs.view",
     "flows.view",
     "tags.view",
@@ -336,6 +338,12 @@ const MainListItems = (props) => {
       to: "/campaigns",
       icon: <FlagOutlinedIcon />,
       permissions: ["campaigns.view"],
+    },
+    metaTemplates: {
+      labelKey: "mainDrawer.listItems.metaTemplates",
+      to: "/meta-templates",
+      icon: <DescriptionOutlinedIcon />,
+      permissions: ["metaTemplates.view"],
     },
     dialogs: {
       labelKey: "mainDrawer.listItems.dialogs",
@@ -573,6 +581,10 @@ const MainListItems = (props) => {
             >
               {renderMenuItem(
                 "campaigns",
+                isDrawerOpen ? classes.nestedItem : classes.collapsedItem
+              )}
+              {renderMenuItem(
+                "metaTemplates",
                 isDrawerOpen ? classes.nestedItem : classes.collapsedItem
               )}
               {renderMenuItem(
