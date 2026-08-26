@@ -44,7 +44,7 @@ describe(
             upperAnchorId: "anchor",
             lowerBoundAt:
               new Date(
-                "2026-08-13T22:00:00.000Z"
+                "2026-08-13T17:00:00.000Z"
               ),
             fetchMessages: async () => [
               msg(
@@ -151,30 +151,33 @@ describe(
       }
     );
     it(
-      "does not require raw timestamps when durable Message.id continuity exists",
+      "uses durable Message.id continuity when the known boundary is inside the temporal window",
       async () => {
-        const invalidTimestamp =
-          Number.NaN;
-
         const result =
           await ScanWWebJsReconciliationHistory({
             upperAnchorId: "anchor",
             lowerBoundAt:
               new Date(
-                "2026-08-13T23:00:00.000Z"
+                "2026-08-13T17:00:00.000Z"
               ),
             fetchMessages: async () => [
               msg(
                 "known-1",
-                invalidTimestamp
+                unix(
+                  "2026-08-13T18:00:00.000Z"
+                )
               ),
               msg(
                 "new-1",
-                invalidTimestamp
+                unix(
+                  "2026-08-13T18:01:00.000Z"
+                )
               ),
               msg(
                 "anchor",
-                invalidTimestamp
+                unix(
+                  "2026-08-13T18:02:00.000Z"
+                )
               )
             ],
             resolveMessageId,
@@ -202,7 +205,6 @@ describe(
         ]);
       }
     );
-
     it(
       "ignores messages newer than the captured upper anchor",
       async () => {
@@ -284,8 +286,98 @@ describe(
       }
     );
 
+
     it(
-      "applies lowerBoundAt only when history exhausts without a durable known message",
+      "stops growing as soon as the temporal floor is reached",
+      async () => {
+        const fetchMessages =
+          jest.fn(
+            async (limit: number) => {
+              if (limit === 2) {
+                return [
+                  msg(
+                    "new-2",
+                    unix(
+                      "2026-08-13T20:10:00.000Z"
+                    )
+                  ),
+                  msg(
+                    "anchor",
+                    unix(
+                      "2026-08-13T20:20:00.000Z"
+                    )
+                  )
+                ];
+              }
+
+              return [
+                msg(
+                  "too-old",
+                  unix(
+                    "2026-08-13T19:00:00.000Z"
+                  )
+                ),
+                msg(
+                  "new-1",
+                  unix(
+                    "2026-08-13T20:00:00.000Z"
+                  )
+                ),
+                msg(
+                  "new-2",
+                  unix(
+                    "2026-08-13T20:10:00.000Z"
+                  )
+                ),
+                msg(
+                  "anchor",
+                  unix(
+                    "2026-08-13T20:20:00.000Z"
+                  )
+                )
+              ];
+            }
+          );
+
+        const result =
+          await ScanWWebJsReconciliationHistory({
+            upperAnchorId: "anchor",
+            lowerBoundAt:
+              new Date(
+                "2026-08-13T20:00:00.000Z"
+              ),
+            fetchMessages,
+            resolveMessageId,
+            resolveRawMessageTimestamp,
+            isKnownMessage:
+              async () => false,
+            findKnownMessageIds:
+              async () =>
+                new Set<string>(),
+            initialLimit: 2,
+            growthFactor: 2,
+            maxLimit: 5000
+          });
+
+        expect(fetchMessages)
+          .toHaveBeenCalledTimes(2);
+
+        expect(result.stopReason)
+          .toBe("time-window");
+
+        expect(
+          result.messages.map(
+            item => item.id.id
+          )
+        ).toEqual([
+          "new-1",
+          "new-2",
+          "anchor"
+        ]);
+      }
+    );
+    it(
+      "stops at lowerBoundAt once the temporal window is reached without a durable known message",
       async () => {
         const lowerBoundAt =
           new Date(
@@ -337,7 +429,7 @@ describe(
           });
 
         expect(result.stopReason)
-          .toBe("history-exhausted");
+          .toBe("time-window");
 
         expect(
           result.temporalBoundaryApplied

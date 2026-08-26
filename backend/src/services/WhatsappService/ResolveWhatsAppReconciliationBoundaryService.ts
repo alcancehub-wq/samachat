@@ -1,3 +1,11 @@
+export const WHATSAPP_RECONCILIATION_MAX_LOOKBACK_DAYS = 7;
+
+const WHATSAPP_RECONCILIATION_MAX_LOOKBACK_MS =
+  WHATSAPP_RECONCILIATION_MAX_LOOKBACK_DAYS *
+  24 *
+  60 *
+  60 *
+  1000;
 export type WhatsAppReconciliationBoundaryMode =
   | "bootstrap"
   | "recovery";
@@ -49,6 +57,12 @@ const ResolveWhatsAppReconciliationBoundaryService = ({
     "ERR_INVALID_RECONCILIATION_CAPTURED_BOUNDARY"
   );
 
+  const lookbackFloorAt =
+    new Date(
+      capturedBoundaryAt.getTime() -
+        WHATSAPP_RECONCILIATION_MAX_LOOKBACK_MS
+    );
+
   if (existingCheckpointAt === null) {
     /*
      * First controlled cutover.
@@ -64,7 +78,7 @@ const ResolveWhatsAppReconciliationBoundaryService = ({
      */
     return {
       mode: "bootstrap",
-      lowerBoundAt: cloneDate(capturedBoundaryAt),
+      lowerBoundAt: cloneDate(lookbackFloorAt),
       checkpointCandidateAt:
         cloneDate(capturedBoundaryAt)
     };
@@ -88,10 +102,16 @@ const ResolveWhatsAppReconciliationBoundaryService = ({
     );
   }
 
+  const effectiveLowerBoundAt =
+    existingCheckpointAt.getTime() >
+    lookbackFloorAt.getTime()
+      ? existingCheckpointAt
+      : lookbackFloorAt;
+
   return {
     mode: "recovery",
     lowerBoundAt:
-      cloneDate(existingCheckpointAt),
+      cloneDate(effectiveLowerBoundAt),
     checkpointCandidateAt:
       cloneDate(capturedBoundaryAt)
   };

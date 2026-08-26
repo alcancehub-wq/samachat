@@ -16,7 +16,8 @@ export interface WWebJsHistoryScannerMessage {
 
 export type WWebJsHistoryScanStopReason =
   | "known-message"
-  | "history-exhausted";
+  | "history-exhausted"
+  | "time-window";
 
 export interface WWebJsHistoryScanResult<TMessage> {
   messages: TMessage[];
@@ -233,10 +234,42 @@ const ScanWWebJsReconciliationHistory = async <
     const bounded =
       resolved.slice(0, upperAnchorIndex + 1);
 
+    const oldestBoundedTimestamp =
+      resolveRawMessageTimestamp(
+        bounded[0].message
+      );
+
+    assertValidRawTimestamp(
+      oldestBoundedTimestamp
+    );
+
+    const temporalWindowReached =
+      oldestBoundedTimestamp <=
+      lowerBoundUnixSeconds;
+
+    const eligibleBounded =
+      temporalWindowReached
+        ? bounded.filter(item => {
+            const rawTimestamp =
+              resolveRawMessageTimestamp(
+                item.message
+              );
+
+            assertValidRawTimestamp(
+              rawTimestamp
+            );
+
+            return (
+              rawTimestamp >=
+              lowerBoundUnixSeconds
+            );
+          })
+        : bounded;
+
     let knownBoundaryIndex = -1;
 
     const candidateIdsToCheck =
-      bounded
+      eligibleBounded
         .map(item => item.id)
         .filter(
           candidateId =>
@@ -274,13 +307,13 @@ const ScanWWebJsReconciliationHistory = async <
     }
 
     for (
-      let index = bounded.length - 1;
+      let index = eligibleBounded.length - 1;
       index >= 0;
       index -= 1
     ) {
       if (
         knownMessageIds.has(
-          bounded[index].id
+          eligibleBounded[index].id
         )
       ) {
         knownBoundaryIndex = index;
@@ -298,7 +331,7 @@ const ScanWWebJsReconciliationHistory = async <
        * Raw timestamps are intentionally NOT required here.
        */
       const unseenMessages =
-        bounded
+        eligibleBounded
           .slice(knownBoundaryIndex + 1)
           .map(item => item.message);
 
@@ -308,13 +341,27 @@ const ScanWWebJsReconciliationHistory = async <
           normalizedUpperAnchorId,
         stopReason: "known-message",
         knownBoundaryId:
-          bounded[knownBoundaryIndex].id,
+          eligibleBounded[knownBoundaryIndex].id,
         requestedLimit,
         fetchedCount: fetched.length,
         temporalBoundaryApplied: false
       };
     }
 
+    if (temporalWindowReached) {
+      return {
+        messages:
+          eligibleBounded.map(
+            item => item.message
+          ),
+        upperAnchorId:
+          normalizedUpperAnchorId,
+        stopReason: "time-window",
+        requestedLimit,
+        fetchedCount: fetched.length,
+        temporalBoundaryApplied: true
+      };
+    }
     const historyExhaustedByShortPage =
       fetched.length < requestedLimit;
 

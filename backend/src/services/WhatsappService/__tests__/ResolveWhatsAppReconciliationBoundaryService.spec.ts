@@ -18,7 +18,9 @@ describe(
         expect(result).toEqual({
           mode: "bootstrap",
           lowerBoundAt:
-            capturedBoundaryAt,
+            new Date(
+              "2026-08-06T21:00:00.000Z"
+            ),
           checkpointCandidateAt:
             capturedBoundaryAt
         });
@@ -87,6 +89,30 @@ describe(
       }
     );
 
+
+    it(
+      "clamps an old durable checkpoint to the seven-day floor",
+      () => {
+        const result =
+          ResolveWhatsAppReconciliationBoundaryService({
+            existingCheckpointAt:
+              new Date(
+                "2026-07-01T00:00:00.000Z"
+              ),
+            capturedBoundaryAt:
+              new Date(
+                "2026-08-13T21:00:00.000Z"
+              )
+          });
+
+        expect(result.lowerBoundAt)
+          .toEqual(
+            new Date(
+              "2026-08-06T21:00:00.000Z"
+            )
+          );
+      }
+    );
     it(
       "allows an equal captured boundary without moving time backwards",
       () => {
