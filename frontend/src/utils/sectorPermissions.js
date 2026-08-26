@@ -76,6 +76,15 @@ export const SECTOR_PERMISSION_GROUPS = [
     ]
   },
   {
+    key: "metaTemplates",
+    titleKey: "sectorPermissions.groups.metaTemplates",
+    items: [
+      { key: "metaTemplates.view", actionKey: "view" },
+      { key: "metaTemplates.create", actionKey: "create" },
+      { key: "metaTemplates.delete", actionKey: "delete" }
+    ]
+  },
+  {
     key: "campaigns",
     titleKey: "sectorPermissions.groups.campaigns",
     items: [

@@ -578,6 +578,7 @@ const messages = {
           contactLists: "Listas",
           dialogs: "Diálogos",
           campaigns: "Campanhas",
+          metaTemplates: "Templates",
           integrations: "Integrações",
           webhooks: "Webhooks",
           informatives: "Informativos",
