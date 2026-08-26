@@ -45,6 +45,7 @@ import { revokeMessageWithLookupFallback } from "./wwebjsDeleteLookup";
 import CollectWWebJsRawReconciliationHistory from "./wwebjsReconciliationRawCollector";
 import createWWebJsReconciliationAdapter from "./wwebjsReconciliationAdapter";
 import RunWWebJsReconciliationBridge from "./wwebjsReconciliationBridge";
+import BuildEquivalentContactNumberCandidates from "../../../helpers/BuildEquivalentContactNumberCandidates";
 import {
   buildWWebJsFallbackReconciliationContactMetadata,
   mapWWebJsContactToReconciliationMetadata,
@@ -1284,13 +1285,57 @@ const resolveWWebJsReconciliationMessageMetadata = async (
 };
 
 export const createWWebJsReconciliationAdapterForSession = (
-  sessionId: number
+  sessionId: number,
+  options: {
+    targetChatIds?: string[];
+    targetedRepair?: boolean;
+  } = {}
 ) => {
   const wbot =
     getWbot(sessionId);
 
   return createWWebJsReconciliationAdapter({
     whatsappId: sessionId,
+
+    targetChatIds: options.targetChatIds,
+    includeContactProfilePic:
+      Boolean(options.targetedRepair),
+
+    services:
+      options.targetedRepair
+        ? {
+            /*
+             * Targeted repair is intentionally independent from
+             * the connection-wide incremental checkpoint.
+             *
+             * Scanner classification is overridden only so a
+             * known recent Message.id does not stop traversal.
+             * RunWhatsAppReconciliationService still performs
+             * the real persistence/deduplication classification.
+             */
+            getCheckpoint:
+              async () => null,
+
+            saveCheckpoint:
+              async () => undefined,
+
+            classifyMessage:
+              async () => "new" as const,
+
+            classifyMessages:
+              async () => new Set<string>(),
+
+            resolveBoundary:
+              ({ capturedBoundaryAt }) => ({
+                mode: "recovery" as const,
+                lowerBoundAt: new Date(1),
+                checkpointCandidateAt:
+                  new Date(
+                    capturedBoundaryAt.getTime()
+                  )
+              })
+          }
+        : undefined,
 
     session: wbot as any,
 
@@ -1338,11 +1383,69 @@ export const createWWebJsReconciliationAdapterForSession = (
 };
 
 export const runManualWWebJsReconciliationForSession = async (
-  sessionId: number
+  sessionId: number,
+  options: {
+    ticketId?: number | null;
+    targetContact?: {
+      number?: string | null;
+      lid?: string | null;
+    } | null;
+  } = {}
 ) => {
+  const {
+    ticketId = null,
+    targetContact = null
+  } = options;
+
+  const targetChatIds = new Set<string>();
+
+  if (ticketId !== null && targetContact) {
+    const numberCandidates =
+      BuildEquivalentContactNumberCandidates(
+        String(targetContact.number || "")
+      );
+
+    for (const number of numberCandidates) {
+      const normalized = String(number || "").trim();
+
+      if (normalized) {
+        targetChatIds.add(
+          normalized.includes("@")
+            ? normalized
+            : `${normalized}@c.us`
+        );
+      }
+    }
+
+    const lid = String(targetContact.lid || "").trim();
+
+    if (lid) {
+      targetChatIds.add(
+        lid.includes("@")
+          ? lid
+          : `${lid}@lid`
+      );
+    }
+  }
+
+  if (ticketId !== null && targetChatIds.size === 0) {
+    throw new Error(
+      "ERR_RECONCILIATION_TARGET_WITHOUT_PROVIDER_IDENTITY"
+    );
+  }
+
+  const targetedRepair = ticketId !== null;
+
   const reconciliation =
     createWWebJsReconciliationAdapterForSession(
-      sessionId
+      sessionId,
+      {
+        targetChatIds:
+          targetedRepair
+            ? Array.from(targetChatIds)
+            : undefined,
+        targetedRepair
+      }
     );
 
   return RunWWebJsReconciliationBridge({

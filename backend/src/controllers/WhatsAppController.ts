@@ -249,6 +249,25 @@ export const reconcile = async (
 ): Promise<Response> => {
   const { whatsappId } = req.params;
 
+
+  const requestedTicketId =
+    req.body?.ticketId === undefined ||
+    req.body?.ticketId === null
+      ? null
+      : Number(req.body.ticketId);
+
+  if (
+    requestedTicketId !== null &&
+    (
+      !Number.isInteger(requestedTicketId) ||
+      requestedTicketId <= 0
+    )
+  ) {
+    return res.status(400).json({
+      error: "ERR_INVALID_RECONCILIATION_TICKET_ID"
+    });
+  }
+
   const requesterUserId =
     Number(req.user.id);
 
@@ -296,7 +315,8 @@ export const reconcile = async (
     {
       whatsappId: whatsapp.id,
       requestedByUserId:
-        requesterUserId
+        requesterUserId,
+      ticketId: requestedTicketId
     },
     "Manual WhatsApp reconciliation requested"
   );
@@ -304,7 +324,8 @@ export const reconcile = async (
   try {
     const result =
       await RunManualWhatsAppReconciliationService({
-        whatsappId: whatsapp.id
+        whatsappId: whatsapp.id,
+        ticketId: requestedTicketId
       });
 
     const state =
@@ -317,6 +338,7 @@ export const reconcile = async (
         whatsappId: whatsapp.id,
         requestedByUserId:
           requesterUserId,
+        ticketId: requestedTicketId,
         checkedMessages:
           result.checkedMessages,
         importedMessages:

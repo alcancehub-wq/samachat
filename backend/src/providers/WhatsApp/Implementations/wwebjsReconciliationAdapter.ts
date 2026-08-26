@@ -109,6 +109,10 @@ interface Request<
 
   captureBoundaryAt?: () => Date;
 
+
+  targetChatIds?: string[];
+  includeContactProfilePic?: boolean;
+
   services?: Partial<AdapterServices>;
 }
 
@@ -220,6 +224,8 @@ const createWWebJsReconciliationAdapter = <
   resolveMessageMetadata,
   processNewMessage,
   captureBoundaryAt = () => new Date(),
+    targetChatIds = [],
+  includeContactProfilePic = false,
   services: serviceOverrides = {}
 }: Request<
   TMessage,
@@ -229,6 +235,16 @@ const createWWebJsReconciliationAdapter = <
     ...defaultServices,
     ...serviceOverrides
   };
+
+  const normalizedTargetChatIds =
+    new Set(
+      targetChatIds
+        .map(value => normalizeIdentity(value))
+        .filter(Boolean)
+    );
+
+  const hasTargetChatScope =
+    normalizedTargetChatIds.size > 0;
   if (
     serviceOverrides.classifyMessage &&
     !serviceOverrides.classifyMessages
@@ -319,7 +335,28 @@ const createWWebJsReconciliationAdapter = <
 
             signal.throwIfAborted();
 
-            return chats;
+            if (!hasTargetChatScope) {
+              return chats;
+            }
+
+            const targetedChats =
+              chats.filter(chat => {
+                const chatId =
+                  resolveWWebJsReconciliationChatId(chat);
+
+                return Boolean(
+                  chatId &&
+                  normalizedTargetChatIds.has(chatId)
+                );
+              });
+
+            if (!targetedChats.length) {
+              throw new Error(
+                "ERR_RECONCILIATION_TARGET_CHAT_NOT_FOUND"
+              );
+            }
+
+            return targetedChats;
           }
 
           /*
@@ -402,7 +439,26 @@ const createWWebJsReconciliationAdapter = <
 
           signal.throwIfAborted();
 
-          return chatEnvelopes.map(
+          const scopedChatEnvelopes =
+            hasTargetChatScope
+              ? chatEnvelopes.filter(
+                  (envelope: any) =>
+                    normalizedTargetChatIds.has(
+                      String(envelope?.chatId || "")
+                    )
+                )
+              : chatEnvelopes;
+
+          if (
+            hasTargetChatScope &&
+            scopedChatEnvelopes.length === 0
+          ) {
+            throw new Error(
+              "ERR_RECONCILIATION_TARGET_CHAT_NOT_FOUND"
+            );
+          }
+
+          return scopedChatEnvelopes.map(
             (envelope: any) => ({
               id: {
                 _serialized:
@@ -688,17 +744,50 @@ const createWWebJsReconciliationAdapter = <
           signal.throwIfAborted();
 
           /*
-           * P05 manual reconciliation is scoped to messages from
-           * the bounded history window, not to a full WhatsApp
-           * address-book import.
-           *
-           * Message metadata is reconciled downstream for every
-           * discovered conversation/message, so a global
-           * session.getContacts() here is unnecessary and was
-           * keeping the manual run blocked before any message
-           * could be processed.
+           * Normal P05 does not enumerate the global address
+           * book. A targeted repair is different: only the
+           * selected client's provider identities are queried,
+           * allowing contact metadata/profile picture repair
+           * without session.getContacts().
            */
-          return [];
+          if (!hasTargetChatScope) {
+            return [];
+          }
+
+          const runtimeSession = session as any;
+
+          if (
+            typeof runtimeSession.getContactById !==
+            "function"
+          ) {
+            return [];
+          }
+
+          const contacts: TContact[] = [];
+
+          for (const contactId of normalizedTargetChatIds) {
+            signal.throwIfAborted();
+
+            try {
+              const contact =
+                await runtimeSession.getContactById(
+                  contactId
+                );
+
+              if (contact) {
+                contacts.push(contact as TContact);
+              }
+            } catch (_err) {
+              /*
+               * One identity may be stale while another
+               * equivalent number/LID identity is valid.
+               */
+            }
+          }
+
+          signal.throwIfAborted();
+
+          return contacts;
         },
         mapContact:
           async (
@@ -710,7 +799,11 @@ const createWWebJsReconciliationAdapter = <
             try {
               const metadata =
                 await mapWWebJsContactToReconciliationMetadata(
-                  contact
+                  contact,
+                  {
+                    includeProfilePic:
+                      includeContactProfilePic
+                  }
                 );
 
               signal.throwIfAborted();

@@ -170,7 +170,10 @@ const extractWWebJsContactIdentifiers = (
 };
 
 export const mapWWebJsContactToReconciliationMetadata = async (
-  contact: WWebJsReconciliationContactLike
+  contact: WWebJsReconciliationContactLike,
+  options: {
+    includeProfilePic?: boolean;
+  } = {}
 ): Promise<WWebJsReconciliationContactMetadata> => {
 
   const {
@@ -195,6 +198,28 @@ export const mapWWebJsContactToReconciliationMetadata = async (
     );
   }
 
+
+  let profilePicUrl: string | undefined;
+
+  if (
+    options.includeProfilePic &&
+    typeof contact.getProfilePicUrl === "function"
+  ) {
+    try {
+      profilePicUrl =
+        await contact.getProfilePicUrl();
+    } catch (err) {
+      logger.warn(
+        {
+          err,
+          contactId:
+            contact?.id?._serialized
+        },
+        "Unable to resolve targeted reconciliation profile picture"
+      );
+    }
+  }
+
   return {
     name:
       contact.name ||
@@ -203,7 +228,7 @@ export const mapWWebJsContactToReconciliationMetadata = async (
       "",
     number,
     lid,
-    profilePicUrl: undefined,
+    profilePicUrl,
     isGroup:
       Boolean(contact.isGroup)
   };
