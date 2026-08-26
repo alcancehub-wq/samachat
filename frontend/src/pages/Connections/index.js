@@ -89,6 +89,55 @@ const useStyles = makeStyles(theme => ({
 		justifyContent: "center",
 		backgroundColor: theme.custom.softBackground,
 	},
+	connectionChip: {
+		display: "inline-flex",
+		alignItems: "center",
+		gap: 6,
+		height: 30,
+		padding: "0 12px",
+		borderRadius: 999,
+		fontSize: "0.78rem",
+		fontWeight: 600,
+		whiteSpace: "nowrap",
+	},
+	connectionChipSuccess: {
+		backgroundColor: "#E8F5E9",
+		color: "#237A3B",
+	},
+	connectionChipWarning: {
+		backgroundColor: "#FFF4E5",
+		color: "#9A6700",
+	},
+	connectionChipDanger: {
+		backgroundColor: "#FDECEC",
+		color: "#B42318",
+	},
+	connectionChipNeutral: {
+		backgroundColor: theme.custom.softBackground,
+		color: theme.palette.text.secondary,
+	},
+	connectionDot: {
+		width: 7,
+		height: 7,
+		borderRadius: "50%",
+		backgroundColor: "currentColor",
+		flexShrink: 0,
+	},
+	connectionSession: {
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: theme.spacing(1),
+		flexWrap: "wrap",
+	},
+	connectionAction: {
+		height: 30,
+		borderRadius: 8,
+		textTransform: "none",
+		fontSize: "0.78rem",
+		fontWeight: 500,
+		padding: "0 11px",
+	},
 	actionGroup: {
 		display: "flex",
 		gap: theme.spacing(1),
@@ -225,6 +274,31 @@ const Connections = () => {
 		return isOwnByAuthPayload || isOwnByLinkedUsers;
 	};
 
+	const renderConnectionChip = (label, tone = "neutral") => {
+		const toneClass = {
+			success: classes.connectionChipSuccess,
+			warning: classes.connectionChipWarning,
+			danger: classes.connectionChipDanger,
+			neutral: classes.connectionChipNeutral,
+		}[tone];
+
+		return (
+			<span className={`${classes.connectionChip} ${toneClass}`}>
+				<span className={classes.connectionDot} />
+				{label}
+			</span>
+		);
+	};
+
+	const getOfficialCloudState = whatsApp => {
+		const activeStates = ["configured", "webhook_received", "message_received"];
+		return (
+			whatsApp.providerType === "official" &&
+			Boolean(whatsApp.hasAccessToken) &&
+			activeStates.includes(String(whatsApp.cloudApiStatus || ""))
+		);
+	};
+
 	const handleStartWhatsAppSession = async whatsAppId => {
 		try {
 			await api.post(`/whatsappsession/${whatsAppId}`);
@@ -332,159 +406,206 @@ const Connections = () => {
 		const hasQrCode = Boolean(whatsApp.qrcode);
 		const isQrPending = whatsApp.status === "qrcode" || hasQrCode;
 		const isOfficialProvider = whatsApp.providerType === "official";
+		const isOfficialActive = getOfficialCloudState(whatsApp);
 
 		const embeddedSignupButton = (
 			<MetaEmbeddedSignupButton
 				whatsApp={whatsApp}
 				canEdit={canEditConnection}
 				reload={reload}
-				className={classes.actionButton}
+				className={classes.connectionAction}
 			/>
 		);
 
-		if (!canManageSession && !canManageOwnSession(whatsApp)) {
-			return embeddedSignupButton;
-		}
-
 		if (isOfficialProvider) {
+			if (!isOfficialActive) {
+				return (
+					<div className={classes.connectionSession}>
+						{renderConnectionChip("Pendente", "warning")}
+						{embeddedSignupButton}
+					</div>
+				);
+			}
+
 			return (
-				<>
-					<Button
-						size="small"
-						variant="outlined"
-						color="primary"
-						className={classes.actionButton}
-						disabled
-					>
-						API Oficial
-					</Button>
-					{embeddedSignupButton}
-				</>
+				<div className={classes.connectionSession}>
+					{renderConnectionChip("Ativa", "success")}
+					{canEditConnection && (
+						<Button
+							size="small"
+							variant="outlined"
+							className={classes.connectionAction}
+							onClick={() => handleEditWhatsApp(whatsApp)}
+						>
+							Ver detalhes
+						</Button>
+					)}
+				</div>
 			);
 		}
 
-		return (
-			<>
-				{embeddedSignupButton}
-				<Button
-					size="small"
-					variant="outlined"
-					color="primary"
-					className={classes.actionButton}
-					disabled={isRestarting}
-					startIcon={
-						isRestarting ? <CircularProgress size={14} /> : undefined
-					}
-					onClick={() => handleRestartWhatsAppSession(whatsApp.id)}
-				>
-					{i18n.t(
-						isRestarting
-							? "connections.buttons.reconnecting"
-							: "connections.buttons.reconnect"
-					)}
-				</Button>
-				{isQrPending && (
+		if (!canManageSession && !canManageOwnSession(whatsApp)) {
+			return null;
+		}
+
+		if (isQrPending) {
+			return (
+				<div className={classes.connectionSession}>
+					{renderConnectionChip("Pendente", "warning")}
 					<Button
 						size="small"
-						variant="contained"
-						color="primary"
-						className={classes.actionButton}
+						variant="outlined"
+						className={classes.connectionAction}
 						onClick={() => handleOpenQrModal(whatsApp)}
 					>
-						{i18n.t("connections.buttons.qrcode")}
+						Ver QR
 					</Button>
-				)}
-				{whatsApp.status === "DISCONNECTED" && (
-					<>
-						<Button
-							size="small"
-							variant="outlined"
-							color="primary"
-							className={classes.actionButton}
-							onClick={() => handleStartWhatsAppSession(whatsApp.id)}
-						>
-							{i18n.t("connections.buttons.tryAgain")}
-						</Button>{" "}
-						<Button
-							size="small"
-							variant="outlined"
-							color="secondary"
-							className={classes.actionButton}
-							onClick={() => handleRequestNewQrCode(whatsApp.id)}
-						>
-							{i18n.t("connections.buttons.newQr")}
-						</Button>
-					</>
-				)}
-				{(whatsApp.status === "CONNECTED" ||
-					whatsApp.status === "PAIRING" ||
-					whatsApp.status === "TIMEOUT") && (
+				</div>
+			);
+		}
+
+		if (whatsApp.status === "CONNECTED") {
+			return (
+				<div className={classes.connectionSession}>
+					{renderConnectionChip("Ativa", "success")}
 					<Button
 						size="small"
 						variant="outlined"
 						color="secondary"
-						className={classes.actionButton}
-						onClick={() => {
-							handleOpenConfirmationModal("disconnect", whatsApp.id);
-						}}
+						className={classes.connectionAction}
+						onClick={() => handleOpenConfirmationModal("disconnect", whatsApp.id)}
 					>
 						{i18n.t("connections.buttons.disconnect")}
 					</Button>
-				)}
-				{whatsApp.status === "OPENING" && !hasQrCode && (
+				</div>
+			);
+		}
+
+		if (whatsApp.status === "DISCONNECTED") {
+			return (
+				<div className={classes.connectionSession}>
+					{renderConnectionChip("Inativa", "neutral")}
 					<Button
 						size="small"
 						variant="outlined"
-						disabled
-						color="default"
-						className={classes.actionButton}
+						color="primary"
+						className={classes.connectionAction}
+						onClick={() => handleStartWhatsAppSession(whatsApp.id)}
 					>
-						{i18n.t("connections.buttons.connecting")}
+						Reconectar
 					</Button>
-				)}
-			</>
+					<Button
+						size="small"
+						variant="outlined"
+						color="secondary"
+						className={classes.connectionAction}
+						onClick={() => handleRequestNewQrCode(whatsApp.id)}
+					>
+						Novo QR
+					</Button>
+				</div>
+			);
+		}
+
+		if (whatsApp.status === "OPENING") {
+			return (
+				<div className={classes.connectionSession}>
+					{renderConnectionChip("Iniciando", "warning")}
+				</div>
+			);
+		}
+
+		if (whatsApp.status === "PAIRING") {
+			return (
+				<div className={classes.connectionSession}>
+					{renderConnectionChip("Pareando", "warning")}
+					<Button
+						size="small"
+						variant="outlined"
+						color="secondary"
+						className={classes.connectionAction}
+						onClick={() => handleOpenConfirmationModal("disconnect", whatsApp.id)}
+					>
+						{i18n.t("connections.buttons.disconnect")}
+					</Button>
+				</div>
+			);
+		}
+
+		if (whatsApp.status === "TIMEOUT") {
+			return (
+				<div className={classes.connectionSession}>
+					{renderConnectionChip("Instável", "danger")}
+					<Button
+						size="small"
+						variant="outlined"
+						color="primary"
+						className={classes.connectionAction}
+						disabled={isRestarting}
+						onClick={() => handleRestartWhatsAppSession(whatsApp.id)}
+					>
+						{isRestarting ? "Reconectando..." : "Reconectar"}
+					</Button>
+					<Button
+						size="small"
+						variant="outlined"
+						color="secondary"
+						className={classes.connectionAction}
+						onClick={() => handleOpenConfirmationModal("disconnect", whatsApp.id)}
+					>
+						{i18n.t("connections.buttons.disconnect")}
+					</Button>
+				</div>
+			);
+		}
+
+		return (
+			<div className={classes.connectionSession}>
+				{renderConnectionChip("Inativa", "neutral")}
+				<Button
+					size="small"
+					variant="outlined"
+					color="primary"
+					className={classes.connectionAction}
+					disabled={isRestarting}
+					onClick={() => handleRestartWhatsAppSession(whatsApp.id)}
+				>
+					{isRestarting ? "Reconectando..." : "Reconectar"}
+				</Button>
+			</div>
 		);
 	};
 
 	const renderStatusToolTips = whatsApp => {
 		const hasQrCode = Boolean(whatsApp.qrcode);
+		const isQrPending = whatsApp.status === "qrcode" || hasQrCode;
+		const isOfficialProvider = whatsApp.providerType === "official";
+		const isOfficialActive = getOfficialCloudState(whatsApp);
 
-		return (
-			<div className={`${classes.customTableCell} ${classes.statusPill}`}>
-				{whatsApp.status === "DISCONNECTED" && (
-					<CustomToolTip
-						title={i18n.t("connections.toolTips.disconnected.title")}
-						content={i18n.t("connections.toolTips.disconnected.content")}
-					>
-						<SignalCellularConnectedNoInternet0Bar color="secondary" />
-					</CustomToolTip>
-				)}
-				{whatsApp.status === "OPENING" && !hasQrCode && (
-					<CircularProgress size={20} className={classes.buttonProgress} />
-				)}
-				{(whatsApp.status === "qrcode" || hasQrCode) && (
-					<CustomToolTip
-						title={i18n.t("connections.toolTips.qrcode.title")}
-						content={i18n.t("connections.toolTips.qrcode.content")}
-					>
-						<CropFree />
-					</CustomToolTip>
-				)}
-				{whatsApp.status === "CONNECTED" && (
-					<CustomToolTip title={i18n.t("connections.toolTips.connected.title")}>
-						<SignalCellular4Bar style={{ color: green[500] }} />
-					</CustomToolTip>
-				)}
-				{(whatsApp.status === "TIMEOUT" || whatsApp.status === "PAIRING") && (
-					<CustomToolTip
-						title={i18n.t("connections.toolTips.timeout.title")}
-						content={i18n.t("connections.toolTips.timeout.content")}
-					>
-						<SignalCellularConnectedNoInternet2Bar color="secondary" />
-					</CustomToolTip>
-				)}
-			</div>
-		);
+		if (isOfficialProvider) {
+			return isOfficialActive
+				? renderConnectionChip("Conectado", "success")
+				: renderConnectionChip("Configuração pendente", "warning");
+		}
+
+		if (isQrPending) {
+			return renderConnectionChip("Aguardando QR", "warning");
+		}
+
+		switch (whatsApp.status) {
+			case "CONNECTED":
+				return renderConnectionChip("Conectado", "success");
+			case "DISCONNECTED":
+				return renderConnectionChip("Desconectado", "danger");
+			case "OPENING":
+				return renderConnectionChip("Conectando", "warning");
+			case "PAIRING":
+				return renderConnectionChip("Pareando", "warning");
+			case "TIMEOUT":
+				return renderConnectionChip("Instável", "danger");
+			default:
+				return renderConnectionChip("Indefinido", "neutral");
+		}
 	};
 
 	return (

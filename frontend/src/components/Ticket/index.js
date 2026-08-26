@@ -11,7 +11,6 @@ import ContactDrawer from "../ContactDrawer";
 import MessageInput from "../MessageInput/";
 import TicketHeader from "../TicketHeader";
 import TicketInfo from "../TicketInfo";
-import WhatsAppModal from "../WhatsAppModal";
 import TicketActionButtons from "../TicketActionButtons";
 import MessagesList from "../MessagesList";
 import api from "../../services/api";
@@ -119,7 +118,6 @@ const Ticket = () => {
   const [loading, setLoading] = useState(true);
   const [contact, setContact] = useState({});
   const [ticket, setTicket] = useState({});
-  const [whatsappDetailsOpen, setWhatsappDetailsOpen] = useState(false);
   const [transferNotice, setTransferNotice] = useState(false);
 
   useEffect(() => {
@@ -204,7 +202,6 @@ const Ticket = () => {
                 contact={contact}
                 ticket={ticket}
                 onClick={handleDrawerOpen}
-                onConnectionDetails={() => setWhatsappDetailsOpen(true)}
               />
             </div>
             <div className={classes.ticketActionButtons}>
@@ -229,11 +226,6 @@ const Ticket = () => {
           <MessageInput ticketStatus={ticket.status} />
         </ReplyMessageProvider>
       </Paper>
-      <WhatsAppModal
-        open={whatsappDetailsOpen}
-        onClose={() => setWhatsappDetailsOpen(false)}
-        whatsAppId={whatsappDetailsOpen ? ticket.whatsappId : null}
-      />
       <ContactDrawer
         open={drawerOpen}
         handleDrawerClose={handleDrawerClose}
