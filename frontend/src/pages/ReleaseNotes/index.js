@@ -11,6 +11,20 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.08.26 / Templates oficiais da Meta - Fundacao",
+    label: "Fundacao de templates oficiais da Meta",
+    summary:
+      "Criada a base tecnica isolada para futura gestao de Message Templates oficiais do WhatsApp Business Platform, preservando integralmente a integracao Cloud API atualmente em operacao.",
+    changes: [
+      "Criado modulo independente MetaMessageTemplateServices, sem acoplamento ao fluxo atual de envio e recebimento de mensagens.",
+      "Adicionado contrato inicial para categorias MARKETING, UTILITY e AUTHENTICATION e para estruturas retornadas pela Meta.",
+      "Adicionada construcao validada do endpoint WABA /message_templates usando a versao configurada da API.",
+      "Incluidas validacoes para WABA ID e token de acesso sem expor credenciais ao frontend.",
+      "Nenhuma chamada real a Meta, alteracao de banco, campanha, dialogo, FlowBuilder, webhook ou fluxo de envio foi realizada nesta etapa.",
+      "Fundacao validada com 5 testes unitarios aprovados e build do backend concluido com sucesso.",
+    ],
+  },
+  {
     version: "2026.08.18 / Continuidade de transferencias",
     label: "Correcao de continuidade do atendimento",
     summary:
