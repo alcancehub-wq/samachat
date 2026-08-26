@@ -1,4 +1,4 @@
-﻿export interface MetaMessageTemplateCredentials {
+export interface MetaMessageTemplateCredentials {
   accessToken?: string | null;
   wabaId?: string | null;
   apiVersion?: string | null;
@@ -33,8 +33,6 @@ export interface MetaMessageTemplateListResponse {
       before?: string;
       after?: string;
     };
-    next?: string;
-    previous?: string;
   };
 }
 

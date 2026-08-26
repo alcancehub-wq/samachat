@@ -1,4 +1,4 @@
-﻿import MetaMessageTemplateClient, {
+import MetaMessageTemplateClient, {
   buildMetaMessageTemplatesUrl
 } from "../MetaMessageTemplateClient";
 
@@ -128,6 +128,64 @@ describe("MetaMessageTemplateClient", () => {
     );
   });
 
+  it("removes raw Meta paging URLs and exposes cursors only", async () => {
+    const executor = jest.fn().mockResolvedValue({
+      statusCode: 200,
+      body: JSON.stringify({
+        data: [],
+        paging: {
+          cursors: {
+            before: "cursor-before",
+            after: "cursor-after"
+          },
+          next:
+            "https://graph.facebook.com/v20.0/test/message_templates?after=cursor-after&access_token=SECRET_TOKEN",
+          previous:
+            "https://graph.facebook.com/v20.0/test/message_templates?before=cursor-before&access_token=SECRET_TOKEN"
+        }
+      })
+    });
+
+    const client = new MetaMessageTemplateClient(
+      {
+        accessToken: "secret-test-token",
+        wabaId: "1015864050707890",
+        apiVersion: "v20.0"
+      },
+      executor
+    );
+
+    const result = await client.listTemplates();
+
+    expect(result).toEqual({
+      data: [],
+      paging: {
+        cursors: {
+          before: "cursor-before",
+          after: "cursor-after"
+        }
+      }
+    });
+
+    expect(JSON.stringify(result)).not.toContain(
+      "SECRET_TOKEN"
+    );
+    expect(JSON.stringify(result)).not.toContain(
+      "graph.facebook.com"
+    );
+    expect(
+      Object.prototype.hasOwnProperty.call(
+        result.paging || {},
+        "next"
+      )
+    ).toBe(false);
+    expect(
+      Object.prototype.hasOwnProperty.call(
+        result.paging || {},
+        "previous"
+      )
+    ).toBe(false);
+  });
   it("returns a generic status error without exposing the Meta body", async () => {
     const executor = jest.fn().mockResolvedValue({
       statusCode: 403,

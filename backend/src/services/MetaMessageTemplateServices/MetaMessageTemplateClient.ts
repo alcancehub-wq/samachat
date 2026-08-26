@@ -1,4 +1,4 @@
-﻿import AppError from "../../errors/AppError";
+import AppError from "../../errors/AppError";
 import {
   MetaMessageTemplateCredentials,
   MetaMessageTemplateHttpResponse,
@@ -49,7 +49,40 @@ const parseListResponse = (
       throw new Error("invalid response");
     }
 
-    return parsed as MetaMessageTemplateListResponse;
+    const response =
+      parsed as MetaMessageTemplateListResponse & {
+        paging?: {
+          cursors?: {
+            before?: unknown;
+            after?: unknown;
+          };
+        };
+      };
+
+    const before =
+      typeof response.paging?.cursors?.before === "string"
+        ? response.paging.cursors.before
+        : undefined;
+
+    const after =
+      typeof response.paging?.cursors?.after === "string"
+        ? response.paging.cursors.after
+        : undefined;
+
+    return {
+      data: Array.isArray(response.data)
+        ? response.data
+        : undefined,
+      paging:
+        before || after
+          ? {
+              cursors: {
+                ...(before ? { before } : {}),
+                ...(after ? { after } : {})
+              }
+            }
+          : undefined
+    };
   } catch {
     throw new AppError(
       "ERR_META_TEMPLATE_INVALID_RESPONSE"
