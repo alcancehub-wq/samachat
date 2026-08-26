@@ -404,6 +404,162 @@ describe(
           .toHaveLength(0);
       }
     );
+
+    it(
+      "uses the raw browser chat collection without calling session.getChats",
+      async () => {
+        const getChats =
+          jest.fn(
+            async () => {
+              throw new Error(
+                "CLASSIC_GET_CHATS_FAILURE"
+              );
+            }
+          );
+
+        const getContacts =
+          jest.fn(
+            async () => []
+          );
+
+        const rawMessageModel = {
+          id: {
+            id: "message-direct-1",
+            _serialized:
+              "false_5511999999999@c.us_message-direct-1"
+          },
+          timestamp: 2000,
+          t: 2000,
+          type: "chat",
+          body: "teste",
+          from:
+            "5511999999999@c.us",
+          to:
+            "5511888888888@c.us",
+          fromMe: false,
+          isNotification: false
+        };
+
+        const evaluate =
+          jest.fn(
+            async (
+              fn: Function,
+              ...args: any[]
+            ) => {
+              /*
+               * First evaluate = direct chat envelopes.
+               */
+              if (args.length === 0) {
+                return [
+                  {
+                    chatId:
+                      "5511999999999@c.us",
+                    lastMessage: {
+                      id: {
+                        id:
+                          "message-direct-1",
+                        _serialized:
+                          "false_5511999999999@c.us_message-direct-1"
+                      },
+                      timestamp:
+                        2000
+                    }
+                  }
+                ];
+              }
+
+              /*
+               * Second evaluate = bounded history models.
+               * We mock the browser result because this unit test
+               * validates routing/bypass, not WhatsApp internals.
+               */
+              return [
+                rawMessageModel
+              ];
+            }
+          );
+
+        const session: any = {
+          getChats,
+          getContacts,
+          pupPage: {
+            evaluate
+          }
+        };
+
+        const processNewMessage =
+          jest.fn(
+            async () => undefined
+          );
+
+        const orchestrator =
+          createWWebJsReconciliationAdapter({
+            whatsappId: 101,
+            session,
+
+            captureBoundaryAt:
+              () =>
+                new Date(
+                  2000 * 1000
+                ),
+
+            resolveMessageId:
+              message =>
+                (message as any)
+                  .id.id,
+
+            shouldHandleMessage:
+              () => true,
+
+            resolveMessageMetadata:
+              async () => ({
+                name: "Contato",
+                number:
+                  "5511999999999",
+                isGroup: false
+              }),
+
+            processNewMessage,
+
+            services: {
+              getCheckpoint:
+                async () =>
+                  new Date(
+                    1999 * 1000
+                  ),
+
+              saveCheckpoint:
+                async () =>
+                  undefined,
+
+              classifyMessage:
+                async () =>
+                  "new",
+
+              classifyMessages:
+                async () =>
+                  new Set<string>()
+            }
+          });
+
+        const work =
+          await orchestrator.collectWork(
+            makeSignal() as any
+          );
+
+        expect(getChats)
+          .not.toHaveBeenCalled();
+
+        expect(getContacts)
+          .not.toHaveBeenCalled();
+
+        expect(evaluate)
+          .toHaveBeenCalled();
+
+        expect(work.messages)
+          .toHaveLength(1);
+      }
+    );
     it(
       "filters message work through the injected production eligibility policy",
       async () => {
