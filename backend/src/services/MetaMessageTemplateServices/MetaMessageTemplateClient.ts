@@ -1,6 +1,9 @@
 import AppError from "../../errors/AppError";
 import {
   MetaMessageTemplateCredentials,
+  MetaMessageTemplate,
+  MetaMessageTemplateCreateResponse,
+  MetaMessageTemplateDeleteResponse,
   MetaMessageTemplateHttpResponse,
   MetaMessageTemplateListResponse
 } from "./types";
@@ -101,6 +104,79 @@ const parseListResponse = (
   }
 };
 
+
+const parseCreateResponse = (
+  body: string
+): MetaMessageTemplateCreateResponse => {
+  try {
+    const parsed = JSON.parse(body || "{}");
+
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      Array.isArray(parsed)
+    ) {
+      throw new Error("invalid response");
+    }
+
+    const response = parsed as {
+      id?: unknown;
+      status?: unknown;
+      category?: unknown;
+    };
+
+    return {
+      id:
+        typeof response.id === "string"
+          ? response.id
+          : undefined,
+      status:
+        typeof response.status === "string"
+          ? response.status
+          : undefined,
+      category:
+        typeof response.category === "string"
+          ? response.category
+          : undefined
+    };
+  } catch {
+    throw new AppError(
+      "ERR_META_TEMPLATE_INVALID_RESPONSE"
+    );
+  }
+};
+
+const parseDeleteResponse = (
+  body: string
+): MetaMessageTemplateDeleteResponse => {
+  try {
+    const parsed = JSON.parse(body || "{}");
+
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      Array.isArray(parsed)
+    ) {
+      throw new Error("invalid response");
+    }
+
+    const response = parsed as {
+      success?: unknown;
+    };
+
+    if (typeof response.success !== "boolean") {
+      throw new Error("invalid response");
+    }
+
+    return {
+      success: response.success
+    };
+  } catch {
+    throw new AppError(
+      "ERR_META_TEMPLATE_INVALID_RESPONSE"
+    );
+  }
+};
 export const buildMetaMessageTemplatesUrl = (
   wabaId: string,
   apiVersion?: string | null
@@ -124,13 +200,19 @@ export const buildMetaMessageTemplatesUrl = (
 export class MetaMessageTemplateClient {
   private readonly credentials: MetaMessageTemplateCredentials;
   private readonly getExecutor?: MetaMessageTemplateGetExecutor;
+  private readonly postExecutor?: MetaMessageTemplatePostExecutor;
+  private readonly deleteExecutor?: MetaMessageTemplateDeleteExecutor;
 
   constructor(
     credentials: MetaMessageTemplateCredentials,
-    getExecutor?: MetaMessageTemplateGetExecutor
+    getExecutor?: MetaMessageTemplateGetExecutor,
+    postExecutor?: MetaMessageTemplatePostExecutor,
+    deleteExecutor?: MetaMessageTemplateDeleteExecutor
   ) {
     this.credentials = credentials;
     this.getExecutor = getExecutor;
+    this.postExecutor = postExecutor;
+    this.deleteExecutor = deleteExecutor;
   }
 
   private getValidatedContext(): {
@@ -170,6 +252,80 @@ export class MetaMessageTemplateClient {
     return this.getValidatedContext().url;
   }
 
+
+  async createTemplate(
+    template: MetaMessageTemplate
+  ): Promise<MetaMessageTemplateCreateResponse> {
+    if (!this.postExecutor) {
+      throw new AppError(
+        "ERR_META_TEMPLATE_POST_EXECUTOR_REQUIRED"
+      );
+    }
+
+    const {
+      accessToken,
+      url
+    } = this.getValidatedContext();
+
+    const response = await this.postExecutor(
+      url,
+      accessToken,
+      JSON.stringify(template)
+    );
+
+    if (
+      response.statusCode < 200 ||
+      response.statusCode >= 300
+    ) {
+      throw new AppError(
+        `ERR_META_TEMPLATE_CREATE_FAILED: ${response.statusCode}`
+      );
+    }
+
+    return parseCreateResponse(response.body);
+  }
+
+  async deleteTemplate(
+    name: string
+  ): Promise<MetaMessageTemplateDeleteResponse> {
+    if (!this.deleteExecutor) {
+      throw new AppError(
+        "ERR_META_TEMPLATE_DELETE_EXECUTOR_REQUIRED"
+      );
+    }
+
+    const cleanName = (name || "").trim();
+
+    if (!cleanName) {
+      throw new AppError(
+        "ERR_META_TEMPLATE_NAME_REQUIRED"
+      );
+    }
+
+    const {
+      accessToken,
+      url
+    } = this.getValidatedContext();
+
+    const deleteUrl =
+      `${url}?name=${encodeURIComponent(cleanName)}`;
+
+    const response = await this.deleteExecutor(
+      deleteUrl,
+      accessToken
+    );
+
+    if (
+      response.statusCode < 200 ||
+      response.statusCode >= 300
+    ) {
+      throw new AppError(
+        `ERR_META_TEMPLATE_DELETE_FAILED: ${response.statusCode}`
+      );
+    }
+
+    return parseDeleteResponse(response.body);
+  }
   async listTemplates(): Promise<MetaMessageTemplateListResponse> {
     if (!this.getExecutor) {
       throw new AppError(

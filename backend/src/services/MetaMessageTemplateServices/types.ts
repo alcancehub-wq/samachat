@@ -26,6 +26,14 @@ export interface MetaMessageTemplate {
   components?: MetaMessageTemplateComponent[];
 }
 
+export interface MetaMessageTemplateDeleteResponse {
+  success: boolean;
+}
+export interface MetaMessageTemplateCreateResponse {
+  id?: string;
+  status?: string;
+  category?: MetaMessageTemplateCategory | string;
+}
 export interface MetaMessageTemplateListResponse {
   data?: MetaMessageTemplate[];
   paging?: {

@@ -1,4 +1,4 @@
-import MetaMessageTemplateClient, {
+﻿import MetaMessageTemplateClient, {
   buildMetaMessageTemplatesUrl
 } from "../MetaMessageTemplateClient";
 
@@ -55,6 +55,336 @@ describe("MetaMessageTemplateClient", () => {
     );
   });
 
+
+
+  it("does not permit create without an injected POST executor", async () => {
+    const client = new MetaMessageTemplateClient({
+      accessToken: "test-token",
+      wabaId: "1015864050707890",
+      apiVersion: "v20.0"
+    });
+
+    await expect(
+      client.createTemplate({
+        name: "boas_vindas",
+        language: "pt_BR",
+        category: "UTILITY",
+        components: [
+          {
+            type: "BODY",
+            text: "Olá"
+          }
+        ]
+      })
+    ).rejects.toMatchObject({
+      message: "ERR_META_TEMPLATE_POST_EXECUTOR_REQUIRED"
+    });
+  });
+
+  it("returns generic create status error without exposing the Meta body", async () => {
+    const postExecutor = jest.fn().mockResolvedValue({
+      statusCode: 403,
+      body: JSON.stringify({
+        error: {
+          message: "sensitive upstream detail"
+        }
+      })
+    });
+
+    const client = new MetaMessageTemplateClient(
+      {
+        accessToken: "secret-test-token",
+        wabaId: "1015864050707890",
+        apiVersion: "v20.0"
+      },
+      undefined,
+      postExecutor
+    );
+
+    await expect(
+      client.createTemplate({
+        name: "boas_vindas",
+        language: "pt_BR",
+        category: "UTILITY",
+        components: [
+          {
+            type: "BODY",
+            text: "Olá"
+          }
+        ]
+      })
+    ).rejects.toMatchObject({
+      message: "ERR_META_TEMPLATE_CREATE_FAILED: 403"
+    });
+
+    try {
+      await client.createTemplate({
+        name: "boas_vindas",
+        language: "pt_BR",
+        category: "UTILITY"
+      });
+    } catch (error) {
+      expect(String(error)).not.toContain(
+        "sensitive upstream detail"
+      );
+      expect(String(error)).not.toContain(
+        "secret-test-token"
+      );
+    }
+  });
+
+  it("rejects malformed successful create response", async () => {
+    const postExecutor = jest.fn().mockResolvedValue({
+      statusCode: 200,
+      body: "not-json"
+    });
+
+    const client = new MetaMessageTemplateClient(
+      {
+        accessToken: "test-token",
+        wabaId: "1015864050707890",
+        apiVersion: "v20.0"
+      },
+      undefined,
+      postExecutor
+    );
+
+    await expect(
+      client.createTemplate({
+        name: "boas_vindas",
+        language: "pt_BR",
+        category: "UTILITY"
+      })
+    ).rejects.toMatchObject({
+      message: "ERR_META_TEMPLATE_INVALID_RESPONSE"
+    });
+  });
+
+
+  it("does not permit delete without an injected DELETE executor", async () => {
+    const client = new MetaMessageTemplateClient({
+      accessToken: "test-token",
+      wabaId: "1015864050707890",
+      apiVersion: "v20.0"
+    });
+
+    await expect(
+      client.deleteTemplate("boas_vindas")
+    ).rejects.toMatchObject({
+      message: "ERR_META_TEMPLATE_DELETE_EXECUTOR_REQUIRED"
+    });
+  });
+
+  it("rejects delete with an empty template name", async () => {
+    const deleteExecutor = jest.fn();
+
+    const client = new MetaMessageTemplateClient(
+      {
+        accessToken: "test-token",
+        wabaId: "1015864050707890",
+        apiVersion: "v20.0"
+      },
+      undefined,
+      undefined,
+      deleteExecutor
+    );
+
+    await expect(
+      client.deleteTemplate("   ")
+    ).rejects.toMatchObject({
+      message: "ERR_META_TEMPLATE_NAME_REQUIRED"
+    });
+
+    expect(deleteExecutor).not.toHaveBeenCalled();
+  });
+
+  it("returns generic delete status error without exposing the Meta body", async () => {
+    const deleteExecutor = jest.fn().mockResolvedValue({
+      statusCode: 403,
+      body: JSON.stringify({
+        error: {
+          message: "sensitive upstream delete detail"
+        }
+      })
+    });
+
+    const client = new MetaMessageTemplateClient(
+      {
+        accessToken: "secret-delete-token",
+        wabaId: "1015864050707890",
+        apiVersion: "v20.0"
+      },
+      undefined,
+      undefined,
+      deleteExecutor
+    );
+
+    await expect(
+      client.deleteTemplate("boas_vindas")
+    ).rejects.toMatchObject({
+      message: "ERR_META_TEMPLATE_DELETE_FAILED: 403"
+    });
+
+    try {
+      await client.deleteTemplate("boas_vindas");
+    } catch (error) {
+      expect(String(error)).not.toContain(
+        "sensitive upstream delete detail"
+      );
+
+      expect(String(error)).not.toContain(
+        "secret-delete-token"
+      );
+    }
+  });
+
+  it("rejects malformed successful delete response", async () => {
+    const deleteExecutor = jest.fn().mockResolvedValue({
+      statusCode: 200,
+      body: "not-json"
+    });
+
+    const client = new MetaMessageTemplateClient(
+      {
+        accessToken: "test-token",
+        wabaId: "1015864050707890",
+        apiVersion: "v20.0"
+      },
+      undefined,
+      undefined,
+      deleteExecutor
+    );
+
+    await expect(
+      client.deleteTemplate("boas_vindas")
+    ).rejects.toMatchObject({
+      message: "ERR_META_TEMPLATE_INVALID_RESPONSE"
+    });
+  });
+
+  it("rejects delete response without boolean success", async () => {
+    const deleteExecutor = jest.fn().mockResolvedValue({
+      statusCode: 200,
+      body: JSON.stringify({
+        success: "true"
+      })
+    });
+
+    const client = new MetaMessageTemplateClient(
+      {
+        accessToken: "test-token",
+        wabaId: "1015864050707890",
+        apiVersion: "v20.0"
+      },
+      undefined,
+      undefined,
+      deleteExecutor
+    );
+
+    await expect(
+      client.deleteTemplate("boas_vindas")
+    ).rejects.toMatchObject({
+      message: "ERR_META_TEMPLATE_INVALID_RESPONSE"
+    });
+  });
+  it("deletes template through the injected DELETE executor", async () => {
+    const deleteExecutor = jest.fn().mockResolvedValue({
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true,
+        ignored: "must-not-leak"
+      })
+    });
+
+    const client = new MetaMessageTemplateClient(
+      {
+        accessToken: "test-token",
+        wabaId: "1015864050707890",
+        apiVersion: "v20.0"
+      },
+      undefined,
+      undefined,
+      deleteExecutor
+    );
+
+    const result = await client.deleteTemplate(
+      "boas vindas"
+    );
+
+    expect(deleteExecutor).toHaveBeenCalledTimes(1);
+
+    expect(deleteExecutor).toHaveBeenCalledWith(
+      "https://graph.facebook.com/v20.0/1015864050707890/message_templates?name=boas%20vindas",
+      "test-token"
+    );
+
+    expect(result).toEqual({
+      success: true
+    });
+
+    expect(
+      Object.prototype.hasOwnProperty.call(
+        result,
+        "ignored"
+      )
+    ).toBe(false);
+  });
+  it("creates template through the injected POST executor", async () => {
+    const postExecutor = jest.fn().mockResolvedValue({
+      statusCode: 200,
+      body: JSON.stringify({
+        id: "template-created-1",
+        status: "PENDING",
+        category: "UTILITY",
+        ignored: "must-not-leak"
+      })
+    });
+
+    const client = new MetaMessageTemplateClient(
+      {
+        accessToken: "test-token",
+        wabaId: "1015864050707890",
+        apiVersion: "v20.0"
+      },
+      undefined,
+      postExecutor
+    );
+
+    const template = {
+      name: "boas_vindas",
+      language: "pt_BR",
+      category: "UTILITY",
+      components: [
+        {
+          type: "BODY",
+          text: "Olá"
+        }
+      ]
+    };
+
+    const result = await client.createTemplate(template);
+
+    expect(postExecutor).toHaveBeenCalledTimes(1);
+
+    expect(postExecutor).toHaveBeenCalledWith(
+      "https://graph.facebook.com/v20.0/1015864050707890/message_templates",
+      "test-token",
+      JSON.stringify(template)
+    );
+
+    expect(result).toEqual({
+      id: "template-created-1",
+      status: "PENDING",
+      category: "UTILITY"
+    });
+
+    expect(
+      Object.prototype.hasOwnProperty.call(
+        result,
+        "ignored"
+      )
+    ).toBe(false);
+  });
   it("does not permit list without an injected GET executor", async () => {
     const client = new MetaMessageTemplateClient({
       accessToken: "test-token",
