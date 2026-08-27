@@ -12,11 +12,26 @@ metaMessageTemplateRoutes.get(
   checkSectorPermission("metaTemplates.view"),
   MetaMessageTemplateController.authorizedConnections
 );
+
 metaMessageTemplateRoutes.get(
   "/meta-message-templates/:whatsappId",
   isAuth,
   checkSectorPermission("metaTemplates.view"),
   MetaMessageTemplateController.index
+);
+
+metaMessageTemplateRoutes.post(
+  "/meta-message-templates/:whatsappId",
+  isAuth,
+  checkSectorPermission("metaTemplates.create"),
+  MetaMessageTemplateController.store
+);
+
+metaMessageTemplateRoutes.delete(
+  "/meta-message-templates/:whatsappId/:name",
+  isAuth,
+  checkSectorPermission("metaTemplates.delete"),
+  MetaMessageTemplateController.destroy
 );
 
 export default metaMessageTemplateRoutes;
