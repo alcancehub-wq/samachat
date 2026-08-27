@@ -57,6 +57,7 @@ interface Request<TMessage extends WWebJsHistoryScannerMessage> {
   initialLimit?: number;
   growthFactor?: number;
   maxLimit?: number;
+  allowUpperAnchorFallback?: boolean;
 }
 
 const normalizePositiveInteger = (
@@ -116,7 +117,8 @@ const ScanWWebJsReconciliationHistory = async <
   findKnownMessageIds,
   initialLimit,
   growthFactor,
-  maxLimit
+  maxLimit,
+  allowUpperAnchorFallback = false
 }: Request<TMessage>): Promise<
   WWebJsHistoryScanResult<TMessage>
 > => {
@@ -132,6 +134,8 @@ const ScanWWebJsReconciliationHistory = async <
   }
 
   assertValidLowerBound(lowerBoundAt);
+
+  let effectiveUpperAnchorId = normalizedUpperAnchorId;
 
   /*
    * WWebJS Message.timestamp has second precision.
@@ -209,19 +213,40 @@ const ScanWWebJsReconciliationHistory = async <
       );
     }
 
-    const upperAnchorIndex =
+    let upperAnchorIndex =
       resolved.findIndex(
         item =>
-          item.id === normalizedUpperAnchorId
+          item.id === effectiveUpperAnchorId
       );
 
     if (upperAnchorIndex === -1) {
-      if (fetched.length < requestedLimit || requestedLimit >= resolvedMaxLimit) {
-        throw new Error("ERR_RECONCILIATION_UPPER_ANCHOR_NOT_FOUND");
+      const cannotGrowFurther =
+        fetched.length < requestedLimit ||
+        requestedLimit >= resolvedMaxLimit;
+
+      if (
+        allowUpperAnchorFallback &&
+        cannotGrowFurther &&
+        resolved.length > 0
+      ) {
+        effectiveUpperAnchorId =
+          resolved[resolved.length - 1].id;
+        upperAnchorIndex =
+          resolved.length - 1;
+      } else {
+        if (cannotGrowFurther) {
+          throw new Error(
+            "ERR_RECONCILIATION_UPPER_ANCHOR_NOT_FOUND"
+          );
+        }
+
+        previousFetchedCount = fetched.length;
+        requestedLimit = Math.min(
+          requestedLimit * resolvedGrowthFactor,
+          resolvedMaxLimit
+        );
+        continue;
       }
-      previousFetchedCount = fetched.length;
-      requestedLimit = Math.min(requestedLimit * resolvedGrowthFactor, resolvedMaxLimit);
-      continue;
     }
 
     /*
@@ -234,6 +259,86 @@ const ScanWWebJsReconciliationHistory = async <
     const bounded =
       resolved.slice(0, upperAnchorIndex + 1);
 
+    /*
+     * Durable Message.id continuity has precedence over the
+     * temporal boundary. Resolve it BEFORE requiring provider
+     * timestamps, because a real known-message boundary is
+     * sufficient to establish continuity.
+     */
+    const candidateIdsToCheck =
+      bounded
+        .map(item => item.id)
+        .filter(
+          candidateId =>
+            candidateId !== effectiveUpperAnchorId &&
+            !checkedMessageIds.has(candidateId)
+        );
+
+    if (candidateIdsToCheck.length > 0) {
+      if (findKnownMessageIds) {
+        const resolvedKnownIds =
+          await findKnownMessageIds(
+            candidateIdsToCheck
+          );
+
+        for (const candidateId of candidateIdsToCheck) {
+          checkedMessageIds.add(candidateId);
+        }
+
+        for (const knownId of resolvedKnownIds) {
+          if (candidateIdsToCheck.includes(knownId)) {
+            knownMessageIds.add(knownId);
+          }
+        }
+      } else {
+        for (const candidateId of candidateIdsToCheck) {
+          if (await isKnownMessage(candidateId)) {
+            knownMessageIds.add(candidateId);
+          }
+
+          checkedMessageIds.add(candidateId);
+        }
+      }
+    }
+
+    let knownBoundaryIndex = -1;
+
+    for (
+      let index = bounded.length - 1;
+      index >= 0;
+      index -= 1
+    ) {
+      if (
+        knownMessageIds.has(
+          bounded[index].id
+        )
+      ) {
+        knownBoundaryIndex = index;
+        break;
+      }
+    }
+
+    if (knownBoundaryIndex >= 0) {
+      return {
+        messages:
+          bounded
+            .slice(knownBoundaryIndex + 1)
+            .map(item => item.message),
+        upperAnchorId:
+          effectiveUpperAnchorId,
+        stopReason: "known-message",
+        knownBoundaryId:
+          bounded[knownBoundaryIndex].id,
+        requestedLimit,
+        fetchedCount: fetched.length,
+        temporalBoundaryApplied: false
+      };
+    }
+
+    /*
+     * Only the no-durable-boundary path depends on raw provider
+     * timestamps.
+     */
     const oldestBoundedTimestamp =
       resolveRawMessageTimestamp(
         bounded[0].message
@@ -266,88 +371,6 @@ const ScanWWebJsReconciliationHistory = async <
           })
         : bounded;
 
-    let knownBoundaryIndex = -1;
-
-    const candidateIdsToCheck =
-      eligibleBounded
-        .map(item => item.id)
-        .filter(
-          candidateId =>
-            candidateId !== normalizedUpperAnchorId &&
-            !checkedMessageIds.has(candidateId)
-        );
-
-    if (candidateIdsToCheck.length > 0) {
-      if (findKnownMessageIds) {
-        const resolvedKnownIds =
-          await findKnownMessageIds(
-            candidateIdsToCheck
-          );
-
-        for (const candidateId of candidateIdsToCheck) {
-          checkedMessageIds.add(candidateId);
-        }
-
-        for (const knownId of resolvedKnownIds) {
-          if (
-            candidateIdsToCheck.includes(knownId)
-          ) {
-            knownMessageIds.add(knownId);
-          }
-        }
-      } else {
-        for (const candidateId of candidateIdsToCheck) {
-          if (await isKnownMessage(candidateId)) {
-            knownMessageIds.add(candidateId);
-          }
-
-          checkedMessageIds.add(candidateId);
-        }
-      }
-    }
-
-    for (
-      let index = eligibleBounded.length - 1;
-      index >= 0;
-      index -= 1
-    ) {
-      if (
-        knownMessageIds.has(
-          eligibleBounded[index].id
-        )
-      ) {
-        knownBoundaryIndex = index;
-        break;
-      }
-    }
-
-    if (knownBoundaryIndex >= 0) {
-      /*
-       * Durable Message.id continuity has precedence over the
-       * temporal cutover. This safely allows recovery of older
-       * messages when the SamaChat already owns a real boundary
-       * for this conversation.
-       *
-       * Raw timestamps are intentionally NOT required here.
-       */
-      const unseenMessages =
-        eligibleBounded
-          .slice(knownBoundaryIndex + 1)
-          .map(item => item.message);
-
-      return {
-        messages: unseenMessages,
-        upperAnchorId:
-          normalizedUpperAnchorId,
-        stopReason: "known-message",
-        knownBoundaryId:
-          eligibleBounded[knownBoundaryIndex].id,
-        requestedLimit,
-        fetchedCount: fetched.length,
-        temporalBoundaryApplied: false
-      };
-    }
-
     if (temporalWindowReached) {
       return {
         messages:
@@ -355,7 +378,7 @@ const ScanWWebJsReconciliationHistory = async <
             item => item.message
           ),
         upperAnchorId:
-          normalizedUpperAnchorId,
+          effectiveUpperAnchorId,
         stopReason: "time-window",
         requestedLimit,
         fetchedCount: fetched.length,
@@ -402,7 +425,7 @@ const ScanWWebJsReconciliationHistory = async <
           item => item.message
         ),
         upperAnchorId:
-          normalizedUpperAnchorId,
+          effectiveUpperAnchorId,
         stopReason: "history-exhausted",
         requestedLimit,
         fetchedCount: fetched.length,

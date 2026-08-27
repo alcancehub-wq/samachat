@@ -552,6 +552,52 @@ describe(
     );
 
     it(
+      "uses newest fetched message as upper anchor when targeted fallback is enabled",
+      async () => {
+        const result =
+          await ScanWWebJsReconciliationHistory({
+            upperAnchorId:
+              "captured-anchor-missing",
+            lowerBoundAt:
+              defaultLowerBound,
+            fetchMessages: async () => [
+              msg(
+                "provider-1",
+                unix(
+                  "2026-08-13T21:00:00.000Z"
+                )
+              ),
+              msg(
+                "provider-last",
+                unix(
+                  "2026-08-13T21:01:00.000Z"
+                )
+              )
+            ],
+            resolveMessageId,
+            resolveRawMessageTimestamp,
+            isKnownMessage:
+              async () => false,
+            initialLimit: 10,
+            maxLimit: 100,
+            allowUpperAnchorFallback: true
+          });
+
+        expect(result.upperAnchorId)
+          .toBe("provider-last");
+
+        expect(
+          result.messages.map(
+            item => item.id.id
+          )
+        ).toEqual([
+          "provider-1",
+          "provider-last"
+        ]);
+      }
+    );
+
+    it(
       "fails closed when the captured upper anchor disappears",
       async () => {
         await expect(

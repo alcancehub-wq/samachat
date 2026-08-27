@@ -656,6 +656,9 @@ const createWWebJsReconciliationAdapter = <
               lowerBoundAt,
               signal,
 
+              allowUpperAnchorFallback:
+                hasTargetChatScope,
+
               resolveMessageId,
 
               findKnownMessageIds:

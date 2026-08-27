@@ -53,6 +53,7 @@ interface Request<
   initialLimit?: number;
   growthFactor?: number;
   maxLimit?: number;
+  allowUpperAnchorFallback?: boolean;
 }
 
 const normalizeMessageId = (
@@ -89,7 +90,8 @@ const CollectWWebJsRawReconciliationHistory = async <
   findKnownMessageIds,
   initialLimit,
   growthFactor,
-  maxLimit
+  maxLimit,
+  allowUpperAnchorFallback = false
 }: Request<TMessage>): Promise<
   WWebJsRawReconciliationCollection<TMessage>
 > => {
@@ -149,7 +151,8 @@ const CollectWWebJsRawReconciliationHistory = async <
 
       initialLimit,
       growthFactor,
-      maxLimit
+      maxLimit,
+      allowUpperAnchorFallback
     });
 
   signal?.throwIfAborted();
