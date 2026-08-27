@@ -116,6 +116,27 @@ describe(
     );
 
     it(
+      "authorizes a targeted ticket using normal ticket access rules",
+      () => {
+        expect(controller).toContain(
+          "ShowTicketService"
+        );
+
+        expect(controller).toContain(
+          "requestedTicketId !== null"
+        );
+
+        expect(controller).toContain(
+          "userId: requesterUserId"
+        );
+
+        expect(controller).toContain(
+          "profile: req.user.profile"
+        );
+      }
+    );
+
+    it(
       "tracks the authenticated requester and maps lock or cooldown conflicts",
       () => {
         expect(controller).toContain(

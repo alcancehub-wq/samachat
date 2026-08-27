@@ -12,6 +12,7 @@ import { whatsappProvider } from "../providers/WhatsApp";
 import SerializeWhatsAppForClient from "../helpers/SerializeWhatsAppForClient";
 import { logger } from "../utils/logger";
 import RunManualWhatsAppReconciliationService from "../services/WhatsappService/RunManualWhatsAppReconciliationService";
+import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import {
   getWhatsAppReconciliationRuntimeState,
   WhatsAppReconciliationBlockedError
@@ -278,6 +279,21 @@ export const reconcile = async (
     return res.status(401).json({
       error: "ERR_INVALID_AUTHENTICATED_USER"
     });
+  }
+
+  /*
+   * ticketId affects the scope of a targeted reconciliation.
+   * Therefore the authenticated requester must already have
+   * normal SamaChat access to that ticket.
+   */
+  if (requestedTicketId !== null) {
+    await ShowTicketService(
+      requestedTicketId,
+      {
+        userId: requesterUserId,
+        profile: req.user.profile
+      }
+    );
   }
 
   const whatsapp =
