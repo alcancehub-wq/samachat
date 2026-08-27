@@ -1,6 +1,8 @@
 ﻿import { EventEmitter } from "events";
 import {
+  createMetaMessageTemplateDeleteExecutor,
   createMetaMessageTemplateGetExecutor,
+  createMetaMessageTemplatePostExecutor,
   MetaMessageTemplateHttpsRequest
 } from "../MetaMessageTemplateHttpExecutor";
 
@@ -12,7 +14,7 @@ describe("MetaMessageTemplateHttpExecutor", () => {
     const requestEmitter = new EventEmitter() as any;
 
     requestEmitter.end = jest.fn();
-
+    requestEmitter.write = jest.fn();
     const requestFactory = jest.fn(
       (
         options: any,
@@ -85,6 +87,112 @@ describe("MetaMessageTemplateHttpExecutor", () => {
     expect(requestEmitter.end).toHaveBeenCalledTimes(1);
   });
 
+
+  it("performs POST with JSON body through injected request factory", async () => {
+    const {
+      requestFactory,
+      requestEmitter
+    } = buildRequestFactory(
+      200,
+      JSON.stringify({
+        id: "template-id",
+        status: "PENDING",
+        category: "UTILITY"
+      })
+    );
+
+    const executor =
+      createMetaMessageTemplatePostExecutor(
+        requestFactory
+      );
+
+    const body = JSON.stringify({
+      name: "teste_template",
+      language: "pt_BR",
+      category: "UTILITY",
+      components: [
+        {
+          type: "BODY",
+          text: "Teste"
+        }
+      ]
+    });
+
+    const result = await executor(
+      "https://graph.facebook.com/v20.0/test-waba/message_templates",
+      "test-token",
+      body
+    );
+
+    expect(result.statusCode).toBe(200);
+
+    const call = (requestFactory as any).mock.calls[0];
+
+    expect(call[0]).toMatchObject({
+      protocol: "https:",
+      hostname: "graph.facebook.com",
+      path: "/v20.0/test-waba/message_templates",
+      method: "POST",
+      headers: expect.objectContaining({
+        Authorization: "Bearer test-token",
+        Accept: "application/json",
+        "Content-Type": "application/json"
+      })
+    });
+
+    expect(call[0].headers["Content-Length"]).toBe(
+      Buffer.byteLength(body)
+    );
+
+    expect(requestEmitter.write).toHaveBeenCalledTimes(1);
+    expect(requestEmitter.write).toHaveBeenCalledWith(body);
+    expect(requestEmitter.end).toHaveBeenCalledTimes(1);
+  });
+
+  it("performs DELETE preserving query string", async () => {
+    const {
+      requestFactory,
+      requestEmitter
+    } = buildRequestFactory(
+      200,
+      JSON.stringify({
+        success: true
+      })
+    );
+
+    const executor =
+      createMetaMessageTemplateDeleteExecutor(
+        requestFactory
+      );
+
+    const result = await executor(
+      "https://graph.facebook.com/v20.0/test-waba/message_templates?name=teste_template",
+      "test-token"
+    );
+
+    expect(result).toEqual({
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true
+      })
+    });
+
+    const call = (requestFactory as any).mock.calls[0];
+
+    expect(call[0]).toMatchObject({
+      protocol: "https:",
+      hostname: "graph.facebook.com",
+      path: "/v20.0/test-waba/message_templates?name=teste_template",
+      method: "DELETE",
+      headers: {
+        Authorization: "Bearer test-token",
+        Accept: "application/json"
+      }
+    });
+
+    expect(requestEmitter.write).not.toHaveBeenCalled();
+    expect(requestEmitter.end).toHaveBeenCalledTimes(1);
+  });
   it("preserves query string in the request path", async () => {
     const {
       requestFactory

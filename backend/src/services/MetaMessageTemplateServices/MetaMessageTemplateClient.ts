@@ -13,6 +13,17 @@ export type MetaMessageTemplateGetExecutor = (
   accessToken: string
 ) => Promise<MetaMessageTemplateHttpResponse>;
 
+export type MetaMessageTemplatePostExecutor = (
+  url: string,
+  accessToken: string,
+  body: string
+) => Promise<MetaMessageTemplateHttpResponse>;
+
+export type MetaMessageTemplateDeleteExecutor = (
+  url: string,
+  accessToken: string
+) => Promise<MetaMessageTemplateHttpResponse>;
+
 const normalizeApiVersion = (
   apiVersion?: string | null
 ): string => {
