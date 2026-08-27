@@ -808,6 +808,33 @@ const messages = {
         subtitle: "Consulta los templates oficiales de Meta por conexi\u00f3n.",
         connection: "Conexi\u00f3n oficial",
         refresh: "Actualizar",
+        buttons: {
+          create: "Crear template",
+        },
+        createModal: {
+          title: "Crear template oficial",
+          name: "Nombre del template",
+          category: "Categor\u00eda",
+          language: "Idioma",
+          body: "Mensaje",
+          cancel: "Cancelar",
+          submit: "Enviar a Meta",
+          categories: {
+            MARKETING: "Marketing",
+            UTILITY: "Utilidad",
+            AUTHENTICATION: "Autenticaci\u00f3n",
+          },
+        },
+        toasts: {
+          created: "Template enviado a Meta para revisi\u00f3n.",
+          deleted: "Template eliminado correctamente.",
+        },
+        deleteModal: {
+          title: "Eliminar template",
+          message: "¿Est\u00e1s seguro? Esta acci\u00f3n elimina el template oficial de Meta y no se puede deshacer.",
+          cancel: "Cancelar",
+          confirm: "Eliminar",
+        },
         table: {
           name: "Nombre",
           category: "Categor\u00eda",
@@ -1516,6 +1543,33 @@ const messages = {
         logs: {
           title: "Logs de uso",
           refresh: "Actualizar",
+        buttons: {
+          create: "Crear template",
+        },
+        createModal: {
+          title: "Crear template oficial",
+          name: "Nombre del template",
+          category: "Categor\u00eda",
+          language: "Idioma",
+          body: "Mensaje",
+          cancel: "Cancelar",
+          submit: "Enviar a Meta",
+          categories: {
+            MARKETING: "Marketing",
+            UTILITY: "Utilidad",
+            AUTHENTICATION: "Autenticaci\u00f3n",
+          },
+        },
+        toasts: {
+          created: "Template enviado a Meta para revisi\u00f3n.",
+          deleted: "Template eliminado correctamente.",
+        },
+        deleteModal: {
+          title: "Eliminar template",
+          message: "¿Est\u00e1s seguro? Esta acci\u00f3n elimina el template oficial de Meta y no se puede deshacer.",
+          cancel: "Cancelar",
+          confirm: "Eliminar",
+        },
           empty: "No hay logs.",
           columns: {
             action: "Accion",

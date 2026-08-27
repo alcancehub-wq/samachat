@@ -826,6 +826,33 @@ const messages = {
         subtitle: "Consulte os templates oficiais da Meta por conex\u00e3o.",
         connection: "Conex\u00e3o oficial",
         refresh: "Atualizar",
+        buttons: {
+          create: "Criar template",
+        },
+        createModal: {
+          title: "Criar template oficial",
+          name: "Nome do template",
+          category: "Categoria",
+          language: "Idioma",
+          body: "Mensagem",
+          cancel: "Cancelar",
+          submit: "Enviar para a Meta",
+          categories: {
+            MARKETING: "Marketing",
+            UTILITY: "Utilidade",
+            AUTHENTICATION: "Autentica\u00e7\u00e3o",
+          },
+        },
+        toasts: {
+          created: "Template enviado para an\u00e1lise da Meta.",
+          deleted: "Template exclu\u00eddo com sucesso.",
+        },
+        deleteModal: {
+          title: "Excluir template",
+          message: "Tem certeza? Esta a\u00e7\u00e3o exclui o template oficial da Meta e n\u00e3o pode ser desfeita.",
+          cancel: "Cancelar",
+          confirm: "Excluir",
+        },
         table: {
           name: "Nome",
           category: "Categoria",
@@ -1545,6 +1572,33 @@ const messages = {
         logs: {
           title: "Logs de uso",
           refresh: "Atualizar",
+        buttons: {
+          create: "Criar template",
+        },
+        createModal: {
+          title: "Criar template oficial",
+          name: "Nome do template",
+          category: "Categoria",
+          language: "Idioma",
+          body: "Mensagem",
+          cancel: "Cancelar",
+          submit: "Enviar para a Meta",
+          categories: {
+            MARKETING: "Marketing",
+            UTILITY: "Utilidade",
+            AUTHENTICATION: "Autentica\u00e7\u00e3o",
+          },
+        },
+        toasts: {
+          created: "Template enviado para an\u00e1lise da Meta.",
+          deleted: "Template exclu\u00eddo com sucesso.",
+        },
+        deleteModal: {
+          title: "Excluir template",
+          message: "Tem certeza? Esta a\u00e7\u00e3o exclui o template oficial da Meta e n\u00e3o pode ser desfeita.",
+          cancel: "Cancelar",
+          confirm: "Excluir",
+        },
           empty: "Nenhum log encontrado.",
           columns: {
             action: "Ação",

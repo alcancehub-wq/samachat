@@ -1,9 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
+import { toast } from "react-toastify";
 
 import {
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
+  IconButton,
   InputLabel,
   MenuItem,
   Paper,
@@ -13,19 +19,24 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  TextField,
+  Tooltip,
   Typography
 } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
 import RefreshIcon from "@material-ui/icons/Refresh";
+import DeleteOutline from "@material-ui/icons/DeleteOutline";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import Title from "../../components/Title";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
+import ConfirmationModal from "../../components/ConfirmationModal";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const useStyles = makeStyles(theme => ({
   mainPaper: {
@@ -90,16 +101,63 @@ const useStyles = makeStyles(theme => ({
     borderRadius: 10,
     textTransform: "none",
     fontWeight: 600
+  },
+  createButton: {
+    borderRadius: 10,
+    textTransform: "none",
+    fontWeight: 600
   }
 }));
 
 const MetaTemplates = () => {
   const classes = useStyles();
+  const { user } = useContext(AuthContext);
+
   const [officialConnections, setOfficialConnections] = useState([]);
   const [connectionsLoading, setConnectionsLoading] = useState(true);
   const [selectedWhatsappId, setSelectedWhatsappId] = useState("");
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templateCategory, setTemplateCategory] = useState("UTILITY");
+  const [templateLanguage, setTemplateLanguage] = useState("pt_BR");
+  const [templateBody, setTemplateBody] = useState("");
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
+
+  const permissions = user?.permissions || [];
+  const isAdmin = user?.profile?.toLowerCase() === "admin";
+  const canCreateTemplate =
+    isAdmin || permissions.includes("metaTemplates.create");
+
+  const canDeleteTemplate =
+    isAdmin || permissions.includes("metaTemplates.delete");
+
+  const resetCreateForm = () => {
+    setTemplateName("");
+    setTemplateCategory("UTILITY");
+    setTemplateLanguage("pt_BR");
+    setTemplateBody("");
+  };
+
+  const handleOpenCreateModal = () => {
+    resetCreateForm();
+    setCreateModalOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    if (creating) {
+      return;
+    }
+
+    setCreateModalOpen(false);
+    resetCreateForm();
+  };
 
   const loadAuthorizedConnections = async () => {
     setConnectionsLoading(true);
@@ -121,6 +179,7 @@ const MetaTemplates = () => {
     loadAuthorizedConnections();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   useEffect(() => {
     if (!selectedWhatsappId && officialConnections.length > 0) {
       setSelectedWhatsappId(String(officialConnections[0].id));
@@ -153,8 +212,213 @@ const MetaTemplates = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWhatsappId]);
 
+  const handleCreateTemplate = async () => {
+    const cleanName = templateName.trim();
+    const cleanBody = templateBody.trim();
+
+    if (
+      !selectedWhatsappId ||
+      !cleanName ||
+      !templateCategory ||
+      !templateLanguage.trim() ||
+      !cleanBody
+    ) {
+      return;
+    }
+
+    setCreating(true);
+
+    try {
+      await api.post(
+        `/meta-message-templates/${selectedWhatsappId}`,
+        {
+          name: cleanName,
+          language: templateLanguage.trim(),
+          category: templateCategory,
+          components: [
+            {
+              type: "BODY",
+              text: cleanBody
+            }
+          ]
+        }
+      );
+
+      toast.success(i18n.t("metaTemplates.toasts.created"));
+      setCreateModalOpen(false);
+      resetCreateForm();
+      await fetchTemplates();
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleOpenDeleteModal = template => {
+    if (!template?.name) {
+      return;
+    }
+
+    setTemplateToDelete(template);
+    setDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    if (deleting) {
+      return;
+    }
+
+    setDeleteModalOpen(false);
+    setTemplateToDelete(null);
+  };
+
+  const handleDeleteTemplate = async () => {
+    if (
+      !selectedWhatsappId ||
+      !templateToDelete?.name
+    ) {
+      return;
+    }
+
+    setDeleting(true);
+
+    try {
+      await api.delete(
+        `/meta-message-templates/${selectedWhatsappId}/${encodeURIComponent(
+          templateToDelete.name
+        )}`
+      );
+
+      toast.success(i18n.t("metaTemplates.toasts.deleted"));
+      setDeleteModalOpen(false);
+      setTemplateToDelete(null);
+      await fetchTemplates();
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setDeleting(false);
+    }
+  };
+  const createFormValid =
+    Boolean(templateName.trim()) &&
+    Boolean(templateCategory) &&
+    Boolean(templateLanguage.trim()) &&
+    Boolean(templateBody.trim());
+
   return (
     <MainContainer>
+      <ConfirmationModal
+        title={
+          templateToDelete
+            ? `${i18n.t("metaTemplates.deleteModal.title")} ${templateToDelete.name}?`
+            : i18n.t("metaTemplates.deleteModal.title")
+        }
+        open={deleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleDeleteTemplate}
+      >
+        {deleting
+          ? <CircularProgress size={18} />
+          : i18n.t("metaTemplates.deleteModal.message")}
+      </ConfirmationModal>
+
+      <Dialog
+        open={createModalOpen}
+        onClose={handleCloseCreateModal}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {i18n.t("metaTemplates.createModal.title")}
+        </DialogTitle>
+
+        <DialogContent dividers>
+          <TextField
+            label={i18n.t("metaTemplates.createModal.name")}
+            variant="outlined"
+            fullWidth
+            margin="dense"
+            value={templateName}
+            onChange={event => setTemplateName(event.target.value)}
+            disabled={creating}
+          />
+
+          <FormControl
+            variant="outlined"
+            fullWidth
+            margin="dense"
+            disabled={creating}
+          >
+            <InputLabel>
+              {i18n.t("metaTemplates.createModal.category")}
+            </InputLabel>
+
+            <Select
+              value={templateCategory}
+              onChange={event => setTemplateCategory(event.target.value)}
+              label={i18n.t("metaTemplates.createModal.category")}
+            >
+              {["MARKETING", "UTILITY", "AUTHENTICATION"].map(category => (
+                <MenuItem key={category} value={category}>
+                  {i18n.t(
+                    `metaTemplates.createModal.categories.${category}`
+                  )}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            label={i18n.t("metaTemplates.createModal.language")}
+            variant="outlined"
+            fullWidth
+            margin="dense"
+            value={templateLanguage}
+            onChange={event => setTemplateLanguage(event.target.value)}
+            disabled={creating}
+          />
+
+          <TextField
+            label={i18n.t("metaTemplates.createModal.body")}
+            variant="outlined"
+            fullWidth
+            margin="dense"
+            multiline
+            rows={5}
+            value={templateBody}
+            onChange={event => setTemplateBody(event.target.value)}
+            disabled={creating}
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={handleCloseCreateModal}
+            color="secondary"
+            variant="outlined"
+            disabled={creating}
+          >
+            {i18n.t("metaTemplates.createModal.cancel")}
+          </Button>
+
+          <Button
+            onClick={handleCreateTemplate}
+            color="primary"
+            variant="contained"
+            disabled={
+              creating ||
+              !selectedWhatsappId ||
+              !createFormValid
+            }
+          >
+            {creating
+              ? <CircularProgress size={18} />
+              : i18n.t("metaTemplates.createModal.submit")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <MainHeader>
         <div className={classes.headerTitle}>
           <Title>{i18n.t("metaTemplates.title")}</Title>
@@ -183,6 +447,18 @@ const MetaTemplates = () => {
               ))}
             </Select>
           </FormControl>
+
+          {canCreateTemplate && (
+            <Button
+              variant="contained"
+              color="primary"
+              className={classes.createButton}
+              disabled={!selectedWhatsappId || connectionsLoading}
+              onClick={handleOpenCreateModal}
+            >
+              {i18n.t("metaTemplates.buttons.create")}
+            </Button>
+          )}
 
           <Button
             variant="outlined"
@@ -214,11 +490,17 @@ const MetaTemplates = () => {
               <TableCell className={classes.tableHeadCell}>
                 {i18n.t("metaTemplates.table.status")}
               </TableCell>
+              {canDeleteTemplate && (
+                <TableCell
+                  className={classes.tableHeadCell}
+                  align="right"
+                />
+              )}
             </TableRow>
           </TableHead>
 
           <TableBody>
-            {loading && <TableRowSkeleton columns={4} />}
+            {loading && <TableRowSkeleton columns={canDeleteTemplate ? 5 : 4} />}
 
             {!loading &&
               templates.map(template => (
@@ -230,6 +512,24 @@ const MetaTemplates = () => {
                   <TableCell>{template.category || "-"}</TableCell>
                   <TableCell>{template.language || "-"}</TableCell>
                   <TableCell>{template.status || "-"}</TableCell>
+
+                  {canDeleteTemplate && (
+                    <TableCell align="right">
+                      <Tooltip
+                        title={i18n.t("metaTemplates.deleteModal.title")}
+                      >
+                        <span>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenDeleteModal(template)}
+                            disabled={!template.name || deleting}
+                          >
+                            <DeleteOutline />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
           </TableBody>

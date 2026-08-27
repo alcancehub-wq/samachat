@@ -810,6 +810,33 @@ const messages = {
         subtitle: "View official Meta templates by connection.",
         connection: "Official connection",
         refresh: "Refresh",
+        buttons: {
+          create: "Create template",
+        },
+        createModal: {
+          title: "Create official template",
+          name: "Template name",
+          category: "Category",
+          language: "Language",
+          body: "Message",
+          cancel: "Cancel",
+          submit: "Send to Meta",
+          categories: {
+            MARKETING: "Marketing",
+            UTILITY: "Utility",
+            AUTHENTICATION: "Authentication",
+          },
+        },
+        toasts: {
+          created: "Template submitted to Meta for review.",
+          deleted: "Template deleted successfully.",
+        },
+        deleteModal: {
+          title: "Delete template",
+          message: "Are you sure? This deletes the official Meta template and cannot be undone.",
+          cancel: "Cancel",
+          confirm: "Delete",
+        },
         table: {
           name: "Name",
           category: "Category",
@@ -1521,6 +1548,33 @@ const messages = {
         logs: {
           title: "Usage logs",
           refresh: "Refresh",
+        buttons: {
+          create: "Create template",
+        },
+        createModal: {
+          title: "Create official template",
+          name: "Template name",
+          category: "Category",
+          language: "Language",
+          body: "Message",
+          cancel: "Cancel",
+          submit: "Send to Meta",
+          categories: {
+            MARKETING: "Marketing",
+            UTILITY: "Utility",
+            AUTHENTICATION: "Authentication",
+          },
+        },
+        toasts: {
+          created: "Template submitted to Meta for review.",
+          deleted: "Template deleted successfully.",
+        },
+        deleteModal: {
+          title: "Delete template",
+          message: "Are you sure? This deletes the official Meta template and cannot be undone.",
+          cancel: "Cancel",
+          confirm: "Delete",
+        },
           empty: "No logs found.",
           columns: {
             action: "Action",
