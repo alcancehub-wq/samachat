@@ -103,6 +103,88 @@ describe(
     );
 
     it(
+      "crosses a known local message during targeted deep repair and returns older provider history",
+      async () => {
+        const result =
+          await ScanWWebJsReconciliationHistory({
+            upperAnchorId: "anchor",
+            lowerBoundAt:
+              new Date(1),
+
+            fetchMessages:
+              async () => [
+                msg(
+                  "old-new-1",
+                  unix(
+                    "2026-08-10T18:00:00.000Z"
+                  )
+                ),
+                msg(
+                  "old-new-2",
+                  unix(
+                    "2026-08-11T18:00:00.000Z"
+                  )
+                ),
+                msg(
+                  "known-local",
+                  unix(
+                    "2026-08-12T18:00:00.000Z"
+                  )
+                ),
+                msg(
+                  "anchor",
+                  unix(
+                    "2026-08-13T18:00:00.000Z"
+                  )
+                )
+              ],
+
+            resolveMessageId,
+            resolveRawMessageTimestamp,
+
+            isKnownMessage:
+              async id =>
+                id ===
+                "known-local",
+
+            findKnownMessageIds:
+              async ids =>
+                new Set(
+                  ids.filter(
+                    id =>
+                      id ===
+                      "known-local"
+                  )
+                ),
+
+            initialLimit: 10,
+            maxLimit: 100,
+
+            ignoreKnownMessageBoundary:
+              true
+          });
+
+        expect(
+          result.stopReason
+        ).toBe(
+          "history-exhausted"
+        );
+
+        expect(
+          result.messages.map(
+            item =>
+              item.id.id
+          )
+        ).toEqual([
+          "old-new-1",
+          "old-new-2",
+          "known-local",
+          "anchor"
+        ]);
+      }
+    );
+
+    it(
       "resolves durable continuity in one batch per fetched page",
       async () => {
         const findKnownMessageIds =

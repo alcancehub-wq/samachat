@@ -129,6 +129,207 @@ describe(
     );
 
     it(
+      "keeps scanning older history across an existing local message in targeted repair",
+      async () => {
+        const messages: any[] = [
+          {
+            id: {
+              id:
+                "fernanda-old-1"
+            },
+            timestamp:
+              1700000000,
+            type:
+              "chat",
+            body:
+              "historico antigo 1",
+            from:
+              "140582986985630@lid",
+            to:
+              "5511999999999@c.us",
+            fromMe:
+              false
+          },
+          {
+            id: {
+              id:
+                "fernanda-old-2"
+            },
+            timestamp:
+              1700000100,
+            type:
+              "chat",
+            body:
+              "historico antigo 2",
+            from:
+              "140582986985630@lid",
+            to:
+              "5511999999999@c.us",
+            fromMe:
+              false
+          },
+          {
+            id: {
+              id:
+                "fernanda-known-local"
+            },
+            timestamp:
+              1700000200,
+            type:
+              "chat",
+            body:
+              "ja conhecida",
+            from:
+              "140582986985630@lid",
+            to:
+              "5511999999999@c.us",
+            fromMe:
+              false
+          },
+          {
+            id: {
+              id:
+                "fernanda-anchor"
+            },
+            timestamp:
+              1700000300,
+            type:
+              "chat",
+            body:
+              "mais recente",
+            from:
+              "140582986985630@lid",
+            to:
+              "5511999999999@c.us",
+            fromMe:
+              false
+          }
+        ];
+
+        const adapter =
+          createWWebJsReconciliationAdapter({
+            whatsappId:
+              38,
+
+            targetChatIds: [
+              "140582986985630@lid"
+            ],
+
+            session: {
+              getChats:
+                async () => [
+                  {
+                    id: {
+                      _serialized:
+                        "140582986985630@lid"
+                    },
+
+                    lastMessage:
+                      messages[
+                        messages.length - 1
+                      ],
+
+                    fetchMessages:
+                      async () =>
+                        messages
+                  }
+                ],
+
+              getContactById:
+                async () =>
+                  null
+            } as any,
+
+            captureBoundaryAt:
+              () =>
+                new Date(
+                  1700001000 *
+                    1000
+                ),
+
+            resolveMessageId:
+              item =>
+                (item as any)
+                  .id.id,
+
+            shouldHandleMessage:
+              () =>
+                true,
+
+            resolveMessageMetadata:
+              async () => ({
+                number:
+                  "5551982438188",
+                lid:
+                  "140582986985630@lid",
+                isGroup:
+                  false
+              }),
+
+            processNewMessage:
+              async () =>
+                undefined,
+
+            services: {
+              getCheckpoint:
+                async () =>
+                  null,
+
+              saveCheckpoint:
+                async () =>
+                  undefined,
+
+              classifyMessage:
+                async id =>
+                  id ===
+                  "fernanda-known-local"
+                    ? "existing"
+                    : "new",
+
+              classifyMessages:
+                async ids =>
+                  new Set(
+                    ids.filter(
+                      id =>
+                        id ===
+                        "fernanda-known-local"
+                    )
+                  ),
+
+              resolveBoundary:
+                ({
+                  capturedBoundaryAt
+                }) => ({
+                  mode:
+                    "recovery" as const,
+                  lowerBoundAt:
+                    new Date(1),
+                  checkpointCandidateAt:
+                    capturedBoundaryAt
+                })
+            }
+          });
+
+        const work =
+          await adapter.collectWork(
+            signal as any
+          );
+
+        expect(
+          work.messages?.map(
+            item =>
+              item.messageId
+          )
+        ).toEqual([
+          "fernanda-old-1",
+          "fernanda-old-2",
+          "fernanda-known-local",
+          "fernanda-anchor"
+        ]);
+      }
+    );
+
+    it(
       "uses a non-async Puppeteer evaluate callback on the production pupPage path",
       async () => {
         const messageModel = {

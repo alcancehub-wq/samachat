@@ -742,6 +742,15 @@ const createWWebJsReconciliationAdapter = <
               allowUpperAnchorFallback:
                 hasTargetChatScope,
 
+              /*
+               * Normal reconciliation remains incremental.
+               * Only targeted repair crosses already-known
+               * local Message.id boundaries to reconstruct
+               * older provider history.
+               */
+              ignoreKnownMessageBoundary:
+                hasTargetChatScope,
+
               resolveMessageId,
 
               findKnownMessageIds:

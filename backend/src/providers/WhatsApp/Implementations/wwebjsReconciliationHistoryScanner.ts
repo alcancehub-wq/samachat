@@ -58,6 +58,15 @@ interface Request<TMessage extends WWebJsHistoryScannerMessage> {
   growthFactor?: number;
   maxLimit?: number;
   allowUpperAnchorFallback?: boolean;
+
+  /*
+   * Targeted deep repair must be able to cross durable
+   * Message.id boundaries already present locally.
+   *
+   * Normal incremental reconciliation keeps the existing
+   * known-message stop behavior.
+   */
+  ignoreKnownMessageBoundary?: boolean;
 }
 
 const normalizePositiveInteger = (
@@ -118,7 +127,8 @@ const ScanWWebJsReconciliationHistory = async <
   initialLimit,
   growthFactor,
   maxLimit,
-  allowUpperAnchorFallback = false
+  allowUpperAnchorFallback = false,
+  ignoreKnownMessageBoundary = false
 }: Request<TMessage>): Promise<
   WWebJsHistoryScanResult<TMessage>
 > => {
@@ -318,7 +328,10 @@ const ScanWWebJsReconciliationHistory = async <
       }
     }
 
-    if (knownBoundaryIndex >= 0) {
+    if (
+      knownBoundaryIndex >= 0 &&
+      !ignoreKnownMessageBoundary
+    ) {
       return {
         messages:
           bounded
