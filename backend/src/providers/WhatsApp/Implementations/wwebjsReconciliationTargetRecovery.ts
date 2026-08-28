@@ -1,5 +1,6 @@
 import type {
-  WhatsAppReconciliationContactWorkItem
+  WhatsAppReconciliationContactWorkItem,
+  WhatsAppReconciliationWork
 } from "../../../services/WhatsappService/RunWhatsAppReconciliationService";
 
 const normalize = (
@@ -92,5 +93,13 @@ const BuildWWebJsTargetRecoveryContact = ({
     }
   };
 };
+
+export const HasWWebJsTargetRecoveryEvidence = (
+  work: WhatsAppReconciliationWork
+): boolean =>
+  Boolean(
+    (work.messages || []).length > 0 ||
+    (work.contacts || []).length > 0
+  );
 
 export default BuildWWebJsTargetRecoveryContact;

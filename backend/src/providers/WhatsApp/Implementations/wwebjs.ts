@@ -47,7 +47,9 @@ import createWWebJsReconciliationAdapter from "./wwebjsReconciliationAdapter";
 import RunWWebJsReconciliationBridge from "./wwebjsReconciliationBridge";
 import BuildEquivalentContactNumberCandidates from "../../../helpers/BuildEquivalentContactNumberCandidates";
 import ResolveWWebJsTargetProviderAliases from "./wwebjsReconciliationTargetIdentity";
-import BuildWWebJsTargetRecoveryContact from "./wwebjsReconciliationTargetRecovery";
+import BuildWWebJsTargetRecoveryContact, {
+  HasWWebJsTargetRecoveryEvidence
+} from "./wwebjsReconciliationTargetRecovery";
 import {
   buildWWebJsFallbackReconciliationContactMetadata,
   mapWWebJsContactToReconciliationMetadata,
@@ -1392,11 +1394,13 @@ export const runManualWWebJsReconciliationForSession = async (
       number?: string | null;
       lid?: string | null;
     } | null;
+    persistedProviderAliases?: string[];
   } = {}
 ) => {
   const {
     ticketId = null,
-    targetContact = null
+    targetContact = null,
+    persistedProviderAliases = []
   } = options;
 
   const wbot = getWbot(sessionId);
@@ -1490,6 +1494,34 @@ export const runManualWWebJsReconciliationForSession = async (
           : `${lid}@lid`
       );
     }
+
+
+    /*
+     * Historical LIDs from this exact ticket are candidates.
+     * They are not trusted as canonical contact metadata.
+     *
+     * The adapter will only proceed when WAWebCollections
+     * exposes an exact matching provider chat.
+     */
+    for (
+      const persistedAlias of
+      persistedProviderAliases
+    ) {
+      const normalizedAlias =
+        String(
+          persistedAlias || ""
+        ).trim().toLowerCase();
+
+      if (
+        /^[0-9]{5,}@lid$/.test(
+          normalizedAlias
+        )
+      ) {
+        targetChatIds.add(
+          normalizedAlias
+        );
+      }
+    }
   }
 
   if (ticketId !== null && targetChatIds.size === 0) {
@@ -1536,17 +1568,42 @@ export const runManualWWebJsReconciliationForSession = async (
             signal
           );
 
-        if (!targetedContact) {
-          return work;
+        const mergedWork = {
+          ...work,
+
+          contacts:
+            targetedContact
+              ? [
+                  ...(work.contacts || []),
+                  targetedContact
+                ]
+              : (
+                  work.contacts ||
+                  []
+                )
+        };
+
+        /*
+         * Targeted manual reconciliation must not complete
+         * successfully when the provider supplied no useful
+         * message/contact evidence.
+         *
+         * This exception happens inside the reconciliation
+         * guard task, before manual cooldown is started.
+         */
+        if (
+          targetedRepair &&
+          !HasWWebJsTargetRecoveryEvidence(
+            mergedWork
+          )
+        ) {
+          throw new AppError(
+            "ERR_RECONCILIATION_TARGET_NO_PROVIDER_EVIDENCE",
+            422
+          );
         }
 
-        return {
-          ...work,
-          contacts: [
-            ...(work.contacts || []),
-            targetedContact
-          ]
-        };
+        return mergedWork;
       },
 
     finalizeWork:

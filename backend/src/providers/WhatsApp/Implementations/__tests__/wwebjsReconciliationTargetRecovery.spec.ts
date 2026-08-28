@@ -1,5 +1,7 @@
 import createWWebJsReconciliationAdapter from "../wwebjsReconciliationAdapter";
-import BuildWWebJsTargetRecoveryContact from "../wwebjsReconciliationTargetRecovery";
+import BuildWWebJsTargetRecoveryContact, {
+  HasWWebJsTargetRecoveryEvidence
+} from "../wwebjsReconciliationTargetRecovery";
 
 const signal = {
   aborted: false,
@@ -331,6 +333,30 @@ describe(
             isGroup: false
           }
         });
+      }
+    );
+
+    it(
+      "rejects an empty targeted provider result as no evidence",
+      () => {
+        expect(
+          HasWWebJsTargetRecoveryEvidence({})
+        ).toBe(false);
+
+        expect(
+          HasWWebJsTargetRecoveryEvidence({
+            contacts: [
+              {
+                metadata: {
+                  number:
+                    "5551982438188",
+                  isGroup:
+                    false
+                }
+              }
+            ]
+          })
+        ).toBe(true);
       }
     );
 

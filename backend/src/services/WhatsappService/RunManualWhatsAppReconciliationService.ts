@@ -1,5 +1,7 @@
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
+import Message from "../../models/Message";
+import ExtractWWebJsPersistedTargetLidAliases from "../../providers/WhatsApp/Implementations/wwebjsReconciliationPersistedIdentity";
 
 interface Request {
   whatsappId: number;
@@ -10,7 +12,10 @@ const RunManualWhatsAppReconciliationService = async ({
   whatsappId,
   ticketId = null
 }: Request) => {
-    let targetContact:
+  let persistedProviderAliases:
+    string[] = [];
+
+  let targetContact:
     | {
         number?: string | null;
         lid?: string | null;
@@ -44,6 +49,37 @@ const RunManualWhatsAppReconciliationService = async ({
       number: contact.number || null,
       lid: contact.lid || null
     };
+
+
+    /*
+     * Provider identities already persisted in Message.id
+     * for this exact ticket are candidate aliases only.
+     *
+     * They are not persisted back into Contact here.
+     * The provider still has to expose a matching targeted
+     * chat/contact before reconciliation work is accepted.
+     */
+    const ticketMessages =
+      await Message.findAll({
+        where: {
+          ticketId
+        },
+        attributes: [
+          "id"
+        ],
+        raw: true
+      });
+
+    persistedProviderAliases =
+      ExtractWWebJsPersistedTargetLidAliases(
+        ticketMessages.map(
+          message =>
+            String(
+              (message as any)?.id ||
+              ""
+            )
+        )
+      );
   }
 
   /*
@@ -61,7 +97,8 @@ const RunManualWhatsAppReconciliationService = async ({
     whatsappId,
     {
       ticketId,
-      targetContact
+      targetContact,
+      persistedProviderAliases
     }
   );
 };
