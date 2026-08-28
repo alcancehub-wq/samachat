@@ -486,107 +486,146 @@ const createWWebJsReconciliationAdapter = <
 
                   const messageModels =
                     await pupPage.evaluate(
-                      async (
+                      (
                         chatId: string,
                         requestedLimit: number
                       ) => {
+                        /*
+                         * IMPORTANT:
+                         * This function crosses the Puppeteer
+                         * Node -> browser serialization boundary.
+                         *
+                         * It MUST NOT be async. TypeScript
+                         * transpiles async functions to __awaiter,
+                         * but that Node helper does not exist
+                         * inside the browser execution context.
+                         */
+                        const browserWindow =
+                          window as any;
+
                         const msgFilter =
                           (message: any) =>
                             !message
                               .isNotification;
 
-                        const chat =
-                          await (
-                            window as any
-                          ).WWebJS.getChat(
+                        return browserWindow
+                          .WWebJS
+                          .getChat(
                             chatId,
                             {
                               getAsModel:
                                 false
                             }
-                          );
-
-                        if (!chat) {
-                          return [];
-                        }
-
-                        let messages =
-                          chat.msgs
-                            .getModelsArray()
-                            .filter(
-                              msgFilter
-                            );
-
-                        if (
-                          requestedLimit >
-                          0
-                        ) {
-                          while (
-                            messages.length <
-                            requestedLimit
-                          ) {
-                            const loaded =
-                              await (
-                                window as any
-                              )
-                                .require(
-                                  "WAWebChatLoadMessages"
-                                )
-                                .loadEarlierMsgs(
-                                  {
-                                    chat
-                                  }
-                                );
-
-                            if (
-                              !loaded ||
-                              !loaded.length
-                            ) {
-                              break;
+                          )
+                          .then((chat: any) => {
+                            if (!chat) {
+                              return [];
                             }
 
-                            messages = [
-                              ...loaded.filter(
-                                msgFilter
-                              ),
-                              ...messages
-                            ];
-                          }
+                            let messages =
+                              chat.msgs
+                                .getModelsArray()
+                                .filter(
+                                  msgFilter
+                                );
 
-                          if (
-                            messages.length >
-                            requestedLimit
-                          ) {
-                            messages.sort(
-                              (
-                                first:
-                                  any,
-                                second:
-                                  any
-                              ) =>
-                                first.t >
-                                second.t
-                                  ? 1
-                                  : -1
-                            );
+                            const loadUntilBound =
+                              (): Promise<any[]> => {
+                                if (
+                                  requestedLimit <= 0 ||
+                                  messages.length >=
+                                    requestedLimit
+                                ) {
+                                  return Promise.resolve(
+                                    messages
+                                  );
+                                }
 
-                            messages =
-                              messages.splice(
-                                messages.length -
-                                  requestedLimit
+                                return browserWindow
+                                  .require(
+                                    "WAWebChatLoadMessages"
+                                  )
+                                  .loadEarlierMsgs({
+                                    chat
+                                  })
+                                  .then(
+                                    (
+                                      loaded:
+                                        any[]
+                                    ) => {
+                                      if (
+                                        !loaded ||
+                                        !loaded.length
+                                      ) {
+                                        return messages;
+                                      }
+
+                                      messages = [
+                                        ...loaded.filter(
+                                          msgFilter
+                                        ),
+                                        ...messages
+                                      ];
+
+                                      return loadUntilBound();
+                                    }
+                                  );
+                              };
+
+                            return loadUntilBound()
+                              .then(
+                                (
+                                  loadedMessages:
+                                    any[]
+                                ) => {
+                                  let resolvedMessages =
+                                    loadedMessages;
+
+                                  if (
+                                    requestedLimit >
+                                      0 &&
+                                    resolvedMessages.length >
+                                      requestedLimit
+                                  ) {
+                                    resolvedMessages =
+                                      [
+                                        ...resolvedMessages
+                                      ];
+
+                                    resolvedMessages.sort(
+                                      (
+                                        first:
+                                          any,
+                                        second:
+                                          any
+                                      ) =>
+                                        first.t >
+                                        second.t
+                                          ? 1
+                                          : -1
+                                    );
+
+                                    resolvedMessages =
+                                      resolvedMessages.slice(
+                                        resolvedMessages.length -
+                                          requestedLimit
+                                      );
+                                  }
+
+                                  return resolvedMessages.map(
+                                    (
+                                      message:
+                                        any
+                                    ) =>
+                                      browserWindow
+                                        .WWebJS
+                                        .getMessageModel(
+                                          message
+                                        )
+                                  );
+                                }
                               );
-                          }
-                        }
-
-                        return messages.map(
-                          (message: any) =>
-                            (
-                              window as any
-                            ).WWebJS
-                              .getMessageModel(
-                                message
-                              )
-                        );
+                          });
                       },
                       envelope.chatId,
                       limit
