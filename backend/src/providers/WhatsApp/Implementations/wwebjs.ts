@@ -47,6 +47,7 @@ import createWWebJsReconciliationAdapter from "./wwebjsReconciliationAdapter";
 import RunWWebJsReconciliationBridge from "./wwebjsReconciliationBridge";
 import BuildEquivalentContactNumberCandidates from "../../../helpers/BuildEquivalentContactNumberCandidates";
 import ResolveWWebJsTargetProviderAliases from "./wwebjsReconciliationTargetIdentity";
+import BuildWWebJsTargetRecoveryContact from "./wwebjsReconciliationTargetRecovery";
 import {
   buildWWebJsFallbackReconciliationContactMetadata,
   mapWWebJsContactToReconciliationMetadata,
@@ -1402,6 +1403,10 @@ export const runManualWWebJsReconciliationForSession = async (
 
   const targetChatIds = new Set<string>();
 
+  let providerAliases: string[] = [];
+  let resolvedTargetProfilePicUrl:
+    string | undefined;
+
   if (ticketId !== null && targetContact) {
     const numberCandidates =
       BuildEquivalentContactNumberCandidates(
@@ -1427,7 +1432,7 @@ export const runManualWWebJsReconciliationForSession = async (
      * contacts.
      */
     try {
-      const providerAliases =
+      providerAliases =
         await ResolveWWebJsTargetProviderAliases({
           session: wbot as any,
           numberCandidates
@@ -1435,6 +1440,35 @@ export const runManualWWebJsReconciliationForSession = async (
 
       for (const alias of providerAliases) {
         targetChatIds.add(alias);
+      }
+
+      /*
+       * Profile lookup is targeted only. No global contact
+       * enumeration is introduced.
+       */
+      for (
+        const candidate of
+        Array.from(
+          new Set([
+            ...providerAliases,
+            ...Array.from(targetChatIds)
+          ])
+        )
+      ) {
+        try {
+          const profilePicUrl =
+            await wbot.getProfilePicUrl(
+              candidate
+            );
+
+          if (profilePicUrl) {
+            resolvedTargetProfilePicUrl =
+              profilePicUrl;
+            break;
+          }
+        } catch (_err) {
+          // Equivalent identities may not all expose a photo.
+        }
       }
     } catch (err) {
       logger.warn(
@@ -1478,11 +1512,43 @@ export const runManualWWebJsReconciliationForSession = async (
       }
     );
 
+  const targetedContact =
+    targetedRepair && targetContact
+      ? BuildWWebJsTargetRecoveryContact({
+          number:
+            targetContact.number,
+          storedLid:
+            targetContact.lid,
+          providerAliases,
+          profilePicUrl:
+            resolvedTargetProfilePicUrl
+        })
+      : null;
+
   return RunWWebJsReconciliationBridge({
     whatsappId: sessionId,
     trigger: "manual",
+
     collectWork:
-      reconciliation.collectWork,
+      async signal => {
+        const work =
+          await reconciliation.collectWork(
+            signal
+          );
+
+        if (!targetedContact) {
+          return work;
+        }
+
+        return {
+          ...work,
+          contacts: [
+            ...(work.contacts || []),
+            targetedContact
+          ]
+        };
+      },
+
     finalizeWork:
       reconciliation.finalizeWork
   });

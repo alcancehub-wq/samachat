@@ -610,7 +610,17 @@ const createWWebJsReconciliationAdapter = <
         resolveWWebJsReconciliationChatId,
 
       isEligibleChat:
-        isEligibleWWebJsReconciliationChat,
+        (chat, chatId) =>
+          hasTargetChatScope
+            ? Boolean(
+                normalizeIdentity(chatId) &&
+                normalizeIdentity(chatId) !==
+                  "status@broadcast"
+              )
+            : isEligibleWWebJsReconciliationChat(
+                chat,
+                chatId
+              ),
 
       collectChatWork:
         async ({
@@ -650,9 +660,43 @@ const createWWebJsReconciliationAdapter = <
             return [];
           }
 
+          let historyChat = chat;
+
+          /*
+           * A modern WhatsApp chat can exist in WAWebCollections
+           * while its envelope does not expose lastMessage.
+           *
+           * In targeted recovery this must not become a silent
+           * zero-work success. Fetch a bounded seed first and use
+           * its newest real Message as the upper anchor.
+           */
+          if (
+            hasTargetChatScope &&
+            !historyChat.lastMessage
+          ) {
+            const seedMessages =
+              await historyChat.fetchMessages({
+                limit: 50
+              });
+
+            signal.throwIfAborted();
+
+            if (seedMessages.length === 0) {
+              return [];
+            }
+
+            historyChat = {
+              ...historyChat,
+              lastMessage:
+                seedMessages[
+                  seedMessages.length - 1
+                ]
+            };
+          }
+
           const collection =
             await CollectWWebJsRawReconciliationHistory({
-              chat,
+              chat: historyChat,
               lowerBoundAt,
               signal,
 

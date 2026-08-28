@@ -600,9 +600,34 @@ const LoggedInLayout = ({ children }) => {
         setReconciliationState(nextState || null);
       }
 
-      toast.success(
-        "WhatsApp ressincronizado com sucesso."
+      const importedMessages = Number(
+        data?.importedMessages || 0
       );
+
+      const checkedMessages = Number(
+        data?.checkedMessages || 0
+      );
+
+      const contactsChecked = Number(
+        data?.contactsChecked || 0
+      );
+
+      if (importedMessages > 0) {
+        toast.success(
+          `WhatsApp ressincronizado: ${importedMessages} mensagem(ns) recuperada(s).`
+        );
+      } else if (
+        checkedMessages > 0 ||
+        contactsChecked > 0
+      ) {
+        toast.info(
+          "Ressincronização concluída sem novas mensagens para importar."
+        );
+      } else {
+        toast.warning(
+          "O WhatsApp não retornou histórico nem dados de contato para este cliente."
+        );
+      }
     } catch (err) {
       const retryAfterMs = Number(
         err?.response?.data?.retryAfterMs || 0
