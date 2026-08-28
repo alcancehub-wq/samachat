@@ -46,6 +46,7 @@ import CollectWWebJsRawReconciliationHistory from "./wwebjsReconciliationRawColl
 import createWWebJsReconciliationAdapter from "./wwebjsReconciliationAdapter";
 import RunWWebJsReconciliationBridge from "./wwebjsReconciliationBridge";
 import BuildEquivalentContactNumberCandidates from "../../../helpers/BuildEquivalentContactNumberCandidates";
+import ResolveWWebJsTargetProviderAliases from "./wwebjsReconciliationTargetIdentity";
 import {
   buildWWebJsFallbackReconciliationContactMetadata,
   mapWWebJsContactToReconciliationMetadata,
@@ -1397,6 +1398,8 @@ export const runManualWWebJsReconciliationForSession = async (
     targetContact = null
   } = options;
 
+  const wbot = getWbot(sessionId);
+
   const targetChatIds = new Set<string>();
 
   if (ticketId !== null && targetContact) {
@@ -1415,6 +1418,33 @@ export const runManualWWebJsReconciliationForSession = async (
             : `${normalized}@c.us`
         );
       }
+    }
+
+    /*
+     * Modern WhatsApp Web may keep the same private chat
+     * under a LID instead of its phone JID. Resolve aliases
+     * only for this targeted contact; never enumerate all
+     * contacts.
+     */
+    try {
+      const providerAliases =
+        await ResolveWWebJsTargetProviderAliases({
+          session: wbot as any,
+          numberCandidates
+        });
+
+      for (const alias of providerAliases) {
+        targetChatIds.add(alias);
+      }
+    } catch (err) {
+      logger.warn(
+        {
+          err,
+          sessionId,
+          ticketId
+        },
+        "Unable to resolve targeted phone/LID aliases"
+      );
     }
 
     const lid = String(targetContact.lid || "").trim();
