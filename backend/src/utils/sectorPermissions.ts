@@ -32,6 +32,7 @@ export const SECTOR_PERMISSION_KEYS = [
   "metaTemplates.view",
   "metaTemplates.create",
   "metaTemplates.delete",
+  "metaOutbound.send",
   "campaigns.view",
   "campaigns.create",
   "campaigns.update",
@@ -110,7 +111,9 @@ export const SECTOR_PERMISSION_KEYS = [
   "contacts-page:deleteContact"
 ];
 
-export const DEFAULT_SECTOR_PERMISSIONS = [...SECTOR_PERMISSION_KEYS];
+export const DEFAULT_SECTOR_PERMISSIONS = SECTOR_PERMISSION_KEYS.filter(
+  permission => permission !== "metaOutbound.send"
+);
 
 export const expandSectorPermissions = (
   permissions?: string[] | null
