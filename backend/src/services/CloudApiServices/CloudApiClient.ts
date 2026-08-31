@@ -9,7 +9,8 @@ import {
   CloudApiMediaUploadInput,
   CloudApiMediaUploadResult,
   CloudApiMessageResult,
-  CloudApiTextMessageInput
+  CloudApiTextMessageInput,
+  CloudApiTemplateMessageInput
 } from "./types";
 
 const GRAPH_BASE_URL = "https://graph.facebook.com";
@@ -138,6 +139,55 @@ export const buildCloudApiTextPayload = ({
   };
 };
 
+
+export const buildCloudApiTemplatePayload = ({
+  to,
+  name,
+  languageCode,
+  components
+}: CloudApiTemplateMessageInput): Record<string, unknown> => {
+  const cleanTo = (to || "").replace(/\D/g, "");
+  const cleanName = (name || "").trim();
+  const cleanLanguageCode = (languageCode || "").trim();
+
+  if (!cleanTo) {
+    throw new AppError("ERR_CLOUD_API_TO_REQUIRED");
+  }
+
+  if (!cleanName) {
+    throw new AppError(
+      "ERR_CLOUD_API_TEMPLATE_NAME_REQUIRED"
+    );
+  }
+
+  if (!cleanLanguageCode) {
+    throw new AppError(
+      "ERR_CLOUD_API_TEMPLATE_LANGUAGE_REQUIRED"
+    );
+  }
+
+  const template: Record<string, unknown> = {
+    name: cleanName,
+    language: {
+      code: cleanLanguageCode
+    }
+  };
+
+  if (
+    Array.isArray(components) &&
+    components.length > 0
+  ) {
+    template.components = components;
+  }
+
+  return {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: cleanTo,
+    type: "template",
+    template
+  };
+};
 const defaultRequestExecutor: CloudApiRequestExecutor = (
   url,
   accessToken,
@@ -298,6 +348,61 @@ export class CloudApiClient {
     return parsedBody as CloudApiMessageResult;
   }
 
+
+  async sendTemplate(
+    input: CloudApiTemplateMessageInput
+  ): Promise<CloudApiMessageResult> {
+    const accessToken = sanitizeAccessToken(
+      this.credentials.accessToken
+    );
+
+    const phoneNumberId = sanitizePhoneNumberId(
+      this.credentials.phoneNumberId
+    );
+
+    if (!accessToken) {
+      throw new AppError(
+        "ERR_CLOUD_API_ACCESS_TOKEN_REQUIRED"
+      );
+    }
+
+    if (!phoneNumberId) {
+      throw new AppError(
+        "ERR_CLOUD_API_PHONE_NUMBER_ID_REQUIRED"
+      );
+    }
+
+    const url = buildCloudApiMessagesUrl(
+      phoneNumberId,
+      this.credentials.apiVersion
+    );
+
+    const payload =
+      buildCloudApiTemplatePayload(input);
+
+    const response = await this.requestExecutor(
+      url,
+      accessToken,
+      payload
+    );
+
+    const parsedBody =
+      parseResponseBody(response.body);
+
+    if (
+      response.statusCode < 200 ||
+      response.statusCode >= 300
+    ) {
+      throw new AppError(
+        buildCloudApiErrorMessage(
+          response.statusCode,
+          parsedBody
+        )
+      );
+    }
+
+    return parsedBody as CloudApiMessageResult;
+  }
   async uploadMedia(
     input: CloudApiMediaUploadInput
   ): Promise<CloudApiMediaUploadResult> {

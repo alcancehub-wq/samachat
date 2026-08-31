@@ -9,6 +9,12 @@ export interface CloudApiTextMessageInput {
   body: string;
   previewUrl?: boolean;
 }
+export interface CloudApiTemplateMessageInput {
+  to: string;
+  name: string;
+  languageCode: string;
+  components?: Array<Record<string, unknown>>;
+}
 
 export type CloudApiMediaType =
   | "audio"
