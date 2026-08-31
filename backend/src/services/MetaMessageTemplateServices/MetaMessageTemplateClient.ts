@@ -326,10 +326,24 @@ export class MetaMessageTemplateClient {
 
     return parseDeleteResponse(response.body);
   }
-  async listTemplates(): Promise<MetaMessageTemplateListResponse> {
+  async listTemplates(
+    params: {
+      after?: string;
+      before?: string;
+    } = {}
+  ): Promise<MetaMessageTemplateListResponse> {
     if (!this.getExecutor) {
       throw new AppError(
         "ERR_META_TEMPLATE_GET_EXECUTOR_REQUIRED"
+      );
+    }
+
+    const cleanAfter = (params.after || "").trim();
+    const cleanBefore = (params.before || "").trim();
+
+    if (cleanAfter && cleanBefore) {
+      throw new AppError(
+        "ERR_META_TEMPLATE_PAGINATION_CURSOR_AMBIGUOUS"
       );
     }
 
@@ -338,8 +352,14 @@ export class MetaMessageTemplateClient {
       url
     } = this.getValidatedContext();
 
+    const listUrl = cleanAfter
+      ? `${url}?after=${encodeURIComponent(cleanAfter)}`
+      : cleanBefore
+        ? `${url}?before=${encodeURIComponent(cleanBefore)}`
+        : url;
+
     const response = await this.getExecutor(
-      url,
+      listUrl,
       accessToken
     );
 
