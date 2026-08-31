@@ -1,4 +1,4 @@
-﻿import AppError from "../../errors/AppError";
+import AppError from "../../errors/AppError";
 import MetaMessageTemplateClient, {
   MetaMessageTemplateGetExecutor
 } from "./MetaMessageTemplateClient";
@@ -14,6 +14,10 @@ export interface MetaMessageTemplateConnectionContext {
 interface ListMetaMessageTemplatesRequest {
   connection: MetaMessageTemplateConnectionContext;
   getExecutor: MetaMessageTemplateGetExecutor;
+  pagination?: {
+    after?: string;
+    before?: string;
+  };
 }
 
 const normalizeProviderType = (
@@ -24,7 +28,8 @@ const normalizeProviderType = (
 
 const ListMetaMessageTemplatesService = async ({
   connection,
-  getExecutor
+  getExecutor,
+  pagination
 }: ListMetaMessageTemplatesRequest): Promise<MetaMessageTemplateListResponse> => {
   if (
     normalizeProviderType(connection.providerType) !==
@@ -44,7 +49,7 @@ const ListMetaMessageTemplatesService = async ({
     getExecutor
   );
 
-  return client.listTemplates();
+  return client.listTemplates(pagination);
 };
 
 export default ListMetaMessageTemplatesService;
