@@ -2,51 +2,50 @@ import NormalizeCloudApiWebhook from "../NormalizeCloudApiWebhook";
 
 describe("Cloud API coexistence history contract", () => {
   it("does not route history messages through the normal realtime normalizer", () => {
-    const result = NormalizeCloudApiWebhook(
-      {
-        object: "whatsapp_business_account",
-        entry: [
-          {
-            changes: [
-              {
-                field: "history",
-                value: {
-                  metadata: {
-                    phone_number_id: "629748506897910"
-                  },
-                  history: [
-                    {
-                      metadata: {
-                        phase: "history",
-                        chunk_order: 1,
-                        progress: 50
-                      },
-                      threads: [
-                        {
-                          messages: [
-                            {
-                              id: "wamid.history.out.1",
-                              from: "5511981901577",
-                              to: "553287072428",
-                              timestamp: "1769000000",
-                              type: "text",
-                              text: {
-                                body: "Mensagem historica do celular"
-                              }
+    const historyPayload = {
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          changes: [
+            {
+              field: "history",
+              value: {
+                metadata: {
+                  phone_number_id: "629748506897910"
+                },
+                history: [
+                  {
+                    metadata: {
+                      phase: "history",
+                      chunk_order: 1,
+                      progress: 50
+                    },
+                    threads: [
+                      {
+                        messages: [
+                          {
+                            id: "wamid.history.out.1",
+                            from: "5511981901577",
+                            to: "553287072428",
+                            timestamp: "1769000000",
+                            type: "text",
+                            text: {
+                              body: "Mensagem historica do celular"
                             }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
               }
-            ]
-          }
-        ]
-      },
-      35
-    );
+            }
+          ]
+        }
+      ]
+    };
+
+    const result = NormalizeCloudApiWebhook(historyPayload, 35);
 
     expect(result).toHaveLength(0);
   });

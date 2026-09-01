@@ -21,6 +21,7 @@ jest.mock("../../MessageServices/CreateMessageService", () => ({
 import Contact from "../../../models/Contact";
 import Ticket from "../../../models/Ticket";
 import Message from "../../../models/Message";
+import { MessagePayload } from "../../../handlers/handleWhatsappEvents";
 import CreateMessageService from "../../MessageServices/CreateMessageService";
 import ProcessCloudApiMessageEchoWebhook from "../ProcessCloudApiMessageEchoWebhook";
 
@@ -29,12 +30,12 @@ const ticketFindAllMock = Ticket.findAll as jest.Mock;
 const messageFindByPkMock = Message.findByPk as jest.Mock;
 const createMessageServiceMock = CreateMessageService as jest.Mock;
 
-const messagePayload = {
+const messagePayload: MessagePayload = {
   id: "wamid.coex.echo.persist.1",
   body: "Resposta pelo celular",
   fromMe: true,
   hasMedia: false,
-  type: "chat" as any,
+  type: "chat",
   timestamp: 1770000100,
   from: "5511981901577@c.us",
   to: "553287072428@c.us",
@@ -130,7 +131,7 @@ describe("ProcessCloudApiMessageEchoWebhook", () => {
     const result = await ProcessCloudApiMessageEchoWebhook({
       normalizedMessage: {
         contactPayload: { name: "553287072428", number: "553287072428", isGroup: false },
-        messagePayload: { ...messagePayload, hasMedia: true, type: "audio" as any },
+        messagePayload: { ...messagePayload, hasMedia: true, type: "audio" },
         contextPayload: { whatsappId: 35, unreadMessages: 0 },
         cloudMedia: { id: "media-id" }
       }
