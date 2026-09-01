@@ -138,7 +138,7 @@ describe("CreateMessageService historical persistence contract", () => {
     const ticketRoomEmitMock = jest.fn();
     const statusEmitMock = jest.fn();
 
-    const ticketRoomToMock = jest.fn(() => ({
+    const ticketRoomToMock = jest.fn((_room: string) => ({
       emit: ticketRoomEmitMock
     }));
 
