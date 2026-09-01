@@ -154,7 +154,7 @@ describe("CreateMessageService historical persistence contract", () => {
         if (room === "118") {
           return ticketRoomToMock(room);
         }
-        return broadcasterMock.to(room);
+        return broadcasterMock.to();
       })
     };
 
