@@ -248,3 +248,96 @@ describe("NormalizeCloudApiWebhook", () => {
     expect(result).toHaveLength(0);
   });
 });
+describe("NormalizeCloudApiWebhook coexistence message echoes", () => {
+  it("normalizes outbound message sent from WhatsApp Business App", () => {
+    const result = NormalizeCloudApiWebhook(
+      {
+        object: "whatsapp_business_account",
+        entry: [
+          {
+            changes: [
+              {
+                field: "smb_message_echoes",
+                value: {
+                  metadata: {
+                    display_phone_number: "+55 11 98190-1577",
+                    phone_number_id: "629748506897910"
+                  },
+                  message_echoes: [
+                    {
+                      from: "5511981901577",
+                      to: "553287072428",
+                      id: "wamid.coex.echo.1",
+                      timestamp: "1770000100",
+                      type: "text",
+                      text: {
+                        body: "Resposta enviada pelo celular"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      35
+    );
+
+    expect(result).toHaveLength(1);
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        contactPayload: {
+          name: "553287072428",
+          number: "553287072428",
+          isGroup: false
+        },
+        messagePayload: expect.objectContaining({
+          id: "wamid.coex.echo.1",
+          body: "Resposta enviada pelo celular",
+          fromMe: true,
+          hasMedia: false,
+          type: "chat",
+          timestamp: 1770000100,
+          from: "5511981901577@c.us",
+          to: "553287072428@c.us"
+        }),
+        contextPayload: {
+          whatsappId: 35,
+          unreadMessages: 0
+        },
+        isCoexistenceMessageEcho: true
+      })
+    );
+  });
+
+  it("rejects echoes without a provider WAMID or timestamp", () => {
+    const result = NormalizeCloudApiWebhook(
+      {
+        entry: [
+          {
+            changes: [
+              {
+                field: "smb_message_echoes",
+                value: {
+                  message_echoes: [
+                    {
+                      from: "5511981901577",
+                      to: "553287072428",
+                      type: "text",
+                      text: { body: "Sem identidade do provider" }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      35
+    );
+
+    expect(result).toHaveLength(0);
+  });
+});

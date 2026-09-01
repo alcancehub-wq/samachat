@@ -3,11 +3,18 @@ import Whatsapp from "../models/Whatsapp";
 import AppError from "../errors/AppError";
 import VerifyCloudApiSignature from "../services/CloudApiWebhookServices/VerifyCloudApiSignature";
 import NormalizeCloudApiWebhook from "../services/CloudApiWebhookServices/NormalizeCloudApiWebhook";
+import ProcessCloudApiHistoryWebhook from "../services/CloudApiWebhookServices/ProcessCloudApiHistoryWebhook";
+import ProcessCloudApiMessageEchoWebhook from "../services/CloudApiWebhookServices/ProcessCloudApiMessageEchoWebhook";
 import CloudApiClient from "../services/CloudApiServices/CloudApiClient";
+import { logger } from "../utils/logger";
 import {
   handleMessage,
   MediaPayload
 } from "../handlers/handleWhatsappEvents";
+
+declare const process: {
+  env: Record<string, string | undefined>;
+};
 
 const getQueryValue = (value: unknown): string => {
   if (Array.isArray(value)) {
@@ -15,6 +22,30 @@ const getQueryValue = (value: unknown): string => {
   }
 
   return String(value || "");
+};
+
+const describePayloadShape = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return {
+      type: "array",
+      length: value.length,
+      items: value.length > 0 ? describePayloadShape(value[0]) : undefined
+    };
+  }
+
+  if (value && typeof value === "object") {
+    const objectValue = value as Record<string, unknown>;
+
+    return Object.keys(objectValue).reduce(
+      (shape, key) => ({
+        ...shape,
+        [key]: describePayloadShape(objectValue[key])
+      }),
+      {} as Record<string, unknown>
+    );
+  }
+
+  return typeof value;
 };
 
 export const verify = async (req: Request, res: Response): Promise<Response> => {
@@ -76,12 +107,90 @@ export const receive = async (req: Request, res: Response): Promise<Response> =>
     throw new AppError("ERR_CLOUD_API_INVALID_SIGNATURE", 403);
   }
 
-  const normalizedMessages = NormalizeCloudApiWebhook(
-    req.body,
-    whatsapp.id
-  );
+  const historyEntries: any[] = [];
+  const realtimeEntries: any[] = [];
+
+  for (const entry of req.body?.entry || []) {
+    const historyChanges = (entry.changes || []).filter(
+      (change: any) => change.field === "history"
+    );
+
+    const realtimeChanges = (entry.changes || []).filter(
+      (change: any) => change.field !== "history"
+    );
+
+    if (historyChanges.length > 0) {
+      historyEntries.push({
+        ...entry,
+        changes: historyChanges
+      });
+    }
+
+    if (realtimeChanges.length > 0) {
+      realtimeEntries.push({
+        ...entry,
+        changes: realtimeChanges
+      });
+    }
+  }
+
+  if (
+    historyEntries.length > 0 &&
+    process.env.CLOUD_API_HISTORY_CAPTURE === "true" &&
+    rawBody
+  ) {
+    logger.info(
+      {
+        event: "cloud_api_history_webhook_capture",
+        whatsappId: whatsapp.id,
+        payloadShape: describePayloadShape({
+          ...req.body,
+          entry: historyEntries
+        })
+      },
+      "Cloud API history webhook shape captured"
+    );
+  }
+
+  if (historyEntries.length > 0) {
+    await ProcessCloudApiHistoryWebhook({
+      payload: {
+        ...req.body,
+        entry: historyEntries
+      },
+      whatsappId: whatsapp.id
+    });
+  }
+
+  const hasStructuredEntries = Array.isArray(req.body?.entry);
+
+  const realtimePayload = hasStructuredEntries
+    ? {
+        ...req.body,
+        entry: realtimeEntries
+      }
+    : req.body;
+
+  const shouldNormalizeRealtime =
+    !hasStructuredEntries ||
+    req.body.entry.length === 0 ||
+    realtimeEntries.length > 0;
+
+  const normalizedMessages = shouldNormalizeRealtime
+    ? NormalizeCloudApiWebhook(
+        realtimePayload,
+        whatsapp.id
+      )
+    : [];
 
   for (const normalizedMessage of normalizedMessages) {
+    if (normalizedMessage.isCoexistenceMessageEcho) {
+      await ProcessCloudApiMessageEchoWebhook({
+        normalizedMessage
+      });
+      continue;
+    }
+
     let mediaPayload: MediaPayload | undefined;
 
     if (normalizedMessage.cloudMedia) {

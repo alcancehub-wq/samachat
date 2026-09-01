@@ -29,6 +29,7 @@ interface CloudApiMediaObject {
 interface CloudApiMessage {
   id?: string;
   from?: string;
+  to?: string;
   timestamp?: string;
   type?: string;
   text?: {
@@ -43,6 +44,7 @@ interface CloudApiMessage {
 interface CloudApiChangeValue {
   contacts?: CloudApiContact[];
   messages?: CloudApiMessage[];
+  message_echoes?: CloudApiMessage[];
   metadata?: {
     phone_number_id?: string;
     display_phone_number?: string;
@@ -76,6 +78,7 @@ export interface NormalizedCloudApiMessage {
   messagePayload: MessagePayload;
   contextPayload: WhatsappContextPayload;
   cloudMedia?: NormalizedCloudApiMedia;
+  isCoexistenceMessageEcho?: boolean;
 }
 
 const resolveContactName = (
@@ -145,12 +148,31 @@ const NormalizeCloudApiWebhook = (
     for (const change of entry.changes || []) {
       const value = change.value;
 
-      if (!value || !Array.isArray(value.messages)) {
+      if (!value) {
         continue;
       }
 
-      for (const message of value.messages) {
+      const isMessageEchoChange =
+        change.field === "smb_message_echoes";
+
+      const messages = isMessageEchoChange
+        ? value.message_echoes
+        : value.messages;
+
+      if (!Array.isArray(messages)) {
+        continue;
+      }
+
+      for (const message of messages) {
         if (!message.from) {
+          continue;
+        }
+
+        const providerTimestamp = Number(message.timestamp || 0);
+        if (
+          isMessageEchoChange &&
+          (!message.id || !providerTimestamp || Number.isNaN(providerTimestamp))
+        ) {
           continue;
         }
 
@@ -165,12 +187,22 @@ const NormalizeCloudApiWebhook = (
           continue;
         }
 
-        const contact = findContact(value.contacts, message.from);
-        const contactName = resolveContactName(contact, message.from);
+        const customerNumber = isMessageEchoChange
+          ? message.to || ""
+          : message.from;
+
+        if (!customerNumber) {
+          continue;
+        }
+
+        const contact = findContact(value.contacts, customerNumber);
+        const contactName = resolveContactName(contact, customerNumber);
         const fromChatId = `${message.from}@c.us`;
-        const toChatId = value.metadata?.phone_number_id
-          ? `${value.metadata.phone_number_id}@c.us`
-          : "";
+        const toChatId = isMessageEchoChange
+          ? `${customerNumber}@c.us`
+          : value.metadata?.phone_number_id
+            ? `${value.metadata.phone_number_id}@c.us`
+            : "";
 
         const body = isText
           ? message.text?.body || ""
@@ -179,7 +211,7 @@ const NormalizeCloudApiWebhook = (
         normalizedMessages.push({
           contactPayload: {
             name: contactName,
-            number: message.from,
+            number: customerNumber,
             isGroup: false
           },
           messagePayload: {
@@ -187,20 +219,25 @@ const NormalizeCloudApiWebhook = (
               message.id ||
               `cloudapi-${message.from}-${message.timestamp}`,
             body,
-            fromMe: false,
+            fromMe: isMessageEchoChange,
             hasMedia: Boolean(cloudMedia),
             type: cloudMedia
               ? (cloudMedia.type as any)
               : ("chat" as any),
-            timestamp: normalizeTimestamp(message.timestamp),
+            timestamp: isMessageEchoChange
+              ? providerTimestamp
+              : normalizeTimestamp(message.timestamp),
             from: fromChatId,
             to: toChatId,
             ack: 0
           },
           contextPayload: {
             whatsappId,
-            unreadMessages: 1
+            unreadMessages: isMessageEchoChange ? 0 : 1
           },
+          ...(isMessageEchoChange
+            ? { isCoexistenceMessageEcho: true }
+            : {}),
           ...(cloudMedia ? { cloudMedia } : {})
         });
       }

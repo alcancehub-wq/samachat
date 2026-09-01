@@ -17,6 +17,7 @@ interface MessageData {
   quotedMsgId?: string;
   isInternal?: boolean;
   senderName?: string;
+  createdAt?: Date;
 }
 interface Request {
   messageData: MessageData;
@@ -63,7 +64,6 @@ const CreateMessageService = async ({
     throw new Error("ERR_CREATING_MESSAGE");
   }
 
-  const io = getIO();
   const action = existingMessage ? "update" : "create";
   const payload = {
     action,
@@ -72,34 +72,42 @@ const CreateMessageService = async ({
     contact: message.ticket.contact
   };
 
-  if (broadcastToTicketRoom) {
-    io.to(message.ticketId.toString()).emit("appMessage", payload);
-  }
+  if (
+    broadcastToTicketRoom ||
+    broadcastToStatus ||
+    broadcastToNotification
+  ) {
+    const io = getIO();
 
-  if (broadcastToStatus || broadcastToNotification) {
-    let broadcaster = io;
-    const roomTargets = new Set<string>();
-
-    if (broadcastToStatus) {
-      roomTargets.add(getScopedTicketsRoom(message.ticket.status));
-      roomTargets.add(
-        getScopedTicketsRoom(message.ticket.status, message.ticket.whatsappId)
-      );
+    if (broadcastToTicketRoom) {
+      io.to(message.ticketId.toString()).emit("appMessage", payload);
     }
 
-    if (broadcastToNotification) {
-      roomTargets.add(getScopedNotificationRoom());
-      roomTargets.add(
-        getScopedNotificationRoom(message.ticket.whatsappId)
-      );
-    }
+    if (broadcastToStatus || broadcastToNotification) {
+      let broadcaster = io;
+      const roomTargets = new Set<string>();
 
-    roomTargets.forEach(room => {
-      broadcaster = broadcaster.to(room);
-    });
+      if (broadcastToStatus) {
+        roomTargets.add(getScopedTicketsRoom(message.ticket.status));
+        roomTargets.add(
+          getScopedTicketsRoom(message.ticket.status, message.ticket.whatsappId)
+        );
+      }
 
-    if (roomTargets.size > 0) {
-      broadcaster.emit("appMessage", payload);
+      if (broadcastToNotification) {
+        roomTargets.add(getScopedNotificationRoom());
+        roomTargets.add(
+          getScopedNotificationRoom(message.ticket.whatsappId)
+        );
+      }
+
+      roomTargets.forEach(room => {
+        broadcaster = broadcaster.to(room);
+      });
+
+      if (roomTargets.size > 0) {
+        broadcaster.emit("appMessage", payload);
+      }
     }
   }
 
