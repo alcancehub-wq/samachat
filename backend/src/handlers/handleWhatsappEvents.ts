@@ -24,6 +24,7 @@ import UpdateTicketService from "../services/TicketServices/UpdateTicketService"
 import AssignInboundTicketByDistributionService from "../services/WhatsappService/AssignInboundTicketByDistributionService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
 import HandleIncomingFlowMessageService from "../services/FlowExecutionServices/HandleIncomingFlowMessageService";
+import ResolveOfficialInboundOriginService from "../services/OutboundChannelServices/ResolveOfficialInboundOriginService";
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
@@ -492,6 +493,24 @@ export const handleMessage = async (
       contextPayload.unreadMessages,
       groupContact
     );
+
+    if (!processedMessage.fromMe && whatsapp.providerType === "official") {
+      const origin = await ResolveOfficialInboundOriginService({
+        contactId: contact.id,
+        deliveryWhatsappId: contextPayload.whatsappId
+      });
+
+      if (
+        origin &&
+        (!ticket.userId || ticket.userId === origin.ownerUserId) &&
+        (!ticket.queueId || ticket.queueId === origin.ownerQueueId)
+      ) {
+        await ticket.update({
+          userId: origin.ownerUserId,
+          queueId: origin.ownerQueueId
+        });
+      }
+    }
 
     let resolvedMessageId = processedMessage.id;
     if (processedMessage.fromMe) {
