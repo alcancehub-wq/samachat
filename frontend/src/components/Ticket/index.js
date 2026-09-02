@@ -217,7 +217,7 @@ const Ticket = () => {
         </div>
         {transferNotice && (
           <Typography className={classes.transferNotice}>
-            Atendimento transferido para voc�. Verifique o hist�rico da conversa e mensagens agendadas antes de responder.
+            Atendimento transferido para vocï¿½. Verifique o histï¿½rico da conversa e mensagens agendadas antes de responder.
           </Typography>
         )}
         <ReplyMessageProvider>
