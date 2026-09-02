@@ -1,4 +1,7 @@
 import FlowExecutionLog from "../../models/FlowExecutionLog";
+import sanitizeOutboundAudit, {
+  sanitizeOutboundAuditText
+} from "../../utils/sanitizeOutboundAudit";
 
 interface Request {
   flowExecutionId: number;
@@ -19,8 +22,8 @@ const CreateFlowExecutionLogService = async ({
     flowExecutionId,
     nodeId: nodeId || null,
     event,
-    message: message || null,
-    data: data ? JSON.stringify(data) : null
+    message: sanitizeOutboundAuditText(message) || null,
+    data: data ? JSON.stringify(sanitizeOutboundAudit(data)) : null
   });
 
   return log;

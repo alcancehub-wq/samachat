@@ -1,4 +1,5 @@
 import CampaignLog from "../../models/CampaignLog";
+import { sanitizeOutboundAuditText } from "../../utils/sanitizeOutboundAudit";
 
 interface Request {
   campaignId: number;
@@ -28,8 +29,8 @@ const CreateCampaignLogService = async ({
     campaignId,
     contactId,
     status,
-    message,
-    error,
+    message: sanitizeOutboundAuditText(message),
+    error: sanitizeOutboundAuditText(error),
     executedAt: executedAtValue
   });
 

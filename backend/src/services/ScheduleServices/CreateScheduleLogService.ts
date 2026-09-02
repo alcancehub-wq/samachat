@@ -1,4 +1,5 @@
 import ScheduleLog from "../../models/ScheduleLog";
+import { sanitizeOutboundAuditText } from "../../utils/sanitizeOutboundAudit";
 
 interface Request {
   scheduleId: number;
@@ -25,8 +26,8 @@ const CreateScheduleLogService = async ({
   const log = await ScheduleLog.create({
     scheduleId,
     status,
-    message,
-    error,
+    message: sanitizeOutboundAuditText(message),
+    error: sanitizeOutboundAuditText(error),
     executedAt: executedAtValue
   });
 
