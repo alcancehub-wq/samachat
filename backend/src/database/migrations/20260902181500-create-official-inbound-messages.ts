@@ -12,7 +12,11 @@ module.exports = {
       createdAt: { type: DataTypes.DATE, allowNull: false },
       updatedAt: { type: DataTypes.DATE, allowNull: false }
     });
-    await queryInterface.addIndex("OfficialInboundMessages", ["ticketId", "deliveryWhatsappId", "providerTimestamp"]);
+    await queryInterface.addIndex(
+      "OfficialInboundMessages",
+      ["ticketId", "deliveryWhatsappId", "providerTimestamp"],
+      { name: "idx_official_inbound_ticket_delivery_ts" }
+    );
     await queryInterface.addIndex("OfficialInboundMessages", ["contextProviderMessageId"]);
   },
 
