@@ -27,6 +27,7 @@ import MessageVariablesHelper from "../MessageVariablesHelper";
 import { appendMessageVariable } from "../../utils/messageVariables";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import OfficialOutboundConfig from "../OfficialOutboundConfig";
 
 const BRAZIL_SCHEDULE_OFFSET = "-03:00";
 const ACTIVE_TICKET_STATUSES = ["open", "pending"];
@@ -132,8 +133,8 @@ const parseScheduledAtInput = value => {
 
 const ScheduleSchema = Yup.object().shape({
   body: Yup.string()
-    .max(1000, "Too Long!")
-    .test("body-min", "Too Short!", value => {
+    .max(1000, "Mensagem muito longa.")
+    .test("body-min", "Mensagem muito curta.", value => {
       if (!value || !value.trim()) {
         return true;
       }
@@ -144,6 +145,9 @@ const ScheduleSchema = Yup.object().shape({
       "body-or-media",
       i18n.t("backendErrors.ERR_SCHEDULE_BODY_OR_MEDIA_REQUIRED"),
       function validateBodyOrMedia(value) {
+        if (this.parent.outboundMode === "OFFICIAL") {
+          return true;
+        }
         const hasBody = Boolean(value && value.trim());
         const hasMedia = Boolean(
           this.parent.mediaOriginalName && !this.parent.removeMedia
@@ -171,6 +175,21 @@ const ScheduleSchema = Yup.object().shape({
         return scheduledAt.getTime() > Date.now();
       }
     ),
+  deliveryWhatsappId: Yup.string().when("outboundMode", {
+    is: "OFFICIAL",
+    then: Yup.string().required("Selecione o número oficial."),
+    otherwise: Yup.string()
+  }),
+  templateName: Yup.string().when("outboundMode", {
+    is: "OFFICIAL",
+    then: Yup.string().required("Selecione o modelo de mensagem."),
+    otherwise: Yup.string()
+  }),
+  templateLanguage: Yup.string().when("outboundMode", {
+    is: "OFFICIAL",
+    then: Yup.string().required("Selecione o modelo de mensagem."),
+    otherwise: Yup.string()
+  }),
   recurringMonths: Yup.number()
     .transform((value, originalValue) => {
       if (originalValue === "" || originalValue === null || originalValue === undefined) {
@@ -568,7 +587,7 @@ const ScheduleModal = ({
 
   const handleSaveSchedule = async values => {
     const payload = {
-      body: values.body,
+      body: values.outboundMode === "OFFICIAL" ? `Modelo oficial: ${values.templateName || ""}` : values.body,
       status: scheduleId ? values.status : "pending",
       scheduledAt: normalizeScheduledAtForApi(values.scheduledAt),
       assigneeId: normalizeId(values.assigneeId),
@@ -669,7 +688,7 @@ const ScheduleModal = ({
           return (
           <Form>
             <DialogContent dividers>
-              <Field
+              {values.outboundMode !== "OFFICIAL" && <Field
                 as={TextField}
                 label={i18n.t("scheduleModal.form.body")}
                 name="body"
@@ -681,7 +700,8 @@ const ScheduleModal = ({
                 rows={3}
                 error={touched.body && Boolean(errors.body)}
                 helperText={touched.body && errors.body ? errors.body : ""}
-              />
+              />}
+              {values.outboundMode !== "OFFICIAL" && <>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -729,6 +749,7 @@ const ScheduleModal = ({
                   setFieldValue("body", appendMessageVariable(values.body, token));
                 }}
               />
+              </>}
               <TextField
                 label={i18n.t("scheduleModal.form.scheduledAt")}
                 type="datetime-local"
@@ -945,22 +966,7 @@ const ScheduleModal = ({
                   )}
                 </>
               )}
-              <FormControl fullWidth margin="dense" variant="outlined">
-                <InputLabel>Outbound mode</InputLabel>
-                <Select value={values.outboundMode} onChange={event => setFieldValue("outboundMode", event.target.value)} label="Outbound mode">
-                  <MenuItem value="STANDARD">Standard</MenuItem>
-                  <MenuItem value="OFFICIAL">Official template</MenuItem>
-                </Select>
-              </FormControl>
-              {values.outboundMode === "OFFICIAL" && (
-                <>
-                  {!values.ticketId && <TextField label="Owner queue ID" type="number" fullWidth variant="outlined" margin="dense" value={values.ownerQueueId} onChange={event => setFieldValue("ownerQueueId", event.target.value)} required />}
-                  <TextField label="Official connection ID" type="number" fullWidth variant="outlined" margin="dense" value={values.deliveryWhatsappId} onChange={event => setFieldValue("deliveryWhatsappId", event.target.value)} required />
-                  <TextField label="Template name" fullWidth variant="outlined" margin="dense" value={values.templateName} onChange={event => setFieldValue("templateName", event.target.value)} required />
-                  <TextField label="Template language" fullWidth variant="outlined" margin="dense" value={values.templateLanguage} onChange={event => setFieldValue("templateLanguage", event.target.value)} required />
-                  <TextField label="Template components (JSON array)" fullWidth variant="outlined" margin="dense" value={values.templateComponents} onChange={event => setFieldValue("templateComponents", event.target.value)} />
-                </>
-              )}
+              <OfficialOutboundConfig value={values} requireQueue={!values.ticketId} onChange={next => Object.entries(next).forEach(([key, fieldValue]) => setFieldValue(key, fieldValue))} />
             </DialogContent>
             <DialogActions>
               <Button onClick={handleClose} color="secondary" variant="outlined">

@@ -38,6 +38,7 @@ import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
 import { getBackendUrl } from "../../config";
+import OfficialOutboundConfig from "../../components/OfficialOutboundConfig";
 
 const nodeTypes = [
   { value: "start", label: "flowBuilder.nodeTypes.start" },
@@ -913,6 +914,14 @@ const FlowBuilder = () => {
   const handleSaveNode = () => {
     if (!nodeDraft) {
       return;
+    }
+
+    if (nodeDraft.type === "message" && nodeDraft.data?.outboundMode === "OFFICIAL") {
+      const { ownerQueueId, deliveryWhatsappId, templateName, templateLanguage } = nodeDraft.data;
+      if (!ownerQueueId || !deliveryWhatsappId || !templateName || !templateLanguage) {
+        toast.error("Selecione o setor, o número oficial e o modelo de mensagem.");
+        return;
+      }
     }
 
     if (
@@ -2315,22 +2324,8 @@ const FlowBuilder = () => {
           />
           {nodeDraft?.type === "message" && (
             <>
-              <TextField label={i18n.t("flowBuilder.nodes.message")} variant="outlined" fullWidth margin="dense" multiline rows={3} value={nodeDraft?.data?.text || ""} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, text: event.target.value } }))} />
-              <FormControl variant="outlined" fullWidth margin="dense">
-                <InputLabel>Outbound mode</InputLabel>
-                <Select value={nodeDraft?.data?.outboundMode || "STANDARD"} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, outboundMode: event.target.value } }))} label="Outbound mode">
-                  <MenuItem value="STANDARD">Standard</MenuItem>
-                  <MenuItem value="OFFICIAL">Official template</MenuItem>
-                </Select>
-              </FormControl>
-              {nodeDraft?.data?.outboundMode === "OFFICIAL" && (
-                <>
-                  <TextField label="Owner queue ID for contact-only execution" type="number" variant="outlined" fullWidth margin="dense" value={nodeDraft?.data?.ownerQueueId || ""} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, ownerQueueId: event.target.value } }))} />
-                  <TextField label="Official connection ID" type="number" variant="outlined" fullWidth margin="dense" value={nodeDraft?.data?.deliveryWhatsappId || ""} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, deliveryWhatsappId: event.target.value } }))} required />
-                  <TextField label="Template name" variant="outlined" fullWidth margin="dense" value={nodeDraft?.data?.templateName || ""} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, templateName: event.target.value } }))} required />
-                  <TextField label="Template language" variant="outlined" fullWidth margin="dense" value={nodeDraft?.data?.templateLanguage || ""} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, templateLanguage: event.target.value } }))} required />
-                </>
-              )}
+              {nodeDraft?.data?.outboundMode !== "OFFICIAL" && <TextField label={i18n.t("flowBuilder.nodes.message")} variant="outlined" fullWidth margin="dense" multiline rows={3} value={nodeDraft?.data?.text || ""} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, text: event.target.value } }))} />}
+              <OfficialOutboundConfig value={nodeDraft?.data || { outboundMode: "STANDARD" }} onChange={next => setNodeDraft(prev => ({ ...prev, data: next }))} />
             </>
           )}
           {nodeDraft?.type === "media" && (

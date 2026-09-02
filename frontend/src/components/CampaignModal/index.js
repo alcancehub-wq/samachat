@@ -25,9 +25,14 @@ import toastError from "../../errors/toastError";
 import TagSelect from "../TagSelect";
 import DialogSelect from "../DialogSelect";
 import ContactListSelect from "../ContactListSelect";
+import OfficialOutboundConfig from "../OfficialOutboundConfig";
 
 const CampaignSchema = Yup.object().shape({
-  name: Yup.string().min(2, "Too Short!").max(80, "Too Long!").required("Required")
+  name: Yup.string().min(2, "Nome muito curto.").max(80, "Nome muito longo.").required("Informe o nome da campanha."),
+  ownerQueueId: Yup.string().when("outboundMode", { is: "OFFICIAL", then: Yup.string().required("Selecione o setor responsável."), otherwise: Yup.string() }),
+  deliveryWhatsappId: Yup.string().when("outboundMode", { is: "OFFICIAL", then: Yup.string().required("Selecione o número oficial."), otherwise: Yup.string() }),
+  templateName: Yup.string().when("outboundMode", { is: "OFFICIAL", then: Yup.string().required("Selecione o modelo de mensagem."), otherwise: Yup.string() }),
+  templateLanguage: Yup.string().when("outboundMode", { is: "OFFICIAL", then: Yup.string().required("Selecione o modelo de mensagem."), otherwise: Yup.string() })
 });
 
 const toInputDateTime = value => {
@@ -241,26 +246,7 @@ const CampaignModal = ({ open, onClose, campaignId }) => {
                   shrink: true
                 }}
               />
-              <FormControl fullWidth margin="dense" variant="outlined">
-                <InputLabel>Outbound mode</InputLabel>
-                <Select
-                  value={values.outboundMode}
-                  onChange={event => setFieldValue("outboundMode", event.target.value)}
-                  label="Outbound mode"
-                >
-                  <MenuItem value="STANDARD">Standard</MenuItem>
-                  <MenuItem value="OFFICIAL">Official template</MenuItem>
-                </Select>
-              </FormControl>
-              {values.outboundMode === "OFFICIAL" && (
-                <>
-                  <TextField label="Owner queue ID" type="number" fullWidth variant="outlined" margin="dense" value={values.ownerQueueId} onChange={event => setFieldValue("ownerQueueId", event.target.value)} required />
-                  <TextField label="Official connection ID" type="number" fullWidth variant="outlined" margin="dense" value={values.deliveryWhatsappId} onChange={event => setFieldValue("deliveryWhatsappId", event.target.value)} required />
-                  <TextField label="Template name" fullWidth variant="outlined" margin="dense" value={values.templateName} onChange={event => setFieldValue("templateName", event.target.value)} required />
-                  <TextField label="Template language" fullWidth variant="outlined" margin="dense" value={values.templateLanguage} onChange={event => setFieldValue("templateLanguage", event.target.value)} required />
-                  <TextField label="Template components (JSON array)" fullWidth variant="outlined" margin="dense" value={values.templateComponents} onChange={event => setFieldValue("templateComponents", event.target.value)} />
-                </>
-              )}
+              <OfficialOutboundConfig value={values} onChange={next => Object.entries(next).forEach(([key, fieldValue]) => setFieldValue(key, fieldValue))} />
             </DialogContent>
             <DialogActions>
               <Button onClick={handleClose} color="secondary" variant="outlined">
