@@ -33,6 +33,12 @@ interface ScheduleData {
   mediaOriginalName?: string | null;
   mediaMimeType?: string | null;
   removeMedia?: boolean;
+  outboundMode?: string;
+  ownerQueueId?: number | null;
+  deliveryWhatsappId?: number | null;
+  templateName?: string | null;
+  templateLanguage?: string | null;
+  templateComponents?: string | null;
 }
 
 const normalizeNullableNumber = (value: unknown): number | null | undefined => {
@@ -96,6 +102,12 @@ const getNormalizedScheduleData = (req: Request): ScheduleData => {
     mediaOriginalName: uploadedFile?.originalname,
     mediaMimeType: uploadedFile?.mimetype,
     removeMedia: normalizeBoolean(req.body.removeMedia)
+    ,outboundMode: normalizeNullableString(req.body.outboundMode) || undefined
+    ,ownerQueueId: normalizeNullableNumber(req.body.ownerQueueId)
+    ,deliveryWhatsappId: normalizeNullableNumber(req.body.deliveryWhatsappId)
+    ,templateName: normalizeNullableString(req.body.templateName)
+    ,templateLanguage: normalizeNullableString(req.body.templateLanguage)
+    ,templateComponents: normalizeNullableString(req.body.templateComponents)
   };
 };
 
@@ -154,6 +166,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     mediaOriginalName: Yup.string().nullable(),
     mediaMimeType: Yup.string().nullable(),
     removeMedia: Yup.boolean()
+    ,outboundMode: Yup.string().oneOf(["STANDARD", "OFFICIAL"])
+    ,ownerQueueId: Yup.number().nullable()
+    ,deliveryWhatsappId: Yup.number().nullable()
+    ,templateName: Yup.string().nullable()
+    ,templateLanguage: Yup.string().nullable()
+    ,templateComponents: Yup.string().nullable()
   });
 
   try {
@@ -170,6 +188,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       ...newSchedule,
       scheduledAt: newSchedule.scheduledAt as string,
       createdById: Number(req.user.id),
+      actorProfile: req.user.profile,
       accessData: getScheduleAccessData(req)
     });
   } catch (error) {

@@ -16,6 +16,7 @@ import {
   parseScheduledAt
 } from "./normalizeScheduledAt";
 import { deleteScheduleMediaFileIfExists } from "./scheduleMedia";
+import ValidateOfficialOutboundConfigurationService from "../OutboundChannelServices/ValidateOfficialOutboundConfigurationService";
 
 interface ScheduleData {
   body?: string;
@@ -32,6 +33,13 @@ interface ScheduleData {
   mediaOriginalName?: string | null;
   mediaMimeType?: string | null;
   removeMedia?: boolean;
+  outboundMode?: string | null;
+  ownerQueueId?: number | null;
+  deliveryWhatsappId?: number | null;
+  templateName?: string | null;
+  templateLanguage?: string | null;
+  templateComponents?: string | null;
+  actorProfile?: string | null;
 }
 
 interface Request {
@@ -39,7 +47,6 @@ interface Request {
   scheduleData: ScheduleData;
   accessData?: ScheduleAccessData;
 }
-
 const normalizeDate = (value?: Date | string | null): Date | null | undefined => {
   if (value === undefined) {
     return undefined;
@@ -170,6 +177,25 @@ const UpdateScheduleService = async ({
 
   const normalizedSentAt = normalizeDate(scheduleData.sentAt);
   const normalizedCanceledAt = normalizeDate(scheduleData.canceledAt);
+  const nextTicketId = scheduleData.ticketId !== undefined
+    ? scheduleData.ticketId
+    : schedule.ticketId;
+  const nextOutboundMode = scheduleData.outboundMode ?? schedule.outboundMode;
+  const nextTicket = nextOutboundMode === "OFFICIAL" && nextTicketId
+    ? await Ticket.findByPk(nextTicketId)
+    : null;
+  const nextOwnerQueueId = nextTicket ? nextTicket.queueId : (scheduleData.ownerQueueId ?? schedule.ownerQueueId);
+
+  await ValidateOfficialOutboundConfigurationService({
+    outboundMode: nextOutboundMode,
+    ownerUserId: schedule.createdById,
+    ownerQueueId: nextOwnerQueueId,
+    deliveryWhatsappId: scheduleData.deliveryWhatsappId ?? schedule.deliveryWhatsappId,
+    templateName: scheduleData.templateName ?? schedule.templateName,
+    templateLanguage: scheduleData.templateLanguage ?? schedule.templateLanguage,
+    templateComponents: scheduleData.templateComponents ?? schedule.templateComponents,
+    actorProfile: scheduleData.actorProfile
+  });
 
   await schedule.update({
     body: resolvedBody,
@@ -193,9 +219,14 @@ const UpdateScheduleService = async ({
     contactId:
       scheduleData.contactId !== undefined
         ? scheduleData.contactId
-        : schedule.contactId
+        : schedule.contactId,
+    outboundMode: nextOutboundMode,
+    ownerQueueId: nextOwnerQueueId || null,
+    deliveryWhatsappId: scheduleData.deliveryWhatsappId ?? schedule.deliveryWhatsappId,
+    templateName: scheduleData.templateName ?? schedule.templateName,
+    templateLanguage: scheduleData.templateLanguage ?? schedule.templateLanguage,
+    templateComponents: scheduleData.templateComponents ?? schedule.templateComponents
   });
-
   await schedule.reload();
 
   const shouldDeletePreviousMedia =

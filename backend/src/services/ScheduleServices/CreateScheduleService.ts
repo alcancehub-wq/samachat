@@ -13,6 +13,7 @@ import {
   assertScheduledAtIsFuture,
   parseScheduledAt
 } from "./normalizeScheduledAt";
+import ValidateOfficialOutboundConfigurationService from "../OutboundChannelServices/ValidateOfficialOutboundConfigurationService";
 
 interface Request {
   body?: string;
@@ -23,6 +24,13 @@ interface Request {
   contactId?: number | null;
   createdById?: number | null;
   senderWhatsappId?: number | null;
+  outboundMode?: string | null;
+  ownerQueueId?: number | null;
+  deliveryWhatsappId?: number | null;
+  templateName?: string | null;
+  templateLanguage?: string | null;
+  templateComponents?: string | null;
+  actorProfile?: string | null;
   mediaFileName?: string | null;
   mediaOriginalName?: string | null;
   mediaMimeType?: string | null;
@@ -38,6 +46,13 @@ const CreateScheduleService = async ({
   contactId,
   createdById,
   senderWhatsappId,
+  outboundMode = "STANDARD",
+  ownerQueueId,
+  deliveryWhatsappId,
+  templateName,
+  templateLanguage,
+  templateComponents,
+  actorProfile,
   mediaFileName = null,
   mediaOriginalName = null,
   mediaMimeType = null,
@@ -98,6 +113,22 @@ const CreateScheduleService = async ({
 
   assertScheduledAtIsFuture(scheduledAtDate);
 
+  const ticketOwnerQueueId =
+    outboundMode === "OFFICIAL" && ticketId
+      ? (await Ticket.findByPk(ticketId))?.queueId || null
+      : ownerQueueId;
+
+  await ValidateOfficialOutboundConfigurationService({
+    outboundMode,
+    ownerUserId: Number(createdById),
+    ownerQueueId: ticketOwnerQueueId,
+    deliveryWhatsappId,
+    templateName,
+    templateLanguage,
+    templateComponents,
+    actorProfile
+  });
+
   let sentAt: Date | null = null;
   let canceledAt: Date | null = null;
 
@@ -122,7 +153,13 @@ const CreateScheduleService = async ({
     ticketId: ticketId || null,
     contactId: contactId || null,
     createdById: createdById || null,
-    senderWhatsappId: resolvedSenderWhatsappId
+    senderWhatsappId: resolvedSenderWhatsappId,
+    outboundMode,
+    ownerQueueId: ticketOwnerQueueId || null,
+    deliveryWhatsappId: deliveryWhatsappId || null,
+    templateName: templateName || null,
+    templateLanguage: templateLanguage || null,
+    templateComponents: templateComponents || null
   });
 
   await CreateScheduleLogService({

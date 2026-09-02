@@ -12,6 +12,8 @@ import {
 } from "./assertScheduleTicketIsActive";
 import { parseScheduledAt } from "./normalizeScheduledAt";
 import { buildScheduledMediaFile } from "./scheduleMedia";
+import Contact from "../../models/Contact";
+import SendOfficialOutboundTemplateService from "../OutboundChannelServices/SendOfficialOutboundTemplateService";
 
 const DEFAULT_POLL_MS = 5000;
 const DEFAULT_BATCH_SIZE = 20;
@@ -282,6 +284,36 @@ const executeSchedule = async (scheduleId: number): Promise<void> => {
         "Blocked schedule execution for closed ticket"
       );
       await markFailed(schedule.id, ERR_SCHEDULE_TICKET_CLOSED);
+      return;
+    }
+
+    if (schedule.outboundMode === "OFFICIAL") {
+      if (schedule.mediaFileName) {
+        throw new Error("ERR_META_OUTBOUND_MEDIA_NOT_SUPPORTED");
+      }
+      if (!schedule.createdById || !ticket.queueId || !schedule.deliveryWhatsappId || !schedule.templateName || !schedule.templateLanguage) {
+        throw new Error("ERR_META_OUTBOUND_OWNER_QUEUE_REQUIRED");
+      }
+      const contact = await Contact.findByPk(schedule.contactId || ticket.contactId);
+      if (!contact) throw new Error("ERR_NO_CONTACT_FOUND");
+      const providerMessageId = await SendOfficialOutboundTemplateService({
+        consumerType: "schedule",
+        consumerId: schedule.id,
+        ownerUserId: schedule.createdById,
+        ownerQueueId: ticket.queueId,
+        deliveryWhatsappId: schedule.deliveryWhatsappId,
+        contactId: contact.id,
+        contactNumber: contact.number,
+        ticketId: ticket.id,
+        templateName: schedule.templateName,
+        templateLanguage: schedule.templateLanguage,
+        templateComponents: schedule.templateComponents
+      });
+      await markSent(schedule.id, "Official schedule template sent", buildScheduleAuditMessage("official_schedule_template_sent", schedule, {
+        consumerType: "schedule", outboundMode: "OFFICIAL", ownerUserId: schedule.createdById,
+        ownerQueueId: ticket.queueId, deliveryWhatsappId: schedule.deliveryWhatsappId,
+        templateName: schedule.templateName, templateLanguage: schedule.templateLanguage, providerMessageId
+      }));
       return;
     }
 

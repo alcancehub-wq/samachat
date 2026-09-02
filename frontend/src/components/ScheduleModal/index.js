@@ -254,6 +254,12 @@ const ScheduleModal = ({
         : initialValues.contactId,
     mediaOriginalName: initialValues?.mediaOriginalName || "",
     removeMedia: false,
+    outboundMode: initialValues?.outboundMode || "STANDARD",
+    ownerQueueId: initialValues?.ownerQueueId || "",
+    deliveryWhatsappId: initialValues?.deliveryWhatsappId || "",
+    templateName: initialValues?.templateName || "",
+    templateLanguage: initialValues?.templateLanguage || "",
+    templateComponents: initialValues?.templateComponents || "",
     monthlyRecurring: false,
     recurringMonths: "1"
   };
@@ -568,7 +574,13 @@ const ScheduleModal = ({
       assigneeId: normalizeId(values.assigneeId),
       ticketId: normalizeId(values.ticketId),
       contactId: normalizeId(values.contactId),
-      removeMedia: Boolean(values.removeMedia)
+      removeMedia: Boolean(values.removeMedia),
+      outboundMode: values.outboundMode,
+      ownerQueueId: normalizeId(values.ownerQueueId),
+      deliveryWhatsappId: normalizeId(values.deliveryWhatsappId),
+      templateName: values.templateName || null,
+      templateLanguage: values.templateLanguage || null,
+      templateComponents: values.templateComponents || null
     };
 
     const shouldCreateRecurringSchedules =
@@ -931,6 +943,22 @@ const ScheduleModal = ({
                       helperText={i18n.t("scheduleModal.form.recurringMonthsHelp")}
                     />
                   )}
+                </>
+              )}
+              <FormControl fullWidth margin="dense" variant="outlined">
+                <InputLabel>Outbound mode</InputLabel>
+                <Select value={values.outboundMode} onChange={event => setFieldValue("outboundMode", event.target.value)} label="Outbound mode">
+                  <MenuItem value="STANDARD">Standard</MenuItem>
+                  <MenuItem value="OFFICIAL">Official template</MenuItem>
+                </Select>
+              </FormControl>
+              {values.outboundMode === "OFFICIAL" && (
+                <>
+                  {!values.ticketId && <TextField label="Owner queue ID" type="number" fullWidth variant="outlined" margin="dense" value={values.ownerQueueId} onChange={event => setFieldValue("ownerQueueId", event.target.value)} required />}
+                  <TextField label="Official connection ID" type="number" fullWidth variant="outlined" margin="dense" value={values.deliveryWhatsappId} onChange={event => setFieldValue("deliveryWhatsappId", event.target.value)} required />
+                  <TextField label="Template name" fullWidth variant="outlined" margin="dense" value={values.templateName} onChange={event => setFieldValue("templateName", event.target.value)} required />
+                  <TextField label="Template language" fullWidth variant="outlined" margin="dense" value={values.templateLanguage} onChange={event => setFieldValue("templateLanguage", event.target.value)} required />
+                  <TextField label="Template components (JSON array)" fullWidth variant="outlined" margin="dense" value={values.templateComponents} onChange={event => setFieldValue("templateComponents", event.target.value)} />
                 </>
               )}
             </DialogContent>

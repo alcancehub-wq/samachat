@@ -18,6 +18,7 @@ import User from "./User";
 import Ticket from "./Ticket";
 import Contact from "./Contact";
 import Whatsapp from "./Whatsapp";
+import Queue from "./Queue";
 import ScheduleLog from "./ScheduleLog";
 
 @Table
@@ -81,8 +82,36 @@ class Schedule extends Model<Schedule> {
   @Column
   senderWhatsappId: number;
 
+  @Default("STANDARD")
+  @AllowNull(false)
+  @Column(DataType.STRING)
+  outboundMode: string;
+
+  @ForeignKey(() => Queue)
+  @Column(DataType.INTEGER)
+  ownerQueueId: number | null;
+
+  @ForeignKey(() => Whatsapp)
+  @Column(DataType.INTEGER)
+  deliveryWhatsappId: number | null;
+
+  @Column(DataType.STRING)
+  templateName: string | null;
+
+  @Column(DataType.STRING)
+  templateLanguage: string | null;
+
+  @Column(DataType.TEXT)
+  templateComponents: string | null;
+
   @BelongsTo(() => Whatsapp, "senderWhatsappId")
   senderWhatsapp: Whatsapp;
+
+  @BelongsTo(() => Queue, "ownerQueueId")
+  ownerQueue: Queue;
+
+  @BelongsTo(() => Whatsapp, "deliveryWhatsappId")
+  deliveryWhatsapp: Whatsapp;
 
   @BelongsTo(() => User, "assigneeId")
   assignee: User;
