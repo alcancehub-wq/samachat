@@ -7,7 +7,8 @@ export type OutboundChannelMode =
 export type OutboundChannelContext =
   | "schedule"
   | "campaign"
-  | "flow";
+  | "flow"
+  | "ticketReply";
 
 export interface ResolveOutboundChannelRequest {
   mode?: OutboundChannelMode | null;

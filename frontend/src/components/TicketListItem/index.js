@@ -670,6 +670,9 @@ const TicketListItem = ({ ticket, selectable = false, selectedInBulk = false, on
 							{assigneeLabel && (
 								<div className={classes.userTag} title={assigneeTitle}>{assigneeLabel}</div>
 							)}
+							{ticket.replyOutboundMode === "OFFICIAL" && (
+								<div className={classes.userTag} title="Canal de resposta: API Oficial">API Oficial</div>
+							)}
 						</div>
 						<div className={classes.footerActions}>
 							{ticket.status !== "pending" && ticket.tags && ticket.tags.length > 0 && (

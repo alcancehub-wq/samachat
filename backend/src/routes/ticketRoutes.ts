@@ -35,6 +35,20 @@ ticketRoutes.put(
 );
 
 ticketRoutes.put(
+	"/tickets/:ticketId/reply-channel",
+	isAuth,
+	checkSectorPermission("tickets.update"),
+	TicketController.updateReplyChannel
+);
+
+ticketRoutes.get(
+	"/tickets/:ticketId/reply-channel-connections",
+	isAuth,
+	checkSectorPermission("tickets.view"),
+	TicketController.listReplyChannelConnections
+);
+
+ticketRoutes.put(
 	"/tickets/:ticketId/unread",
 	isAuth,
 	checkSectorPermission("tickets.update"),

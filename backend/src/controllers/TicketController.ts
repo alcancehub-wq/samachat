@@ -6,6 +6,8 @@ import DeleteTicketService from "../services/TicketServices/DeleteTicketService"
 import ListTicketsService from "../services/TicketServices/ListTicketsService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
+import SetTicketReplyOutboundChannelService from "../services/TicketServices/SetTicketReplyOutboundChannelService";
+import ListTicketOfficialReplyConnectionsService from "../services/TicketServices/ListTicketOfficialReplyConnectionsService";
 import { getScopedNotificationRoom, getScopedTicketsRoom } from "../helpers/socketRooms";
 import SetTicketMessagesAsUnread from "../helpers/SetTicketMessagesAsUnread";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
@@ -146,6 +148,28 @@ export const update = async (
   }
 
   return res.status(200).json(ticket);
+};
+
+export const updateReplyChannel = async (req: Request, res: Response): Promise<Response> => {
+  const { ticketId } = req.params;
+  const { replyOutboundMode, replyDeliveryWhatsappId } = req.body;
+  const ticket = await SetTicketReplyOutboundChannelService({
+    ticketId,
+    replyOutboundMode,
+    replyDeliveryWhatsappId,
+    accessData: { userId: req.user.id, profile: req.user.profile }
+  });
+
+  return res.status(200).json(ticket);
+};
+
+export const listReplyChannelConnections = async (req: Request, res: Response): Promise<Response> => {
+  const deliveryWhatsappIds = await ListTicketOfficialReplyConnectionsService({
+    ticketId: req.params.ticketId,
+    accessData: { userId: req.user.id, profile: req.user.profile }
+  });
+
+  return res.status(200).json({ deliveryWhatsappIds });
 };
 
 export const remove = async (

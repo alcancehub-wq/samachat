@@ -14,6 +14,8 @@ import ShowUserService from "../services/UserServices/ShowUserService";
 import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessage";
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
+import ResolveOutboundChannelService from "../services/OutboundChannelServices/ResolveOutboundChannelService";
+import { AssertOfficialFreeTextAllowedService } from "../services/OutboundChannelServices/OfficialCustomerServiceWindowService";
 
 type IndexQuery = {
   pageNumber: string;
@@ -25,6 +27,23 @@ type MessageData = {
   read: boolean;
   quotedMsg?: Message;
   isInternal?: boolean;
+};
+
+const resolveOfficialReplyChannel = async (ticket: Awaited<ReturnType<typeof ShowTicketService>>, userId: string | number, profile?: string) => {
+  if (ticket.replyOutboundMode !== "OFFICIAL") {
+    return null;
+  }
+
+  const actor = await ShowUserService(userId);
+  const actorQueueIds = (actor.queues || []).map(queue => Number(queue.id));
+  return ResolveOutboundChannelService({
+    mode: "OFFICIAL",
+    context: "ticketReply",
+    ownerUserId: Number(userId),
+    actorProfile: profile,
+    actorQueueIds,
+    officialWhatsappId: ticket.replyDeliveryWhatsappId
+  });
 };
 
 const COMPOSER_RECORDED_AUDIO_PATTERN = /^recorded_\d{10,}\.(ogg|webm)$/i;
@@ -134,18 +153,25 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   }
 
   SetTicketMessagesAsRead(ticket);
+  const officialReplyChannel = await resolveOfficialReplyChannel(
+    ticket,
+    req.user.id,
+    req.user.profile
+  );
 
   if (medias) {
     await Promise.all(
       medias.map(async (media: Express.Multer.File, mediaIndex: number) => {
         const shouldPersistRecordedAudioLocally = isComposerRecordedAudioUpload(media);
         const shouldPersistOfficialMediaLocally =
+          officialReplyChannel?.providerType === "official" ||
           ticket.whatsapp?.providerType === "official";
         const shouldPersistMediaLocally =
           shouldPersistRecordedAudioLocally || shouldPersistOfficialMediaLocally;
         const providerMessage = await SendWhatsAppMedia({
           media,
           ticket,
+          whatsapp: officialReplyChannel?.whatsapp,
           preserveUploadedFile: shouldPersistMediaLocally
         });
 
@@ -192,7 +218,18 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       })
     );
   } else {
-    const providerMessage = await SendWhatsAppMessage({ body, ticket, quotedMsg });
+    if (officialReplyChannel) {
+      await AssertOfficialFreeTextAllowedService({
+        ticketId: ticket.id,
+        deliveryWhatsappId: officialReplyChannel.whatsappId
+      });
+    }
+    const providerMessage = await SendWhatsAppMessage({
+      body,
+      ticket,
+      quotedMsg,
+      whatsapp: officialReplyChannel?.whatsapp
+    });
 
     await CreateMessageService({
       messageData: {

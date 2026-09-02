@@ -22,6 +22,7 @@ interface Request {
   body: string;
   ticket: Ticket;
   quotedMsg?: Message;
+  whatsapp?: Whatsapp;
 }
 
 interface NumberLookupResult {
@@ -301,9 +302,10 @@ const sendOfficialCloudApiTextMessage = async ({
 const SendWhatsAppMessage = async ({
   body,
   ticket,
-  quotedMsg
+  quotedMsg,
+  whatsapp: explicitWhatsapp
 }: Request): Promise<ProviderMessage> => {
-  const whatsapp = await ensureWhatsappSession(ticket);
+  const whatsapp = explicitWhatsapp || await ensureWhatsappSession(ticket);
 
   if (whatsapp.providerType !== "official") {
     await ensureWhatsappReady(ticket, whatsapp);
@@ -382,7 +384,7 @@ const SendWhatsAppMessage = async ({
   }
 
   const sendWithChatId = async (targetChatId: string): Promise<ProviderMessage> =>
-    whatsappProvider.sendMessage(ticket.whatsappId as number, targetChatId, payload, {
+    whatsappProvider.sendMessage(whatsapp.id, targetChatId, payload, {
       quotedMessageId: quotedMsg?.id,
       quotedMessageFromMe: quotedMsg?.fromMe,
       linkPreview: false

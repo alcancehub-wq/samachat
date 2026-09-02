@@ -12,6 +12,7 @@ import MessageInput from "../MessageInput/";
 import TicketHeader from "../TicketHeader";
 import TicketInfo from "../TicketInfo";
 import TicketActionButtons from "../TicketActionButtons";
+import TicketReplyChannelSelect from "../TicketReplyChannelSelect";
 import MessagesList from "../MessagesList";
 import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
@@ -204,6 +205,7 @@ const Ticket = () => {
                 onClick={handleDrawerOpen}
               />
             </div>
+            <TicketReplyChannelSelect ticket={ticket} onUpdated={setTicket} />
             <div className={classes.ticketActionButtons}>
               <TicketActionButtons
                 ticket={ticket}
@@ -215,7 +217,7 @@ const Ticket = () => {
         </div>
         {transferNotice && (
           <Typography className={classes.transferNotice}>
-            Atendimento transferido para você. Verifique o histórico da conversa e mensagens agendadas antes de responder.
+            Atendimento transferido para vocï¿½. Verifique o histï¿½rico da conversa e mensagens agendadas antes de responder.
           </Typography>
         )}
         <ReplyMessageProvider>

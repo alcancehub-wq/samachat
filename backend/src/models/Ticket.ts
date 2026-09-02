@@ -10,7 +10,8 @@ import {
   HasMany,
   BelongsToMany,
   AutoIncrement,
-  Default
+  Default,
+  DataType
 } from "sequelize-typescript";
 
 import Contact from "./Contact";
@@ -73,6 +74,14 @@ class Ticket extends Model<Ticket> {
 
   @BelongsTo(() => Whatsapp)
   whatsapp: Whatsapp;
+
+  @Default("STANDARD")
+  @Column
+  replyOutboundMode: "STANDARD" | "OFFICIAL";
+
+  @ForeignKey(() => Whatsapp)
+  @Column(DataType.INTEGER)
+  replyDeliveryWhatsappId: number | null;
 
   @ForeignKey(() => Queue)
   @Column

@@ -33,6 +33,7 @@ interface Request {
   media: Express.Multer.File;
   ticket: Ticket;
   body?: string;
+  whatsapp?: Whatsapp;
   forceSendAudioAsVoice?: boolean;
   preserveUploadedFile?: boolean;
 }
@@ -325,6 +326,7 @@ const SendWhatsAppMedia = async ({
   media,
   ticket,
   body,
+  whatsapp: explicitWhatsapp,
   forceSendAudioAsVoice,
   preserveUploadedFile = false
 }: Request): Promise<ProviderMessage> => {
@@ -345,7 +347,7 @@ const SendWhatsAppMedia = async ({
       );
     }
 
-    const whatsapp = await ensureWhatsappSession(ticket);
+    const whatsapp = explicitWhatsapp || await ensureWhatsappSession(ticket);
 
     if (perfAuditAudio) {
       logger.info(

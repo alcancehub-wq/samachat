@@ -26,6 +26,7 @@ import CreateContactService from "../services/ContactServices/CreateContactServi
 import HandleIncomingFlowMessageService from "../services/FlowExecutionServices/HandleIncomingFlowMessageService";
 import ResolveOfficialInboundOriginService from "../services/OutboundChannelServices/ResolveOfficialInboundOriginService";
 import { PersistOfficialInboundFactsService } from "../services/OutboundChannelServices/OfficialInboundCorrelationService";
+import { ResolveOfficialInboundCorrelationService } from "../services/OutboundChannelServices/OfficialInboundCorrelationService";
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
@@ -659,6 +660,13 @@ export const handleMessage = async (
         contactId: contact.id,
         ticketId: ticket.id
       });
+      const origin = await ResolveOfficialInboundCorrelationService(processedMessage.id);
+      if (origin) {
+        await ticket.update({
+          replyOutboundMode: "OFFICIAL",
+          replyDeliveryWhatsappId: origin.deliveryWhatsappId
+        });
+      }
     }
 
     await processVcardMessage(processedMessage);
