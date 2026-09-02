@@ -229,7 +229,7 @@ const NormalizeCloudApiWebhook = (
               : normalizeTimestamp(message.timestamp),
             from: fromChatId,
             to: toChatId,
-            ack: 0
+            ack: isMessageEchoChange ? 1 : 0
           },
           contextPayload: {
             whatsappId,

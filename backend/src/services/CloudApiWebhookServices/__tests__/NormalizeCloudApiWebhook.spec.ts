@@ -71,6 +71,71 @@ describe("NormalizeCloudApiWebhook", () => {
     expect(result[0].cloudMedia).toBeUndefined();
   });
 
+  it("normalizes coexistence echoes as sent without changing their provider data", () => {
+    const result = NormalizeCloudApiWebhook(
+      {
+        object: "whatsapp_business_account",
+        entry: [
+          {
+            changes: [
+              {
+                field: "smb_message_echoes",
+                value: {
+                  contacts: [
+                    {
+                      profile: {
+                        name: "Cliente Echo"
+                      },
+                      wa_id: "5511999999999"
+                    }
+                  ],
+                  message_echoes: [
+                    {
+                      id: "wamid.echo.1",
+                      from: "5511888888888",
+                      to: "5511999999999",
+                      timestamp: "1770000005",
+                      type: "text",
+                      text: {
+                        body: "Mensagem do Business App"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      35
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        contactPayload: {
+          name: "Cliente Echo",
+          number: "5511999999999",
+          isGroup: false
+        },
+        messagePayload: expect.objectContaining({
+          id: "wamid.echo.1",
+          body: "Mensagem do Business App",
+          fromMe: true,
+          timestamp: 1770000005,
+          from: "5511888888888@c.us",
+          to: "5511999999999@c.us",
+          ack: 1
+        }),
+        contextPayload: {
+          whatsappId: 35,
+          unreadMessages: 0
+        },
+        isCoexistenceMessageEcho: true
+      })
+    );
+  });
+
   it("normalizes inbound official audio preserving media id", () => {
     const result = NormalizeCloudApiWebhook(
       {
