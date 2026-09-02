@@ -25,6 +25,7 @@ import AssignInboundTicketByDistributionService from "../services/WhatsappServic
 import CreateContactService from "../services/ContactServices/CreateContactService";
 import HandleIncomingFlowMessageService from "../services/FlowExecutionServices/HandleIncomingFlowMessageService";
 import ResolveOfficialInboundOriginService from "../services/OutboundChannelServices/ResolveOfficialInboundOriginService";
+import { PersistOfficialInboundFactsService } from "../services/OutboundChannelServices/OfficialInboundCorrelationService";
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
@@ -98,10 +99,12 @@ export interface MessagePayload {
   hasMedia: boolean;
   type: MessageType;
   timestamp: number;
+  providerTimestamp?: number;
   from: string;
   to: string;
   hasQuotedMsg?: boolean;
   quotedMsgId?: string;
+  contextProviderMessageId?: string;
   mediaUrl?: string;
   mediaType?: string;
   ack?: MessageAck;
@@ -646,6 +649,17 @@ export const handleMessage = async (
     await ticket.update({ lastMessage: lastMessageText });
 
     await CreateMessageService({ messageData });
+
+    if (!processedMessage.fromMe && whatsapp.providerType === "official" && processedMessage.id && processedMessage.providerTimestamp) {
+      await PersistOfficialInboundFactsService({
+        providerMessageId: processedMessage.id,
+        providerTimestamp: processedMessage.providerTimestamp,
+        contextProviderMessageId: processedMessage.contextProviderMessageId,
+        deliveryWhatsappId: contextPayload.whatsappId,
+        contactId: contact.id,
+        ticketId: ticket.id
+      });
+    }
 
     await processVcardMessage(processedMessage);
 

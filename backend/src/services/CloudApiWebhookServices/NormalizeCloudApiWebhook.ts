@@ -35,6 +35,9 @@ interface CloudApiMessage {
   text?: {
     body?: string;
   };
+  context?: {
+    id?: string;
+  };
   audio?: CloudApiMediaObject;
   image?: CloudApiMediaObject;
   video?: CloudApiMediaObject;
@@ -227,6 +230,8 @@ const NormalizeCloudApiWebhook = (
             timestamp: isMessageEchoChange
               ? providerTimestamp
               : normalizeTimestamp(message.timestamp),
+            providerTimestamp: providerTimestamp || undefined,
+            contextProviderMessageId: message.context?.id,
             from: fromChatId,
             to: toChatId,
             ack: isMessageEchoChange ? 1 : 0

@@ -41,6 +41,7 @@ import ScheduleLog from "../models/ScheduleLog";
 import OpenAISetting from "../models/OpenAISetting";
 import OpenAILog from "../models/OpenAILog";
 import OfficialOutboundOrigin from "../models/OfficialOutboundOrigin";
+import OfficialInboundMessage from "../models/OfficialInboundMessage";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -90,7 +91,8 @@ const models = [
   ScheduleLog,
   OpenAISetting,
   OpenAILog,
-  OfficialOutboundOrigin
+  OfficialOutboundOrigin,
+  OfficialInboundMessage
 ];
 
 sequelize.addModels(models);
