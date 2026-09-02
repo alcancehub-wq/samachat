@@ -22,6 +22,7 @@ import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import SendStoredWhatsAppMedia from "../WbotServices/SendStoredWhatsAppMedia";
 import { logger } from "../../utils/logger";
 import { getRandomCampaignContactDelayMs } from "./campaignDelay";
+import { requiresCampaignDialog } from "./campaignOutboundMode";
 import SendOfficialOutboundTemplateService from "../OutboundChannelServices/SendOfficialOutboundTemplateService";
 
 const DEFAULT_POLL_MS = 8000;
@@ -177,7 +178,6 @@ const alreadySent = async (campaignId: number, contactId: number): Promise<boole
 };
 
 const runCampaignOnce = async (campaign: Campaign): Promise<void> => {
-  const dialog = await loadDialog(campaign);
   const contacts = await resolveCampaignContacts(campaign);
 
   if (contacts.length === 0) {
@@ -185,7 +185,7 @@ const runCampaignOnce = async (campaign: Campaign): Promise<void> => {
     return;
   }
 
-  if (campaign.outboundMode === "OFFICIAL") {
+  if (!requiresCampaignDialog(campaign.outboundMode)) {
     if (!campaign.ownerUserId || !campaign.ownerQueueId || !campaign.deliveryWhatsappId || !campaign.templateName || !campaign.templateLanguage) {
       throw new Error("ERR_META_OUTBOUND_OWNER_QUEUE_REQUIRED");
     }
@@ -212,6 +212,8 @@ const runCampaignOnce = async (campaign: Campaign): Promise<void> => {
     await markCampaignStatus(campaign.id, failedCount > 0 ? "failed" : "completed");
     return;
   }
+
+  const dialog = await loadDialog(campaign);
 
   let defaultWhatsapp;
 

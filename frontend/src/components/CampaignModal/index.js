@@ -122,7 +122,7 @@ const CampaignModal = ({ open, onClose, campaignId }) => {
     const payload = {
       name: values.name,
       description: values.description,
-      dialogId: values.dialogId,
+      dialogId: values.outboundMode === "OFFICIAL" ? null : values.dialogId,
       contactListId: values.contactListId,
       tagIds: values.tagIds,
       status: values.status,
@@ -194,10 +194,10 @@ const CampaignModal = ({ open, onClose, campaignId }) => {
                 multiline
                 rows={3}
               />
-              <DialogSelect
+              {values.outboundMode !== "OFFICIAL" && <DialogSelect
                 selectedDialogId={values.dialogId}
                 onChange={id => setFieldValue("dialogId", id)}
-              />
+              />}
               <ContactListSelect
                 selectedListId={values.contactListId}
                 onChange={id => setFieldValue("contactListId", id)}

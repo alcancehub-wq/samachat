@@ -3,8 +3,18 @@ import {
   getCampaignContactDelayRange,
   getRandomCampaignContactDelayMs
 } from "../../../services/CampaignServices/campaignDelay";
+import { requiresCampaignDialog } from "../../../services/CampaignServices/campaignOutboundMode";
 
 describe("RunCampaignWorker", () => {
+  it("should preserve the dialog requirement for standard campaigns", () => {
+    expect(requiresCampaignDialog("STANDARD")).toBe(true);
+    expect(requiresCampaignDialog()).toBe(true);
+  });
+
+  it("should not require or load a dialog for official campaigns", () => {
+    expect(requiresCampaignDialog("OFFICIAL")).toBe(false);
+  });
+
   it("should keep only contacts matching campaign tags when list and tags are combined", () => {
     const contacts = [
       {
