@@ -6,11 +6,21 @@ import toastError from "../../errors/toastError";
 
 const useStyles = makeStyles(theme => ({
   control: {
-    minWidth: 150,
-    marginLeft: "auto",
-    [theme.breakpoints.down("sm")]: { minWidth: 120 }
+    minWidth: 136,
+    flex: "none",
+    [theme.breakpoints.down("sm")]: { minWidth: 116 }
   },
-  select: { fontSize: "0.8rem" }
+  select: {
+    fontSize: "0.8rem",
+    "& .MuiSelect-select": {
+      paddingTop: 8,
+      paddingBottom: 8,
+      paddingRight: 25
+    },
+    "& .MuiSelect-iconOutlined": {
+      right: 5
+    }
+  }
 }));
 
 const TicketReplyChannelSelect = ({ ticket, onUpdated }) => {

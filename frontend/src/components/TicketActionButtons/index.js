@@ -9,6 +9,7 @@ import { i18n } from '../../translate/i18n';
 import api from '../../services/api';
 import TicketOptionsMenu from '../TicketOptionsMenu';
 import ButtonWithSpinner from '../ButtonWithSpinner';
+import TicketReplyChannelSelect from '../TicketReplyChannelSelect';
 import toastError from '../../errors/toastError';
 import { AuthContext } from '../../context/Auth/AuthContext';
 
@@ -134,7 +135,7 @@ const getSchedulePreview = (schedule) => {
   return 'Agendamento sem texto';
 };
 
-const TicketActionButtons = ({ ticket, contactId, contactName }) => {
+const TicketActionButtons = ({ ticket, contactId, contactName, onTicketUpdated }) => {
   const classes = useStyles();
   const history = useHistory();
   const [anchorEl, setAnchorEl] = useState(null);
@@ -233,6 +234,8 @@ const TicketActionButtons = ({ ticket, contactId, contactName }) => {
           {i18n.t('messagesList.header.buttons.accept')}
         </ButtonWithSpinner>
       )}
+
+      <TicketReplyChannelSelect ticket={ticket} onUpdated={onTicketUpdated} />
 
       <Tooltip title="Agendamentos do cliente">
         <IconButton

@@ -12,7 +12,6 @@ import MessageInput from "../MessageInput/";
 import TicketHeader from "../TicketHeader";
 import TicketInfo from "../TicketInfo";
 import TicketActionButtons from "../TicketActionButtons";
-import TicketReplyChannelSelect from "../TicketReplyChannelSelect";
 import MessagesList from "../MessagesList";
 import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
@@ -205,12 +204,12 @@ const Ticket = () => {
                 onClick={handleDrawerOpen}
               />
             </div>
-            <TicketReplyChannelSelect ticket={ticket} onUpdated={setTicket} />
             <div className={classes.ticketActionButtons}>
               <TicketActionButtons
                 ticket={ticket}
                 contactId={contact.id}
                 contactName={contact.name}
+                onTicketUpdated={setTicket}
               />
             </div>
           </TicketHeader>
