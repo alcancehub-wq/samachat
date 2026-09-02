@@ -1,4 +1,4 @@
-import {
+﻿import {
   ContactPayload,
   MessagePayload,
   WhatsappContextPayload
@@ -7,6 +7,7 @@ import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
 import Message from "../../models/Message";
 import CreateMessageService from "../MessageServices/CreateMessageService";
+import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 
 interface CloudMedia {
   id: string;
@@ -63,8 +64,21 @@ const ProcessCloudApiMessageEchoWebhook = async ({
     }
   });
 
-  if (tickets.length !== 1) {
+  if (tickets.length > 1) {
     return { status: "ticket_unresolved" };
+  }
+
+  let ticket = tickets[0];
+  let ticketCreatedForEcho = false;
+
+  if (tickets.length === 0) {
+    ticket = await FindOrCreateTicketService(
+      contact,
+      contextPayload.whatsappId,
+      0
+    );
+
+    ticketCreatedForEcho = true;
   }
 
   const existingMessage = await MessageModel.findByPk(messagePayload.id);
@@ -75,7 +89,7 @@ const ProcessCloudApiMessageEchoWebhook = async ({
   await CreateMessageService({
     messageData: {
       id: messagePayload.id,
-      ticketId: tickets[0].id,
+      ticketId: ticket.id,
       body: messagePayload.body,
       fromMe: true,
       read: true,
@@ -84,7 +98,7 @@ const ProcessCloudApiMessageEchoWebhook = async ({
       createdAt: new Date(messagePayload.timestamp * 1000)
     },
     broadcastToTicketRoom: true,
-    broadcastToStatus: false,
+    broadcastToStatus: ticketCreatedForEcho,
     broadcastToNotification: false
   });
 
