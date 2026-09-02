@@ -31,6 +31,12 @@ interface CampaignData {
   isActive?: boolean;
   scheduledAt?: string | null;
   reviewedAt?: string | null;
+  ownerQueueId?: number | null;
+  deliveryWhatsappId?: number | null;
+  outboundMode?: string;
+  templateName?: string | null;
+  templateLanguage?: string | null;
+  templateComponents?: string | null;
 }
 
 const serializeCampaign = (campaign: any) => {
@@ -61,7 +67,13 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     status: Yup.string().oneOf([...campaignStatuses]),
     isActive: Yup.boolean(),
     scheduledAt: Yup.string().nullable(),
-    reviewedAt: Yup.string().nullable()
+    reviewedAt: Yup.string().nullable(),
+    ownerQueueId: Yup.number().nullable(),
+    deliveryWhatsappId: Yup.number().nullable(),
+    outboundMode: Yup.string().oneOf(["STANDARD", "OFFICIAL"]),
+    templateName: Yup.string().nullable(),
+    templateLanguage: Yup.string().nullable(),
+    templateComponents: Yup.string().nullable()
   });
 
   try {
@@ -72,7 +84,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   const createdCampaign = await CreateCampaignService({
     ...newCampaign,
-    tagIds: newCampaign.tagIds || []
+    tagIds: newCampaign.tagIds || [],
+    ownerUserId: Number(req.user.id),
+    actorProfile: req.user.profile
   });
 
   const campaign = await ShowCampaignService(createdCampaign.id);
@@ -106,7 +120,13 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
     status: Yup.string().oneOf([...campaignStatuses]),
     isActive: Yup.boolean(),
     scheduledAt: Yup.string().nullable(),
-    reviewedAt: Yup.string().nullable()
+    reviewedAt: Yup.string().nullable(),
+    ownerQueueId: Yup.number().nullable(),
+    deliveryWhatsappId: Yup.number().nullable(),
+    outboundMode: Yup.string().oneOf(["STANDARD", "OFFICIAL"]),
+    templateName: Yup.string().nullable(),
+    templateLanguage: Yup.string().nullable(),
+    templateComponents: Yup.string().nullable()
   });
 
   try {

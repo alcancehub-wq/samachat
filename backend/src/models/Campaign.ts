@@ -16,6 +16,9 @@ import {
 
 import Dialog from "./Dialog";
 import ContactList from "./ContactList";
+import User from "./User";
+import Queue from "./Queue";
+import Whatsapp from "./Whatsapp";
 
 @Table
 class Campaign extends Model<Campaign> {
@@ -62,11 +65,46 @@ class Campaign extends Model<Campaign> {
   @Column(DataType.TEXT)
   tagIds: string;
 
+  @ForeignKey(() => User)
+  @Column(DataType.INTEGER)
+  ownerUserId: number | null;
+
+  @ForeignKey(() => Queue)
+  @Column(DataType.INTEGER)
+  ownerQueueId: number | null;
+
+  @ForeignKey(() => Whatsapp)
+  @Column(DataType.INTEGER)
+  deliveryWhatsappId: number | null;
+
+  @Default("STANDARD")
+  @AllowNull(false)
+  @Column(DataType.STRING)
+  outboundMode: string;
+
+  @Column(DataType.STRING)
+  templateName: string | null;
+
+  @Column(DataType.STRING)
+  templateLanguage: string | null;
+
+  @Column(DataType.TEXT)
+  templateComponents: string | null;
+
   @BelongsTo(() => Dialog)
   dialog: Dialog;
 
   @BelongsTo(() => ContactList)
   contactList: ContactList;
+
+  @BelongsTo(() => User, "ownerUserId")
+  ownerUser: User;
+
+  @BelongsTo(() => Queue, "ownerQueueId")
+  ownerQueue: Queue;
+
+  @BelongsTo(() => Whatsapp, "deliveryWhatsappId")
+  deliveryWhatsapp: Whatsapp;
 
   @CreatedAt
   createdAt: Date;

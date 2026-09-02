@@ -12,6 +12,7 @@ import {
   parseCampaignScheduledAt
 } from "./campaignSchedule";
 import TriggerWebhooksService from "../WebhookServices/TriggerWebhooksService";
+import ValidateOfficialOutboundConfigurationService from "../OutboundChannelServices/ValidateOfficialOutboundConfigurationService";
 
 interface Request {
   name: string;
@@ -23,6 +24,14 @@ interface Request {
   isActive?: boolean;
   scheduledAt?: Date | string | null;
   reviewedAt?: Date | string | null;
+  ownerUserId: number;
+  ownerQueueId?: number | null;
+  deliveryWhatsappId?: number | null;
+  outboundMode?: string | null;
+  templateName?: string | null;
+  templateLanguage?: string | null;
+  templateComponents?: string | null;
+  actorProfile?: string | null;
 }
 
 const CreateCampaignService = async ({
@@ -34,7 +43,15 @@ const CreateCampaignService = async ({
   status,
   isActive,
   scheduledAt,
-  reviewedAt
+  reviewedAt,
+  ownerUserId,
+  ownerQueueId,
+  deliveryWhatsappId,
+  outboundMode = "STANDARD",
+  templateName,
+  templateLanguage,
+  templateComponents,
+  actorProfile
 }: Request): Promise<Campaign> => {
   const trimmedName = name.trim();
 
@@ -75,6 +92,17 @@ const CreateCampaignService = async ({
     assertCampaignScheduledAtIsFuture(scheduledAtValue);
   }
 
+  await ValidateOfficialOutboundConfigurationService({
+    outboundMode,
+    ownerUserId,
+    ownerQueueId,
+    deliveryWhatsappId,
+    templateName,
+    templateLanguage,
+    templateComponents,
+    actorProfile
+  });
+
   const campaign = await Campaign.create({
     name: trimmedName,
     description,
@@ -85,7 +113,14 @@ const CreateCampaignService = async ({
     isActive: typeof isActive === "boolean" ? isActive : true,
     scheduledAt: scheduledAtValue,
     reviewedAt: reviewedAt || null,
-    lastStatusAt: new Date()
+    lastStatusAt: new Date(),
+    ownerUserId,
+    ownerQueueId: ownerQueueId || null,
+    deliveryWhatsappId: deliveryWhatsappId || null,
+    outboundMode,
+    templateName: templateName || null,
+    templateLanguage: templateLanguage || null,
+    templateComponents: templateComponents || null
   });
 
   void TriggerWebhooksService({

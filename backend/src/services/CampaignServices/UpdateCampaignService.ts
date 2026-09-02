@@ -12,6 +12,7 @@ import {
   parseCampaignScheduledAt
 } from "./campaignSchedule";
 import TriggerWebhooksService from "../WebhookServices/TriggerWebhooksService";
+import ValidateOfficialOutboundConfigurationService from "../OutboundChannelServices/ValidateOfficialOutboundConfigurationService";
 
 interface CampaignData {
   name?: string;
@@ -23,6 +24,12 @@ interface CampaignData {
   isActive?: boolean;
   scheduledAt?: Date | string | null;
   reviewedAt?: Date | string | null;
+  ownerQueueId?: number | null;
+  deliveryWhatsappId?: number | null;
+  outboundMode?: string | null;
+  templateName?: string | null;
+  templateLanguage?: string | null;
+  templateComponents?: string | null;
 }
 
 interface Request {
@@ -101,6 +108,17 @@ const UpdateCampaignService = async ({
     }
   }
 
+  const nextOutboundMode = campaignData.outboundMode ?? campaign.outboundMode;
+  await ValidateOfficialOutboundConfigurationService({
+    outboundMode: nextOutboundMode,
+    ownerUserId: Number(campaign.ownerUserId),
+    ownerQueueId: campaignData.ownerQueueId ?? campaign.ownerQueueId,
+    deliveryWhatsappId: campaignData.deliveryWhatsappId ?? campaign.deliveryWhatsappId,
+    templateName: campaignData.templateName ?? campaign.templateName,
+    templateLanguage: campaignData.templateLanguage ?? campaign.templateLanguage,
+    templateComponents: campaignData.templateComponents ?? campaign.templateComponents
+  });
+
   await campaign.update({
     name: nextName ?? campaign.name,
     description: campaignData.description ?? campaign.description,
@@ -123,7 +141,13 @@ const UpdateCampaignService = async ({
       campaignData.reviewedAt !== undefined
         ? campaignData.reviewedAt || null
         : campaign.reviewedAt,
-    lastStatusAt: shouldUpdateStatus ? new Date() : campaign.lastStatusAt
+      lastStatusAt: shouldUpdateStatus ? new Date() : campaign.lastStatusAt,
+      ownerQueueId: campaignData.ownerQueueId ?? campaign.ownerQueueId,
+      deliveryWhatsappId: campaignData.deliveryWhatsappId ?? campaign.deliveryWhatsappId,
+      outboundMode: nextOutboundMode,
+      templateName: campaignData.templateName ?? campaign.templateName,
+      templateLanguage: campaignData.templateLanguage ?? campaign.templateLanguage,
+      templateComponents: campaignData.templateComponents ?? campaign.templateComponents
   });
 
   await campaign.reload();

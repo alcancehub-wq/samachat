@@ -22,6 +22,7 @@ import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import SendStoredWhatsAppMedia from "../WbotServices/SendStoredWhatsAppMedia";
 import { logger } from "../../utils/logger";
 import { getRandomCampaignContactDelayMs } from "./campaignDelay";
+import SendOfficialOutboundTemplateService from "../OutboundChannelServices/SendOfficialOutboundTemplateService";
 
 const DEFAULT_POLL_MS = 8000;
 const DEFAULT_BATCH_SIZE = 10;
@@ -181,6 +182,34 @@ const runCampaignOnce = async (campaign: Campaign): Promise<void> => {
 
   if (contacts.length === 0) {
     await markCampaignStatus(campaign.id, "failed");
+    return;
+  }
+
+  if (campaign.outboundMode === "OFFICIAL") {
+    if (!campaign.ownerUserId || !campaign.ownerQueueId || !campaign.deliveryWhatsappId || !campaign.templateName || !campaign.templateLanguage) {
+      throw new Error("ERR_META_OUTBOUND_OWNER_QUEUE_REQUIRED");
+    }
+
+    let failedCount = 0;
+    for (const contact of contacts) {
+      if (await alreadySent(campaign.id, contact.id)) continue;
+      try {
+        const providerMessageId = await SendOfficialOutboundTemplateService({
+          consumerType: "campaign", consumerId: campaign.id,
+          ownerUserId: campaign.ownerUserId, ownerQueueId: campaign.ownerQueueId,
+          deliveryWhatsappId: campaign.deliveryWhatsappId, contactId: contact.id,
+          contactNumber: contact.number, templateName: campaign.templateName,
+          templateLanguage: campaign.templateLanguage,
+          templateComponents: campaign.templateComponents
+        });
+        await CreateCampaignLogService({ campaignId: campaign.id, contactId: contact.id, status: "sent",
+          message: JSON.stringify({ event: "official_campaign_template_sent", consumerType: "campaign", consumerId: campaign.id, outboundMode: "OFFICIAL", ownerUserId: campaign.ownerUserId, ownerQueueId: campaign.ownerQueueId, deliveryWhatsappId: campaign.deliveryWhatsappId, templateName: campaign.templateName, templateLanguage: campaign.templateLanguage, providerMessageId, status: "sent", timestamp: new Date().toISOString() }), executedAt: new Date() });
+      } catch (error) {
+        failedCount += 1;
+        await CreateCampaignLogService({ campaignId: campaign.id, contactId: contact.id, status: "failed", error: error instanceof Error ? error.message : "Campaign send failed", executedAt: new Date() });
+      }
+    }
+    await markCampaignStatus(campaign.id, failedCount > 0 ? "failed" : "completed");
     return;
   }
 

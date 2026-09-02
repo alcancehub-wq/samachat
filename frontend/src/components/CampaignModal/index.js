@@ -57,7 +57,13 @@ const CampaignModal = ({ open, onClose, campaignId }) => {
     contactListId: null,
     tagIds: [],
     status: "draft",
-    scheduledAt: ""
+    scheduledAt: "",
+    outboundMode: "STANDARD",
+    ownerQueueId: "",
+    deliveryWhatsappId: "",
+    templateName: "",
+    templateLanguage: "",
+    templateComponents: ""
   };
 
   const [campaign, setCampaign] = useState(initialState);
@@ -85,7 +91,13 @@ const CampaignModal = ({ open, onClose, campaignId }) => {
             contactListId: data.contactListId || null,
             tagIds: data.tagIds || [],
             status: data.status || "draft",
-            scheduledAt: toInputDateTime(data.scheduledAt)
+            scheduledAt: toInputDateTime(data.scheduledAt),
+            outboundMode: data.outboundMode || "STANDARD",
+            ownerQueueId: data.ownerQueueId || "",
+            deliveryWhatsappId: data.deliveryWhatsappId || "",
+            templateName: data.templateName || "",
+            templateLanguage: data.templateLanguage || "",
+            templateComponents: data.templateComponents || ""
           });
         }
       } catch (err) {
@@ -109,7 +121,13 @@ const CampaignModal = ({ open, onClose, campaignId }) => {
       contactListId: values.contactListId,
       tagIds: values.tagIds,
       status: values.status,
-      scheduledAt: values.scheduledAt || null
+      scheduledAt: values.scheduledAt || null,
+      outboundMode: values.outboundMode,
+      ownerQueueId: values.ownerQueueId || null,
+      deliveryWhatsappId: values.deliveryWhatsappId || null,
+      templateName: values.templateName || null,
+      templateLanguage: values.templateLanguage || null,
+      templateComponents: values.templateComponents || null
     };
 
     try {
@@ -223,6 +241,26 @@ const CampaignModal = ({ open, onClose, campaignId }) => {
                   shrink: true
                 }}
               />
+              <FormControl fullWidth margin="dense" variant="outlined">
+                <InputLabel>Outbound mode</InputLabel>
+                <Select
+                  value={values.outboundMode}
+                  onChange={event => setFieldValue("outboundMode", event.target.value)}
+                  label="Outbound mode"
+                >
+                  <MenuItem value="STANDARD">Standard</MenuItem>
+                  <MenuItem value="OFFICIAL">Official template</MenuItem>
+                </Select>
+              </FormControl>
+              {values.outboundMode === "OFFICIAL" && (
+                <>
+                  <TextField label="Owner queue ID" type="number" fullWidth variant="outlined" margin="dense" value={values.ownerQueueId} onChange={event => setFieldValue("ownerQueueId", event.target.value)} required />
+                  <TextField label="Official connection ID" type="number" fullWidth variant="outlined" margin="dense" value={values.deliveryWhatsappId} onChange={event => setFieldValue("deliveryWhatsappId", event.target.value)} required />
+                  <TextField label="Template name" fullWidth variant="outlined" margin="dense" value={values.templateName} onChange={event => setFieldValue("templateName", event.target.value)} required />
+                  <TextField label="Template language" fullWidth variant="outlined" margin="dense" value={values.templateLanguage} onChange={event => setFieldValue("templateLanguage", event.target.value)} required />
+                  <TextField label="Template components (JSON array)" fullWidth variant="outlined" margin="dense" value={values.templateComponents} onChange={event => setFieldValue("templateComponents", event.target.value)} />
+                </>
+              )}
             </DialogContent>
             <DialogActions>
               <Button onClick={handleClose} color="secondary" variant="outlined">
