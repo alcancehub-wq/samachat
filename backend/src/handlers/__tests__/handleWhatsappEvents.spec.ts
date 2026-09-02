@@ -532,6 +532,22 @@ describe("handleWhatsappEvents group guard", () => {
     expect(updateMock).toHaveBeenCalledWith({ ack: 2 });
   });
 
+  it("does not regress a persisted acknowledgement", async () => {
+    const updateMock = jest.fn().mockResolvedValue(undefined);
+    const persistedMessage = {
+      id: "wamid.status.already-read",
+      ack: 3,
+      ticketId: 118,
+      update: updateMock
+    } as any;
+
+    jest.spyOn(Message, "findByPk").mockResolvedValue(persistedMessage);
+
+    await handleMessageAck("wamid.status.already-read", 2 as any);
+
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
   it("reuses serialized provider id when outbound echo arrives with raw id representation", async () => {
     const contact = { id: 16, name: "Larissa" } as any;
     const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);

@@ -9,8 +9,10 @@ import CloudApiClient from "../services/CloudApiServices/CloudApiClient";
 import { logger } from "../utils/logger";
 import {
   handleMessage,
+  handleMessageAck,
   MediaPayload
 } from "../handlers/handleWhatsappEvents";
+import { MessageAck } from "../providers/WhatsApp/types";
 
 declare const process: {
   env: Record<string, string | undefined>;
@@ -46,6 +48,32 @@ const describePayloadShape = (value: unknown): unknown => {
   }
 
   return typeof value;
+};
+
+const cloudApiStatusToAck: Record<string, MessageAck> = {
+  sent: 1,
+  delivered: 2,
+  read: 3
+};
+
+const processCloudApiStatuses = async (payload: any): Promise<void> => {
+  for (const entry of payload.entry || []) {
+    for (const change of entry.changes || []) {
+      if (change.field !== "messages") {
+        continue;
+      }
+
+      for (const status of change.value?.statuses || []) {
+        const ack = cloudApiStatusToAck[status?.status];
+
+        if (!status?.id || ack === undefined) {
+          continue;
+        }
+
+        await handleMessageAck(status.id, ack);
+      }
+    }
+  }
 };
 
 export const verify = async (req: Request, res: Response): Promise<Response> => {
@@ -161,6 +189,8 @@ export const receive = async (req: Request, res: Response): Promise<Response> =>
       whatsappId: whatsapp.id
     });
   }
+
+  await processCloudApiStatuses(req.body);
 
   const hasStructuredEntries = Array.isArray(req.body?.entry);
 

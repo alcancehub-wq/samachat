@@ -3,7 +3,10 @@ import Whatsapp from "../../models/Whatsapp";
 import VerifyCloudApiSignature from "../../services/CloudApiWebhookServices/VerifyCloudApiSignature";
 import NormalizeCloudApiWebhook from "../../services/CloudApiWebhookServices/NormalizeCloudApiWebhook";
 import CloudApiClient from "../../services/CloudApiServices/CloudApiClient";
-import { handleMessage } from "../../handlers/handleWhatsappEvents";
+import {
+  handleMessage,
+  handleMessageAck
+} from "../../handlers/handleWhatsappEvents";
 
 jest.mock("../../models/Whatsapp", () => ({
   findByPk: jest.fn()
@@ -31,7 +34,8 @@ jest.mock("../../services/CloudApiServices/CloudApiClient", () => ({
 }));
 
 jest.mock("../../handlers/handleWhatsappEvents", () => ({
-  handleMessage: jest.fn()
+  handleMessage: jest.fn(),
+  handleMessageAck: jest.fn()
 }));
 
 describe("CloudApiWebhookController inbound media", () => {
@@ -40,6 +44,7 @@ describe("CloudApiWebhookController inbound media", () => {
   const normalizeMock = NormalizeCloudApiWebhook as jest.Mock;
   const cloudClientMock = CloudApiClient as unknown as jest.Mock;
   const handleMessageMock = handleMessage as jest.Mock;
+  const handleMessageAckMock = handleMessageAck as jest.Mock;
 
   const retrieveMediaMock = jest.fn();
   const downloadMediaMock = jest.fn();
@@ -71,6 +76,97 @@ describe("CloudApiWebhookController inbound media", () => {
 
     whatsappUpdateMock.mockResolvedValue(undefined);
     handleMessageMock.mockResolvedValue(undefined);
+    handleMessageAckMock.mockResolvedValue(undefined);
+  });
+
+  const receiveStatusWebhook = async (statuses: unknown[]) => {
+    normalizeMock.mockReturnValue([]);
+
+    const req = {
+      params: { whatsappId: "35" },
+      headers: { "x-hub-signature-256": "sha256=test" },
+      rawBody: Buffer.from("{}"),
+      body: {
+        object: "whatsapp_business_account",
+        entry: [{ changes: [{ field: "messages", value: { statuses } }] }]
+      }
+    } as any;
+    const sendMock = jest.fn().mockReturnValue("EVENT_RECEIVED");
+    const statusMock = jest.fn().mockReturnValue({ send: sendMock });
+
+    await receive(req, { status: statusMock } as any);
+
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(sendMock).toHaveBeenCalledWith("EVENT_RECEIVED");
+  };
+
+  it.each([
+    ["sent", 1],
+    ["delivered", 2],
+    ["read", 3]
+  ])("promotes Cloud API %s status by WAMID", async (status, ack) => {
+    await receiveStatusWebhook([
+      { id: "wamid.status.1", status }
+    ]);
+
+    expect(handleMessageAckMock).toHaveBeenCalledWith(
+      "wamid.status.1",
+      ack
+    );
+    expect(handleMessageMock).not.toHaveBeenCalled();
+  });
+
+  it.each(["failed", "deleted", "unknown"]) (
+    "skips non-promoting Cloud API status %s",
+    async status => {
+      await receiveStatusWebhook([
+        { id: "wamid.status.1", status }
+      ]);
+
+      expect(handleMessageAckMock).not.toHaveBeenCalled();
+      expect(handleMessageMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it("skips a Cloud API status without WAMID", async () => {
+    await receiveStatusWebhook([{ status: "delivered" }]);
+
+    expect(handleMessageAckMock).not.toHaveBeenCalled();
+    expect(handleMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("processes statuses and inbound messages in the same webhook", async () => {
+    normalizeMock.mockReturnValue([
+      {
+        contactPayload: { name: "Cliente", number: "5511999999999", isGroup: false },
+        messagePayload: { id: "wamid.inbound.1", body: "Ola", fromMe: false },
+        contextPayload: { whatsappId: 35, unreadMessages: 1 }
+      }
+    ]);
+
+    const req = {
+      params: { whatsappId: "35" },
+      headers: { "x-hub-signature-256": "sha256=test" },
+      rawBody: Buffer.from("{}"),
+      body: {
+        entry: [{
+          changes: [{
+            field: "messages",
+            value: { statuses: [{ id: "wamid.status.2", status: "delivered" }] }
+          }]
+        }]
+      }
+    } as any;
+
+    await receive(req, { status: jest.fn().mockReturnValue({ send: jest.fn() }) } as any);
+
+    expect(handleMessageAckMock).toHaveBeenCalledWith("wamid.status.2", 2);
+    expect(handleMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "wamid.inbound.1" }),
+      expect.any(Object),
+      expect.any(Object),
+      undefined
+    );
   });
 
   it("downloads inbound official audio and forwards MediaPayload to handleMessage", async () => {
