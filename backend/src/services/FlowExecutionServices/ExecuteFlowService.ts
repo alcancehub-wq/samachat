@@ -12,6 +12,7 @@ import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import SendStoredWhatsAppMedia from "../WbotServices/SendStoredWhatsAppMedia";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
+import SendOfficialOutboundTemplateService from "../OutboundChannelServices/SendOfficialOutboundTemplateService";
 
 interface Request {
   flowId: string | number;
@@ -287,12 +288,29 @@ const ExecuteFlowService = async ({
 
       if (mode === "execute") {
         try {
-          const ticket = await resolveTicket(ticketId, contactId);
           const text = String(nodeData.text || "").trim();
-          if (!text) {
+          if (nodeData.outboundMode === "OFFICIAL") {
+            const ticket = ticketId ? await ShowTicketService(ticketId) : null;
+            const contact = ticket ? ticket.contact : contactId ? await Contact.findByPk(contactId) : null;
+            const ownerQueueId = ticket ? ticket.queueId : Number(nodeData.ownerQueueId);
+            if (!contact || !flow.createdById || !ownerQueueId || !nodeData.deliveryWhatsappId || !nodeData.templateName || !nodeData.templateLanguage) {
+              throw new Error("ERR_META_OUTBOUND_OWNER_QUEUE_REQUIRED");
+            }
+            const providerMessageId = await SendOfficialOutboundTemplateService({
+              consumerType: "flow", consumerId: flow.id, ownerUserId: flow.createdById,
+              ownerQueueId, deliveryWhatsappId: Number(nodeData.deliveryWhatsappId),
+              contactId: contact.id, contactNumber: contact.number, ticketId: ticket?.id || null,
+              templateName: nodeData.templateName, templateLanguage: nodeData.templateLanguage,
+              templateComponents: nodeData.templateComponents ? JSON.stringify(nodeData.templateComponents) : null
+            });
+            await CreateFlowExecutionLogService({ flowExecutionId: execution.id, nodeId: currentNode.id,
+              event: "official_message_sent", message: "Official template sent", data: { consumerType: "flow", consumerId: flow.id, outboundMode: "OFFICIAL", ownerUserId: flow.createdById, ownerQueueId, deliveryWhatsappId: Number(nodeData.deliveryWhatsappId), templateName: nodeData.templateName, templateLanguage: nodeData.templateLanguage, providerMessageId, status: "sent", timestamp: new Date().toISOString() } });
+          } else if (!text) {
             throw new Error("ERR_FLOW_MESSAGE_EMPTY");
+          } else {
+            const ticket = await resolveTicket(ticketId, contactId);
+            await SendWhatsAppMessage({ body: text, ticket });
           }
-          await SendWhatsAppMessage({ body: text, ticket });
           await CreateFlowExecutionLogService({
             flowExecutionId: execution.id,
             nodeId: currentNode.id,
@@ -327,6 +345,9 @@ const ExecuteFlowService = async ({
 
       if (mode === "execute") {
         try {
+          if (nodeData.outboundMode === "OFFICIAL") {
+            throw new Error("ERR_META_OUTBOUND_MEDIA_NOT_SUPPORTED");
+          }
           const ticket = await resolveTicket(ticketId, contactId);
           const fileName = String(nodeData.fileName || "").trim();
 

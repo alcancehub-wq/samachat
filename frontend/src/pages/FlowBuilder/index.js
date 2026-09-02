@@ -76,7 +76,15 @@ const nodeAccentMap = {
 const buildNodeData = (type, currentData = {}) => {
   switch (type) {
     case "message":
-      return { text: currentData.text || "" };
+      return {
+        text: currentData.text || "",
+        outboundMode: currentData.outboundMode || "STANDARD",
+        ownerQueueId: currentData.ownerQueueId || "",
+        deliveryWhatsappId: currentData.deliveryWhatsappId || "",
+        templateName: currentData.templateName || "",
+        templateLanguage: currentData.templateLanguage || "",
+        templateComponents: currentData.templateComponents || []
+      };
     case "media":
       return {
         caption: currentData.caption || "",
@@ -2306,21 +2314,24 @@ const FlowBuilder = () => {
             }
           />
           {nodeDraft?.type === "message" && (
-            <TextField
-              label={i18n.t("flowBuilder.nodes.message")}
-              variant="outlined"
-              fullWidth
-              margin="dense"
-              multiline
-              rows={3}
-              value={nodeDraft?.data?.text || ""}
-              onChange={event =>
-                setNodeDraft(prev => ({
-                  ...prev,
-                  data: { ...prev.data, text: event.target.value }
-                }))
-              }
-            />
+            <>
+              <TextField label={i18n.t("flowBuilder.nodes.message")} variant="outlined" fullWidth margin="dense" multiline rows={3} value={nodeDraft?.data?.text || ""} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, text: event.target.value } }))} />
+              <FormControl variant="outlined" fullWidth margin="dense">
+                <InputLabel>Outbound mode</InputLabel>
+                <Select value={nodeDraft?.data?.outboundMode || "STANDARD"} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, outboundMode: event.target.value } }))} label="Outbound mode">
+                  <MenuItem value="STANDARD">Standard</MenuItem>
+                  <MenuItem value="OFFICIAL">Official template</MenuItem>
+                </Select>
+              </FormControl>
+              {nodeDraft?.data?.outboundMode === "OFFICIAL" && (
+                <>
+                  <TextField label="Owner queue ID for contact-only execution" type="number" variant="outlined" fullWidth margin="dense" value={nodeDraft?.data?.ownerQueueId || ""} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, ownerQueueId: event.target.value } }))} />
+                  <TextField label="Official connection ID" type="number" variant="outlined" fullWidth margin="dense" value={nodeDraft?.data?.deliveryWhatsappId || ""} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, deliveryWhatsappId: event.target.value } }))} required />
+                  <TextField label="Template name" variant="outlined" fullWidth margin="dense" value={nodeDraft?.data?.templateName || ""} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, templateName: event.target.value } }))} required />
+                  <TextField label="Template language" variant="outlined" fullWidth margin="dense" value={nodeDraft?.data?.templateLanguage || ""} onChange={event => setNodeDraft(prev => ({ ...prev, data: { ...prev.data, templateLanguage: event.target.value } }))} required />
+                </>
+              )}
+            </>
           )}
           {nodeDraft?.type === "media" && (
             <>
