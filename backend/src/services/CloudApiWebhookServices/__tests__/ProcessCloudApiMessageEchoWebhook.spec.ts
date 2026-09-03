@@ -229,7 +229,7 @@ describe("ProcessCloudApiMessageEchoWebhook", () => {
     expect(createMessageServiceMock).not.toHaveBeenCalled();
   });
 
-  it.each([
+  it.each<[MessagePayload["type"], string, string]>([
     ["audio", "audio/ogg", "echo-media.abc.ogg"],
     ["video", "video/mp4", "echo-media.abc.mp4"]
   ])("persists resolved coexistence %s media", async (type, mimetype, mediaUrl) => {
