@@ -1,16 +1,25 @@
-import { Op } from "sequelize";
 import AppError from "../errors/AppError";
-import Ticket from "../models/Ticket";
+import Contact from "../models/Contact";
+import ResolveOperationalTicketService from "../services/TicketServices/ResolveOperationalTicketService";
 
 const CheckContactOpenTickets = async (
   contactId: number,
-  whatsappId: number
+  whatsappId: number,
+  excludedTicketId?: number
 ): Promise<void> => {
-  const ticket = await Ticket.findOne({
-    where: { contactId, whatsappId, status: { [Op.or]: ["open", "pending"] } }
+  const contact = await Contact.findByPk(contactId);
+
+  if (!contact) {
+    throw new AppError("ERR_NO_CONTACT_FOUND", 404);
+  }
+
+  const ticket = await ResolveOperationalTicketService({
+    contactId,
+    allowMultipleConversations: contact.allowMultipleConversations,
+    whatsappId
   });
 
-  if (ticket) {
+  if (ticket && ticket.id !== excludedTicketId) {
     throw new AppError("ERR_OTHER_OPEN_TICKET");
   }
 };

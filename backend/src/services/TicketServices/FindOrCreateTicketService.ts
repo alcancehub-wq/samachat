@@ -1,5 +1,5 @@
-import { subHours } from "date-fns";
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
+import sequelize from "../../database";
 import { getIO } from "../../libs/socket";
 import Contact from "../../models/Contact";
 import Tag from "../../models/Tag";
@@ -9,8 +9,7 @@ import { getScopedNotificationRoom, getScopedTicketsRoom } from "../../helpers/s
 import BuildEquivalentContactNumberCandidates from "../../helpers/BuildEquivalentContactNumberCandidates";
 import { FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag";
 import ShowTicketService from "./ShowTicketService";
-
-const ACTIVE_TICKET_STATUSES = ["open", "pending"];
+import ResolveOperationalTicketService from "./ResolveOperationalTicketService";
 
 const removeAutomaticFollowUpTag = async (
   ticketId: number,
@@ -121,7 +120,8 @@ const sortActiveTicketsByBusinessPriority = (left: Ticket, right: Ticket): numbe
 const findActiveTicketByContactNumberEquivalence = async (
   contact: Contact,
   whatsappId: number,
-  ticketContactId: number
+  ticketContactId: number,
+  transaction?: Transaction
 ): Promise<Ticket | null> => {
   const numberCandidates = BuildEquivalentContactNumberCandidates(contact.number || "");
 
@@ -148,24 +148,24 @@ const findActiveTicketByContactNumberEquivalence = async (
     return null;
   }
 
-  const activeTickets = await Ticket.findAll({
-    where: {
-      status: {
-        [Op.in]: ACTIVE_TICKET_STATUSES
-      },
-      contactId: {
-        [Op.in]: contactIds
-      },
-      whatsappId
-    },
-    order: [["updatedAt", "DESC"], ["id", "DESC"]]
-  });
+  const activeTickets = await Promise.all(
+    contactIds.map(contactId =>
+      ResolveOperationalTicketService({
+        contactId,
+        allowMultipleConversations: contact.allowMultipleConversations,
+        whatsappId,
+        transaction
+      })
+    )
+  );
 
-  if (!activeTickets.length) {
+  const resolvedTickets = activeTickets.filter(Boolean) as Ticket[];
+
+  if (!resolvedTickets.length) {
     return null;
   }
 
-  return [...activeTickets].sort(sortActiveTicketsByBusinessPriority)[0];
+  return [...resolvedTickets].sort(sortActiveTicketsByBusinessPriority)[0];
 };
 
 const FindOrCreateTicketService = async (
@@ -174,113 +174,104 @@ const FindOrCreateTicketService = async (
   unreadMessages: number,
   groupContact?: Contact
 ): Promise<Ticket> => {
-  const ticketContactId = groupContact ? groupContact.id : contact.id;
-  let transitionedTicketId: number | null = null;
-  let transitionedFromStatus: string | null = null;
-  let transitionedFromWhatsappId: number | null = null;
+  const resolution = await sequelize.transaction(async (transaction: Transaction) => {
+    const lockedContact = await Contact.findByPk(contact.id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
 
-  let ticket: Ticket | null = null;
+    if (!lockedContact) {
+      throw new Error("ERR_NO_CONTACT_FOUND");
+    }
 
-  if (!groupContact) {
-    ticket = await findActiveTicketByContactNumberEquivalence(
-      contact,
-      whatsappId,
-      ticketContactId
-    );
-  }
+    const ticketContactId = groupContact ? groupContact.id : lockedContact.id;
+    let transitionedTicketId: number | null = null;
+    let transitionedFromStatus: string | null = null;
+    let transitionedFromWhatsappId: number | null = null;
 
-  if (!ticket) {
-    ticket = await Ticket.findOne({
-      where: {
-        status: {
-          [Op.or]: ACTIVE_TICKET_STATUSES
-        },
+    let ticket: Ticket | null = null;
+
+    if (!groupContact) {
+      ticket = await findActiveTicketByContactNumberEquivalence(
+        lockedContact,
+        whatsappId,
+        ticketContactId,
+        transaction
+      );
+    }
+
+    if (!ticket) {
+      ticket = await ResolveOperationalTicketService({
         contactId: ticketContactId,
-        whatsappId
-      },
-      order: [["updatedAt", "DESC"]]
-    });
-  }
-
-  if (ticket) {
-    await ticket.update({ unreadMessages: resolveNextUnreadMessages(ticket, unreadMessages) });
-  }
-
-  if (!ticket && groupContact) {
-    ticket = await Ticket.findOne({
-      where: {
-        contactId: groupContact.id,
-        whatsappId: whatsappId
-      },
-      order: [["updatedAt", "DESC"]]
-    });
-
-    if (ticket) {
-      transitionedTicketId = ticket.id;
-      transitionedFromStatus = ticket.status;
-      transitionedFromWhatsappId = ticket.whatsappId;
-      await ticket.update({
-        status: "pending",
-        userId: null,
-        unreadMessages,
-        pendingSince: new Date()
+        allowMultipleConversations: lockedContact.allowMultipleConversations,
+        whatsappId,
+        transaction
       });
     }
-  }
-
-  if (!ticket && !groupContact) {
-    ticket = await Ticket.findOne({
-      where: {
-        updatedAt: {
-          [Op.between]: [+subHours(new Date(), 2), +new Date()]
-        },
-        contactId: contact.id,
-        whatsappId: whatsappId
-      },
-      order: [["updatedAt", "DESC"]]
-    });
 
     if (ticket) {
-      if (["closed", "lost"].includes(ticket.status)) {
+      await ticket.update(
+        { unreadMessages: resolveNextUnreadMessages(ticket, unreadMessages) },
+        { transaction }
+      );
+    }
+
+    if (!ticket && groupContact) {
+      ticket = await Ticket.findOne({
+        where: {
+          contactId: groupContact.id,
+          whatsappId: whatsappId
+        },
+        order: [["updatedAt", "DESC"]],
+        transaction
+      });
+
+      if (ticket) {
         transitionedTicketId = ticket.id;
         transitionedFromStatus = ticket.status;
         transitionedFromWhatsappId = ticket.whatsappId;
-        const preservedUserId = ticket.userId ?? null;
         await ticket.update({
           status: "pending",
-          userId: preservedUserId,
-          lostAt: null,
+          userId: null,
           unreadMessages,
           pendingSince: new Date()
-        });
-      } else {
-        await ticket.update({ unreadMessages: resolveNextUnreadMessages(ticket, unreadMessages) });
+        }, { transaction });
       }
     }
+
+    if (!ticket) {
+      ticket = await Ticket.create({
+        contactId: ticketContactId,
+        status: "pending",
+        isGroup: !!groupContact,
+        unreadMessages,
+        pendingSince: new Date(),
+        whatsappId
+      }, { transaction });
+    }
+
+    return {
+      ticketId: ticket.id,
+      transitionedTicketId,
+      transitionedFromStatus,
+      transitionedFromWhatsappId
+    };
+  });
+
+  if (resolution.transitionedTicketId === resolution.ticketId) {
+    await removeAutomaticFollowUpTag(
+      resolution.ticketId,
+      resolution.transitionedFromStatus
+    );
   }
 
-  if (!ticket) {
-    ticket = await Ticket.create({
-      contactId: ticketContactId,
-      status: "pending",
-      isGroup: !!groupContact,
-      unreadMessages,
-      pendingSince: new Date(),
-      whatsappId
-    });
-  }
+  const ticket = await ShowTicketService(resolution.ticketId);
 
-  if (transitionedTicketId === ticket.id) {
-    await removeAutomaticFollowUpTag(ticket.id, transitionedFromStatus);
-  }
-
-  ticket = await ShowTicketService(ticket.id);
-
-  if (transitionedTicketId === ticket.id) {
+  if (resolution.transitionedTicketId === ticket.id) {
     emitAutomaticPendingTransition({
       ticket,
-      oldStatus: transitionedFromStatus,
-      oldWhatsappId: transitionedFromWhatsappId
+      oldStatus: resolution.transitionedFromStatus,
+      oldWhatsappId: resolution.transitionedFromWhatsappId
     });
   }
 
