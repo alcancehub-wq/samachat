@@ -23,19 +23,25 @@ jest.mock("../../TicketServices/FindOrCreateTicketService", () => ({
   default: jest.fn()
 }));
 
+jest.mock("../../../handlers/handleWhatsappEvents", () => ({
+  saveMediaFile: jest.fn()
+}));
+
 import Contact from "../../../models/Contact";
 import Ticket from "../../../models/Ticket";
 import Message from "../../../models/Message";
-import { MessagePayload } from "../../../handlers/handleWhatsappEvents";
+import { MediaPayload, MessagePayload } from "../../../handlers/handleWhatsappEvents";
 import CreateMessageService from "../../MessageServices/CreateMessageService";
 import FindOrCreateTicketService from "../../TicketServices/FindOrCreateTicketService";
 import ProcessCloudApiMessageEchoWebhook from "../ProcessCloudApiMessageEchoWebhook";
+import { saveMediaFile } from "../../../handlers/handleWhatsappEvents";
 
 const contactFindOneMock = (Contact as any).findOne as jest.Mock;
 const ticketFindAllMock = (Ticket as any).findAll as jest.Mock;
 const messageFindByPkMock = (Message as any).findByPk as jest.Mock;
 const createMessageServiceMock = CreateMessageService as jest.Mock;
 const findOrCreateTicketServiceMock = FindOrCreateTicketService as jest.Mock;
+const saveMediaFileMock = saveMediaFile as jest.Mock;
 
 const contact = { id: 16 };
 
@@ -72,6 +78,7 @@ describe("ProcessCloudApiMessageEchoWebhook", () => {
 
     messageFindByPkMock.mockResolvedValue(null);
     createMessageServiceMock.mockResolvedValue(undefined);
+    saveMediaFileMock.mockResolvedValue("echo-media.abc.ogg");
   });
 
   it("persists a new echo with its provider WAMID and timestamp and emits only to its existing ticket room", async () => {
@@ -222,7 +229,53 @@ describe("ProcessCloudApiMessageEchoWebhook", () => {
     expect(createMessageServiceMock).not.toHaveBeenCalled();
   });
 
-  it("skips echo media until a coexistence media contract is proven", async () => {
+  it.each([
+    ["audio", "audio/ogg", "echo-media.abc.ogg"],
+    ["video", "video/mp4", "echo-media.abc.mp4"]
+  ])("persists resolved coexistence %s media", async (type, mimetype, mediaUrl) => {
+    const mediaPayload: MediaPayload = {
+      filename: `echo.${type === "audio" ? "ogg" : "mp4"}`,
+      mimetype,
+      data: Buffer.from(`fake-${type}`).toString("base64")
+    };
+    saveMediaFileMock.mockResolvedValueOnce(mediaUrl);
+
+    const result = await ProcessCloudApiMessageEchoWebhook({
+      normalizedMessage: {
+        contactPayload: {
+          name: "553287072428",
+          number: "553287072428",
+          isGroup: false
+        },
+        messagePayload: {
+          ...messagePayload,
+          hasMedia: true,
+          type
+        },
+        contextPayload: { whatsappId: 35, unreadMessages: 0 },
+        cloudMedia: { id: `media-${type}` }
+      },
+      mediaPayload
+    });
+
+    expect(result).toEqual({ status: "persisted" });
+    expect(saveMediaFileMock).toHaveBeenCalledWith(mediaPayload);
+    expect(createMessageServiceMock).toHaveBeenCalledWith({
+      messageData: expect.objectContaining({
+        id: "wamid.coex.echo.persist.1",
+        fromMe: true,
+        read: true,
+        mediaType: type,
+        mediaUrl,
+        createdAt: new Date(1770000100 * 1000)
+      }),
+      broadcastToTicketRoom: true,
+      broadcastToStatus: false,
+      broadcastToNotification: false
+    });
+  });
+
+  it("skips echo media without a resolved payload", async () => {
     const result = await ProcessCloudApiMessageEchoWebhook({
       normalizedMessage: {
         contactPayload: {
@@ -246,6 +299,32 @@ describe("ProcessCloudApiMessageEchoWebhook", () => {
 
     expect(contactFindOneMock).not.toHaveBeenCalled();
     expect(findOrCreateTicketServiceMock).not.toHaveBeenCalled();
+    expect(createMessageServiceMock).not.toHaveBeenCalled();
+  });
+
+  it("does not save duplicate echo media", async () => {
+    messageFindByPkMock.mockResolvedValue({ id: messagePayload.id });
+
+    const result = await ProcessCloudApiMessageEchoWebhook({
+      normalizedMessage: {
+        contactPayload: {
+          name: "553287072428",
+          number: "553287072428",
+          isGroup: false
+        },
+        messagePayload: { ...messagePayload, hasMedia: true, type: "audio" },
+        contextPayload: { whatsappId: 35, unreadMessages: 0 },
+        cloudMedia: { id: "media-audio" }
+      },
+      mediaPayload: {
+        filename: "echo.ogg",
+        mimetype: "audio/ogg",
+        data: "ZmFrZS1hdWRpbw=="
+      }
+    });
+
+    expect(result).toEqual({ status: "duplicate" });
+    expect(saveMediaFileMock).not.toHaveBeenCalled();
     expect(createMessageServiceMock).not.toHaveBeenCalled();
   });
 });

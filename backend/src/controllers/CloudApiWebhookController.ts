@@ -215,8 +215,41 @@ export const receive = async (req: Request, res: Response): Promise<Response> =>
 
   for (const normalizedMessage of normalizedMessages) {
     if (normalizedMessage.isCoexistenceMessageEcho) {
+      let mediaPayload: MediaPayload | undefined;
+
+      if (normalizedMessage.cloudMedia) {
+        const cloudApiClient = new CloudApiClient({
+          accessToken: whatsapp.accessToken,
+          phoneNumberId: whatsapp.phoneNumberId,
+          apiVersion: whatsapp.apiVersion
+        });
+
+        const mediaMetadata = await cloudApiClient.retrieveMedia(
+          normalizedMessage.cloudMedia.id
+        );
+
+        if (!mediaMetadata.url) {
+          throw new AppError("ERR_CLOUD_API_MEDIA_URL_REQUIRED");
+        }
+
+        const downloadedMedia = await cloudApiClient.downloadMedia(
+          mediaMetadata.url
+        );
+
+        mediaPayload = {
+          filename: normalizedMessage.cloudMedia.filename || "",
+          mimetype:
+            downloadedMedia.mimetype ||
+            mediaMetadata.mime_type ||
+            normalizedMessage.cloudMedia.mimetype ||
+            "application/octet-stream",
+          data: downloadedMedia.data.toString("base64")
+        };
+      }
+
       await ProcessCloudApiMessageEchoWebhook({
-        normalizedMessage
+        normalizedMessage,
+        mediaPayload
       });
       continue;
     }

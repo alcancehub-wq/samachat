@@ -1,7 +1,9 @@
 ﻿import {
   ContactPayload,
+  MediaPayload,
   MessagePayload,
-  WhatsappContextPayload
+  WhatsappContextPayload,
+  saveMediaFile
 } from "../../handlers/handleWhatsappEvents";
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
@@ -20,6 +22,7 @@ interface Request {
     contextPayload: WhatsappContextPayload;
     cloudMedia?: CloudMedia;
   };
+  mediaPayload?: MediaPayload;
 }
 
 type ResultStatus =
@@ -38,11 +41,12 @@ const TicketModel = Ticket as any;
 const MessageModel = Message as any;
 
 const ProcessCloudApiMessageEchoWebhook = async ({
-  normalizedMessage
+  normalizedMessage,
+  mediaPayload
 }: Request): Promise<Result> => {
   const { contactPayload, messagePayload, contextPayload } = normalizedMessage;
 
-  if (normalizedMessage.cloudMedia) {
+  if (normalizedMessage.cloudMedia && !mediaPayload) {
     return { status: "media_unresolved" };
   }
 
@@ -86,6 +90,11 @@ const ProcessCloudApiMessageEchoWebhook = async ({
     return { status: "duplicate" };
   }
 
+  const persistedMediaUrl =
+    mediaPayload && messagePayload.hasMedia
+      ? await saveMediaFile(mediaPayload)
+      : undefined;
+
   await CreateMessageService({
     messageData: {
       id: messagePayload.id,
@@ -93,7 +102,10 @@ const ProcessCloudApiMessageEchoWebhook = async ({
       body: messagePayload.body,
       fromMe: true,
       read: true,
-      mediaType: messagePayload.type,
+      mediaType: persistedMediaUrl
+        ? mediaPayload!.mimetype.split("/")[0]
+        : messagePayload.type,
+      ...(persistedMediaUrl ? { mediaUrl: persistedMediaUrl } : {}),
       ack: messagePayload.ack !== undefined ? messagePayload.ack : 0,
       createdAt: new Date(messagePayload.timestamp * 1000)
     },

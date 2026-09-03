@@ -255,7 +255,9 @@ const processLocationMessage = (
   return messagePayload;
 };
 
-const saveMediaFile = async (mediaPayload: MediaPayload): Promise<string> => {
+export const saveMediaFile = async (
+  mediaPayload: MediaPayload
+): Promise<string> => {
   const randomId = makeRandomId(5);
   const { filename: originalFilename } = mediaPayload;
 

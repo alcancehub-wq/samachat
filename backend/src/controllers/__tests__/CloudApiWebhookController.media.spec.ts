@@ -3,6 +3,7 @@ import Whatsapp from "../../models/Whatsapp";
 import VerifyCloudApiSignature from "../../services/CloudApiWebhookServices/VerifyCloudApiSignature";
 import NormalizeCloudApiWebhook from "../../services/CloudApiWebhookServices/NormalizeCloudApiWebhook";
 import CloudApiClient from "../../services/CloudApiServices/CloudApiClient";
+import ProcessCloudApiMessageEchoWebhook from "../../services/CloudApiWebhookServices/ProcessCloudApiMessageEchoWebhook";
 import {
   handleMessage,
   handleMessageAck
@@ -33,6 +34,14 @@ jest.mock("../../services/CloudApiServices/CloudApiClient", () => ({
   default: jest.fn()
 }));
 
+jest.mock(
+  "../../services/CloudApiWebhookServices/ProcessCloudApiMessageEchoWebhook",
+  () => ({
+    __esModule: true,
+    default: jest.fn()
+  })
+);
+
 jest.mock("../../handlers/handleWhatsappEvents", () => ({
   handleMessage: jest.fn(),
   handleMessageAck: jest.fn()
@@ -45,6 +54,7 @@ describe("CloudApiWebhookController inbound media", () => {
   const cloudClientMock = CloudApiClient as unknown as jest.Mock;
   const handleMessageMock = handleMessage as jest.Mock;
   const handleMessageAckMock = handleMessageAck as jest.Mock;
+  const processMessageEchoMock = ProcessCloudApiMessageEchoWebhook as jest.Mock;
 
   const retrieveMediaMock = jest.fn();
   const downloadMediaMock = jest.fn();
@@ -77,6 +87,7 @@ describe("CloudApiWebhookController inbound media", () => {
     whatsappUpdateMock.mockResolvedValue(undefined);
     handleMessageMock.mockResolvedValue(undefined);
     handleMessageAckMock.mockResolvedValue(undefined);
+    processMessageEchoMock.mockResolvedValue({ status: "persisted" });
   });
 
   const receiveStatusWebhook = async (statuses: unknown[]) => {
@@ -346,6 +357,91 @@ describe("CloudApiWebhookController inbound media", () => {
       },
       undefined
     );
+  });
+
+  it.each([
+    ["audio", "audio/ogg", "fake-audio-binary"],
+    ["video", "video/mp4", "fake-video-binary"]
+  ])("downloads coexistence %s media and forwards it to the echo processor", async (type, mimetype, content) => {
+    normalizeMock.mockReturnValue([
+      {
+        isCoexistenceMessageEcho: true,
+        contactPayload: { name: "Cliente", number: "5511999999999", isGroup: false },
+        messagePayload: {
+          id: `wamid.echo.${type}`,
+          body: "",
+          fromMe: true,
+          hasMedia: true,
+          type,
+          timestamp: 1770000000,
+          from: "629748506897910@c.us",
+          to: "5511999999999@c.us",
+          ack: 0
+        },
+        contextPayload: { whatsappId: 35, unreadMessages: 0 },
+        cloudMedia: { id: `meta-media-${type}`, type, mimetype }
+      }
+    ]);
+    retrieveMediaMock.mockResolvedValue({
+      id: `meta-media-${type}`,
+      url: `https://lookaside.fbsbx.com/${type}-1`,
+      mime_type: mimetype
+    });
+    downloadMediaMock.mockResolvedValue({ data: Buffer.from(content), mimetype });
+
+    await receive(
+      {
+        params: { whatsappId: "35" },
+        headers: { "x-hub-signature-256": "sha256=test" },
+        rawBody: Buffer.from("{}"),
+        body: {}
+      } as any,
+      { status: jest.fn().mockReturnValue({ send: jest.fn() }) } as any
+    );
+
+    expect(retrieveMediaMock).toHaveBeenCalledWith(`meta-media-${type}`);
+    expect(downloadMediaMock).toHaveBeenCalledWith(
+      `https://lookaside.fbsbx.com/${type}-1`
+    );
+    expect(processMessageEchoMock).toHaveBeenCalledWith({
+      normalizedMessage: expect.objectContaining({
+        isCoexistenceMessageEcho: true,
+        messagePayload: expect.objectContaining({ id: `wamid.echo.${type}` })
+      }),
+      mediaPayload: {
+        filename: "",
+        mimetype,
+        data: Buffer.from(content).toString("base64")
+      }
+    });
+    expect(handleMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("forwards coexistence text without a media download", async () => {
+    normalizeMock.mockReturnValue([
+      {
+        isCoexistenceMessageEcho: true,
+        contactPayload: { name: "Cliente", number: "5511999999999", isGroup: false },
+        messagePayload: { id: "wamid.echo.text", body: "Ola", fromMe: true, hasMedia: false, type: "chat", timestamp: 1770000000, from: "629748506897910@c.us", to: "5511999999999@c.us" },
+        contextPayload: { whatsappId: 35, unreadMessages: 0 }
+      }
+    ]);
+
+    await receive(
+      { params: { whatsappId: "35" }, headers: { "x-hub-signature-256": "sha256=test" }, rawBody: Buffer.from("{}"), body: {} } as any,
+      { status: jest.fn().mockReturnValue({ send: jest.fn() }) } as any
+    );
+
+    expect(cloudClientMock).not.toHaveBeenCalled();
+    expect(retrieveMediaMock).not.toHaveBeenCalled();
+    expect(downloadMediaMock).not.toHaveBeenCalled();
+    expect(processMessageEchoMock).toHaveBeenCalledWith({
+      normalizedMessage: expect.objectContaining({
+        messagePayload: expect.objectContaining({ id: "wamid.echo.text" })
+      }),
+      mediaPayload: undefined
+    });
+    expect(handleMessageMock).not.toHaveBeenCalled();
   });
 
   it("rejects media event when Meta metadata does not return a URL", async () => {
