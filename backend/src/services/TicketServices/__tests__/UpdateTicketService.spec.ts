@@ -1,4 +1,5 @@
 ﻿import Tag from "../../../models/Tag";
+import Ticket from "../../../models/Ticket";
 import User from "../../../models/User";
 import { getIO } from "../../../libs/socket";
 import CheckContactOpenTickets from "../../../helpers/CheckContactOpenTickets";
@@ -16,6 +17,10 @@ jest.mock("../../../models/User", () => ({
   findByPk: jest.fn()
 }));
 
+jest.mock("../../../models/Ticket", () => ({
+  update: jest.fn()
+}));
+
 jest.mock("../../../libs/socket", () => ({
   getIO: jest.fn()
 }));
@@ -28,6 +33,7 @@ jest.mock("../../../helpers/GetDefaultWhatsAppByUser", () => jest.fn());
 jest.mock("../ShowTicketService", () => jest.fn());
 
 const tagFindOneMock = Tag.findOne as jest.Mock;
+const ticketStaticUpdateMock = Ticket.update as jest.Mock;
 const userFindByPkMock = User.findByPk as jest.Mock;
 const getIOMock = getIO as jest.Mock;
 const checkContactOpenTicketsMock = CheckContactOpenTickets as jest.Mock;
@@ -77,6 +83,7 @@ describe("UpdateTicketService", () => {
     setTicketMessagesAsReadMock.mockResolvedValue(undefined);
     getDefaultWhatsAppByUserMock.mockResolvedValue(null);
     userFindByPkMock.mockResolvedValue(null);
+    ticketStaticUpdateMock.mockResolvedValue([1]);
   });
 
   it("preserves manual reopen cleanup by removing only the Follow up tag", async () => {
@@ -252,5 +259,37 @@ describe("UpdateTicketService", () => {
     ).rejects.toMatchObject({
       message: "ERR_TRANSFER_QUEUE_NOT_ALLOWED"
     });
+  });
+
+  it("T16 atomically claims a pending unowned ticket and rejects the losing accept", async () => {
+    const firstRead = buildTicket({
+      status: "pending",
+      user: null,
+      userId: null
+    });
+    const secondRead = buildTicket({
+      status: "pending",
+      user: null,
+      userId: null
+    });
+    showTicketServiceMock.mockResolvedValueOnce(firstRead).mockResolvedValueOnce(secondRead);
+    ticketStaticUpdateMock.mockResolvedValueOnce([1]).mockResolvedValueOnce([0]);
+
+    await expect(
+      UpdateTicketService({ ticketId: 41, ticketData: { status: "open", userId: 8 } })
+    ).resolves.toMatchObject({ ticket: firstRead });
+
+    await expect(
+      UpdateTicketService({ ticketId: 41, ticketData: { status: "open", userId: 9 } })
+    ).rejects.toMatchObject({ message: "ERR_TICKET_ALREADY_ACCEPTED", statusCode: 409 });
+
+    expect(ticketStaticUpdateMock).toHaveBeenNthCalledWith(1,
+      { status: "open", userId: 8 },
+      { where: { id: 41, status: "pending", userId: null } }
+    );
+    expect(ticketStaticUpdateMock).toHaveBeenNthCalledWith(2,
+      { status: "open", userId: 9 },
+      { where: { id: 41, status: "pending", userId: null } }
+    );
   });
 });

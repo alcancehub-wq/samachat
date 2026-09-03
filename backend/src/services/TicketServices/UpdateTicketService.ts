@@ -93,9 +93,33 @@ const UpdateTicketService = async ({
   } = ticketData;
 
   const ticket = await ShowTicketService(ticketId, accessData);
-
   const oldStatus = ticket.status;
   const oldUserId = ticket.user?.id;
+
+  if (
+    status === "open" &&
+    ticket.status === "pending" &&
+    !ticket.userId &&
+    userId
+  ) {
+    const [claimedCount] = await Ticket.update(
+      { status: "open", userId },
+      {
+        where: {
+          id: ticket.id,
+          status: "pending",
+          userId: null
+        }
+      }
+    );
+
+    if (claimedCount !== 1) {
+      throw new AppError("ERR_TICKET_ALREADY_ACCEPTED", 409);
+    }
+
+    await ticket.reload({ include: ["contact", "queue", "whatsapp", "user", "tags"] });
+  }
+
   const oldWhatsappId = ticket.whatsappId;
   const nextStatus = status || oldStatus;
   const nextLostAt =
@@ -132,11 +156,11 @@ const UpdateTicketService = async ({
   });
 
   if (nextWhatsappId && ticket.whatsappId !== nextWhatsappId) {
-    await CheckContactOpenTickets(ticket.contactId, nextWhatsappId);
+    await CheckContactOpenTickets(ticket.contactId, nextWhatsappId, ticket.id);
   }
 
   if (oldStatus === "closed") {
-    await CheckContactOpenTickets(ticket.contact.id, ticket.whatsappId);
+    await CheckContactOpenTickets(ticket.contact.id, ticket.whatsappId, ticket.id);
   }
 
   await ticket.update({

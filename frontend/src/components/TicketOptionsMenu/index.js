@@ -110,6 +110,10 @@ const TicketOptionsMenu = ({
         };
 
         const handleMarkAsResolved = () => {
+                if (!window.confirm("Encerrar este atendimento? O envio de mensagens ficará indisponível.")) {
+                        return;
+                }
+
                 handleUpdateTicket({
                         status: "closed",
                         userId: ticket.userId || user?.id || null,
@@ -118,6 +122,10 @@ const TicketOptionsMenu = ({
         };
 
         const handleMarkAsLost = () => {
+                if (!window.confirm("Marcar este atendimento como perdido? O envio de mensagens ficará indisponível.")) {
+                        return;
+                }
+
                 handleUpdateTicket({
                         status: "lost",
                         userId: ticket.userId || user?.id || null,

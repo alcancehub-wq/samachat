@@ -1,11 +1,12 @@
-import { Op } from "sequelize";
+import { Transaction } from "sequelize";
 import AppError from "../../errors/AppError";
-import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
+import sequelize from "../../database";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import GetDefaultWhatsAppByUser from "../../helpers/GetDefaultWhatsAppByUser";
+import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
 import User from "../../models/User";
-import ShowContactService from "../ContactServices/ShowContactService";
+import ResolveOperationalTicketService from "./ResolveOperationalTicketService";
 
 interface Request {
   contactId: number;
@@ -22,32 +23,6 @@ const buildExclusiveContactErrorMessage = (responsibleName?: string | null): str
   return "Este contato já possui atendimento anterior com outro responsável. Para continuar, transfira o contato ou solicite liberação a um administrador.";
 };
 
-const findConflictingOwnerTicket = async (
-  contactId: number,
-  userId: number
-): Promise<Ticket | null> => {
-  const activeTickets = await Ticket.findAll({
-    where: {
-      contactId,
-      status: {
-        [Op.in]: ["open", "pending"]
-      }
-    },
-    order: [["updatedAt", "DESC"], ["id", "DESC"]]
-  });
-
-  const conflictingTickets = activeTickets.filter(
-    ticket => ticket.userId && Number(ticket.userId) !== Number(userId)
-  );
-
-  if (!conflictingTickets.length) {
-    return null;
-  }
-
-  const openTicket = conflictingTickets.find(ticket => ticket.status === "open");
-  return openTicket || conflictingTickets[0];
-};
-
 const CreateTicketService = async ({
   contactId,
   status,
@@ -61,54 +36,55 @@ const CreateTicketService = async ({
   if (!defaultWhatsapp) {
     throw new AppError("ERR_USER_WAPP_NOT_FOUND");
   }
-  const contact = await ShowContactService(contactId);
+  const id = await sequelize.transaction(async (transaction: Transaction) => {
+    const contact = await Contact.findByPk(contactId, {
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
 
-  if (!contact.allowMultipleConversations) {
-    const conflictingOwnerTicket = await findConflictingOwnerTicket(
+    if (!contact) {
+      throw new AppError("ERR_NO_CONTACT_FOUND", 404);
+    }
+
+    const existingTicket = await ResolveOperationalTicketService({
       contactId,
-      userId
-    );
+      allowMultipleConversations: contact.allowMultipleConversations,
+      whatsappId: defaultWhatsapp.id,
+      transaction
+    });
 
-    if (conflictingOwnerTicket) {
-      const responsibleUser = await User.findByPk(conflictingOwnerTicket.userId, {
-        attributes: ["id", "name"]
-      });
+    if (existingTicket) {
+      const responsibleUser = existingTicket.userId
+        ? await User.findByPk(existingTicket.userId, {
+            attributes: ["id", "name"],
+            transaction
+          })
+        : null;
 
       throw new AppError(
-        buildExclusiveContactErrorMessage(responsibleUser?.name)
+        contact.allowMultipleConversations
+          ? "ERR_OTHER_OPEN_TICKET"
+          : buildExclusiveContactErrorMessage(responsibleUser?.name),
+        409
       );
     }
-  }
 
-  const existingTicket = await Ticket.findOne({
-    where: {
+    if (queueId === undefined) {
+      const user = await User.findByPk(userId, { include: ["queues"], transaction });
+      queueId = user?.queues.length === 1 ? user.queues[0].id : undefined;
+    }
+
+    const ticket = await Ticket.create({
       contactId,
       whatsappId: defaultWhatsapp.id,
-      status: {
-        [Op.or]: ["open", "pending"]
-      }
-    },
-    order: [["updatedAt", "DESC"]]
-  });
+      status,
+      isGroup: contact.isGroup,
+      userId,
+      queueId,
+      pendingSince: status === "pending" ? new Date() : undefined
+    }, { transaction });
 
-  if (existingTicket) {
-    throw new AppError("ERR_OTHER_OPEN_TICKET");
-  }
-
-  await CheckContactOpenTickets(contactId, defaultWhatsapp.id);
-
-  if (queueId === undefined) {
-    const user = await User.findByPk(userId, { include: ["queues"] });
-    queueId = user?.queues.length === 1 ? user.queues[0].id : undefined;
-  }
-
-  const { id }: Ticket = await defaultWhatsapp.$create("ticket", {
-    contactId,
-    status,
-    isGroup: contact.isGroup,
-    userId,
-		queueId,
-		pendingSince: status === "pending" ? new Date() : undefined
+    return ticket.id;
   });
 
   const ticket = await Ticket.findByPk(id, { include: ["contact"] });

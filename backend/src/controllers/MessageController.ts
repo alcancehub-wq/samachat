@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 
+import AppError from "../errors/AppError";
 import { getScopedNotificationRoom, getScopedTicketsRoom } from "../helpers/socketRooms";
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
@@ -96,6 +97,10 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     userId: req.user.id,
     profile: req.user.profile
   });
+
+  if (!isInternal && ticket.status !== "open") {
+    throw new AppError("ERR_TICKET_NOT_OPEN_FOR_SEND", 409);
+  }
 
   if (hasComposerRecordedAudio) {
     logger.info(

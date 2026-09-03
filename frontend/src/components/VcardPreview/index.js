@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext } from 'react';
 import { useHistory } from "react-router-dom";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
+import findExistingTicketByContact from "../../services/findExistingTicketByContact";
 
 import Avatar from "@material-ui/core/Avatar";
 import Typography from "@material-ui/core/Typography";
@@ -46,6 +47,13 @@ const VcardPreview = ({ contact, numbers }) => {
 
     const handleNewChat = async () => {
         try {
+            const existingTicket = await findExistingTicketByContact(selectedContact);
+
+            if (existingTicket?.id) {
+                history.push(`/tickets/${existingTicket.id}`);
+                return;
+            }
+
             const { data: ticket } = await api.post("/tickets", {
                 contactId: selectedContact.id,
                 userId: user.id,
