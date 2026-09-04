@@ -364,4 +364,52 @@ describe("ProcessCloudApiHistoryWebhook", () => {
     });
     expect(createMessageMock).toHaveBeenCalledTimes(2);
   });
+
+  it("skips an outbound media duplicate before creating the media client", async () => {
+    (Message.findAll as jest.Mock).mockResolvedValueOnce([
+      { id: "fallback_1770000100", createdAt: new Date(1770000100 * 1000) }
+    ]);
+
+    await ProcessCloudApiHistoryWebhook({
+      whatsappId: 35,
+      payload: buildPayload(mediaMessage("image"))
+    });
+
+    expect(whatsappFindByPkMock).not.toHaveBeenCalled();
+    expect(retrieveMediaMock).not.toHaveBeenCalled();
+    expect(downloadMediaMock).not.toHaveBeenCalled();
+    expect(saveMediaFileMock).not.toHaveBeenCalled();
+  });
+
+  it.each(["ptt", "chat"])("deduplicates outbound audio persisted as %s before download", async persistedType => {
+    (Message.findAll as jest.Mock).mockResolvedValueOnce([
+      { id: "fallback_audio", createdAt: new Date(1770000100 * 1000) }
+    ]);
+
+    await ProcessCloudApiHistoryWebhook({
+      whatsappId: 35,
+      payload: buildPayload(mediaMessage("audio"))
+    });
+
+    expect(Message.findAll).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ mediaType: expect.anything() })
+    }));
+    const mediaTypes = (Message.findAll as jest.Mock).mock.calls[0][0].where.mediaType;
+    const mediaTypeValues = mediaTypes[Object.getOwnPropertySymbols(mediaTypes)[0]];
+    expect(mediaTypeValues).toContain(persistedType);
+    expect(retrieveMediaMock).not.toHaveBeenCalled();
+  });
+
+  it("uses the persisted filename when media has neither caption nor original filename", async () => {
+    await ProcessCloudApiHistoryWebhook({
+      whatsappId: 35,
+      payload: buildPayload(mediaMessage("image", {
+        image: { id: "media-image" }
+      }))
+    });
+
+    expect(createMessageMock).toHaveBeenCalledWith(expect.objectContaining({
+      messageData: expect.objectContaining({ body: "stored-file" })
+    }));
+  });
 });

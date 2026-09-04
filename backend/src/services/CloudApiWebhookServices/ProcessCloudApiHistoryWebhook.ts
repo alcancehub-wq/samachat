@@ -66,6 +66,14 @@ const HISTORICAL_MEDIA_TYPES = ["audio", "image", "video", "document"] as const;
 type HistoricalMediaType = typeof HISTORICAL_MEDIA_TYPES[number];
 type HistoricalMedia = NonNullable<CloudApiHistoryMessage["audio"]>;
 
+const buildEquivalentOutboundMediaTypes = (mediaType: string): string[] => {
+  if (mediaType === "audio" || mediaType === "ptt") {
+    return ["audio", "ptt", "chat"];
+  }
+
+  return [mediaType];
+};
+
 const isTemporaryOutboundId = (value?: string): boolean =>
   Boolean(
     value &&
@@ -83,13 +91,13 @@ const findHistoricalOutboundDuplicate = async ({
   messageId,
   ticketId,
   body,
-  mediaType,
+  mediaTypes,
   providerCreatedAt
 }: {
   messageId: string;
   ticketId: number;
   body: string;
-  mediaType: string;
+  mediaTypes: string[];
   providerCreatedAt: Date;
 }): Promise<boolean> => {
   const messageTimestampMs = providerCreatedAt.getTime();
@@ -98,7 +106,10 @@ const findHistoricalOutboundDuplicate = async ({
       ticketId,
       fromMe: true,
       body,
-      mediaType,
+      mediaType:
+        mediaTypes.length === 1
+          ? mediaTypes[0]
+          : { [Op.in]: mediaTypes },
       createdAt: {
         [Op.between]: [
           new Date(messageTimestampMs - OUTBOUND_DUPLICATE_WINDOW_SECONDS * 1000),
@@ -206,6 +217,24 @@ const ProcessCloudApiHistoryWebhook = async ({
               let body = message.text?.body || "";
               let mediaUrl: string | undefined;
 
+              const deduplicationBody = historicalMedia
+                ? historicalMedia.media.caption || historicalMedia.media.filename || ""
+                : body;
+
+              if (
+                fromMe &&
+                await findHistoricalOutboundDuplicate({
+                  messageId: message.id,
+                  ticketId: ticket.id,
+                  body: deduplicationBody,
+                  mediaTypes: buildEquivalentOutboundMediaTypes(mediaType),
+                  providerCreatedAt
+                })
+              ) {
+                skippedMessages += 1;
+                continue;
+              }
+
               if (historicalMedia) {
                 if (!historicalMedia.media.id) {
                   skippedMessages += 1;
@@ -250,25 +279,11 @@ const ProcessCloudApiHistoryWebhook = async ({
                     mimetype,
                     data: downloadedMedia.data.toString("base64")
                   });
-                  body = historicalMedia.media.caption || filename;
+                  body = historicalMedia.media.caption || filename || mediaUrl || "";
                 } catch {
                   skippedMessages += 1;
                   continue;
                 }
-              }
-
-              if (
-                fromMe &&
-                await findHistoricalOutboundDuplicate({
-                  messageId: message.id,
-                  ticketId: ticket.id,
-                  body,
-                  mediaType,
-                  providerCreatedAt
-                })
-              ) {
-                skippedMessages += 1;
-                continue;
               }
 
               await CreateMessageService({
