@@ -839,14 +839,16 @@ const createWWebJsReconciliationAdapter = <
           signal.throwIfAborted();
 
           /*
-           * Normal P05 does not enumerate the global address
-           * book. A targeted repair is different: only the
-           * selected client's provider identities are queried,
-           * allowing contact metadata/profile picture repair
-           * without session.getContacts().
+           * Global reconciliation enumerates the provider address
+           * book once, independently of message history. Targeted
+           * repair keeps its precise selected-identity lookup.
            */
           if (!hasTargetChatScope) {
-            return [];
+            const contacts = await session.getContacts();
+
+            signal.throwIfAborted();
+
+            return contacts;
           }
 
           const runtimeSession = session as any;

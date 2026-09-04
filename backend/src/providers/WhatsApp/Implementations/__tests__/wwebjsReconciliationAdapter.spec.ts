@@ -111,7 +111,7 @@ describe(
     );
 
     it(
-      "collects bounded chat history without enumerating the global contact catalog",
+      "collects global contacts independently of bounded chat history",
       async () => {
         const rawMessage: any = {
           id: {
@@ -248,7 +248,7 @@ describe(
 
         expect(
           session.getContacts
-        ).not.toHaveBeenCalled();
+        ).toHaveBeenCalledTimes(1);
 
         expect(
           chat.fetchMessages
@@ -260,7 +260,7 @@ describe(
 
         expect(
           work.contacts
-        ).toHaveLength(0);
+        ).toHaveLength(1);
 
         expect(
           processNewMessage
@@ -395,7 +395,7 @@ describe(
           .not.toHaveBeenCalled();
 
         expect(getContacts)
-          .not.toHaveBeenCalled();
+          .toHaveBeenCalledTimes(1);
 
         expect(work.messages)
           .toHaveLength(0);
@@ -551,13 +551,105 @@ describe(
           .not.toHaveBeenCalled();
 
         expect(getContacts)
-          .not.toHaveBeenCalled();
+          .toHaveBeenCalledTimes(1);
 
         expect(evaluate)
           .toHaveBeenCalled();
 
         expect(work.messages)
           .toHaveLength(1);
+
+        expect(work.contacts)
+          .toHaveLength(0);
+      }
+    );
+
+    it(
+      "keeps targeted contact lookup independent from the global catalog",
+      async () => {
+        const rawMessage: any = {
+          id: { id: "targeted-message" },
+          timestamp: 2000
+        };
+
+        const getContacts = jest.fn(async () => {
+          throw new Error("GLOBAL_CATALOG_MUST_NOT_BE_USED");
+        });
+
+        const getContactById = jest.fn(async () => ({
+          id: {
+            user: "5511999999999",
+            _serialized: "5511999999999@c.us"
+          },
+          name: "Targeted contact",
+          isGroup: false
+        }));
+
+        const orchestrator = createWWebJsReconciliationAdapter({
+          whatsappId: 101,
+          session: {
+            getChats: async () => [{
+              id: { _serialized: "5511999999999@c.us" },
+              lastMessage: rawMessage,
+              fetchMessages: async () => [rawMessage]
+            }],
+            getContacts,
+            getContactById
+          } as any,
+          targetChatIds: ["5511999999999@c.us"],
+          captureBoundaryAt: () => new Date(2000 * 1000),
+          resolveMessageId: message => (message as any).id.id,
+          shouldHandleMessage: () => true,
+          resolveMessageMetadata: async () => ({
+            number: "5511999999999",
+            isGroup: false
+          }),
+          processNewMessage: async () => undefined,
+          services: {
+            getCheckpoint: async () => new Date(0),
+            saveCheckpoint: async () => undefined,
+            classifyMessage: async () => "new"
+          }
+        });
+
+        const work = await orchestrator.collectWork(makeSignal() as any);
+
+        expect(getContacts).not.toHaveBeenCalled();
+        expect(getContactById).toHaveBeenCalledWith("5511999999999@c.us");
+        expect(work.contacts).toHaveLength(1);
+      }
+    );
+
+    it(
+      "returns no global contact work when the provider catalog is empty",
+      async () => {
+        const getContacts = jest.fn(async () => []);
+
+        const orchestrator = createWWebJsReconciliationAdapter({
+          whatsappId: 101,
+          session: {
+            getChats: async () => [],
+            getContacts
+          },
+          captureBoundaryAt: () => new Date(2000 * 1000),
+          resolveMessageId: () => "unused",
+          shouldHandleMessage: () => true,
+          resolveMessageMetadata: async () => ({
+            number: "5511999999999",
+            isGroup: false
+          }),
+          processNewMessage: async () => undefined,
+          services: {
+            getCheckpoint: async () => new Date(0),
+            saveCheckpoint: async () => undefined,
+            classifyMessage: async () => "new"
+          }
+        });
+
+        const work = await orchestrator.collectWork(makeSignal() as any);
+
+        expect(getContacts).toHaveBeenCalledTimes(1);
+        expect(work.contacts).toEqual([]);
       }
     );
     it(
