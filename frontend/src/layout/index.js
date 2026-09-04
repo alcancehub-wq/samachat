@@ -375,21 +375,6 @@ const LoggedInLayout = ({ children }) => {
         )
       : null;
 
-
-  const reconciliationTicketId = (() => {
-    const match = location.pathname.match(/^\/tickets\/(\d+)\/?$/);
-
-    if (!match) {
-      return null;
-    }
-
-    const ticketId = Number(match[1]);
-
-    return Number.isInteger(ticketId) && ticketId > 0
-      ? ticketId
-      : null;
-  })();
-
   const canUseManualReconciliation = Boolean(
     user?.id &&
     canViewConnections &&
@@ -585,9 +570,7 @@ const LoggedInLayout = ({ children }) => {
     try {
       const { data } = await api.post(
         `/whatsapp/${reconciliationWhatsApp.id}/reconcile`,
-        reconciliationTicketId
-          ? { ticketId: reconciliationTicketId }
-          : {}
+        {}
       );
 
       if (data?.state) {
