@@ -167,4 +167,111 @@ describe("CreateOrUpdateContactService", () => {
     });
     expect(result).toBe(createdContact);
   });
+
+  it("creates LID-only contacts with a nullable number", async () => {
+    const firstContact = { id: 17182 };
+    const secondContact = { id: 17183 };
+    contactCreateMock
+      .mockResolvedValueOnce(firstContact)
+      .mockResolvedValueOnce(secondContact);
+
+    await CreateOrUpdateContactService({
+      name: "Contato LID 1",
+      lid: "111111@lid",
+      isGroup: false,
+      whatsappId: 35
+    });
+
+    await CreateOrUpdateContactService({
+      name: "Contato LID 2",
+      lid: "222222@lid",
+      isGroup: false,
+      whatsappId: 35
+    });
+
+    expect(contactCreateMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        number: null,
+        lid: "111111@lid"
+      })
+    );
+    expect(contactCreateMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        number: null,
+        lid: "222222@lid"
+      })
+    );
+  });
+
+  it("updates the contact resolved by LID without creating another contact", async () => {
+    const existingLidContact = {
+      id: 17184,
+      name: "Contato LID",
+      number: null,
+      lid: "333333@lid",
+      profilePicUrl: null,
+      update: jest.fn().mockResolvedValue(undefined)
+    };
+    contactFindOneMock.mockResolvedValueOnce(existingLidContact);
+
+    const result = await CreateOrUpdateContactService({
+      name: "Nome atualizado",
+      lid: "333333@lid",
+      isGroup: false,
+      whatsappId: 35
+    });
+
+    expect(existingLidContact.update).toHaveBeenCalledWith({
+      name: "Contato LID",
+      lid: "333333@lid",
+      number: null,
+      profilePicUrl: undefined
+    });
+    expect(contactCreateMock).not.toHaveBeenCalled();
+    expect(result).toBe(existingLidContact);
+  });
+
+  it("merges distinct number and LID contacts into the preferred number contact", async () => {
+    const numberContact = {
+      id: 17185,
+      name: "Número",
+      number: "5511999999999",
+      lid: null,
+      profilePicUrl: null,
+      update: jest.fn().mockResolvedValue(undefined)
+    };
+    const lidContact = {
+      id: 17186,
+      name: "LID",
+      number: null,
+      lid: "444444@lid",
+      profilePicUrl: null,
+      destroy: jest.fn().mockResolvedValue(undefined)
+    };
+    contactFindAllMock.mockResolvedValue([numberContact]);
+    contactFindOneMock.mockResolvedValueOnce(lidContact);
+
+    const result = await CreateOrUpdateContactService({
+      name: "Contato unificado",
+      number: "5511999999999",
+      lid: "444444@lid",
+      isGroup: false,
+      whatsappId: 35
+    });
+
+    expect(Ticket.update).toHaveBeenCalledWith(
+      { contactId: numberContact.id },
+      { where: { contactId: lidContact.id } }
+    );
+    expect(lidContact.destroy).toHaveBeenCalledTimes(1);
+    expect(numberContact.update).toHaveBeenCalledWith({
+      name: "Número",
+      lid: "444444@lid",
+      profilePicUrl: undefined
+    });
+    expect(contactCreateMock).not.toHaveBeenCalled();
+    expect(result).toBe(numberContact);
+  });
 });

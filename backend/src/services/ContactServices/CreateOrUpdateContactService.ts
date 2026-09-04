@@ -294,7 +294,7 @@ const CreateOrUpdateContactService = async ({
       number,
       lid: normalizedLid
     }),
-    number,
+    number: number || null,
     lid: normalizedLid,
 		profilePicUrl: resolvedProfilePicUrl,
     email,
