@@ -18,9 +18,30 @@ const GetProfilePicUrl = async (
       defaultWhatsapp.id,
       number
     );
+    logger.info(
+      {
+        event: "p05_profile_pic_lookup",
+        whatsappId: defaultWhatsapp.id,
+        number,
+        provider: process.env.WHATSAPP_PROVIDER || "wwebjs",
+        result: profilePicUrl ? "present" : "empty"
+      },
+      "Profile picture lookup completed"
+    );
     return profilePicUrl;
   } catch (err) {
-    logger.warn(err, "Failed to fetch profile picture");
+    logger.warn(
+      {
+        event: "p05_profile_pic_lookup",
+        whatsappId: defaultWhatsapp.id,
+        number,
+        provider: process.env.WHATSAPP_PROVIDER || "wwebjs",
+        result: "error",
+        errorName: err instanceof Error ? err.name : null,
+        errorMessage: err instanceof Error ? err.message : String(err)
+      },
+      "Profile picture lookup failed"
+    );
     return "";
   }
 };
