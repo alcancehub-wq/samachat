@@ -1,7 +1,10 @@
 import Contact from "../../models/Contact";
 import Message from "../../models/Message";
+import Whatsapp from "../../models/Whatsapp";
 import CreateMessageService from "../MessageServices/CreateMessageService";
 import ResolveOperationalTicketService from "../TicketServices/ResolveOperationalTicketService";
+import CloudApiClient from "../CloudApiServices/CloudApiClient";
+import { saveMediaFile } from "../../handlers/handleWhatsappEvents";
 import { Op } from "sequelize";
 
 interface CloudApiHistoryMessage {
@@ -10,6 +13,10 @@ interface CloudApiHistoryMessage {
   timestamp?: string;
   type?: string;
   text?: { body?: string };
+  audio?: { id?: string; mime_type?: string; caption?: string; filename?: string };
+  image?: { id?: string; mime_type?: string; caption?: string; filename?: string };
+  video?: { id?: string; mime_type?: string; caption?: string; filename?: string };
+  document?: { id?: string; mime_type?: string; caption?: string; filename?: string };
 }
 
 interface CloudApiHistoryChange {
@@ -55,6 +62,9 @@ const TEMPORARY_OUTBOUND_ID_PREFIXES = [
   "recorded-audio-accepted-",
   "recorded-audio-echo-"
 ];
+const HISTORICAL_MEDIA_TYPES = ["audio", "image", "video", "document"] as const;
+type HistoricalMediaType = typeof HISTORICAL_MEDIA_TYPES[number];
+type HistoricalMedia = NonNullable<CloudApiHistoryMessage["audio"]>;
 
 const isTemporaryOutboundId = (value?: string): boolean =>
   Boolean(
@@ -73,11 +83,13 @@ const findHistoricalOutboundDuplicate = async ({
   messageId,
   ticketId,
   body,
+  mediaType,
   providerCreatedAt
 }: {
   messageId: string;
   ticketId: number;
   body: string;
+  mediaType: string;
   providerCreatedAt: Date;
 }): Promise<boolean> => {
   const messageTimestampMs = providerCreatedAt.getTime();
@@ -86,7 +98,7 @@ const findHistoricalOutboundDuplicate = async ({
       ticketId,
       fromMe: true,
       body,
-      mediaType: "chat",
+      mediaType,
       createdAt: {
         [Op.between]: [
           new Date(messageTimestampMs - OUTBOUND_DUPLICATE_WINDOW_SECONDS * 1000),
@@ -99,19 +111,27 @@ const findHistoricalOutboundDuplicate = async ({
   });
 
   const normalizedMessageId = normalizeProviderMessageId(messageId);
-  const temporaryCandidate = candidates
+  const matchingCandidates = candidates
     .filter((candidate: any) =>
       candidate.id === messageId ||
       normalizeProviderMessageId(candidate.id) === normalizedMessageId ||
       isTemporaryOutboundId(candidate.id)
-    )
-    .sort(
-      (first: any, second: any) =>
-        Math.abs(first.createdAt.getTime() - messageTimestampMs) -
-        Math.abs(second.createdAt.getTime() - messageTimestampMs)
-    )[0];
+    );
 
-  return Boolean(temporaryCandidate);
+  return matchingCandidates.length === 1;
+};
+
+const getHistoricalMedia = (
+  message: CloudApiHistoryMessage
+): { type: HistoricalMediaType; media: HistoricalMedia } | undefined => {
+  if (!HISTORICAL_MEDIA_TYPES.includes(message.type as HistoricalMediaType)) {
+    return undefined;
+  }
+
+  const type = message.type as HistoricalMediaType;
+  const media = message[type];
+
+  return media ? { type, media } : undefined;
 };
 
 const ProcessCloudApiHistoryWebhook = async ({
@@ -125,6 +145,7 @@ const ProcessCloudApiHistoryWebhook = async ({
   let historyChanges = 0;
   let persistedMessages = 0;
   let skippedMessages = 0;
+  let cloudApiClient: CloudApiClient | undefined;
 
   for (const entry of payload.entry || []) {
     for (const change of entry.changes || []) {
@@ -163,7 +184,13 @@ const ProcessCloudApiHistoryWebhook = async ({
               const isText =
                 message.type === "text" &&
                 typeof message.text?.body === "string";
-              if (!message.id || !timestamp || Number.isNaN(timestamp) || !isText) {
+              const historicalMedia = getHistoricalMedia(message);
+              if (
+                !message.id ||
+                !timestamp ||
+                Number.isNaN(timestamp) ||
+                (!isText && !historicalMedia)
+              ) {
                 skippedMessages += 1;
                 continue;
               }
@@ -175,13 +202,68 @@ const ProcessCloudApiHistoryWebhook = async ({
 
               const providerCreatedAt = new Date(timestamp * 1000);
               const fromMe = message.from !== thread.id;
+              const mediaType = historicalMedia?.type || "chat";
+              let body = message.text?.body || "";
+              let mediaUrl: string | undefined;
+
+              if (historicalMedia) {
+                if (!historicalMedia.media.id) {
+                  skippedMessages += 1;
+                  continue;
+                }
+
+                try {
+                  if (!cloudApiClient) {
+                    const whatsapp = await Whatsapp.findByPk(whatsappId);
+                    if (!whatsapp) {
+                      skippedMessages += 1;
+                      continue;
+                    }
+
+                    cloudApiClient = new CloudApiClient({
+                      accessToken: whatsapp.accessToken,
+                      phoneNumberId: whatsapp.phoneNumberId,
+                      apiVersion: whatsapp.apiVersion
+                    });
+                  }
+
+                  const mediaMetadata = await cloudApiClient.retrieveMedia(
+                    historicalMedia.media.id
+                  );
+                  if (!mediaMetadata.url) {
+                    skippedMessages += 1;
+                    continue;
+                  }
+
+                  const downloadedMedia = await cloudApiClient.downloadMedia(
+                    mediaMetadata.url
+                  );
+                  const filename = historicalMedia.media.filename || "";
+                  const mimetype =
+                    downloadedMedia.mimetype ||
+                    mediaMetadata.mime_type ||
+                    historicalMedia.media.mime_type ||
+                    "application/octet-stream";
+
+                  mediaUrl = await saveMediaFile({
+                    filename,
+                    mimetype,
+                    data: downloadedMedia.data.toString("base64")
+                  });
+                  body = historicalMedia.media.caption || filename;
+                } catch {
+                  skippedMessages += 1;
+                  continue;
+                }
+              }
 
               if (
                 fromMe &&
                 await findHistoricalOutboundDuplicate({
                   messageId: message.id,
                   ticketId: ticket.id,
-                  body: message.text!.body!,
+                  body,
+                  mediaType,
                   providerCreatedAt
                 })
               ) {
@@ -194,10 +276,11 @@ const ProcessCloudApiHistoryWebhook = async ({
                   id: message.id,
                   ticketId: ticket.id,
                   contactId: contact.id,
-                  body: message.text?.body || "",
+                  body,
                   fromMe,
                   read: true,
-                  mediaType: "chat",
+                  mediaType,
+                  mediaUrl,
                   ack: 0,
                   createdAt: providerCreatedAt
                 },
