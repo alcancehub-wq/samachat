@@ -1,4 +1,5 @@
 import fs from "fs";
+import AppError from "../../../errors/AppError";
 import SendWhatsAppMedia from "../../../services/WbotServices/SendWhatsAppMedia";
 import Message from "../../../models/Message";
 import Whatsapp from "../../../models/Whatsapp";
@@ -6,6 +7,7 @@ import { whatsappProvider } from "../../../providers/WhatsApp";
 import { StartWhatsAppSession } from "../../../services/WbotServices/StartWhatsAppSession";
 import { sleep } from "../../../utils/sleep";
 import CloudApiClient from "../../../services/CloudApiServices/CloudApiClient";
+import { AssertOfficialFreeTextAllowedService } from "../../../services/OutboundChannelServices/OfficialCustomerServiceWindowService";
 
 jest.mock("../../../models/Message", () => ({
   findOne: jest.fn()
@@ -33,6 +35,13 @@ jest.mock("../../../services/CloudApiServices/CloudApiClient", () => ({
   __esModule: true,
   default: jest.fn()
 }));
+
+jest.mock(
+  "../../../services/OutboundChannelServices/OfficialCustomerServiceWindowService",
+  () => ({
+    AssertOfficialFreeTextAllowedService: jest.fn()
+  })
+);
 
 jest.mock("../../../services/Variables/ResolveMessageVariablesService", () =>
   jest.fn(({ template }: { template: string }) => ({ text: template }))
@@ -78,6 +87,8 @@ describe("SendWhatsAppMedia", () => {
   const startWhatsAppSessionMock = StartWhatsAppSession as jest.Mock;
   const sleepMock = sleep as jest.Mock;
   const cloudApiClientMock = CloudApiClient as unknown as jest.Mock;
+  const assertOfficialFreeTextAllowedMock =
+    AssertOfficialFreeTextAllowedService as jest.Mock;
   const uploadMediaMock = jest.fn();
   const sendCloudMediaMock = jest.fn();
 
@@ -135,6 +146,13 @@ describe("SendWhatsAppMedia", () => {
 
     uploadMediaMock.mockReset();
     sendCloudMediaMock.mockReset();
+
+    assertOfficialFreeTextAllowedMock.mockResolvedValue({
+      isOpen: true,
+      lastInboundAt: new Date(),
+      expiresAt: new Date(Date.now() + 60_000),
+      evidence: "META_PROVIDER_TIMESTAMP"
+    });
 
     cloudApiClientMock.mockImplementation(() => ({
       uploadMedia: uploadMediaMock,
@@ -327,6 +345,67 @@ describe("SendWhatsAppMedia", () => {
     unlinkSyncSpy.mockRestore();
     existsSyncSpy.mockRestore();
   });
+  it.each([
+    ["document", "application/pdf", "guard-test.pdf"],
+    ["image", "image/png", "guard-test.png"],
+    ["audio", "audio/ogg", "guard-test.ogg"],
+    ["video", "video/mp4", "guard-test.mp4"]
+  ])(
+    "blocks official %s before upload when customer service window is closed",
+    async (_type, mimetype, filename) => {
+      const media = {
+        path: "tmp/guard-test",
+        mimetype,
+        filename
+      } as Express.Multer.File;
+
+      const ticket = {
+        id: 3341,
+        whatsappId: 35,
+        contact: {
+          number: "5511945749162",
+          update: jest.fn().mockResolvedValue(undefined)
+        },
+        update: jest.fn().mockResolvedValue(undefined),
+        isGroup: false
+      };
+
+      findByPkMock.mockResolvedValue({
+        id: 35,
+        providerType: "official",
+        status: "CONNECTED",
+        phoneNumberId: "629748506897910",
+        accessToken: "token",
+        phoneNumber: "5511981901577"
+      });
+
+      assertOfficialFreeTextAllowedMock.mockRejectedValue(
+        new AppError("ERR_META_OFFICIAL_TEMPLATE_REQUIRED", 400)
+      );
+
+      await expect(
+        SendWhatsAppMedia({
+          media,
+          ticket: ticket as any,
+          preserveUploadedFile: true
+        })
+      ).rejects.toMatchObject({
+        message: "ERR_META_OFFICIAL_TEMPLATE_REQUIRED"
+      });
+
+      expect(assertOfficialFreeTextAllowedMock).toHaveBeenCalledWith({
+        ticketId: 3341,
+        deliveryWhatsappId: 35
+      });
+
+      expect(cloudApiClientMock).not.toHaveBeenCalled();
+      expect(uploadMediaMock).not.toHaveBeenCalled();
+      expect(sendCloudMediaMock).not.toHaveBeenCalled();
+      expect(sendMediaMock).not.toHaveBeenCalled();
+      expect(ticket.update).not.toHaveBeenCalled();
+    }
+  );
+
   it("routes official media through Cloud API without legacy session or provider send", async () => {
     const media = {
       filename: "foto.jpg",

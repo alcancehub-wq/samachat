@@ -27,6 +27,7 @@ import { shouldSendMediaAsDocument } from "./mediaDelivery";
 import { sleep } from "../../utils/sleep";
 import { readFileSync } from "fs";
 import CloudApiClient from "../CloudApiServices/CloudApiClient";
+import { AssertOfficialFreeTextAllowedService } from "../OutboundChannelServices/OfficialCustomerServiceWindowService";
 import { logger } from "../../utils/logger";
 
 interface Request {
@@ -526,6 +527,11 @@ const SendWhatsAppMedia = async ({
     const providerMediaInput = mediaInput;
 
     if (whatsapp.providerType === "official") {
+      await AssertOfficialFreeTextAllowedService({
+        ticketId: ticket.id,
+        deliveryWhatsappId: whatsapp.id
+      });
+
       if (ticket.isGroup) {
         throw new AppError("ERR_CLOUD_API_GROUP_MEDIA_NOT_SUPPORTED");
       }
@@ -807,7 +813,7 @@ const SendWhatsAppMedia = async ({
 
     return sentMessage;
   } catch (err) {
-    if (err instanceof AppError && err.message === "ERR_WAPP_INVALID_CONTACT") {
+    if (err instanceof AppError) {
       throw err;
     }
     console.error("SendWhatsAppMedia error:", {

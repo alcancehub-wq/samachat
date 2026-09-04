@@ -17,6 +17,7 @@ import { StartWhatsAppSession } from "./StartWhatsAppSession";
 import { sleep } from "../../utils/sleep";
 import { logger } from "../../utils/logger";
 import CloudApiClient from "../CloudApiServices/CloudApiClient";
+import { AssertOfficialFreeTextAllowedService } from "../OutboundChannelServices/OfficialCustomerServiceWindowService";
 
 interface Request {
   body: string;
@@ -375,6 +376,11 @@ const SendWhatsAppMessage = async ({
   const payload = formatBody(resolvedBody, ticket.contact);
 
   if (whatsapp.providerType === "official") {
+    await AssertOfficialFreeTextAllowedService({
+      ticketId: ticket.id,
+      deliveryWhatsappId: whatsapp.id
+    });
+
     return sendOfficialCloudApiTextMessage({
       whatsapp,
       ticket,

@@ -8,6 +8,8 @@ import CheckNumber from "../../../services/WbotServices/CheckNumber";
 import SendWhatsAppMessage from "../../../services/WbotServices/SendWhatsAppMessage";
 import { StartWhatsAppSession } from "../../../services/WbotServices/StartWhatsAppSession";
 import ResolveMessageVariablesService from "../../../services/Variables/ResolveMessageVariablesService";
+import CloudApiClient from "../../../services/CloudApiServices/CloudApiClient";
+import { AssertOfficialFreeTextAllowedService } from "../../../services/OutboundChannelServices/OfficialCustomerServiceWindowService";
 import { logger } from "../../../utils/logger";
 import { sleep } from "../../../utils/sleep";
 
@@ -48,6 +50,18 @@ jest.mock("../../../helpers/CheckContactOpenTickets", () => jest.fn());
 jest.mock("../../../helpers/GetDefaultWhatsApp", () => jest.fn());
 jest.mock("../../../services/WbotServices/CheckNumber", () => jest.fn());
 
+jest.mock("../../../services/CloudApiServices/CloudApiClient", () => ({
+  __esModule: true,
+  default: jest.fn()
+}));
+
+jest.mock(
+  "../../../services/OutboundChannelServices/OfficialCustomerServiceWindowService",
+  () => ({
+    AssertOfficialFreeTextAllowedService: jest.fn()
+  })
+);
+
 describe("SendWhatsAppMessage", () => {
   const findByPkMock = Whatsapp.findByPk as jest.Mock;
   const hasSessionMock = whatsappProvider.hasSession as jest.Mock;
@@ -62,6 +76,10 @@ describe("SendWhatsAppMessage", () => {
   const formatBodyMock = formatBody as jest.Mock;
   const resolveMessageVariablesServiceMock =
     ResolveMessageVariablesService as jest.Mock;
+  const cloudApiClientMock = CloudApiClient as unknown as jest.Mock;
+  const assertOfficialFreeTextAllowedMock =
+    AssertOfficialFreeTextAllowedService as jest.Mock;
+  const sendCloudTextMock = jest.fn();
 
   const whatsapp = {
     id: 35,
@@ -103,6 +121,19 @@ describe("SendWhatsAppMessage", () => {
     checkNumberServiceMock.mockResolvedValue("5511963715316");
     formatBodyMock.mockImplementation((body: string) => body);
     sleepMock.mockResolvedValue(undefined);
+
+    assertOfficialFreeTextAllowedMock.mockResolvedValue({
+      isOpen: true,
+      lastInboundAt: new Date(),
+      expiresAt: new Date(Date.now() + 60_000),
+      evidence: "META_PROVIDER_TIMESTAMP"
+    });
+
+    sendCloudTextMock.mockReset();
+
+    cloudApiClientMock.mockImplementation(() => ({
+      sendText: sendCloudTextMock
+    }));
   });
 
   it("keeps the ticket 1161 control-positive flow sending normally", async () => {
@@ -302,6 +333,94 @@ describe("SendWhatsAppMessage", () => {
     expect(startWhatsAppSessionMock).toHaveBeenCalled();
     expect(sendMessageMock).not.toHaveBeenCalled();
   });
+  it("blocks official free-form text before Cloud API when customer service window is closed", async () => {
+    const ticket = buildTicket({
+      id: 3341,
+      whatsappId: 35,
+      contact: {
+        number: "5511945749162",
+        lid: "",
+        update: jest.fn().mockResolvedValue(undefined)
+      }
+    });
+
+    findByPkMock.mockResolvedValueOnce({
+      id: 35,
+      status: "CONNECTED",
+      providerType: "official",
+      accessToken: "official-token",
+      phoneNumberId: "629748506897910",
+      apiVersion: "v20.0",
+      phoneNumber: "5511981901577"
+    });
+
+    assertOfficialFreeTextAllowedMock.mockRejectedValueOnce(
+      new AppError("ERR_META_OFFICIAL_TEMPLATE_REQUIRED", 400)
+    );
+
+    await expect(
+      SendWhatsAppMessage({
+        body: "fora da janela",
+        ticket
+      })
+    ).rejects.toMatchObject({
+      message: "ERR_META_OFFICIAL_TEMPLATE_REQUIRED"
+    });
+
+    expect(assertOfficialFreeTextAllowedMock).toHaveBeenCalledWith({
+      ticketId: 3341,
+      deliveryWhatsappId: 35
+    });
+
+    expect(cloudApiClientMock).not.toHaveBeenCalled();
+    expect(sendCloudTextMock).not.toHaveBeenCalled();
+    expect(ticket.update).not.toHaveBeenCalled();
+  });
+
+  it("allows official free-form text when customer service window is open", async () => {
+    const ticket = buildTicket({
+      id: 3341,
+      whatsappId: 35,
+      contact: {
+        number: "5511945749162",
+        lid: "",
+        update: jest.fn().mockResolvedValue(undefined)
+      }
+    });
+
+    findByPkMock.mockResolvedValueOnce({
+      id: 35,
+      status: "CONNECTED",
+      providerType: "official",
+      accessToken: "official-token",
+      phoneNumberId: "629748506897910",
+      apiVersion: "v20.0",
+      phoneNumber: "5511981901577"
+    });
+
+    sendCloudTextMock.mockResolvedValueOnce({
+      messages: [{ id: "wamid.window-open" }]
+    });
+
+    await expect(
+      SendWhatsAppMessage({
+        body: "dentro da janela",
+        ticket
+      })
+    ).resolves.toMatchObject({
+      id: "wamid.window-open",
+      ack: 1,
+      type: "chat"
+    });
+
+    expect(assertOfficialFreeTextAllowedMock).toHaveBeenCalledWith({
+      ticketId: 3341,
+      deliveryWhatsappId: 35
+    });
+
+    expect(sendCloudTextMock).toHaveBeenCalledTimes(1);
+  });
+
   it("does not retry text after an ambiguous generic provider error", async () => {
     const ticket = buildTicket({
       id: 1161,
