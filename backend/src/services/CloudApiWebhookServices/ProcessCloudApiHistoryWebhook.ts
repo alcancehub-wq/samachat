@@ -1,7 +1,8 @@
 import Contact from "../../models/Contact";
-import Ticket from "../../models/Ticket";
 import Message from "../../models/Message";
 import CreateMessageService from "../MessageServices/CreateMessageService";
+import ResolveOperationalTicketService from "../TicketServices/ResolveOperationalTicketService";
+import { Op } from "sequelize";
 
 interface CloudApiHistoryMessage {
   id?: string;
@@ -45,8 +46,73 @@ interface Result {
 }
 
 const ContactModel = Contact as any;
-const TicketModel = Ticket as any;
 const MessageModel = Message as any;
+const OUTBOUND_DUPLICATE_WINDOW_SECONDS = 20;
+const TEMPORARY_OUTBOUND_ID_PREFIXES = [
+  "fallback_",
+  "wwebjs-accepted-",
+  "evt_me_",
+  "recorded-audio-accepted-",
+  "recorded-audio-echo-"
+];
+
+const isTemporaryOutboundId = (value?: string): boolean =>
+  Boolean(
+    value &&
+      TEMPORARY_OUTBOUND_ID_PREFIXES.some(prefix => value.startsWith(prefix))
+  );
+
+const normalizeProviderMessageId = (value?: string): string => {
+  const trimmedValue = value?.trim() || "";
+  const serializedMatch = trimmedValue.match(/^(?:true|false)_[^_]+_(.+)$/);
+
+  return serializedMatch?.[1] || trimmedValue;
+};
+
+const findHistoricalOutboundDuplicate = async ({
+  messageId,
+  ticketId,
+  body,
+  providerCreatedAt
+}: {
+  messageId: string;
+  ticketId: number;
+  body: string;
+  providerCreatedAt: Date;
+}): Promise<boolean> => {
+  const messageTimestampMs = providerCreatedAt.getTime();
+  const candidates = await MessageModel.findAll({
+    where: {
+      ticketId,
+      fromMe: true,
+      body,
+      mediaType: "chat",
+      createdAt: {
+        [Op.between]: [
+          new Date(messageTimestampMs - OUTBOUND_DUPLICATE_WINDOW_SECONDS * 1000),
+          new Date(messageTimestampMs + OUTBOUND_DUPLICATE_WINDOW_SECONDS * 1000)
+        ]
+      }
+    },
+    order: [["createdAt", "DESC"]],
+    limit: 5
+  });
+
+  const normalizedMessageId = normalizeProviderMessageId(messageId);
+  const temporaryCandidate = candidates
+    .filter((candidate: any) =>
+      candidate.id === messageId ||
+      normalizeProviderMessageId(candidate.id) === normalizedMessageId ||
+      isTemporaryOutboundId(candidate.id)
+    )
+    .sort(
+      (first: any, second: any) =>
+        Math.abs(first.createdAt.getTime() - messageTimestampMs) -
+        Math.abs(second.createdAt.getTime() - messageTimestampMs)
+    )[0];
+
+  return Boolean(temporaryCandidate);
+};
 
 const ProcessCloudApiHistoryWebhook = async ({
   payload,
@@ -80,10 +146,14 @@ const ProcessCloudApiHistoryWebhook = async ({
               continue;
             }
 
-            const tickets = await TicketModel.findAll({
-              where: { contactId: contact.id, whatsappId }
+            const ticket = await ResolveOperationalTicketService({
+              contactId: contact.id,
+              allowMultipleConversations: Boolean(
+                contact.allowMultipleConversations
+              ),
+              ...(contact.allowMultipleConversations ? { whatsappId } : {})
             });
-            if (tickets.length !== 1) {
+            if (!ticket) {
               skippedMessages += (thread.messages || []).length;
               continue;
             }
@@ -103,17 +173,33 @@ const ProcessCloudApiHistoryWebhook = async ({
                 continue;
               }
 
+              const providerCreatedAt = new Date(timestamp * 1000);
+              const fromMe = message.from !== thread.id;
+
+              if (
+                fromMe &&
+                await findHistoricalOutboundDuplicate({
+                  messageId: message.id,
+                  ticketId: ticket.id,
+                  body: message.text!.body!,
+                  providerCreatedAt
+                })
+              ) {
+                skippedMessages += 1;
+                continue;
+              }
+
               await CreateMessageService({
                 messageData: {
                   id: message.id,
-                  ticketId: tickets[0].id,
+                  ticketId: ticket.id,
                   contactId: contact.id,
                   body: message.text?.body || "",
-                  fromMe: message.from !== thread.id,
+                  fromMe,
                   read: true,
                   mediaType: "chat",
                   ack: 0,
-                  createdAt: new Date(timestamp * 1000)
+                  createdAt: providerCreatedAt
                 },
                 broadcastToTicketRoom: false,
                 broadcastToStatus: false,
