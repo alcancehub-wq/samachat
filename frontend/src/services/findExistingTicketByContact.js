@@ -1,14 +1,19 @@
 import api from "./api";
 
-const findMatchingTicket = (tickets, contact) => {
+const findMatchingTicket = (tickets, contact, whatsappId) => {
   if (!Array.isArray(tickets) || !contact?.id) {
     return null;
   }
 
+  const availableTickets =
+    contact.allowMultipleConversations && whatsappId
+      ? tickets.filter(ticket => Number(ticket.whatsappId) === Number(whatsappId))
+      : tickets;
+
   return (
-    tickets.find(ticket => Number(ticket.contactId) === Number(contact.id)) ||
-    tickets.find(ticket => Number(ticket.contact?.id) === Number(contact.id)) ||
-    tickets.find(
+    availableTickets.find(ticket => Number(ticket.contactId) === Number(contact.id)) ||
+    availableTickets.find(ticket => Number(ticket.contact?.id) === Number(contact.id)) ||
+    availableTickets.find(
       ticket =>
         contact.number &&
         String(ticket.contact?.number || "") === String(contact.number)
@@ -17,7 +22,7 @@ const findMatchingTicket = (tickets, contact) => {
   );
 };
 
-const findExistingTicketByContact = async contact => {
+const findExistingTicketByContact = async (contact, whatsappId) => {
   const searchParam = String(contact?.number || contact?.name || "").trim();
 
   if (!contact?.id || !searchParam) {
@@ -29,7 +34,7 @@ const findExistingTicketByContact = async contact => {
       params: { searchParam, status }
     });
 
-    const matchingTicket = findMatchingTicket(data?.tickets, contact);
+    const matchingTicket = findMatchingTicket(data?.tickets, contact, whatsappId);
 
     if (matchingTicket) {
       return matchingTicket;

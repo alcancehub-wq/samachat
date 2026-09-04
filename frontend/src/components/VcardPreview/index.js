@@ -47,7 +47,10 @@ const VcardPreview = ({ contact, numbers }) => {
 
     const handleNewChat = async () => {
         try {
-            const existingTicket = await findExistingTicketByContact(selectedContact);
+            const existingTicket = await findExistingTicketByContact(
+                selectedContact,
+                user?.whatsappId || user?.whatsapp?.id
+            );
 
             if (existingTicket?.id) {
                 history.push(`/tickets/${existingTicket.id}`);
