@@ -32,6 +32,16 @@ export interface WWebJsReconciliationContactMetadata {
   lid?: string;
   profilePicUrl?: string;
   isGroup: boolean;
+  profilePhotoProbe?: {
+    rawIdSerialized?: string;
+    rawIdUser?: string;
+    rawIsGroup: boolean;
+    hasRawGetProfilePicUrl: boolean;
+    rawPhotoResult: "present" | "empty" | "error";
+    mappedNumber: string;
+    mappedLid?: string;
+    mappedProfilePic: "present" | "empty";
+  };
 }
 
 export const normalizeWWebJsReconciliationLid = (
@@ -173,6 +183,7 @@ export const mapWWebJsContactToReconciliationMetadata = async (
   contact: WWebJsReconciliationContactLike,
   options: {
     includeProfilePic?: boolean;
+    includeProfilePhotoProbe?: boolean;
   } = {}
 ): Promise<WWebJsReconciliationContactMetadata> => {
 
@@ -200,15 +211,22 @@ export const mapWWebJsContactToReconciliationMetadata = async (
 
 
   let profilePicUrl: string | undefined;
+  let rawPhotoResult: "present" | "empty" | "error" = "empty";
+  const rawGetProfilePicUrl =
+    contact.getProfilePicUrl;
+  const hasRawGetProfilePicUrl =
+    typeof rawGetProfilePicUrl === "function";
 
   if (
     options.includeProfilePic &&
-    typeof contact.getProfilePicUrl === "function"
+    hasRawGetProfilePicUrl
   ) {
     try {
       profilePicUrl =
-        await contact.getProfilePicUrl();
+        await rawGetProfilePicUrl();
+      rawPhotoResult = profilePicUrl ? "present" : "empty";
     } catch (err) {
+      rawPhotoResult = "error";
       logger.warn(
         {
           err,
@@ -230,6 +248,22 @@ export const mapWWebJsContactToReconciliationMetadata = async (
     lid,
     profilePicUrl,
     isGroup:
-      Boolean(contact.isGroup)
+      Boolean(contact.isGroup),
+    profilePhotoProbe:
+      options.includeProfilePhotoProbe
+        ? {
+            rawIdSerialized:
+              contact.id?._serialized,
+            rawIdUser: contact.id?.user,
+            rawIsGroup:
+              Boolean(contact.isGroup),
+            hasRawGetProfilePicUrl,
+            rawPhotoResult,
+            mappedNumber: number,
+            mappedLid: lid,
+            mappedProfilePic:
+              profilePicUrl ? "present" : "empty"
+          }
+        : undefined
   };
 };

@@ -112,6 +112,7 @@ interface Request<
 
   targetChatIds?: string[];
   includeContactProfilePic?: boolean;
+  includeProfilePhotoProbe?: boolean;
 
   services?: Partial<AdapterServices>;
 }
@@ -224,8 +225,9 @@ const createWWebJsReconciliationAdapter = <
   resolveMessageMetadata,
   processNewMessage,
   captureBoundaryAt = () => new Date(),
-    targetChatIds = [],
+  targetChatIds = [],
   includeContactProfilePic = false,
+  includeProfilePhotoProbe = false,
   services: serviceOverrides = {}
 }: Request<
   TMessage,
@@ -899,7 +901,8 @@ const createWWebJsReconciliationAdapter = <
                   contact,
                   {
                     includeProfilePic:
-                      includeContactProfilePic
+                      includeContactProfilePic,
+                    includeProfilePhotoProbe
                   }
                 );
 

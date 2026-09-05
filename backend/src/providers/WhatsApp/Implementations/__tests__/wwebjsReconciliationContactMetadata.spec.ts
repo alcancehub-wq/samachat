@@ -186,6 +186,46 @@ describe(
     );
 
     it(
+      "includes raw and mapped states in the enabled global photo probe",
+      async () => {
+        await expect(
+          mapWWebJsContactToReconciliationMetadata(
+            {
+              id: {
+                user: "abc123",
+                _serialized: "abc123@lid"
+              },
+              isGroup: false,
+              getProfilePicUrl:
+                jest.fn().mockResolvedValue(
+                  "https://example.invalid/lid-photo.jpg"
+                )
+            },
+            {
+              includeProfilePic: true,
+              includeProfilePhotoProbe: true
+            }
+          )
+        ).resolves.toMatchObject({
+          number: "",
+          lid: "abc123@lid",
+          profilePicUrl:
+            "https://example.invalid/lid-photo.jpg",
+          profilePhotoProbe: {
+            rawIdSerialized: "abc123@lid",
+            rawIdUser: "abc123",
+            rawIsGroup: false,
+            hasRawGetProfilePicUrl: true,
+            rawPhotoResult: "present",
+            mappedNumber: "",
+            mappedLid: "abc123@lid",
+            mappedProfilePic: "present"
+          }
+        });
+      }
+    );
+
+    it(
       "maps a raw phone contact profile picture through its own identity",
       async () => {
         const getProfilePicUrl =

@@ -112,6 +112,38 @@ describe(
       });
     });
 
+    it("forwards the optional global photo probe without changing contact metadata", async () => {
+      const cancellation = createSignal();
+      const profilePhotoProbe = {
+        rawIdSerialized: "abc123@lid",
+        rawIdUser: "abc123",
+        rawIsGroup: false,
+        hasRawGetProfilePicUrl: true,
+        rawPhotoResult: "present" as const,
+        mappedNumber: "",
+        mappedLid: "abc123@lid",
+        mappedProfilePic: "present" as const
+      };
+
+      await ReconcileWhatsAppContactMetadataService({
+        whatsappId: 101,
+        metadata: {
+          name: "Maria Clara",
+          lid: "abc123@lid",
+          profilePicUrl: "https://example.com/maria.jpg",
+          isGroup: false,
+          profilePhotoProbe
+        },
+        signal: cancellation.signal
+      });
+
+      expect(createOrUpdateContactMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          profilePhotoProbe
+        })
+      );
+    });
+
     it("allows number-only identity and leaves name precedence to the canonical service", async () => {
       const cancellation = createSignal();
 

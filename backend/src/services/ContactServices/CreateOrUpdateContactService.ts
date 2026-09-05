@@ -22,6 +22,16 @@ interface Request {
   profilePicUrl?: string;
   extraInfo?: ExtraInfo[];
   whatsappId?: number;
+  profilePhotoProbe?: {
+    rawIdSerialized?: string;
+    rawIdUser?: string;
+    rawIsGroup: boolean;
+    hasRawGetProfilePicUrl: boolean;
+    rawPhotoResult: "present" | "empty" | "error";
+    mappedNumber: string;
+    mappedLid?: string;
+    mappedProfilePic: "present" | "empty";
+  };
 }
 
 const normalizeLid = (value?: string | null): string | undefined => {
@@ -122,7 +132,8 @@ const CreateOrUpdateContactService = async ({
   isGroup,
   email = "",
   extraInfo = [],
-  whatsappId
+  whatsappId,
+  profilePhotoProbe
 }: Request): Promise<Contact> => {
   const sanitizedRawNumber = rawNumber || "";
   const normalizedLid = normalizeLid(lid);
@@ -198,6 +209,44 @@ const CreateOrUpdateContactService = async ({
     return undefined;
   };
 
+  const logProfilePhotoProbe = (
+    existingContact?: Contact | null,
+    currentProfilePicUrl?: string | null,
+    persistedProfilePicUrl?: string | null
+  ): void => {
+    if (!profilePhotoProbe) {
+      return;
+    }
+
+    logger.info(
+      {
+        event: "p05_global_photo_probe",
+        whatsappId,
+        rawIdSerialized:
+          profilePhotoProbe.rawIdSerialized,
+        rawIdUser: profilePhotoProbe.rawIdUser,
+        rawIsGroup: profilePhotoProbe.rawIsGroup,
+        hasRawGetProfilePicUrl:
+          profilePhotoProbe.hasRawGetProfilePicUrl,
+        rawPhotoResult:
+          profilePhotoProbe.rawPhotoResult,
+        mappedNumber: profilePhotoProbe.mappedNumber,
+        mappedLid: profilePhotoProbe.mappedLid,
+        mappedProfilePic:
+          profilePhotoProbe.mappedProfilePic,
+        existingContactId:
+          existingContact?.id || null,
+        existingProfilePic:
+          currentProfilePicUrl ? "present" : "empty",
+        finalIncomingProfilePic:
+          profilePicUrl ? "present" : "empty",
+        persistedProfilePic:
+          persistedProfilePicUrl ? "present" : "empty"
+      },
+      "Global reconciliation profile photo probe"
+    );
+  };
+
   const shouldMerge =
     contactByNumber &&
     resolvedContactByLid &&
@@ -236,6 +285,12 @@ const CreateOrUpdateContactService = async ({
 
     EmitContactEvent({ action: "update", contact: contactByNumber, whatsappId });
 
+    logProfilePhotoProbe(
+      contactByNumber,
+      contactByNumber.profilePicUrl,
+      resolvedProfilePicUrl
+    );
+
     return contactByNumber;
   }
 
@@ -256,6 +311,13 @@ const CreateOrUpdateContactService = async ({
     });
 
     EmitContactEvent({ action: "update", contact: contactByNumber, whatsappId });
+
+    logProfilePhotoProbe(
+      contactByNumber,
+      contactByNumber.profilePicUrl ||
+        resolvedContactByLid?.profilePicUrl,
+      resolvedProfilePicUrl
+    );
 
     return contactByNumber;
   }
@@ -283,6 +345,11 @@ const CreateOrUpdateContactService = async ({
     });
 
     EmitContactEvent({ action: "update", contact: resolvedContactByLid, whatsappId });
+    logProfilePhotoProbe(
+      resolvedContactByLid,
+      resolvedContactByLid.profilePicUrl,
+      resolvedProfilePicUrl
+    );
     return resolvedContactByLid;
   }
 
@@ -303,6 +370,11 @@ const CreateOrUpdateContactService = async ({
   });
 
   EmitContactEvent({ action: "create", contact: created, whatsappId });
+  logProfilePhotoProbe(
+    null,
+    undefined,
+    resolvedProfilePicUrl
+  );
   return created;
 };
 

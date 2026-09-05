@@ -11,6 +11,16 @@ export interface WhatsAppReconciliationContactMetadata {
   lid?: string | null;
   profilePicUrl?: string | null;
   isGroup: boolean;
+  profilePhotoProbe?: {
+    rawIdSerialized?: string;
+    rawIdUser?: string;
+    rawIsGroup: boolean;
+    hasRawGetProfilePicUrl: boolean;
+    rawPhotoResult: "present" | "empty" | "error";
+    mappedNumber: string;
+    mappedLid?: string;
+    mappedProfilePic: "present" | "empty";
+  };
 }
 
 interface Request {
@@ -96,7 +106,8 @@ const ReconcileWhatsAppContactMetadataService = async ({
     profilePicUrl:
       normalizeText(metadata.profilePicUrl),
     isGroup: Boolean(metadata.isGroup),
-    whatsappId: normalizedWhatsappId
+    whatsappId: normalizedWhatsappId,
+    profilePhotoProbe: metadata.profilePhotoProbe
   });
 
   signal.throwIfAborted();

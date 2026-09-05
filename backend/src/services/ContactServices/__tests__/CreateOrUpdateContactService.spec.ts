@@ -23,6 +23,7 @@ import Contact from "../../../models/Contact";
 import Ticket from "../../../models/Ticket";
 import EmitContactEvent from "../../../helpers/EmitContactEvent";
 import GetProfilePicUrl from "../../WbotServices/GetProfilePicUrl";
+import { logger } from "../../../utils/logger";
 import CreateOrUpdateContactService from "../CreateOrUpdateContactService";
 
 const contactFindAllMock = Contact.findAll as jest.Mock;
@@ -79,6 +80,51 @@ describe("CreateOrUpdateContactService", () => {
       whatsappId: 35
     });
     expect(result).toBe(existingManualContact);
+  });
+
+  it("logs the global photo probe after persisting an incoming photo without its URL", async () => {
+    const existingContact = {
+      id: 17178,
+      name: "Probe",
+      number: "5511999999997",
+      lid: null,
+      profilePicUrl: null,
+      update: jest.fn().mockResolvedValue(undefined)
+    };
+    contactFindAllMock.mockResolvedValue([existingContact]);
+
+    await CreateOrUpdateContactService({
+      name: "Probe",
+      number: "5511999999997",
+      profilePicUrl: "https://example.com/private-photo.jpg",
+      isGroup: false,
+      whatsappId: 37,
+      profilePhotoProbe: {
+        rawIdSerialized: "abc123@lid",
+        rawIdUser: "abc123",
+        rawIsGroup: false,
+        hasRawGetProfilePicUrl: true,
+        rawPhotoResult: "present",
+        mappedNumber: "",
+        mappedLid: "abc123@lid",
+        mappedProfilePic: "present"
+      }
+    });
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "p05_global_photo_probe",
+        whatsappId: 37,
+        existingContactId: 17178,
+        existingProfilePic: "empty",
+        finalIncomingProfilePic: "present",
+        persistedProfilePic: "present"
+      }),
+      "Global reconciliation profile photo probe"
+    );
+    expect(JSON.stringify((logger.info as jest.Mock).mock.calls)).not.toContain(
+      "https://example.com/private-photo.jpg"
+    );
   });
 
   it("preserves an existing profile picture without a fallback lookup", async () => {
