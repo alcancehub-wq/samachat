@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 
 import RunOpenAICompletionService from "../services/OpenAI/RunOpenAICompletionService";
+import ApplyAccentOnlyCorrectionService from "../services/OpenAI/ApplyAccentOnlyCorrectionService";
 import BuildTicketSummaryPromptService from "../services/OpenAI/BuildTicketSummaryPromptService";
 import ListOpenAILogsService from "../services/OpenAILogServices/ListOpenAILogsService";
 import GetOpenAISettingsService from "../services/OpenAISettingsServices/GetOpenAISettingsService";
@@ -115,9 +116,9 @@ export const correctText = async (req: Request, res: Response): Promise<Response
   }
 
   const prompt = [
-    "Corrija apenas ortografia, acentos, pontuacao, capitalizacao e concordancia do texto abaixo em portugues do Brasil.",
-    "Preserve o sentido, tom, quebras de linha, emojis, nomes, numeros, links, telefones, codigos e valores.",
-    "Nao reescreva como mensagem comercial. Nao acrescente informacoes.",
+    "Corrija somente acentuacao grafica e cedilha no texto abaixo em portugues do Brasil.",
+    "Nao altere palavras, capitalizacao, pontuacao, espacos, quebras de linha, emojis, nomes, numeros, links, telefones, codigos ou valores.",
+    "Nao acrescente nem remova conteudo.",
     "Nao explique. Retorne somente o texto corrigido.",
     "",
     req.body.text
@@ -127,10 +128,20 @@ export const correctText = async (req: Request, res: Response): Promise<Response
     action: "rewrite",
     userPrompt: prompt,
     ticketId: req.body.ticketId,
-    userId: Number(req.user.id)
+    userId: Number(req.user.id),
+    systemPrompt:
+      "Sua unica funcao nesta operacao e corrigir acentuacao grafica e cedilha. Nao reescreva nem complete o texto."
   });
 
-  return res.status(200).json(result);
+  const safeContent = ApplyAccentOnlyCorrectionService({
+    original: req.body.text,
+    candidate: result.content
+  });
+
+  return res.status(200).json({
+    ...result,
+    content: safeContent
+  });
 };
 
 export const classify = async (req: Request, res: Response): Promise<Response> => {

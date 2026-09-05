@@ -435,6 +435,10 @@ const MessageInput = ({ ticketStatus }) => {
   const [loading, setLoading] = useState(false);
   const [correctingText, setCorrectingText] = useState(false);
   const [autoCorrectTextEnabled, setAutoCorrectTextEnabled] = useState(false);
+  const externalCorrectionRequestRef = useRef(0);
+  const internalCorrectionRequestRef = useRef(0);
+  const lastExternalAutoCorrectedValueRef = useRef("");
+  const lastInternalAutoCorrectedValueRef = useRef("");
   const [recording, setRecording] = useState(false);
   const [isInternalMessage, setIsInternalMessage] = useState(false);
   const [quickAnswers, setQuickAnswer] = useState([]);
@@ -542,6 +546,7 @@ const MessageInput = ({ ticketStatus }) => {
   }, [user?.id]);
 
   const handleChangeInput = e => {
+    lastExternalAutoCorrectedValueRef.current = "";
     setInputMessage(e.target.value);
     handleLoadQuickAnswer(e.target.value);
   };
@@ -570,9 +575,88 @@ const MessageInput = ({ ticketStatus }) => {
       text: textToCorrect
     });
 
-    return extractCorrectedText(data).trim();
+    return extractCorrectedText(data);
   };
 
+
+  useEffect(() => {
+    if (
+      !autoCorrectTextEnabled ||
+      isInternalMessage ||
+      !inputMessage.trim() ||
+      inputMessage === lastExternalAutoCorrectedValueRef.current
+    ) {
+      return undefined;
+    }
+
+    const original = inputMessage;
+    const requestId = ++externalCorrectionRequestRef.current;
+
+    const timer = setTimeout(async () => {
+      try {
+        const correctedText = await correctTextValue(original);
+
+        if (requestId !== externalCorrectionRequestRef.current) return;
+
+        if (!correctedText || correctedText === original) {
+          lastExternalAutoCorrectedValueRef.current = original;
+          return;
+        }
+
+        lastExternalAutoCorrectedValueRef.current = correctedText;
+
+        setInputMessage(currentValue =>
+          currentValue === original ? correctedText : currentValue
+        );
+      } catch (err) {
+        // Correcao em background nunca bloqueia digitacao ou envio.
+      }
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [autoCorrectTextEnabled, inputMessage, isInternalMessage, ticketId]);
+
+  useEffect(() => {
+    if (
+      !autoCorrectTextEnabled ||
+      !isInternalMessage ||
+      !internalInputMessage.trim() ||
+      internalInputMessage === lastInternalAutoCorrectedValueRef.current
+    ) {
+      return undefined;
+    }
+
+    const original = internalInputMessage;
+    const requestId = ++internalCorrectionRequestRef.current;
+
+    const timer = setTimeout(async () => {
+      try {
+        const correctedText = await correctTextValue(original);
+
+        if (requestId !== internalCorrectionRequestRef.current) return;
+
+        if (!correctedText || correctedText === original) {
+          lastInternalAutoCorrectedValueRef.current = original;
+          return;
+        }
+
+        lastInternalAutoCorrectedValueRef.current = correctedText;
+
+        setInternalInputMessage(currentValue =>
+          currentValue === original ? correctedText : currentValue
+        );
+      } catch (err) {
+        // Correcao em background nunca bloqueia digitacao ou envio.
+      }
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [
+    autoCorrectTextEnabled,
+    internalInputMessage,
+    isInternalMessage,
+    ticketId
+  ]);
 
   const handleAddEmoji = e => {
     let emoji = e.native;
@@ -631,6 +715,7 @@ const MessageInput = ({ ticketStatus }) => {
     const nextValue = event.target.value;
     const mentionMatch = nextValue.match(/(?:^|\s)@([^\s@]*)$/);
 
+    lastInternalAutoCorrectedValueRef.current = "";
     setInternalInputMessage(nextValue);
 
     if (mentionMatch) {
@@ -724,25 +809,6 @@ const MessageInput = ({ ticketStatus }) => {
     sendingMessageRef.current = true;
     setLoading(true);
 
-    if (autoCorrectTextEnabled) {
-      setCorrectingText(true);
-
-      try {
-        const correctedText = await correctTextValue(currentMessage.trim());
-        if (correctedText) {
-          currentMessage = correctedText;
-        }
-      } catch (err) {
-        toastError(err);
-        setLoading(false);
-        setCorrectingText(false);
-        sendingMessageRef.current = false;
-        return;
-      } finally {
-        setCorrectingText(false);
-      }
-    }
-
     const shouldSignMessages = user?.signMessages !== false;
     const trimmedMessage = currentMessage.trim();
 
@@ -835,7 +901,7 @@ const MessageInput = ({ ticketStatus }) => {
           }
 
           if (!audioChunksRef.current || audioChunksRef.current.length === 0) {
-            console.error("Sem chunks — abortando envio");
+            console.error("Sem chunks ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â abortando envio");
             return;
           }
 
@@ -856,7 +922,7 @@ const MessageInput = ({ ticketStatus }) => {
 
           window.dispatchEvent(new Event("refreshMessages"));
         } catch (err) {
-          console.error("Erro ao enviar áudio:", err);
+          console.error("Erro ao enviar ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡udio:", err);
           showAudioToast(
             i18n.t("messagesInput.audioSendError"),
             audioToastIds.sendError
@@ -869,7 +935,7 @@ const MessageInput = ({ ticketStatus }) => {
       mediaRecorderRef.current.start();
       setRecording(true);
     } catch (err) {
-      console.error("Erro ao iniciar gravação:", err);
+      console.error("Erro ao iniciar gravaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o:", err);
       setLoading(false);
       stopMediaStream(mediaStreamRef.current);
       mediaStreamRef.current = null;
