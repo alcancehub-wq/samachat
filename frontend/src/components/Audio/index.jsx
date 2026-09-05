@@ -71,10 +71,13 @@ export default function({ url }) {
 
     return (
         <>
-            <audio ref={audioRef} controls preload="metadata">
-                <source src={audioUrl} type="audio/ogg; codecs=opus"></source>
-                <source src={audioUrl} type="audio/ogg"></source>
-                <source src={audioUrl} type="audio/mpeg"></source>
+            <audio
+                ref={audioRef}
+                src={audioUrl}
+                controls
+                preload="metadata"
+                style={{ width: "300px", maxWidth: "100%" }}
+            >
                 Seu navegador não suporta áudio
             </audio>
             {showButtonRate && <Button style={{marginLeft: "5px", marginTop: "-45px"}} onClick={toogleRate}>{audioRate}x</Button>}
