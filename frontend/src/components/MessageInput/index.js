@@ -901,7 +901,7 @@ const MessageInput = ({ ticketStatus }) => {
           }
 
           if (!audioChunksRef.current || audioChunksRef.current.length === 0) {
-            console.error("Sem chunks ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â abortando envio");
+            console.error("Sem chunks — abortando envio");
             return;
           }
 
@@ -922,7 +922,7 @@ const MessageInput = ({ ticketStatus }) => {
 
           window.dispatchEvent(new Event("refreshMessages"));
         } catch (err) {
-          console.error("Erro ao enviar ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡udio:", err);
+          console.error("Erro ao enviar áudio:", err);
           showAudioToast(
             i18n.t("messagesInput.audioSendError"),
             audioToastIds.sendError
@@ -935,7 +935,7 @@ const MessageInput = ({ ticketStatus }) => {
       mediaRecorderRef.current.start();
       setRecording(true);
     } catch (err) {
-      console.error("Erro ao iniciar gravaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o:", err);
+      console.error("Erro ao iniciar gravação:", err);
       setLoading(false);
       stopMediaStream(mediaStreamRef.current);
       mediaStreamRef.current = null;
