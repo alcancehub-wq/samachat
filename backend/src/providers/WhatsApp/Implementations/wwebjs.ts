@@ -808,7 +808,7 @@ const convertToMediaPayload = async (
       "Unable to download WhatsApp media payload; trying serialized-id compatibility fallback"
     );
 
-    if (!msg.fromMe && observeInboundMedia) {
+    if (observeInboundMedia) {
       try {
         media = await downloadInboundMediaWithSerializedCompat(msg);
 
@@ -844,6 +844,29 @@ const convertToMediaPayload = async (
 
     if (!media) {
       return undefined;
+    }
+  }
+
+  if (
+    !media &&
+    msg.fromMe &&
+    (msg.type === "audio" || msg.type === "ptt")
+  ) {
+    try {
+      media = await downloadInboundMediaWithSerializedCompat(msg);
+    } catch (compatErr) {
+      logger.warn(
+        {
+          err: compatErr,
+          eventName,
+          sessionId,
+          messageId,
+          messageType: msg.type,
+          fromMe: true,
+          serializedMessageId: resolveWwebjsSerializedMessageId(msg)
+        },
+        "WhatsApp outbound audio media compatibility fallback failed"
+      );
     }
   }
 
