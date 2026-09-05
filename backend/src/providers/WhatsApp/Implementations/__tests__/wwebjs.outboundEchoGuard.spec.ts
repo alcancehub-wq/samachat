@@ -96,6 +96,35 @@ describe("wwebjs outbound echo guard", () => {
     ).resolves.toBe(true);
   });
 
+  it("refreshes fallback correlation with the provider result before matching the real echo", async () => {
+    const reservation = reserveOutboundEcho(35, {
+      kind: "text",
+      to: "5511999999999@c.us",
+      body: "mensagem original"
+    });
+
+    reservation.complete(
+      "fallback_1786383780_unknown_5511999999999@c.us_control",
+      {
+        kind: "text",
+        to: "140582986985630@lid",
+        body: "mensagem normalizada"
+      }
+    );
+
+    await expect(
+      shouldSuppressOutboundEcho(
+        35,
+        "3EB0REALNORMALIZED",
+        1000,
+        {
+          kind: "text",
+          to: "140582986985630@lid",
+          body: "mensagem normalizada"
+        }
+      )
+    ).resolves.toBe(true);
+  });
   it("does not correlate a text fallback when destination or body differs", async () => {
     const reservation = reserveOutboundEcho(35, {
       kind: "text",

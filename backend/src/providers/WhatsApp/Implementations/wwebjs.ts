@@ -1858,7 +1858,14 @@ const sendMessage = async (
     }
 
     const providerMessage = convertToProviderMessage(sentMessage);
-    outboundReservation.complete(providerMessage.id);
+    outboundReservation.complete(providerMessage.id, {
+      kind: "text",
+      to: providerMessage.to || to,
+      body:
+        typeof providerMessage.body === "string"
+          ? providerMessage.body
+          : body
+    });
     return providerMessage;
   } catch (err) {
     outboundReservation.cancel();

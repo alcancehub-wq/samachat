@@ -20,7 +20,10 @@ interface OutboundEchoReservation {
 
 export interface OutboundEchoReservationHandle {
   token: string;
-  complete: (messageId: string) => void;
+  complete: (
+    messageId: string,
+    correlation?: OutboundEchoCorrelation
+  ) => void;
   cancel: () => void;
 }
 
@@ -129,7 +132,10 @@ export const reserveOutboundEcho = (
   return {
     token,
 
-    complete: (messageId: string): void => {
+    complete: (
+      messageId: string,
+      correlation?: OutboundEchoCorrelation
+    ): void => {
       const current = reservationsBySession.get(sessionId)?.get(token);
 
       if (!current || current.state !== "pending") {
@@ -137,6 +143,10 @@ export const reserveOutboundEcho = (
       }
 
       current.messageId = normalizeProviderMessageId(messageId);
+
+      if (correlation?.kind === "text") {
+        current.correlation = correlation;
+      }
       current.state = "completed";
       current.completedAt = Date.now();
       current.resolveSettle();
