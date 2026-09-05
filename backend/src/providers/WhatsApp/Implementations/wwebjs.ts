@@ -1293,6 +1293,7 @@ export const createWWebJsReconciliationAdapterForSession = (
   options: {
     targetChatIds?: string[];
     targetedRepair?: boolean;
+    includeContactProfilePic?: boolean;
   } = {}
 ) => {
   const wbot =
@@ -1303,6 +1304,7 @@ export const createWWebJsReconciliationAdapterForSession = (
 
     targetChatIds: options.targetChatIds,
     includeContactProfilePic:
+      Boolean(options.includeContactProfilePic) ||
       Boolean(options.targetedRepair),
 
     services:
@@ -1540,7 +1542,9 @@ export const runManualWWebJsReconciliationForSession = async (
           targetedRepair
             ? Array.from(targetChatIds)
             : undefined,
-        targetedRepair
+        targetedRepair,
+        includeContactProfilePic:
+          !targetedRepair
       }
     );
 

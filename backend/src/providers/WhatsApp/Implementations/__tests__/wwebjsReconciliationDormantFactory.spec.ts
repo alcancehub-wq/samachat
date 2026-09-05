@@ -80,5 +80,31 @@ describe(
         expect(factoryBlock).not.toContain(".initialize(");
       }
     );
+
+    it(
+      "enables raw contact profile lookup only for manual global reconciliation",
+      () => {
+        const manualStart =
+          source.indexOf(
+            "export const runManualWWebJsReconciliationForSession"
+          );
+
+        const automaticStart =
+          source.indexOf(
+            "const runAutomaticWWebJsReconciliationForSession"
+          );
+
+        const manual = source.slice(
+          manualStart,
+          automaticStart
+        );
+
+        expect(manualStart).toBeGreaterThanOrEqual(0);
+        expect(automaticStart).toBeGreaterThan(manualStart);
+        expect(manual).toMatch(
+          /includeContactProfilePic:\s*!targetedRepair/
+        );
+      }
+    );
   }
 );

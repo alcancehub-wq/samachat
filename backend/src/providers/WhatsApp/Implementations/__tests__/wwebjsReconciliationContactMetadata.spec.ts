@@ -152,6 +152,118 @@ describe(
     );
 
     it(
+      "maps a raw LID contact profile picture through its own identity",
+      async () => {
+        const getProfilePicUrl =
+          jest.fn().mockResolvedValue(
+            "https://example.invalid/lid-photo.jpg"
+          );
+
+        await expect(
+          mapWWebJsContactToReconciliationMetadata(
+            {
+              id: {
+                user: "abc123",
+                _serialized: "abc123@lid"
+              },
+              pushname: "Contato LID",
+              isGroup: false,
+              getProfilePicUrl
+            },
+            { includeProfilePic: true }
+          )
+        ).resolves.toEqual({
+          name: "Contato LID",
+          number: "",
+          lid: "abc123@lid",
+          profilePicUrl:
+            "https://example.invalid/lid-photo.jpg",
+          isGroup: false
+        });
+
+        expect(getProfilePicUrl).toHaveBeenCalledTimes(1);
+      }
+    );
+
+    it(
+      "maps a raw phone contact profile picture through its own identity",
+      async () => {
+        const getProfilePicUrl =
+          jest.fn().mockResolvedValue(
+            "https://example.invalid/phone-photo.jpg"
+          );
+
+        await expect(
+          mapWWebJsContactToReconciliationMetadata(
+            {
+              id: {
+                user: "5511888888888",
+                _serialized: "5511888888888@c.us"
+              },
+              name: "Contato",
+              isGroup: false,
+              getProfilePicUrl
+            },
+            { includeProfilePic: true }
+          )
+        ).resolves.toEqual({
+          name: "Contato",
+          number: "5511888888888",
+          lid: undefined,
+          profilePicUrl:
+            "https://example.invalid/phone-photo.jpg",
+          isGroup: false
+        });
+
+        expect(getProfilePicUrl).toHaveBeenCalledTimes(1);
+      }
+    );
+
+    it(
+      "continues when raw profile picture lookup is empty or fails",
+      async () => {
+        const emptyLookup = jest.fn().mockResolvedValue(undefined);
+        const failedLookup = jest.fn().mockRejectedValue(
+          new Error("photo lookup failed")
+        );
+
+        await expect(
+          mapWWebJsContactToReconciliationMetadata(
+            {
+              id: {
+                user: "5511666666666",
+                _serialized: "5511666666666@c.us"
+              },
+              isGroup: false,
+              getProfilePicUrl: emptyLookup
+            },
+            { includeProfilePic: true }
+          )
+        ).resolves.toMatchObject({
+          number: "5511666666666",
+          profilePicUrl: undefined
+        });
+
+        await expect(
+          mapWWebJsContactToReconciliationMetadata(
+            {
+              id: {
+                user: "5511555555555",
+                _serialized: "5511555555555@c.us"
+              },
+              isGroup: false,
+              getProfilePicUrl: failedLookup
+            },
+            { includeProfilePic: true }
+          )
+        ).resolves.toMatchObject({
+          number: "5511555555555",
+          profilePicUrl: undefined
+        });
+      }
+    );
+
+    it(
       "does not require profile picture lookup during reconciliation",
       async () => {
         const getProfilePicUrl =

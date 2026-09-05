@@ -71,6 +71,7 @@ describe("CreateOrUpdateContactService", () => {
       lid: null,
       profilePicUrl: "https://example.com/pic.jpg"
     });
+    expect(getProfilePicUrlMock).not.toHaveBeenCalled();
     expect(contactCreateMock).not.toHaveBeenCalled();
     expect(emitContactEventMock).toHaveBeenCalledWith({
       action: "update",
@@ -78,6 +79,32 @@ describe("CreateOrUpdateContactService", () => {
       whatsappId: 35
     });
     expect(result).toBe(existingManualContact);
+  });
+
+  it("preserves an existing profile picture without a fallback lookup", async () => {
+    const existingContact = {
+      id: 17180,
+      name: "Ana",
+      number: "5511999999998",
+      lid: null,
+      profilePicUrl: "https://example.com/existing.jpg",
+      update: jest.fn().mockResolvedValue(undefined)
+    };
+    contactFindAllMock.mockResolvedValue([existingContact]);
+
+    await CreateOrUpdateContactService({
+      name: "Ana",
+      number: "5511999999998",
+      isGroup: false,
+      whatsappId: 35
+    });
+
+    expect(existingContact.update).toHaveBeenCalledWith({
+      name: "Ana",
+      lid: null,
+      profilePicUrl: "https://example.com/existing.jpg"
+    });
+    expect(getProfilePicUrlMock).not.toHaveBeenCalled();
   });
 
   it("prefers the equivalent contact backing the open ticket on the same whatsapp", async () => {
