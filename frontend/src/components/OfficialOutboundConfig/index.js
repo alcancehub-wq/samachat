@@ -9,6 +9,8 @@ import {
 } from "@material-ui/core";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import MessageVariablesHelper from "../MessageVariablesHelper";
+import { appendMessageVariable } from "../../utils/messageVariables";
 
 const extractParameters = component => {
   const matches = String(component?.text || "").match(/{{\d+}}/g) || [];
@@ -33,11 +35,68 @@ const buildTemplateComponents = (template, values) => {
   return JSON.stringify(grouped);
 };
 
+const parseTemplateComponentsVariables = value => {
+  if (!value) {
+    return {};
+  }
+
+  try {
+    const components =
+      typeof value === "string" ? JSON.parse(value) : value;
+
+    if (!Array.isArray(components)) {
+      return {};
+    }
+
+    return components.reduce((result, component) => {
+      const componentType = String(
+        component?.type || ""
+      ).toUpperCase();
+
+      if (
+        !componentType ||
+        !Array.isArray(component?.parameters)
+      ) {
+        return result;
+      }
+
+      component.parameters.forEach((parameter, index) => {
+        if (
+          parameter?.type === "text" &&
+          typeof parameter.text === "string"
+        ) {
+          result[`${componentType}-${index}`] =
+            parameter.text;
+        }
+      });
+
+      return result;
+    }, {});
+  } catch {
+    return {};
+  }
+};
 const OfficialOutboundConfig = ({ value, onChange, requireQueue = true }) => {
   const [connections, setConnections] = useState([]);
   const [queues, setQueues] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [variables, setVariables] = useState({});
+  const [activeParameterKey, setActiveParameterKey] = useState(null);
+  useEffect(() => {
+    setVariables(
+      parseTemplateComponentsVariables(
+        value.templateComponents
+      )
+    );
+  }, [value.templateComponents]);
+
+  useEffect(() => {
+    setActiveParameterKey(null);
+  }, [
+    value.deliveryWhatsappId,
+    value.templateName,
+    value.templateLanguage
+  ]);
 
   useEffect(() => {
     if (value.outboundMode !== "OFFICIAL") return;
@@ -89,12 +148,73 @@ const OfficialOutboundConfig = ({ value, onChange, requireQueue = true }) => {
         </FormControl>
         <FormControl fullWidth margin="dense" variant="outlined" disabled={!value.deliveryWhatsappId}>
           <InputLabel>Modelo de mensagem</InputLabel>
-          <Select value={selectedTemplate ? `${selectedTemplate.name}:${selectedTemplate.language}` : ""} onChange={event => { const template = templates.find(item => `${item.name}:${item.language}` === event.target.value); setVariables({}); update({ templateName: template?.name || "", templateLanguage: template?.language || "", templateComponents: "" }); }} label="Modelo de mensagem">
+          <Select value={selectedTemplate ? `${selectedTemplate.name}:${selectedTemplate.language}` : ""} onChange={event => { const template = templates.find(item => `${item.name}:${item.language}` === event.target.value); setVariables({}); setActiveParameterKey(null); update({ templateName: template?.name || "", templateLanguage: template?.language || "", templateComponents: "" }); }} label="Modelo de mensagem">
             <MenuItem value="">Selecione um modelo de mensagem</MenuItem>
             {templates.map(template => <MenuItem key={`${template.name}:${template.language}`} value={`${template.name}:${template.language}`}>{[template.name, template.category, template.language].filter(Boolean).join(" - ")}</MenuItem>)}
           </Select>
         </FormControl>
-        {parameters.length > 0 && <><Typography variant="subtitle2" style={{ marginTop: 12 }}>Variáveis da mensagem</Typography>{parameters.map(parameter => <TextField key={parameter.key} label={parameter.label} fullWidth variant="outlined" margin="dense" value={variables[parameter.key] || ""} onChange={event => { const nextVariables = { ...variables, [parameter.key]: event.target.value }; setVariables(nextVariables); update({ templateComponents: buildTemplateComponents(selectedTemplate, nextVariables) }); }} required />)}</>}
+        {parameters.length > 0 && <>
+          <Typography variant="subtitle2" style={{ marginTop: 12 }}>
+            Variáveis da mensagem
+          </Typography>
+
+          {parameters.map(parameter => (
+            <TextField
+              key={parameter.key}
+              label={parameter.label}
+              fullWidth
+              variant="outlined"
+              margin="dense"
+              value={variables[parameter.key] || ""}
+              onFocus={() => setActiveParameterKey(parameter.key)}
+              onChange={event => {
+                const nextVariables = {
+                  ...variables,
+                  [parameter.key]: event.target.value
+                };
+
+                setVariables(nextVariables);
+
+                update({
+                  templateComponents: buildTemplateComponents(
+                    selectedTemplate,
+                    nextVariables
+                  )
+                });
+              }}
+              required
+            />
+          ))}
+
+          <MessageVariablesHelper
+            onInsertVariable={token => {
+              const parameterKey =
+                activeParameterKey || parameters[0]?.key;
+
+              if (!parameterKey) {
+                return;
+              }
+
+              const nextVariables = {
+                ...variables,
+                [parameterKey]: appendMessageVariable(
+                  variables[parameterKey],
+                  token
+                )
+              };
+
+              setVariables(nextVariables);
+              setActiveParameterKey(parameterKey);
+
+              update({
+                templateComponents: buildTemplateComponents(
+                  selectedTemplate,
+                  nextVariables
+                )
+              });
+            }}
+          />
+        </>}
         {selectedTemplate?.components?.some(component => component.text) && <><Typography variant="subtitle2" style={{ marginTop: 12 }}>Prévia da mensagem</Typography><Typography variant="body2">{selectedTemplate.components.filter(component => component.text).map(component => component.text.replace(/{{(\d+)}}/g, (_, index) => variables[`${component.type}-${Number(index) - 1}`] || `{{${index}}}`)).join("\n")}</Typography></>}
       </>}
     </>

@@ -33,6 +33,11 @@ import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper"
 import Title from "../../components/Title";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import MessageVariablesHelper from "../../components/MessageVariablesHelper";
+import {
+  AVAILABLE_MESSAGE_VARIABLES,
+  appendMessageVariable
+} from "../../utils/messageVariables";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
@@ -108,6 +113,58 @@ const useStyles = makeStyles(theme => ({
     fontWeight: 600
   }
 }));
+
+const META_TEMPLATE_VARIABLE_EXAMPLES = {
+  nome: "João",
+  telefone: "5511999999999",
+  email: "joao@exemplo.com",
+  ticket_id: "12345",
+  responsavel: "Maria",
+  fila: "Atendimento",
+  bom_dia: "Bom dia",
+  boa_tarde: "Boa tarde",
+  boa_noite: "Boa noite",
+  data_atual: "08/09/2026",
+  hora_atual: "10:00"
+};
+
+const buildMetaBodyComponent = body => {
+  const availableKeys = new Set(
+    AVAILABLE_MESSAGE_VARIABLES.map(variable => variable.key)
+  );
+
+  const examples = [];
+  let position = 0;
+
+  const text = String(body || "").replace(
+    /{{\s*([a-zA-Z0-9_]+)\s*}}/g,
+    (match, key) => {
+      if (!availableKeys.has(key)) {
+        return match;
+      }
+
+      position += 1;
+      examples.push(
+        META_TEMPLATE_VARIABLE_EXAMPLES[key] || match
+      );
+
+      return `{{${position}}}`;
+    }
+  );
+
+  const component = {
+    type: "BODY",
+    text
+  };
+
+  if (examples.length > 0) {
+    component.example = {
+      body_text: [examples]
+    };
+  }
+
+  return component;
+};
 
 const MetaTemplates = () => {
   const classes = useStyles();
@@ -236,10 +293,7 @@ const MetaTemplates = () => {
           language: templateLanguage.trim(),
           category: templateCategory,
           components: [
-            {
-              type: "BODY",
-              text: cleanBody
-            }
+            buildMetaBodyComponent(cleanBody)
           ]
         }
       );
@@ -389,6 +443,14 @@ const MetaTemplates = () => {
             value={templateBody}
             onChange={event => setTemplateBody(event.target.value)}
             disabled={creating}
+          />
+
+          <MessageVariablesHelper
+            onInsertVariable={token =>
+              setTemplateBody(current =>
+                appendMessageVariable(current, token)
+              )
+            }
           />
         </DialogContent>
 
