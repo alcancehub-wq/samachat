@@ -201,6 +201,45 @@ describe("wwebjs outbound echo integration", () => {
     expect(matches).toHaveLength(2);
   });
 
+  it("keeps outbound audio recovery reachable when downloadMedia throws", () => {
+    const convertToMediaPayload = extractBetween(
+      "const convertToMediaPayload = async (",
+      "const shouldHandleMessage = ("
+    );
+
+    const downloadPosition = convertToMediaPayload.indexOf(
+      "media = await msg.downloadMedia();"
+    );
+
+    const outboundFallbackMatch = convertToMediaPayload.match(
+      /msg\.fromMe\s*&&\s*\(msg\.type === "audio"\s*\|\|\s*msg\.type === "ptt"\)/
+    );
+
+    expect(downloadPosition).toBeGreaterThanOrEqual(0);
+    expect(outboundFallbackMatch).not.toBeNull();
+
+    const outboundFallbackPosition =
+      outboundFallbackMatch?.index ?? -1;
+
+    expect(outboundFallbackPosition).toBeGreaterThan(downloadPosition);
+
+    const recoveryWindow = convertToMediaPayload.slice(
+      downloadPosition,
+      outboundFallbackPosition
+    );
+
+    expect(recoveryWindow).not.toMatch(
+      /if\s*\(!media\)\s*\{\s*return undefined;\s*\}/
+    );
+
+    expect(convertToMediaPayload).toContain(
+      "media = await downloadInboundMediaWithSerializedCompat(msg);"
+    );
+
+    expect(convertToMediaPayload).toContain(
+      "WhatsApp outbound audio media compatibility fallback failed"
+    );
+  });
   it("blocks outbound audio persistence until media payload is available", () => {
     const getMessageData = extractBetween(
       "const getMessageData = async (",

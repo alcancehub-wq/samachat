@@ -842,9 +842,7 @@ const convertToMediaPayload = async (
       }
     }
 
-    if (!media) {
-      return undefined;
-    }
+
   }
 
   if (
