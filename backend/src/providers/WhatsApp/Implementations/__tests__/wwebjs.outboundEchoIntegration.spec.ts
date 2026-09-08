@@ -200,4 +200,23 @@ describe("wwebjs outbound echo integration", () => {
 
     expect(matches).toHaveLength(2);
   });
+
+  it("blocks outbound audio persistence until media payload is available", () => {
+    const getMessageData = extractBetween(
+      "const getMessageData = async (",
+      "const resolveWWebJsReconciliationMessageMetadata = async ("
+    );
+
+    expect(getMessageData).toContain(
+      'msg.fromMe && (msg.type === "audio" || msg.type === "ptt")'
+    );
+    expect(getMessageData).toContain("isOutboundAudioMedia");
+    expect(getMessageData).toMatch(
+      /msg\.hasMedia\s*&&\s*!mediaPayload\s*&&/
+    );
+    expect(getMessageData).toContain(
+      "Blocking persistence of ${mediaDirection} media message without downloaded payload"
+    );
+    expect(getMessageData).toContain("throw mediaError;");
+  });
 });

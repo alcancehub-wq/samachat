@@ -1094,14 +1094,18 @@ const getMessageData = async (
     "sticker"
   ]);
 
+  const isOutboundAudioMedia =
+    msg.fromMe && (msg.type === "audio" || msg.type === "ptt");
+
   if (
-    !msg.fromMe &&
     msg.hasMedia &&
-    inboundMediaTypes.has(msg.type) &&
-    !mediaPayload
+    !mediaPayload &&
+    ((!msg.fromMe && inboundMediaTypes.has(msg.type)) ||
+      isOutboundAudioMedia)
   ) {
+    const mediaDirection = msg.fromMe ? "outbound" : "inbound";
     const mediaError = new Error(
-      `Inbound WhatsApp media payload unavailable for ${resolveWwebjsSerializedMessageId(
+      `${msg.fromMe ? "Outbound" : "Inbound"} WhatsApp media payload unavailable for ${resolveWwebjsSerializedMessageId(
         msg
       ) || resolveEventMessageId(msg as any)}`
     );
@@ -1114,10 +1118,10 @@ const getMessageData = async (
           resolveWwebjsSerializedMessageId(msg) ||
           resolveEventMessageId(msg as any),
         messageType: msg.type,
-        fromMe: false,
+        fromMe: msg.fromMe,
         hasMedia: true
       },
-      "Blocking persistence of inbound media message without downloaded payload"
+      `Blocking persistence of ${mediaDirection} media message without downloaded payload`
     );
 
     throw mediaError;
