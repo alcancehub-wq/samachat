@@ -144,9 +144,7 @@ const buildMetaBodyComponent = body => {
       }
 
       position += 1;
-      examples.push(
-        META_TEMPLATE_VARIABLE_EXAMPLES[key] || match
-      );
+      examples.push(META_TEMPLATE_VARIABLE_EXAMPLES[key]);
 
       return `{{${position}}}`;
     }

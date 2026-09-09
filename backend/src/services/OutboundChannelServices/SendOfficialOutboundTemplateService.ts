@@ -4,12 +4,6 @@ import { createMetaMessageTemplateGetExecutor } from "../MetaMessageTemplateServ
 import ResolveApprovedMetaMessageTemplateService from "../MetaMessageTemplateServices/ResolveApprovedMetaMessageTemplateService";
 import OfficialOutboundOrigin from "../../models/OfficialOutboundOrigin";
 import ResolveOutboundChannelService from "./ResolveOutboundChannelService";
-import ResolveOfficialTemplateComponentsVariablesService, {
-  hasOfficialTemplateSystemVariables
-} from "./ResolveOfficialTemplateComponentsVariablesService";
-import Contact from "../../models/Contact";
-import User from "../../models/User";
-import Queue from "../../models/Queue";
 
 interface Request {
   consumerType: "schedule" | "campaign" | "flow";
@@ -55,39 +49,11 @@ const SendOfficialOutboundTemplateService = async (request: Request): Promise<st
     phoneNumberId: channel.whatsapp.phoneNumberId,
     apiVersion: channel.whatsapp.apiVersion
   });
-
-  const parsedComponents = parseComponents(
-    request.templateComponents
-  );
-
-  let resolvedComponents = parsedComponents;
-
-  if (hasOfficialTemplateSystemVariables(parsedComponents)) {
-    const [contact, ownerUser, ownerQueue] = await Promise.all([
-      Contact.findByPk(request.contactId),
-      User.findByPk(request.ownerUserId),
-      Queue.findByPk(request.ownerQueueId)
-    ]);
-
-    resolvedComponents =
-      ResolveOfficialTemplateComponentsVariablesService({
-        components: parsedComponents,
-        contact,
-        user: ownerUser,
-        ticket: {
-          id: request.ticketId || undefined,
-          contact,
-          user: ownerUser,
-          queue: ownerQueue
-        }
-      });
-  }
-
   const result = await client.sendTemplate({
     to: request.contactNumber,
     name: request.templateName,
     languageCode: request.templateLanguage,
-    components: resolvedComponents
+    components: parseComponents(request.templateComponents)
   });
   const providerMessageId = result.messages?.[0]?.id || null;
   await OfficialOutboundOrigin.create({
