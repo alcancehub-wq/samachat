@@ -34,6 +34,7 @@ import { toast } from "react-toastify";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
+import correctNativeText from "../../services/NativeTextCorrector";
 import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -554,27 +555,8 @@ const MessageInput = ({ ticketStatus }) => {
     setTypeBar(false);
   };
 
-  const extractCorrectedText = data => {
-    if (typeof data === "string") return data;
-
-    return (
-      data?.content ||
-      data?.text ||
-      data?.result ||
-      data?.response ||
-      data?.message ||
-      ""
-    );
-  };
-
-  const correctTextValue = async textToCorrect => {
-    const { data } = await api.post("/openai/correct-text", {
-      ticketId,
-      text: textToCorrect
-    });
-
-    return extractCorrectedText(data);
-  };
+  const correctTextValue = textToCorrect =>
+    correctNativeText(textToCorrect);
 
   const normalizeAutoCorrectedText = (original, correctedText) => {
     if (!correctedText) return "";
