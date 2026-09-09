@@ -1,4 +1,5 @@
 import AppError from "../../errors/AppError";
+import { logger } from "../../utils/logger";
 import {
   MetaMessageTemplateCredentials,
   MetaMessageTemplate,
@@ -105,6 +106,60 @@ const parseListResponse = (
 };
 
 
+type MetaUpstreamErrorDiagnostic = {
+  message?: string;
+  type?: string;
+  code?: number;
+  errorSubcode?: number;
+  fbtraceId?: string;
+};
+
+const parseMetaUpstreamErrorDiagnostic = (
+  body: string
+): MetaUpstreamErrorDiagnostic => {
+  try {
+    const parsed = JSON.parse(body || "{}") as {
+      error?: {
+        message?: unknown;
+        type?: unknown;
+        code?: unknown;
+        error_subcode?: unknown;
+        fbtrace_id?: unknown;
+      };
+    };
+
+    const error = parsed?.error;
+
+    if (!error || typeof error !== "object") {
+      return {};
+    }
+
+    return {
+      message:
+        typeof error.message === "string"
+          ? error.message.slice(0, 500)
+          : undefined,
+      type:
+        typeof error.type === "string"
+          ? error.type.slice(0, 100)
+          : undefined,
+      code:
+        typeof error.code === "number"
+          ? error.code
+          : undefined,
+      errorSubcode:
+        typeof error.error_subcode === "number"
+          ? error.error_subcode
+          : undefined,
+      fbtraceId:
+        typeof error.fbtrace_id === "string"
+          ? error.fbtrace_id.slice(0, 200)
+          : undefined
+    };
+  } catch {
+    return {};
+  }
+};
 const parseCreateResponse = (
   body: string
 ): MetaMessageTemplateCreateResponse => {
@@ -277,6 +332,21 @@ export class MetaMessageTemplateClient {
       response.statusCode < 200 ||
       response.statusCode >= 300
     ) {
+      const diagnostic =
+        parseMetaUpstreamErrorDiagnostic(response.body);
+
+      logger.warn(
+        {
+          statusCode: response.statusCode,
+          metaErrorType: diagnostic.type,
+          metaErrorCode: diagnostic.code,
+          metaErrorSubcode: diagnostic.errorSubcode,
+          metaErrorMessage: diagnostic.message,
+          metaFbtraceId: diagnostic.fbtraceId
+        },
+        "Meta template upstream create failure"
+      );
+
       throw new AppError(
         `ERR_META_TEMPLATE_CREATE_FAILED: ${response.statusCode}`
       );
