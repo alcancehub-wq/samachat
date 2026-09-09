@@ -26,6 +26,7 @@ import CreateContactService from "../services/ContactServices/CreateContactServi
 import HandleIncomingFlowMessageService from "../services/FlowExecutionServices/HandleIncomingFlowMessageService";
 import ResolveOfficialInboundOriginService from "../services/OutboundChannelServices/ResolveOfficialInboundOriginService";
 import { PersistOfficialInboundFactsService } from "../services/OutboundChannelServices/OfficialInboundCorrelationService";
+import ResolveOfficialInboundCrossProviderDuplicateService from "../services/WhatsappService/ResolveOfficialInboundCrossProviderDuplicateService";
 import { ResolveOfficialInboundCorrelationService } from "../services/OutboundChannelServices/OfficialInboundCorrelationService";
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
@@ -650,6 +651,40 @@ export const handleMessage = async (
     }
 
     await ticket.update({ lastMessage: lastMessageText });
+
+    if (
+      !processedMessage.fromMe &&
+      whatsapp.providerType === "official" &&
+      processedMessage.id &&
+      !processedMessage.providerTimestamp &&
+      processedMessage.timestamp
+    ) {
+      const crossProviderDuplicate =
+        await ResolveOfficialInboundCrossProviderDuplicateService({
+          ticketId: ticket.id,
+          contactId: contact.id,
+          providerTimestamp: processedMessage.timestamp,
+          mediaType: messageData.mediaType
+        });
+
+      if (crossProviderDuplicate) {
+        logger.info(
+          {
+            ticketId: ticket.id,
+            contactId: contact.id,
+            wwebjsMessageId: processedMessage.id,
+            officialMessageId: crossProviderDuplicate.id,
+            providerTimestamp: processedMessage.timestamp
+          },
+          "Skipping duplicate official inbound received through WWebJS coexistence"
+        );
+
+        return;
+      }
+
+      messageData.createdAt =
+        new Date(Number(processedMessage.timestamp) * 1000);
+    }
 
     await CreateMessageService({ messageData });
 
