@@ -578,6 +578,42 @@ const MessageInput = ({ ticketStatus }) => {
     return extractCorrectedText(data);
   };
 
+  const normalizeAutoCorrectedText = (original, correctedText) => {
+    if (!correctedText) return "";
+
+    const trailingWhitespace = original.match(/\s+$/)?.[0] || "";
+
+    if (!trailingWhitespace) {
+      return correctedText;
+    }
+
+    return `${correctedText.replace(/\s+$/, "")}${trailingWhitespace}`;
+  };
+
+  const normalizeAccentComparison = value =>
+    value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const applyAutoCorrectedPrefix = (currentValue, original, correctedValue) => {
+    if (currentValue === original) {
+      return correctedValue;
+    }
+
+    if (currentValue.length < original.length) {
+      return currentValue;
+    }
+
+    const currentPrefix = currentValue.slice(0, original.length);
+
+    if (
+      normalizeAccentComparison(currentPrefix) !==
+      normalizeAccentComparison(original)
+    ) {
+      return currentValue;
+    }
+
+    return correctedValue + currentValue.slice(original.length);
+  };
+
 
   useEffect(() => {
     if (
@@ -590,11 +626,16 @@ const MessageInput = ({ ticketStatus }) => {
     }
 
     const original = inputMessage;
-    const requestId = ++externalCorrectionRequestRef.current;
 
-    const timer = setTimeout(async () => {
+    const runCorrection = async () => {
+      const requestId = ++externalCorrectionRequestRef.current;
+
       try {
-        const correctedText = await correctTextValue(original);
+        const responseText = await correctTextValue(original);
+        const correctedText = normalizeAutoCorrectedText(
+          original,
+          responseText
+        );
 
         if (requestId !== externalCorrectionRequestRef.current) return;
 
@@ -606,12 +647,19 @@ const MessageInput = ({ ticketStatus }) => {
         lastExternalAutoCorrectedValueRef.current = correctedText;
 
         setInputMessage(currentValue =>
-          currentValue === original ? correctedText : currentValue
+          applyAutoCorrectedPrefix(currentValue, original, correctedText)
         );
       } catch (err) {
         // Correcao em background nunca bloqueia digitacao ou envio.
       }
-    }, 700);
+    };
+
+    if (original.endsWith(" ")) {
+      runCorrection();
+      return undefined;
+    }
+
+    const timer = setTimeout(runCorrection, 700);
 
     return () => clearTimeout(timer);
   }, [autoCorrectTextEnabled, inputMessage, isInternalMessage, ticketId]);
@@ -627,11 +675,16 @@ const MessageInput = ({ ticketStatus }) => {
     }
 
     const original = internalInputMessage;
-    const requestId = ++internalCorrectionRequestRef.current;
 
-    const timer = setTimeout(async () => {
+    const runCorrection = async () => {
+      const requestId = ++internalCorrectionRequestRef.current;
+
       try {
-        const correctedText = await correctTextValue(original);
+        const responseText = await correctTextValue(original);
+        const correctedText = normalizeAutoCorrectedText(
+          original,
+          responseText
+        );
 
         if (requestId !== internalCorrectionRequestRef.current) return;
 
@@ -643,12 +696,19 @@ const MessageInput = ({ ticketStatus }) => {
         lastInternalAutoCorrectedValueRef.current = correctedText;
 
         setInternalInputMessage(currentValue =>
-          currentValue === original ? correctedText : currentValue
+          applyAutoCorrectedPrefix(currentValue, original, correctedText)
         );
       } catch (err) {
         // Correcao em background nunca bloqueia digitacao ou envio.
       }
-    }, 700);
+    };
+
+    if (original.endsWith(" ")) {
+      runCorrection();
+      return undefined;
+    }
+
+    const timer = setTimeout(runCorrection, 700);
 
     return () => clearTimeout(timer);
   }, [
