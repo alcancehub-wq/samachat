@@ -29,8 +29,7 @@ const resolveMessageTicketIds = async (
 
   if (
     ticket.isGroup ||
-    !ticket.contactId ||
-    ticket.contact?.allowMultipleConversations
+    !ticket.contactId
   ) {
     return [primaryTicketId];
   }
@@ -39,6 +38,14 @@ const resolveMessageTicketIds = async (
     Number(ticket.contactId);
 
   if (!canonicalContactId) {
+    return [primaryTicketId];
+  }
+
+  const contact = await Contact.findByPk(canonicalContactId, {
+    attributes: ["id", "allowMultipleConversations"]
+  });
+
+  if (contact?.allowMultipleConversations) {
     return [primaryTicketId];
   }
 
