@@ -12,6 +12,46 @@ jest.mock("../../UserServices/ShowUserService");
 const ticketFindByPkMock = Ticket.findByPk as jest.Mock;
 const showUserServiceMock = ShowUserService as jest.Mock;
 
+describe("ShowTicketService contact loading", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("loads allowMultipleConversations with the contact", async () => {
+    const ticket = {
+      id: 14001,
+      userId: 7,
+      queueId: 11,
+      status: "open"
+    };
+
+    ticketFindByPkMock.mockResolvedValue(ticket);
+    showUserServiceMock.mockResolvedValue({
+      id: 7,
+      whatsappId: null,
+      queues: []
+    });
+
+    await ShowTicketService(14001, {
+      userId: 7,
+      profile: "user"
+    });
+
+    expect(ticketFindByPkMock).toHaveBeenCalledWith(
+      14001,
+      expect.objectContaining({
+        include: expect.arrayContaining([
+          expect.objectContaining({
+            as: "contact",
+            attributes: expect.arrayContaining([
+              "allowMultipleConversations"
+            ])
+          })
+        ])
+      })
+    );
+  });
+});
 describe("ShowTicketService access control", () => {
   beforeEach(() => {
     jest.clearAllMocks();
