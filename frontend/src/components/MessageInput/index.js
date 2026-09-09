@@ -435,8 +435,6 @@ const MessageInput = ({ ticketStatus }) => {
   const [loading, setLoading] = useState(false);
   const [correctingText, setCorrectingText] = useState(false);
   const [autoCorrectTextEnabled, setAutoCorrectTextEnabled] = useState(false);
-  const externalCorrectionRequestRef = useRef(0);
-  const internalCorrectionRequestRef = useRef(0);
   const lastExternalAutoCorrectedValueRef = useRef("");
   const lastInternalAutoCorrectedValueRef = useRef("");
   const [recording, setRecording] = useState(false);
@@ -628,16 +626,12 @@ const MessageInput = ({ ticketStatus }) => {
     const original = inputMessage;
 
     const runCorrection = async () => {
-      const requestId = ++externalCorrectionRequestRef.current;
-
       try {
         const responseText = await correctTextValue(original);
         const correctedText = normalizeAutoCorrectedText(
           original,
           responseText
         );
-
-        if (requestId !== externalCorrectionRequestRef.current) return;
 
         if (!correctedText || correctedText === original) {
           lastExternalAutoCorrectedValueRef.current = original;
@@ -659,7 +653,7 @@ const MessageInput = ({ ticketStatus }) => {
       return undefined;
     }
 
-    const timer = setTimeout(runCorrection, 700);
+    const timer = setTimeout(runCorrection, 300);
 
     return () => clearTimeout(timer);
   }, [autoCorrectTextEnabled, inputMessage, isInternalMessage, ticketId]);
@@ -677,16 +671,12 @@ const MessageInput = ({ ticketStatus }) => {
     const original = internalInputMessage;
 
     const runCorrection = async () => {
-      const requestId = ++internalCorrectionRequestRef.current;
-
       try {
         const responseText = await correctTextValue(original);
         const correctedText = normalizeAutoCorrectedText(
           original,
           responseText
         );
-
-        if (requestId !== internalCorrectionRequestRef.current) return;
 
         if (!correctedText || correctedText === original) {
           lastInternalAutoCorrectedValueRef.current = original;
@@ -708,7 +698,7 @@ const MessageInput = ({ ticketStatus }) => {
       return undefined;
     }
 
-    const timer = setTimeout(runCorrection, 700);
+    const timer = setTimeout(runCorrection, 300);
 
     return () => clearTimeout(timer);
   }, [
