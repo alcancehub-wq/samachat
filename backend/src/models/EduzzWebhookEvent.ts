@@ -8,7 +8,8 @@ import {
   AutoIncrement,
   AllowNull,
   ForeignKey,
-  BelongsTo} from "sequelize-typescript";
+  BelongsTo,
+  DataType} from "sequelize-typescript";
 
 import Integration from "./Integration";
 import Ticket from "./Ticket";
@@ -36,17 +37,17 @@ class EduzzWebhookEvent extends Model<EduzzWebhookEvent> {
   @Column
   status: string;
 
-  @Column
+  @Column(DataType.STRING)
   productId: string | null;
 
-  @Column
+  @Column(DataType.STRING)
   buyerPhone: string | null;
 
   @ForeignKey(() => Ticket)
-  @Column
+  @Column(DataType.INTEGER)
   ticketId: number | null;
 
-  @Column
+  @Column(DataType.TEXT)
   error: string | null;
 
   @BelongsTo(() => Integration)
