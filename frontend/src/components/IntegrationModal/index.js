@@ -152,9 +152,6 @@ const IntegrationModal = ({ open, onClose, integrationId }) => {
                   <MenuItem value="make">
                     {i18n.t("integrationModal.type.make")}
                   </MenuItem>
-                  <MenuItem value="eduzz">
-                    {i18n.t("integrationModal.type.eduzz", "Eduzz")}
-                  </MenuItem>
                 </Select>
               </FormControl>
               <Field

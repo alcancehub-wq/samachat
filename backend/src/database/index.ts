@@ -42,8 +42,6 @@ import OpenAISetting from "../models/OpenAISetting";
 import OpenAILog from "../models/OpenAILog";
 import OfficialOutboundOrigin from "../models/OfficialOutboundOrigin";
 import OfficialInboundMessage from "../models/OfficialInboundMessage";
-import EduzzIntegrationRule from "../models/EduzzIntegrationRule";
-import EduzzWebhookEvent from "../models/EduzzWebhookEvent";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -94,9 +92,7 @@ const models = [
   OpenAISetting,
   OpenAILog,
   OfficialOutboundOrigin,
-  OfficialInboundMessage,
-  EduzzIntegrationRule,
-  EduzzWebhookEvent
+  OfficialInboundMessage
 ];
 
 sequelize.addModels(models);
