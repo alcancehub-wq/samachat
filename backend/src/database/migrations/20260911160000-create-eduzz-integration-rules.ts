@@ -57,7 +57,7 @@ module.exports = {
         allowNull: true
       },
       metaTemplateComponents: {
-        type: DataTypes.JSONB,
+        type: DataTypes.JSON,
         allowNull: true
       },
       isActive: {
