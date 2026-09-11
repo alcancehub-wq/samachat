@@ -44,6 +44,7 @@ import OfficialOutboundOrigin from "../models/OfficialOutboundOrigin";
 import OfficialInboundMessage from "../models/OfficialInboundMessage";
 import EduzzIntegrationRule from "../models/EduzzIntegrationRule";
 import EduzzWebhookEvent from "../models/EduzzWebhookEvent";
+import IntegrationCredential from "../models/IntegrationCredential";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -96,7 +97,8 @@ const models = [
   OfficialOutboundOrigin,
   OfficialInboundMessage,
   EduzzIntegrationRule,
-  EduzzWebhookEvent
+  EduzzWebhookEvent,
+  IntegrationCredential
 ];
 
 sequelize.addModels(models);

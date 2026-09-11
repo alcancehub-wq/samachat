@@ -10,6 +10,7 @@ import ResolveEduzzContactTicketService from "./ResolveEduzzContactTicketService
 import DispatchEduzzMessageService from "./DispatchEduzzMessageService";
 import BuildEduzzMessageExtraDataService from "./BuildEduzzMessageExtraDataService";
 import SelectEduzzIntegrationRuleService from "./SelectEduzzIntegrationRuleService";
+import { GetDefaultIntegrationCredentialSecretService } from "../IntegrationCredentialServices/IntegrationCredentialService";
 
 interface Request {
   integrationId: number;
@@ -39,7 +40,13 @@ const ProcessEduzzWebhookService = async ({
     throw new AppError("ERR_EDUZZ_INTEGRATION_NOT_FOUND", 404);
   }
 
-  if (!integration.apiKey) {
+  const webhookSecret =
+    await GetDefaultIntegrationCredentialSecretService({
+      integrationId,
+      type: "HMAC_SECRET"
+    });
+
+  if (!webhookSecret) {
     throw new AppError(
       "ERR_EDUZZ_WEBHOOK_SECRET_NOT_CONFIGURED",
       500
@@ -49,7 +56,7 @@ const ProcessEduzzWebhookService = async ({
   const signatureValid = VerifyEduzzSignatureService({
     rawBody,
     signature,
-    secret: integration.apiKey
+    secret: webhookSecret
   });
 
   if (!signatureValid) {

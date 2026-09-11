@@ -48,29 +48,29 @@ const messageVariables = [
   { sequence: 2, key: "telefone", label: "Telefone do contato" },
   { sequence: 3, key: "email", label: "E-mail do contato" },
   { sequence: 4, key: "ticket_id", label: "ID do atendimento" },
-  { sequence: 5, key: "responsavel", label: "ResponsÃƒÂ¡vel" },
+  { sequence: 5, key: "responsavel", label: "ResponsÃƒÆ’Ã‚Â¡vel" },
   { sequence: 6, key: "fila", label: "Setor / fila" },
   { sequence: 7, key: "bom_dia", label: "Bom dia" },
   { sequence: 8, key: "boa_tarde", label: "Boa tarde" },
   { sequence: 9, key: "boa_noite", label: "Boa noite" },
   { sequence: 10, key: "data_atual", label: "Data atual" },
   { sequence: 11, key: "hora_atual", label: "Hora atual" },
-  { sequence: 12, key: "eduzz_comprador_nome", label: "Eduzz Ã¢â‚¬â€ comprador: nome" },
-  { sequence: 13, key: "eduzz_comprador_email", label: "Eduzz Ã¢â‚¬â€ comprador: e-mail" },
-  { sequence: 14, key: "eduzz_comprador_telefone", label: "Eduzz Ã¢â‚¬â€ comprador: telefone" },
-  { sequence: 15, key: "eduzz_fatura_id", label: "Eduzz Ã¢â‚¬â€ ID da fatura" },
-  { sequence: 16, key: "eduzz_produto_id", label: "Eduzz Ã¢â‚¬â€ ID do produto" },
-  { sequence: 17, key: "eduzz_evento_id", label: "Eduzz Ã¢â‚¬â€ ID do webhook" },
-  { sequence: 18, key: "eduzz_evento_nome", label: "Eduzz Ã¢â‚¬â€ nome do evento webhook" },
-  { sequence: 19, key: "blinket_evento_id", label: "Blinket Ã¢â‚¬â€ ID do evento" },
-  { sequence: 20, key: "blinket_evento_nome", label: "Blinket Ã¢â‚¬â€ nome do evento" },
-  { sequence: 21, key: "blinket_participante_id", label: "Blinket Ã¢â‚¬â€ ID do participante" },
-  { sequence: 22, key: "blinket_invite_key", label: "Blinket Ã¢â‚¬â€ invite key" },
-  { sequence: 23, key: "blinket_ingresso_nome", label: "Blinket Ã¢â‚¬â€ nome do ingresso" },
-  { sequence: 24, key: "blinket_participante_nome", label: "Blinket Ã¢â‚¬â€ participante: nome" },
-  { sequence: 25, key: "blinket_participante_email", label: "Blinket Ã¢â‚¬â€ participante: e-mail" },
-  { sequence: 26, key: "blinket_participante_telefone", label: "Blinket Ã¢â‚¬â€ participante: telefone" },
-  { sequence: 27, key: "blinket_participante_status", label: "Blinket Ã¢â‚¬â€ participante: status" }
+  { sequence: 12, key: "eduzz_comprador_nome", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â comprador: nome" },
+  { sequence: 13, key: "eduzz_comprador_email", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â comprador: e-mail" },
+  { sequence: 14, key: "eduzz_comprador_telefone", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â comprador: telefone" },
+  { sequence: 15, key: "eduzz_fatura_id", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ID da fatura" },
+  { sequence: 16, key: "eduzz_produto_id", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ID do produto" },
+  { sequence: 17, key: "eduzz_evento_id", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ID do webhook" },
+  { sequence: 18, key: "eduzz_evento_nome", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â nome do evento webhook" },
+  { sequence: 19, key: "blinket_evento_id", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ID do evento" },
+  { sequence: 20, key: "blinket_evento_nome", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â nome do evento" },
+  { sequence: 21, key: "blinket_participante_id", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ID do participante" },
+  { sequence: 22, key: "blinket_invite_key", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â invite key" },
+  { sequence: 23, key: "blinket_ingresso_nome", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â nome do ingresso" },
+  { sequence: 24, key: "blinket_participante_nome", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â participante: nome" },
+  { sequence: 25, key: "blinket_participante_email", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â participante: e-mail" },
+  { sequence: 26, key: "blinket_participante_telefone", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â participante: telefone" },
+  { sequence: 27, key: "blinket_participante_status", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â participante: status" }
 ];
 
 const getTextTemplateSlots = template => {
@@ -268,8 +268,18 @@ const EduzzRuleConfigModal = ({
   integration
 }) => {
   const { whatsApps = [] } = useContext(WhatsAppsContext);
-
   const [rules, setRules] = useState([]);
+  const [credentials, setCredentials] = useState([]);
+  const [credentialEditing, setCredentialEditing] = useState(false);
+  const [credentialSaving, setCredentialSaving] = useState(false);
+  const [credentialForm, setCredentialForm] = useState({
+    id: null,
+    name: "",
+    secret: "",
+    isDefault: true,
+    isActive: true
+  });
+
   const [users, setUsers] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [templateParameterMapping, setTemplateParameterMapping] = useState({});
@@ -347,6 +357,19 @@ const EduzzRuleConfigModal = ({
 
     setRules(Array.isArray(data) ? data : []);
   }, [integrationId]);
+  const loadCredentials = useCallback(async () => {
+    if (!integrationId) {
+      return;
+    }
+
+    const { data } = await api.get(
+      `/integrations/${integrationId}/credentials`
+    );
+
+    setCredentials(
+      Array.isArray(data) ? data : []
+    );
+  }, [integrationId]);
 
   const loadUsers = useCallback(async () => {
     let pageNumber = 1;
@@ -387,7 +410,8 @@ const EduzzRuleConfigModal = ({
       try {
         await Promise.all([
           loadRules(),
-          loadUsers()
+          loadUsers(),
+          loadCredentials()
         ]);
       } catch (err) {
         if (mounted) {
@@ -407,7 +431,8 @@ const EduzzRuleConfigModal = ({
     open,
     integrationId,
     loadRules,
-    loadUsers
+    loadUsers,
+    loadCredentials
   ]);
 
   useEffect(() => {
@@ -524,7 +549,7 @@ const EduzzRuleConfigModal = ({
         `/integrations/${integrationId}/eduzz-rules/${item.id}`
       );
 
-      toast.success("Regra Eduzz excluÃƒÂ­da.");
+      toast.success("Regra Eduzz excluÃƒÆ’Ã‚Â­da.");
       await loadRules();
 
       if (Number(rule.id) === Number(item.id)) {
@@ -560,13 +585,13 @@ const EduzzRuleConfigModal = ({
     }
 
     if (!rule.whatsappId) {
-      toast.error("Selecione a conexÃƒÂ£o.");
+      toast.error("Selecione a conexÃƒÆ’Ã‚Â£o.");
       return false;
     }
 
     if (!rule.userId) {
       toast.error(
-        "Selecione o responsÃƒÂ¡vel."
+        "Selecione o responsÃƒÆ’Ã‚Â¡vel."
       );
       return false;
     }
@@ -596,7 +621,7 @@ const EduzzRuleConfigModal = ({
       !rule.metaTemplateLanguage
     ) {
       toast.error(
-        "O template selecionado nÃƒÂ£o possui idioma."
+        "O template selecionado nÃƒÆ’Ã‚Â£o possui idioma."
       );
       return false;
     }
@@ -606,7 +631,7 @@ const EduzzRuleConfigModal = ({
       hasUnsupportedDynamicComponent
     ) {
       toast.error(
-        "Este template possui parÃƒÂ¢metro dinÃƒÂ¢mico fora de HEADER/BODY de texto e ainda nÃƒÂ£o pode ser usado nesta automaÃƒÂ§ÃƒÂ£o."
+        "Este template possui parÃƒÆ’Ã‚Â¢metro dinÃƒÆ’Ã‚Â¢mico fora de HEADER/BODY de texto e ainda nÃƒÆ’Ã‚Â£o pode ser usado nesta automaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o."
       );
       return false;
     }
@@ -622,7 +647,7 @@ const EduzzRuleConfigModal = ({
       )
     ) {
       toast.error(
-        "Mapeie todos os parÃƒÂ¢metros do template Meta."
+        "Mapeie todos os parÃƒÆ’Ã‚Â¢metros do template Meta."
       );
       return false;
     }
@@ -703,13 +728,215 @@ const EduzzRuleConfigModal = ({
       );
 
       toast.success(
-        "Copiado para a ÃƒÂ¡rea de transferÃƒÂªncia."
+        "Copiado para a ÃƒÆ’Ã‚Â¡rea de transferÃƒÆ’Ã‚Âªncia."
       );
     } catch (err) {
-      toast.error("NÃƒÂ£o foi possÃƒÂ­vel copiar.");
+      toast.error("NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel copiar.");
     }
   };
 
+  const resetCredentialForm = () => {
+    setCredentialForm({
+      id: null,
+      name: "",
+      secret: "",
+      isDefault: credentials.length === 0,
+      isActive: true
+    });
+
+    setCredentialEditing(false);
+  };
+
+  const handleNewCredential = () => {
+    setCredentialForm({
+      id: null,
+      name: "",
+      secret: "",
+      isDefault: credentials.length === 0,
+      isActive: true
+    });
+
+    setCredentialEditing(true);
+  };
+
+  const handleEditCredential = item => {
+    setCredentialForm({
+      id: item.id,
+      name: item.name || "",
+      secret: "",
+      isDefault: item.isDefault === true,
+      isActive: item.isActive !== false
+    });
+
+    setCredentialEditing(true);
+  };
+
+  const handleSaveCredential = async () => {
+    const name = credentialForm.name.trim();
+    const secret = credentialForm.secret.trim();
+
+    if (!name) {
+      toast.error("Informe o nome da credencial.");
+      return;
+    }
+
+    if (!credentialForm.id && !secret) {
+      toast.error("Informe a Secret gerada pela Eduzz.");
+      return;
+    }
+
+    const payload = {
+      name,
+      type: "HMAC_SECRET",
+      isDefault: credentialForm.isDefault === true,
+      isActive: credentialForm.isActive !== false
+    };
+
+    if (secret) {
+      payload.secret = secret;
+    }
+
+    setCredentialSaving(true);
+
+    try {
+      if (credentialForm.id) {
+        await api.put(
+          `/integrations/${integrationId}/credentials/${credentialForm.id}`,
+          payload
+        );
+      } else {
+        await api.post(
+          `/integrations/${integrationId}/credentials`,
+          payload
+        );
+      }
+
+      toast.success(
+        credentialForm.id
+          ? "Credencial atualizada."
+          : "Credencial adicionada."
+      );
+
+      await loadCredentials();
+
+      setCredentialForm({
+        id: null,
+        name: "",
+        secret: "",
+        isDefault: false,
+        isActive: true
+      });
+
+      setCredentialEditing(false);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setCredentialSaving(false);
+    }
+  };
+
+  const handleDeleteCredential = async item => {
+    if (
+      !window.confirm(
+        `Excluir a credencial "${item.name}"?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await api.delete(
+        `/integrations/${integrationId}/credentials/${item.id}`
+      );
+
+      toast.success("Credencial excluída.");
+      await loadCredentials();
+
+      if (
+        Number(credentialForm.id) ===
+        Number(item.id)
+      ) {
+        setCredentialEditing(false);
+      }
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
+  const renderCredentialSummary = item => (
+    <Paper
+      key={item.id}
+      variant="outlined"
+      style={{
+        padding: 12,
+        marginTop: 10
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 10,
+          flexWrap: "wrap"
+        }}
+      >
+        <div>
+          <Typography variant="subtitle2">
+            {item.name}
+          </Typography>
+
+          <Typography
+            variant="body2"
+            color="textSecondary"
+          >
+            HMAC SHA-256
+            {" • "}
+            {item.maskedSecret || "********"}
+          </Typography>
+        </div>
+
+        <div>
+          {item.isDefault && (
+            <Chip
+              size="small"
+              color="primary"
+              label="Padrão"
+              style={{ marginRight: 6 }}
+            />
+          )}
+
+          <Chip
+            size="small"
+            label={
+              item.isActive === false
+                ? "Inativa"
+                : "Ativa"
+            }
+            style={{ marginRight: 6 }}
+          />
+
+          <IconButton
+            size="small"
+            onClick={() =>
+              handleEditCredential(item)
+            }
+          >
+            <Edit fontSize="small" />
+          </IconButton>
+
+          <IconButton
+            size="small"
+            onClick={() =>
+              handleDeleteCredential(item)
+            }
+          >
+            <DeleteOutline fontSize="small" />
+          </IconButton>
+        </div>
+      </div>
+    </Paper>
+  );
   const renderRuleSummary = item => {
     const whatsapp = whatsApps.find(
       connection =>
@@ -752,12 +979,12 @@ const EduzzRuleConfigModal = ({
             >
               Produto:{" "}
               {item.productId || "Todos"}
-              {" Ã¢â‚¬Â¢ "}
-              ConexÃƒÂ£o:{" "}
+              {" ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ "}
+              ConexÃƒÆ’Ã‚Â£o:{" "}
               {whatsapp?.name ||
                 `#${item.whatsappId}`}
-              {" Ã¢â‚¬Â¢ "}
-              ResponsÃƒÂ¡vel:{" "}
+              {" ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ "}
+              ResponsÃƒÆ’Ã‚Â¡vel:{" "}
               {user?.name ||
                 `#${item.userId}`}
             </Typography>
@@ -815,9 +1042,9 @@ const EduzzRuleConfigModal = ({
       fullWidth
     >
       <DialogTitle>
-        ConfiguraÃƒÂ§ÃƒÂ£o Eduzz
+        ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o Eduzz
         {integration?.name
-          ? ` Ã¢â‚¬â€ ${integration.name}`
+          ? ` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${integration.name}`
           : ""}
       </DialogTitle>
 
@@ -863,42 +1090,193 @@ const EduzzRuleConfigModal = ({
                 )
               }}
             />
-
-            <TextField
-              label="Segredo HMAC / API Key"
-              value={integration?.apiKey || ""}
-              fullWidth
-              margin="dense"
-              variant="outlined"
-              type="password"
-              InputProps={{
-                readOnly: true,
-                endAdornment: (
-                  <Tooltip title="Copiar segredo">
-                    <IconButton
-                      size="small"
-                      onClick={() =>
-                        handleCopy(
-                          integration?.apiKey || ""
-                        )
-                      }
-                    >
-                      <FileCopy fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                )
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+                marginTop: 14,
+                flexWrap: "wrap"
               }}
-            />
+            >
+              <div>
+                <Typography variant="subtitle1">
+                  Credencial HMAC
+                </Typography>
+
+                <Typography
+                  variant="caption"
+                  color="textSecondary"
+                >
+                  Cadastre aqui a Secret criada na Eduzz.
+                  O valor completo não é exibido novamente
+                  depois de salvo.
+                </Typography>
+              </div>
+
+              {!credentialEditing && (
+                <Button
+                  color="primary"
+                  variant="outlined"
+                  startIcon={<Add />}
+                  onClick={handleNewCredential}
+                >
+                  Adicionar chave existente
+                </Button>
+              )}
+            </div>
+
+            {credentials.length === 0 ? (
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                style={{ marginTop: 12 }}
+              >
+                Nenhuma credencial HMAC configurada.
+              </Typography>
+            ) : (
+              credentials.map(renderCredentialSummary)
+            )}
+
+            {credentialEditing && (
+              <Paper
+                variant="outlined"
+                style={{
+                  padding: 14,
+                  marginTop: 12
+                }}
+              >
+                <Typography
+                  variant="subtitle2"
+                  gutterBottom
+                >
+                  {credentialForm.id
+                    ? "Editar credencial"
+                    : "Adicionar credencial"}
+                </Typography>
+
+                <TextField
+                  label="Nome da credencial"
+                  value={credentialForm.name}
+                  onChange={event =>
+                    setCredentialForm(previous => ({
+                      ...previous,
+                      name: event.target.value
+                    }))
+                  }
+                  fullWidth
+                  margin="dense"
+                  variant="outlined"
+                  placeholder="EVENTO JULIA LOPES"
+                />
+
+                <TextField
+                  label={
+                    credentialForm.id
+                      ? "Nova Secret (opcional)"
+                      : "Secret da Eduzz"
+                  }
+                  value={credentialForm.secret}
+                  onChange={event =>
+                    setCredentialForm(previous => ({
+                      ...previous,
+                      secret: event.target.value
+                    }))
+                  }
+                  type="password"
+                  fullWidth
+                  margin="dense"
+                  variant="outlined"
+                  autoComplete="new-password"
+                  helperText={
+                    credentialForm.id
+                      ? "Deixe vazio para manter a Secret atual."
+                      : "Cole a Secret criada em Webhooks > Chaves de acesso na Eduzz."
+                  }
+                />
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={
+                        credentialForm.isDefault === true
+                      }
+                      onChange={event =>
+                        setCredentialForm(previous => ({
+                          ...previous,
+                          isDefault: event.target.checked
+                        }))
+                      }
+                      color="primary"
+                    />
+                  }
+                  label="Usar como credencial padrão"
+                />
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={
+                        credentialForm.isActive !== false
+                      }
+                      onChange={event =>
+                        setCredentialForm(previous => ({
+                          ...previous,
+                          isActive: event.target.checked
+                        }))
+                      }
+                      color="primary"
+                    />
+                  }
+                  label="Credencial ativa"
+                />
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: 8,
+                    marginTop: 8
+                  }}
+                >
+                  <Button
+                    onClick={() =>
+                      setCredentialEditing(false)
+                    }
+                    disabled={credentialSaving}
+                  >
+                    Cancelar
+                  </Button>
+
+                  <Button
+                    color="primary"
+                    variant="contained"
+                    onClick={handleSaveCredential}
+                    disabled={credentialSaving}
+                  >
+                    {credentialSaving
+                      ? "Salvando..."
+                      : "Salvar credencial"}
+                  </Button>
+                </div>
+              </Paper>
+            )}
 
             <Typography
               variant="caption"
               color="textSecondary"
+              style={{
+                display: "block",
+                marginTop: 10
+              }}
             >
-              Configure este segredo na Eduzz para
-              assinatura HMAC SHA-256 do webhook.
+              No painel da Eduzz, selecione a mesma
+              Secret na configuração deste webhook.
+              O SamaChat valida a assinatura HMAC
+              SHA-256 usando a credencial padrão ativa.
             </Typography>
-
-            <Divider
+<Divider
               style={{
                 margin: "18px 0"
               }}
@@ -992,12 +1370,12 @@ const EduzzRuleConfigModal = ({
                   variant="outlined"
                 >
                   <InputLabel>
-                    ConexÃƒÂ£o WhatsApp
+                    ConexÃƒÆ’Ã‚Â£o WhatsApp
                   </InputLabel>
 
                   <Select
                     value={rule.whatsappId}
-                    label="ConexÃƒÂ£o WhatsApp"
+                    label="ConexÃƒÆ’Ã‚Â£o WhatsApp"
                     onChange={event =>
                       setRule(previous => ({
                         ...previous,
@@ -1016,7 +1394,7 @@ const EduzzRuleConfigModal = ({
                         value={item.id}
                       >
                         {item.name}
-                        {" Ã¢â‚¬â€ "}
+                        {" ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â "}
                         {item.providerType ===
                         "official"
                           ? "Meta Oficial"
@@ -1032,12 +1410,12 @@ const EduzzRuleConfigModal = ({
                   variant="outlined"
                 >
                   <InputLabel>
-                    ResponsÃƒÂ¡vel
+                    ResponsÃƒÆ’Ã‚Â¡vel
                   </InputLabel>
 
                   <Select
                     value={rule.userId}
-                    label="ResponsÃƒÂ¡vel"
+                    label="ResponsÃƒÆ’Ã‚Â¡vel"
                     onChange={event =>
                       setRule(previous => ({
                         ...previous,
@@ -1060,7 +1438,7 @@ const EduzzRuleConfigModal = ({
                 {!isOfficial ? (
                   <>
                   <TextField
-                    label="Mensagem automÃƒÂ¡tica"
+                    label="Mensagem automÃƒÆ’Ã‚Â¡tica"
                     value={rule.messageBody}
                     onChange={event =>
                       setRule(previous => ({
@@ -1074,7 +1452,7 @@ const EduzzRuleConfigModal = ({
                     margin="dense"
                     multiline
                     minRows={5}
-                    helperText="Clique em uma variÃ¡vel abaixo para inseri-la na mensagem."
+                    helperText="Clique em uma variÃƒÂ¡vel abaixo para inseri-la na mensagem."
                   />
 
                   <MessageVariablesHelper
@@ -1122,7 +1500,7 @@ const EduzzRuleConfigModal = ({
                               }
                             >
                               {template.name}
-                              {" Ã¢â‚¬â€ "}
+                              {" ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â "}
                               {template.language}
                             </MenuItem>
                           )
@@ -1158,7 +1536,7 @@ const EduzzRuleConfigModal = ({
                         color="error"
                         style={{ marginTop: 8 }}
                       >
-                        Este template possui parÃƒÂ¢metro dinÃƒÂ¢mico fora dos componentes HEADER/BODY de texto. O envio automÃƒÂ¡tico fica bloqueado para evitar payload Meta incorreto.
+                        Este template possui parÃƒÆ’Ã‚Â¢metro dinÃƒÆ’Ã‚Â¢mico fora dos componentes HEADER/BODY de texto. O envio automÃƒÆ’Ã‚Â¡tico fica bloqueado para evitar payload Meta incorreto.
                       </Typography>
                     )}
 
@@ -1199,7 +1577,7 @@ const EduzzRuleConfigModal = ({
                                   key={variable.key}
                                   value={variable.key}
                                 >
-                                  {`${variable.sequence}. ${variable.label} Ã¢â‚¬â€ {{${variable.key}}}`}
+                                  {`${variable.sequence}. ${variable.label} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â {{${variable.key}}}`}
                                 </MenuItem>
                               ))}
                             </Select>
@@ -1218,7 +1596,7 @@ const EduzzRuleConfigModal = ({
                           display="block"
                           style={{ marginTop: 8 }}
                         >
-                          Este template nÃƒÂ£o possui parÃƒÂ¢metros posicionais de texto.
+                          Este template nÃƒÆ’Ã‚Â£o possui parÃƒÆ’Ã‚Â¢metros posicionais de texto.
                         </Typography>
                       )}
                   </>

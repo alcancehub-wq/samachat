@@ -33,6 +33,7 @@ import metaMessageTemplateRoutes from "./metaMessageTemplateRoutes";
 import attendanceAuditRoutes from "./attendanceAuditRoutes";
 import eduzzWebhookRoutes from "./eduzzWebhookRoutes";
 import eduzzIntegrationRuleRoutes from "./eduzzIntegrationRuleRoutes";
+import integrationCredentialRoutes from "./integrationCredentialRoutes";
 
 const routes = Router();
 
@@ -69,5 +70,6 @@ routes.use(attendanceAuditRoutes);
 routes.use(eduzzWebhookRoutes);
 routes.use("/api/messages", apiRoutes);
 routes.use(eduzzIntegrationRuleRoutes);
+routes.use(integrationCredentialRoutes);
 
 export default routes;
