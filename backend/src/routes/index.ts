@@ -31,8 +31,6 @@ import openAIRoutes from "./openAIRoutes";
 import aiRoutes from "./aiRoutes";
 import metaMessageTemplateRoutes from "./metaMessageTemplateRoutes";
 import attendanceAuditRoutes from "./attendanceAuditRoutes";
-import eduzzWebhookRoutes from "./eduzzWebhookRoutes";
-import eduzzIntegrationRuleRoutes from "./eduzzIntegrationRuleRoutes";
 
 const routes = Router();
 
@@ -66,8 +64,6 @@ routes.use(openAIRoutes);
 routes.use(aiRoutes);
 routes.use(metaMessageTemplateRoutes);
 routes.use(attendanceAuditRoutes);
-routes.use(eduzzWebhookRoutes);
 routes.use("/api/messages", apiRoutes);
-routes.use(eduzzIntegrationRuleRoutes);
 
 export default routes;

@@ -10,7 +10,7 @@ interface Request {
   isActive?: boolean;
 }
 
-const allowedTypes = ["custom", "crm", "make", "eduzz"];
+const allowedTypes = ["custom", "crm", "make"];
 
 const CreateIntegrationService = async ({
   name,
