@@ -34,7 +34,7 @@ class EduzzIntegrationRule extends Model<EduzzIntegrationRule> {
   @Column
   eventName: string;
 
-  @Column
+  @Column(DataType.STRING)
   productId: string | null;
 @ForeignKey(() => Whatsapp)
   @AllowNull(false)
@@ -64,7 +64,7 @@ class EduzzIntegrationRule extends Model<EduzzIntegrationRule> {
   metaTemplateLanguage: string;
 
   @AllowNull
-  @Column(DataType.JSONB)
+  @Column(DataType.JSON)
   metaTemplateComponents: Array<Record<string, unknown>>;
 
   @AllowNull(false)
