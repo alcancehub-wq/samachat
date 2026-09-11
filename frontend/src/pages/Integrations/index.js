@@ -396,6 +396,25 @@ const Integrations = ({ embedded = false }) => {
         </MainHeaderButtonsWrapper>
         </MainHeader>
       )}
+      {embedded && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginBottom: 16
+          }}
+        >
+          <Button
+            variant="contained"
+            color="primary"
+            className={classes.actionButton}
+            onClick={handleOpenIntegrationModal}
+          >
+            {i18n.t("integrations.buttons.add")}
+          </Button>
+        </div>
+      )}
+
       <Paper className={classes.mainPaper} variant="outlined">
         <Table size="small">
           <TableHead>
