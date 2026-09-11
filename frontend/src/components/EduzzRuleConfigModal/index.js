@@ -48,29 +48,29 @@ const messageVariables = [
   { sequence: 2, key: "telefone", label: "Telefone do contato" },
   { sequence: 3, key: "email", label: "E-mail do contato" },
   { sequence: 4, key: "ticket_id", label: "ID do atendimento" },
-  { sequence: 5, key: "responsavel", label: "ResponsÃƒÆ’Ã‚Â¡vel" },
+  { sequence: 5, key: "responsavel", label: "Respons\u00e1vel" },
   { sequence: 6, key: "fila", label: "Setor / fila" },
   { sequence: 7, key: "bom_dia", label: "Bom dia" },
   { sequence: 8, key: "boa_tarde", label: "Boa tarde" },
   { sequence: 9, key: "boa_noite", label: "Boa noite" },
   { sequence: 10, key: "data_atual", label: "Data atual" },
   { sequence: 11, key: "hora_atual", label: "Hora atual" },
-  { sequence: 12, key: "eduzz_comprador_nome", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â comprador: nome" },
-  { sequence: 13, key: "eduzz_comprador_email", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â comprador: e-mail" },
-  { sequence: 14, key: "eduzz_comprador_telefone", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â comprador: telefone" },
-  { sequence: 15, key: "eduzz_fatura_id", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ID da fatura" },
-  { sequence: 16, key: "eduzz_produto_id", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ID do produto" },
-  { sequence: 17, key: "eduzz_evento_id", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ID do webhook" },
-  { sequence: 18, key: "eduzz_evento_nome", label: "Eduzz ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â nome do evento webhook" },
-  { sequence: 19, key: "blinket_evento_id", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ID do evento" },
-  { sequence: 20, key: "blinket_evento_nome", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â nome do evento" },
-  { sequence: 21, key: "blinket_participante_id", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ID do participante" },
-  { sequence: 22, key: "blinket_invite_key", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â invite key" },
-  { sequence: 23, key: "blinket_ingresso_nome", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â nome do ingresso" },
-  { sequence: 24, key: "blinket_participante_nome", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â participante: nome" },
-  { sequence: 25, key: "blinket_participante_email", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â participante: e-mail" },
-  { sequence: 26, key: "blinket_participante_telefone", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â participante: telefone" },
-  { sequence: 27, key: "blinket_participante_status", label: "Blinket ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â participante: status" }
+  { sequence: 12, key: "eduzz_comprador_nome", label: "Eduzz \u2014 comprador: nome" },
+  { sequence: 13, key: "eduzz_comprador_email", label: "Eduzz \u2014 comprador: e-mail" },
+  { sequence: 14, key: "eduzz_comprador_telefone", label: "Eduzz \u2014 comprador: telefone" },
+  { sequence: 15, key: "eduzz_fatura_id", label: "Eduzz \u2014 ID da fatura" },
+  { sequence: 16, key: "eduzz_produto_id", label: "Eduzz \u2014 ID do produto" },
+  { sequence: 17, key: "eduzz_evento_id", label: "Eduzz \u2014 ID do webhook" },
+  { sequence: 18, key: "eduzz_evento_nome", label: "Eduzz \u2014 nome do evento webhook" },
+  { sequence: 19, key: "blinket_evento_id", label: "Blinket \u2014 ID do evento" },
+  { sequence: 20, key: "blinket_evento_nome", label: "Blinket \u2014 nome do evento" },
+  { sequence: 21, key: "blinket_participante_id", label: "Blinket \u2014 ID do participante" },
+  { sequence: 22, key: "blinket_invite_key", label: "Blinket \u2014 invite key" },
+  { sequence: 23, key: "blinket_ingresso_nome", label: "Blinket \u2014 nome do ingresso" },
+  { sequence: 24, key: "blinket_participante_nome", label: "Blinket \u2014 participante: nome" },
+  { sequence: 25, key: "blinket_participante_email", label: "Blinket \u2014 participante: e-mail" },
+  { sequence: 26, key: "blinket_participante_telefone", label: "Blinket \u2014 participante: telefone" },
+  { sequence: 27, key: "blinket_participante_status", label: "Blinket \u2014 participante: status" }
 ];
 
 const getTextTemplateSlots = template => {
@@ -549,7 +549,7 @@ const EduzzRuleConfigModal = ({
         `/integrations/${integrationId}/eduzz-rules/${item.id}`
       );
 
-      toast.success("Regra Eduzz excluÃƒÆ’Ã‚Â­da.");
+      toast.success("Regra Eduzz exclu\u00edda.");
       await loadRules();
 
       if (Number(rule.id) === Number(item.id)) {
@@ -585,13 +585,13 @@ const EduzzRuleConfigModal = ({
     }
 
     if (!rule.whatsappId) {
-      toast.error("Selecione a conexÃƒÆ’Ã‚Â£o.");
+      toast.error("Selecione a conex\u00e3o.");
       return false;
     }
 
     if (!rule.userId) {
       toast.error(
-        "Selecione o responsÃƒÆ’Ã‚Â¡vel."
+        "Selecione o respons\u00e1vel."
       );
       return false;
     }
@@ -621,7 +621,7 @@ const EduzzRuleConfigModal = ({
       !rule.metaTemplateLanguage
     ) {
       toast.error(
-        "O template selecionado nÃƒÆ’Ã‚Â£o possui idioma."
+        "O template selecionado n\u00e3o possui idioma."
       );
       return false;
     }
@@ -631,7 +631,7 @@ const EduzzRuleConfigModal = ({
       hasUnsupportedDynamicComponent
     ) {
       toast.error(
-        "Este template possui parÃƒÆ’Ã‚Â¢metro dinÃƒÆ’Ã‚Â¢mico fora de HEADER/BODY de texto e ainda nÃƒÆ’Ã‚Â£o pode ser usado nesta automaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o."
+        "Este template possui par\u00e2metro din\u00e2mico fora de HEADER/BODY de texto e ainda n\u00e3o pode ser usado nesta automa\u00e7\u00e3o."
       );
       return false;
     }
@@ -647,7 +647,7 @@ const EduzzRuleConfigModal = ({
       )
     ) {
       toast.error(
-        "Mapeie todos os parÃƒÆ’Ã‚Â¢metros do template Meta."
+        "Mapeie todos os par\u00e2metros do template Meta."
       );
       return false;
     }
@@ -728,10 +728,10 @@ const EduzzRuleConfigModal = ({
       );
 
       toast.success(
-        "Copiado para a ÃƒÆ’Ã‚Â¡rea de transferÃƒÆ’Ã‚Âªncia."
+        "Copiado para a \u00e1rea de transfer\u00eancia."
       );
     } catch (err) {
-      toast.error("NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel copiar.");
+      toast.error("N\u00e3o foi poss\u00edvel copiar.");
     }
   };
 
@@ -979,12 +979,12 @@ const EduzzRuleConfigModal = ({
             >
               Produto:{" "}
               {item.productId || "Todos"}
-              {" ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ "}
-              ConexÃƒÆ’Ã‚Â£o:{" "}
+              {" \u2022 "}
+              {" \u2014 "}
               {whatsapp?.name ||
                 `#${item.whatsappId}`}
-              {" ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ "}
-              ResponsÃƒÆ’Ã‚Â¡vel:{" "}
+              {" \u2022 "}
+              {" \u2014 "}
               {user?.name ||
                 `#${item.userId}`}
             </Typography>
@@ -1042,9 +1042,9 @@ const EduzzRuleConfigModal = ({
       fullWidth
     >
       <DialogTitle>
-        ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o Eduzz
+        {"Configura\u00e7\u00e3o Eduzz"}
         {integration?.name
-          ? ` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${integration.name}`
+          ? ` \u2014 ${integration.name}`
           : ""}
       </DialogTitle>
 
@@ -1159,12 +1159,14 @@ const EduzzRuleConfigModal = ({
                 <TextField
                   label="Nome da credencial"
                   value={credentialForm.name}
-                  onChange={event =>
+                  onChange={event => {
+                    const value = event.target.value;
+
                     setCredentialForm(previous => ({
                       ...previous,
-                      name: event.target.value
-                    }))
-                  }
+                      name: value
+                    }));
+                  }}
                   fullWidth
                   margin="dense"
                   variant="outlined"
@@ -1178,12 +1180,14 @@ const EduzzRuleConfigModal = ({
                       : "Secret da Eduzz"
                   }
                   value={credentialForm.secret}
-                  onChange={event =>
+                  onChange={event => {
+                    const value = event.target.value;
+
                     setCredentialForm(previous => ({
                       ...previous,
-                      secret: event.target.value
-                    }))
-                  }
+                      secret: value
+                    }));
+                  }}
                   type="password"
                   fullWidth
                   margin="dense"
@@ -1202,12 +1206,14 @@ const EduzzRuleConfigModal = ({
                       checked={
                         credentialForm.isDefault === true
                       }
-                      onChange={event =>
+                      onChange={event => {
+                        const checked = event.target.checked;
+
                         setCredentialForm(previous => ({
                           ...previous,
-                          isDefault: event.target.checked
-                        }))
-                      }
+                          isDefault: checked
+                        }));
+                      }}
                       color="primary"
                     />
                   }
@@ -1220,12 +1226,14 @@ const EduzzRuleConfigModal = ({
                       checked={
                         credentialForm.isActive !== false
                       }
-                      onChange={event =>
+                      onChange={event => {
+                        const checked = event.target.checked;
+
                         setCredentialForm(previous => ({
                           ...previous,
-                          isActive: event.target.checked
-                        }))
-                      }
+                          isActive: checked
+                        }));
+                      }}
                       color="primary"
                     />
                   }
@@ -1335,13 +1343,14 @@ const EduzzRuleConfigModal = ({
                 <TextField
                   label="Evento Eduzz"
                   value={rule.eventName}
-                  onChange={event =>
+                  onChange={event => {
+                    const value = event.target.value;
+
                     setRule(previous => ({
                       ...previous,
-                      eventName:
-                        event.target.value
-                    }))
-                  }
+                      eventName: value
+                    }));
+                  }}
                   fullWidth
                   variant="outlined"
                   margin="dense"
@@ -1351,13 +1360,14 @@ const EduzzRuleConfigModal = ({
                 <TextField
                   label="ID do produto"
                   value={rule.productId}
-                  onChange={event =>
+                  onChange={event => {
+                    const value = event.target.value;
+
                     setRule(previous => ({
                       ...previous,
-                      productId:
-                        event.target.value
-                    }))
-                  }
+                      productId: value
+                    }));
+                  }}
                   fullWidth
                   variant="outlined"
                   margin="dense"
@@ -1370,23 +1380,24 @@ const EduzzRuleConfigModal = ({
                   variant="outlined"
                 >
                   <InputLabel>
-                    ConexÃƒÆ’Ã‚Â£o WhatsApp
+                    {"Conex\u00e3o WhatsApp"}
                   </InputLabel>
 
                   <Select
                     value={rule.whatsappId}
-                    label="ConexÃƒÆ’Ã‚Â£o WhatsApp"
-                    onChange={event =>
+                    label={"Conex\u00e3o WhatsApp"}
+                    onChange={event => {
+                      const value = event.target.value;
+
                       setRule(previous => ({
                         ...previous,
-                        whatsappId:
-                          event.target.value,
+                        whatsappId: value,
                         metaTemplateName: "",
                         metaTemplateLanguage: "",
                         metaTemplateComponents:
                           null
-                      }))
-                    }
+                      }));
+                    }}
                   >
                     {whatsApps.map(item => (
                       <MenuItem
@@ -1394,7 +1405,7 @@ const EduzzRuleConfigModal = ({
                         value={item.id}
                       >
                         {item.name}
-                        {" ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â "}
+                        {" \u2014 "}
                         {item.providerType ===
                         "official"
                           ? "Meta Oficial"
@@ -1410,19 +1421,20 @@ const EduzzRuleConfigModal = ({
                   variant="outlined"
                 >
                   <InputLabel>
-                    ResponsÃƒÆ’Ã‚Â¡vel
+                    {"Respons\u00e1vel"}
                   </InputLabel>
 
                   <Select
                     value={rule.userId}
-                    label="ResponsÃƒÆ’Ã‚Â¡vel"
-                    onChange={event =>
+                    label={"Respons\u00e1vel"}
+                    onChange={event => {
+                      const value = event.target.value;
+
                       setRule(previous => ({
                         ...previous,
-                        userId:
-                          event.target.value
-                      }))
-                    }
+                        userId: value
+                      }));
+                    }}
                   >
                     {users.map(item => (
                       <MenuItem
@@ -1438,21 +1450,22 @@ const EduzzRuleConfigModal = ({
                 {!isOfficial ? (
                   <>
                   <TextField
-                    label="Mensagem automÃƒÆ’Ã‚Â¡tica"
+                    label={"Mensagem autom\u00e1tica"}
                     value={rule.messageBody}
-                    onChange={event =>
+                    onChange={event => {
+                      const value = event.target.value;
+
                       setRule(previous => ({
                         ...previous,
-                        messageBody:
-                          event.target.value
-                      }))
-                    }
+                        messageBody: value
+                      }));
+                    }}
                     fullWidth
                     variant="outlined"
                     margin="dense"
                     multiline
                     minRows={5}
-                    helperText="Clique em uma variÃƒÂ¡vel abaixo para inseri-la na mensagem."
+                    helperText={"Clique em uma vari\u00e1vel abaixo para inseri-la na mensagem."}
                   />
 
                   <MessageVariablesHelper
@@ -1500,7 +1513,7 @@ const EduzzRuleConfigModal = ({
                               }
                             >
                               {template.name}
-                              {" ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â "}
+                              {" \u2014 "}
                               {template.language}
                             </MenuItem>
                           )
@@ -1536,7 +1549,7 @@ const EduzzRuleConfigModal = ({
                         color="error"
                         style={{ marginTop: 8 }}
                       >
-                        Este template possui parÃƒÆ’Ã‚Â¢metro dinÃƒÆ’Ã‚Â¢mico fora dos componentes HEADER/BODY de texto. O envio automÃƒÆ’Ã‚Â¡tico fica bloqueado para evitar payload Meta incorreto.
+                        Este template possui par\u00e2metro din\u00e2mico fora dos componentes HEADER/BODY de texto. O envio autom\u00e1tico fica bloqueado para evitar payload Meta incorreto.
                       </Typography>
                     )}
 
@@ -1563,21 +1576,23 @@ const EduzzRuleConfigModal = ({
                                 templateParameterMapping[mapKey] || ""
                               }
                               label={`${slot.componentType.toUpperCase()} {{${slot.position}}}`}
-                              onChange={event =>
+                              onChange={event => {
+                                const value = event.target.value;
+
                                 setTemplateParameterMapping(
                                   previous => ({
                                     ...previous,
-                                    [mapKey]: event.target.value
+                                    [mapKey]: value
                                   })
-                                )
-                              }
+                                );
+                              }}
                             >
                               {messageVariables.map(variable => (
                                 <MenuItem
                                   key={variable.key}
                                   value={variable.key}
                                 >
-                                  {`${variable.sequence}. ${variable.label} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â {{${variable.key}}}`}
+                                  {`${variable.sequence}. ${variable.label} \u2014 {{${variable.key}}}`}
                                 </MenuItem>
                               ))}
                             </Select>
@@ -1596,7 +1611,7 @@ const EduzzRuleConfigModal = ({
                           display="block"
                           style={{ marginTop: 8 }}
                         >
-                          Este template nÃƒÆ’Ã‚Â£o possui parÃƒÆ’Ã‚Â¢metros posicionais de texto.
+                          {"Este template n\u00e3o possui par\u00e2metros posicionais de texto."}
                         </Typography>
                       )}
                   </>
@@ -1608,13 +1623,14 @@ const EduzzRuleConfigModal = ({
                       checked={
                         rule.isActive !== false
                       }
-                      onChange={event =>
+                      onChange={event => {
+                        const checked = event.target.checked;
+
                         setRule(previous => ({
                           ...previous,
-                          isActive:
-                            event.target.checked
-                        }))
-                      }
+                          isActive: checked
+                        }));
+                      }}
                       color="primary"
                     />
                   }
