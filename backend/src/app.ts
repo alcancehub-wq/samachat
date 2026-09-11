@@ -22,7 +22,13 @@ const cloudApiRawBodyCapture = (
   _res: express.Response,
   buf: Buffer
 ): void => {
-  if (req.originalUrl && req.originalUrl.includes("/cloud-api/webhook/")) {
+  if (
+    req.originalUrl &&
+    (
+      req.originalUrl.includes("/cloud-api/webhook/") ||
+      req.originalUrl.includes("/integrations/eduzz/")
+    )
+  ) {
     req.rawBody = Buffer.from(buf);
   }
 };

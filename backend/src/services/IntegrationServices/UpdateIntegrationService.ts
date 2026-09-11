@@ -14,7 +14,7 @@ interface Request {
   integrationData: IntegrationData;
 }
 
-const allowedTypes = ["custom", "crm", "make"];
+const allowedTypes = ["custom", "crm", "make", "eduzz"];
 
 const UpdateIntegrationService = async ({
   integrationId,

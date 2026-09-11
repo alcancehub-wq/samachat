@@ -14,7 +14,8 @@ import {
   TableRow,
   Typography,
   TextField,
-  InputAdornment
+  InputAdornment,
+  Tooltip
 } from "@material-ui/core";
 
 import MainContainer from "../../components/MainContainer";
@@ -25,11 +26,12 @@ import Title from "../../components/Title";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
-import { DeleteOutline, Edit, Visibility, PlayArrow } from "@material-ui/icons";
+import { DeleteOutline, Edit, Visibility, PlayArrow, Settings } from "@material-ui/icons";
 import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import SearchIcon from "@material-ui/icons/Search";
 import IntegrationModal from "../../components/IntegrationModal";
+import EduzzRuleConfigModal from "../../components/EduzzRuleConfigModal";
 import WebhookModal from "../../components/WebhookModal";
 import WebhookLogsModal from "../../components/WebhookLogsModal";
 import buildMenuListPageStyles from "../../styles/menuListPageStyles";
@@ -159,6 +161,7 @@ const Integrations = ({ embedded = false }) => {
   const [webhookModalOpen, setWebhookModalOpen] = useState(false);
   const [logsModalOpen, setLogsModalOpen] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState(null);
+  const [eduzzConfigOpen, setEduzzConfigOpen] = useState(false);
   const [selectedWebhook, setSelectedWebhook] = useState(null);
   const [confirmIntegrationOpen, setConfirmIntegrationOpen] = useState(false);
   const [confirmWebhookOpen, setConfirmWebhookOpen] = useState(false);
@@ -255,6 +258,15 @@ const Integrations = ({ embedded = false }) => {
     setSelectedIntegration(integration);
     setIntegrationModalOpen(true);
   };
+  const handleOpenEduzzConfig = integration => {
+    setSelectedIntegration(integration);
+    setEduzzConfigOpen(true);
+  };
+
+  const handleCloseEduzzConfig = () => {
+    setEduzzConfigOpen(false);
+    setSelectedIntegration(null);
+  };
 
   const handleEditWebhook = webhook => {
     setSelectedWebhook(webhook);
@@ -339,6 +351,11 @@ const Integrations = ({ embedded = false }) => {
         onClose={handleCloseIntegrationModal}
         integrationId={selectedIntegration?.id}
       />
+      <EduzzRuleConfigModal
+        open={eduzzConfigOpen}
+        onClose={handleCloseEduzzConfig}
+        integration={selectedIntegration}
+      />
       <WebhookModal
         open={webhookModalOpen}
         onClose={handleCloseWebhookModal}
@@ -403,6 +420,18 @@ const Integrations = ({ embedded = false }) => {
                       : i18n.t("integrations.table.inactive")}
                   </TableCell>
                   <TableCell align="center">
+                    {integration.type === "eduzz" && (
+                      <Tooltip title="Configurar Eduzz">
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            handleOpenEduzzConfig(integration)
+                          }
+                        >
+                          <Settings />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                     <IconButton size="small" onClick={() => handleEditIntegration(integration)}>
                       <Edit />
                     </IconButton>
