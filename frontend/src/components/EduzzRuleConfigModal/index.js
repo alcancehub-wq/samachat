@@ -40,35 +40,37 @@ import { toast } from "react-toastify";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
+import MessageVariablesHelper from "../MessageVariablesHelper";
+import { appendMessageVariable } from "../../utils/messageVariables";
 
 const messageVariables = [
   { sequence: 1, key: "nome", label: "Nome do contato" },
   { sequence: 2, key: "telefone", label: "Telefone do contato" },
   { sequence: 3, key: "email", label: "E-mail do contato" },
   { sequence: 4, key: "ticket_id", label: "ID do atendimento" },
-  { sequence: 5, key: "responsavel", label: "Responsável" },
+  { sequence: 5, key: "responsavel", label: "ResponsÃƒÂ¡vel" },
   { sequence: 6, key: "fila", label: "Setor / fila" },
   { sequence: 7, key: "bom_dia", label: "Bom dia" },
   { sequence: 8, key: "boa_tarde", label: "Boa tarde" },
   { sequence: 9, key: "boa_noite", label: "Boa noite" },
   { sequence: 10, key: "data_atual", label: "Data atual" },
   { sequence: 11, key: "hora_atual", label: "Hora atual" },
-  { sequence: 12, key: "eduzz_comprador_nome", label: "Eduzz — comprador: nome" },
-  { sequence: 13, key: "eduzz_comprador_email", label: "Eduzz — comprador: e-mail" },
-  { sequence: 14, key: "eduzz_comprador_telefone", label: "Eduzz — comprador: telefone" },
-  { sequence: 15, key: "eduzz_fatura_id", label: "Eduzz — ID da fatura" },
-  { sequence: 16, key: "eduzz_produto_id", label: "Eduzz — ID do produto" },
-  { sequence: 17, key: "eduzz_evento_id", label: "Eduzz — ID do webhook" },
-  { sequence: 18, key: "eduzz_evento_nome", label: "Eduzz — nome do evento webhook" },
-  { sequence: 19, key: "blinket_evento_id", label: "Blinket — ID do evento" },
-  { sequence: 20, key: "blinket_evento_nome", label: "Blinket — nome do evento" },
-  { sequence: 21, key: "blinket_participante_id", label: "Blinket — ID do participante" },
-  { sequence: 22, key: "blinket_invite_key", label: "Blinket — invite key" },
-  { sequence: 23, key: "blinket_ingresso_nome", label: "Blinket — nome do ingresso" },
-  { sequence: 24, key: "blinket_participante_nome", label: "Blinket — participante: nome" },
-  { sequence: 25, key: "blinket_participante_email", label: "Blinket — participante: e-mail" },
-  { sequence: 26, key: "blinket_participante_telefone", label: "Blinket — participante: telefone" },
-  { sequence: 27, key: "blinket_participante_status", label: "Blinket — participante: status" }
+  { sequence: 12, key: "eduzz_comprador_nome", label: "Eduzz Ã¢â‚¬â€ comprador: nome" },
+  { sequence: 13, key: "eduzz_comprador_email", label: "Eduzz Ã¢â‚¬â€ comprador: e-mail" },
+  { sequence: 14, key: "eduzz_comprador_telefone", label: "Eduzz Ã¢â‚¬â€ comprador: telefone" },
+  { sequence: 15, key: "eduzz_fatura_id", label: "Eduzz Ã¢â‚¬â€ ID da fatura" },
+  { sequence: 16, key: "eduzz_produto_id", label: "Eduzz Ã¢â‚¬â€ ID do produto" },
+  { sequence: 17, key: "eduzz_evento_id", label: "Eduzz Ã¢â‚¬â€ ID do webhook" },
+  { sequence: 18, key: "eduzz_evento_nome", label: "Eduzz Ã¢â‚¬â€ nome do evento webhook" },
+  { sequence: 19, key: "blinket_evento_id", label: "Blinket Ã¢â‚¬â€ ID do evento" },
+  { sequence: 20, key: "blinket_evento_nome", label: "Blinket Ã¢â‚¬â€ nome do evento" },
+  { sequence: 21, key: "blinket_participante_id", label: "Blinket Ã¢â‚¬â€ ID do participante" },
+  { sequence: 22, key: "blinket_invite_key", label: "Blinket Ã¢â‚¬â€ invite key" },
+  { sequence: 23, key: "blinket_ingresso_nome", label: "Blinket Ã¢â‚¬â€ nome do ingresso" },
+  { sequence: 24, key: "blinket_participante_nome", label: "Blinket Ã¢â‚¬â€ participante: nome" },
+  { sequence: 25, key: "blinket_participante_email", label: "Blinket Ã¢â‚¬â€ participante: e-mail" },
+  { sequence: 26, key: "blinket_participante_telefone", label: "Blinket Ã¢â‚¬â€ participante: telefone" },
+  { sequence: 27, key: "blinket_participante_status", label: "Blinket Ã¢â‚¬â€ participante: status" }
 ];
 
 const getTextTemplateSlots = template => {
@@ -522,7 +524,7 @@ const EduzzRuleConfigModal = ({
         `/integrations/${integrationId}/eduzz-rules/${item.id}`
       );
 
-      toast.success("Regra Eduzz excluída.");
+      toast.success("Regra Eduzz excluÃƒÂ­da.");
       await loadRules();
 
       if (Number(rule.id) === Number(item.id)) {
@@ -558,13 +560,13 @@ const EduzzRuleConfigModal = ({
     }
 
     if (!rule.whatsappId) {
-      toast.error("Selecione a conexão.");
+      toast.error("Selecione a conexÃƒÂ£o.");
       return false;
     }
 
     if (!rule.userId) {
       toast.error(
-        "Selecione o responsável."
+        "Selecione o responsÃƒÂ¡vel."
       );
       return false;
     }
@@ -594,7 +596,7 @@ const EduzzRuleConfigModal = ({
       !rule.metaTemplateLanguage
     ) {
       toast.error(
-        "O template selecionado não possui idioma."
+        "O template selecionado nÃƒÂ£o possui idioma."
       );
       return false;
     }
@@ -604,7 +606,7 @@ const EduzzRuleConfigModal = ({
       hasUnsupportedDynamicComponent
     ) {
       toast.error(
-        "Este template possui parâmetro dinâmico fora de HEADER/BODY de texto e ainda não pode ser usado nesta automação."
+        "Este template possui parÃƒÂ¢metro dinÃƒÂ¢mico fora de HEADER/BODY de texto e ainda nÃƒÂ£o pode ser usado nesta automaÃƒÂ§ÃƒÂ£o."
       );
       return false;
     }
@@ -620,7 +622,7 @@ const EduzzRuleConfigModal = ({
       )
     ) {
       toast.error(
-        "Mapeie todos os parâmetros do template Meta."
+        "Mapeie todos os parÃƒÂ¢metros do template Meta."
       );
       return false;
     }
@@ -701,10 +703,10 @@ const EduzzRuleConfigModal = ({
       );
 
       toast.success(
-        "Copiado para a área de transferência."
+        "Copiado para a ÃƒÂ¡rea de transferÃƒÂªncia."
       );
     } catch (err) {
-      toast.error("Não foi possível copiar.");
+      toast.error("NÃƒÂ£o foi possÃƒÂ­vel copiar.");
     }
   };
 
@@ -750,12 +752,12 @@ const EduzzRuleConfigModal = ({
             >
               Produto:{" "}
               {item.productId || "Todos"}
-              {" • "}
-              Conexão:{" "}
+              {" Ã¢â‚¬Â¢ "}
+              ConexÃƒÂ£o:{" "}
               {whatsapp?.name ||
                 `#${item.whatsappId}`}
-              {" • "}
-              Responsável:{" "}
+              {" Ã¢â‚¬Â¢ "}
+              ResponsÃƒÂ¡vel:{" "}
               {user?.name ||
                 `#${item.userId}`}
             </Typography>
@@ -813,9 +815,9 @@ const EduzzRuleConfigModal = ({
       fullWidth
     >
       <DialogTitle>
-        Configuração Eduzz
+        ConfiguraÃƒÂ§ÃƒÂ£o Eduzz
         {integration?.name
-          ? ` — ${integration.name}`
+          ? ` Ã¢â‚¬â€ ${integration.name}`
           : ""}
       </DialogTitle>
 
@@ -990,12 +992,12 @@ const EduzzRuleConfigModal = ({
                   variant="outlined"
                 >
                   <InputLabel>
-                    Conexão WhatsApp
+                    ConexÃƒÂ£o WhatsApp
                   </InputLabel>
 
                   <Select
                     value={rule.whatsappId}
-                    label="Conexão WhatsApp"
+                    label="ConexÃƒÂ£o WhatsApp"
                     onChange={event =>
                       setRule(previous => ({
                         ...previous,
@@ -1014,7 +1016,7 @@ const EduzzRuleConfigModal = ({
                         value={item.id}
                       >
                         {item.name}
-                        {" — "}
+                        {" Ã¢â‚¬â€ "}
                         {item.providerType ===
                         "official"
                           ? "Meta Oficial"
@@ -1030,12 +1032,12 @@ const EduzzRuleConfigModal = ({
                   variant="outlined"
                 >
                   <InputLabel>
-                    Responsável
+                    ResponsÃƒÂ¡vel
                   </InputLabel>
 
                   <Select
                     value={rule.userId}
-                    label="Responsável"
+                    label="ResponsÃƒÂ¡vel"
                     onChange={event =>
                       setRule(previous => ({
                         ...previous,
@@ -1056,8 +1058,9 @@ const EduzzRuleConfigModal = ({
                 </FormControl>
 
                 {!isOfficial ? (
+                  <>
                   <TextField
-                    label="Mensagem automática"
+                    label="Mensagem automÃƒÂ¡tica"
                     value={rule.messageBody}
                     onChange={event =>
                       setRule(previous => ({
@@ -1071,8 +1074,22 @@ const EduzzRuleConfigModal = ({
                     margin="dense"
                     multiline
                     minRows={5}
-                    helperText="As variáveis Eduzz serão configuradas no próximo bloco visual."
+                    helperText="Clique em uma variÃ¡vel abaixo para inseri-la na mensagem."
                   />
+
+                  <MessageVariablesHelper
+                    variables={messageVariables}
+                    onInsertVariable={token =>
+                      setRule(previous => ({
+                        ...previous,
+                        messageBody: appendMessageVariable(
+                          previous.messageBody,
+                          token
+                        )
+                      }))
+                    }
+                  />
+                  </>
                 ) : (
                   <>
                     <FormControl
@@ -1105,7 +1122,7 @@ const EduzzRuleConfigModal = ({
                               }
                             >
                               {template.name}
-                              {" — "}
+                              {" Ã¢â‚¬â€ "}
                               {template.language}
                             </MenuItem>
                           )
@@ -1141,7 +1158,7 @@ const EduzzRuleConfigModal = ({
                         color="error"
                         style={{ marginTop: 8 }}
                       >
-                        Este template possui parâmetro dinâmico fora dos componentes HEADER/BODY de texto. O envio automático fica bloqueado para evitar payload Meta incorreto.
+                        Este template possui parÃƒÂ¢metro dinÃƒÂ¢mico fora dos componentes HEADER/BODY de texto. O envio automÃƒÂ¡tico fica bloqueado para evitar payload Meta incorreto.
                       </Typography>
                     )}
 
@@ -1182,7 +1199,7 @@ const EduzzRuleConfigModal = ({
                                   key={variable.key}
                                   value={variable.key}
                                 >
-                                  {`${variable.sequence}. ${variable.label} — {{${variable.key}}}`}
+                                  {`${variable.sequence}. ${variable.label} Ã¢â‚¬â€ {{${variable.key}}}`}
                                 </MenuItem>
                               ))}
                             </Select>
@@ -1201,7 +1218,7 @@ const EduzzRuleConfigModal = ({
                           display="block"
                           style={{ marginTop: 8 }}
                         >
-                          Este template não possui parâmetros posicionais de texto.
+                          Este template nÃƒÂ£o possui parÃƒÂ¢metros posicionais de texto.
                         </Typography>
                       )}
                   </>

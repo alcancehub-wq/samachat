@@ -85,7 +85,10 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-const MessageVariablesHelper = ({ onInsertVariable }) => {
+const MessageVariablesHelper = ({
+  onInsertVariable,
+  variables = AVAILABLE_MESSAGE_VARIABLES
+}) => {
   const classes = useStyles();
 
   return (
@@ -102,23 +105,40 @@ const MessageVariablesHelper = ({ onInsertVariable }) => {
           </div>
           <Chip
             size="small"
-            label={AVAILABLE_MESSAGE_VARIABLES.length}
+            label={variables.length}
             className={classes.counter}
           />
         </div>
 
         <div className={classes.grid}>
-          {AVAILABLE_MESSAGE_VARIABLES.map(variable => (
-            <ButtonBase
-              key={variable.key}
-              className={classes.card}
-              onClick={() => onInsertVariable && onInsertVariable(variable.token)}
-            >
-              <Typography variant="body2" className={classes.description}>
-                {i18n.t(`messageVariablesHelper.items.${variable.descriptionKey}`)}
-              </Typography>
-            </ButtonBase>
-          ))}
+          {variables.map(variable => {
+            const token =
+              variable.token || `{{${variable.key}}}`;
+
+            const label =
+              variable.label ||
+              i18n.t(
+                `messageVariablesHelper.items.${variable.descriptionKey}`
+              );
+
+            return (
+              <ButtonBase
+                key={variable.key}
+                className={classes.card}
+                onClick={() =>
+                  onInsertVariable &&
+                  onInsertVariable(token)
+                }
+              >
+                <Typography
+                  variant="body2"
+                  className={classes.description}
+                >
+                  {label}
+                </Typography>
+              </ButtonBase>
+            );
+          })}
         </div>
       </Paper>
     </div>
