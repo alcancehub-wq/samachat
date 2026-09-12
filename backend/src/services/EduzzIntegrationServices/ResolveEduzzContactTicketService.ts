@@ -7,6 +7,7 @@ import Ticket from "../../models/Ticket";
 import CreateOrUpdateContactService from "../ContactServices/CreateOrUpdateContactService";
 import ResolveOperationalTicketService from "../TicketServices/ResolveOperationalTicketService";
 import ShowTicketService from "../TicketServices/ShowTicketService";
+import UpdateTicketService from "../TicketServices/UpdateTicketService";
 import ValidateEduzzRuleOwnershipService from "./ValidateEduzzRuleOwnershipService";
 
 interface Request {
@@ -68,38 +69,15 @@ const ResolveEduzzContactTicketService = async ({
       });
 
       if (existingTicket) {
-        if (existingTicket.userId && existingTicket.userId !== userId) {
-          throw new AppError("ERR_EDUZZ_CONTACT_OWNED_BY_OTHER_USER", 409);
-        }
-
-        if (
-          existingTicket.whatsappId &&
-          existingTicket.whatsappId !== whatsappId
-        ) {
-          throw new AppError(
-            "ERR_EDUZZ_CONTACT_OWNED_BY_OTHER_WHATSAPP",
-            409
-          );
-        }
-
-        if (!existingTicket.userId) {
-          await existingTicket.update(
-            {
-              userId,
-              whatsappId,
-              status: "open",
-              pendingSince: null
-            },
-            { transaction }
-          );
-        }
-
         return {
           ticketId: existingTicket.id,
-          createdTicket: false
+          createdTicket: false,
+          requiresTransfer:
+            existingTicket.userId !== userId ||
+            existingTicket.whatsappId !== whatsappId ||
+            existingTicket.status !== "open"
         };
       }
-
       const ticket = await Ticket.create(
         {
           contactId: lockedContact.id,
@@ -114,10 +92,23 @@ const ResolveEduzzContactTicketService = async ({
 
       return {
         ticketId: ticket.id,
-        createdTicket: true
+        createdTicket: true,
+        requiresTransfer: false
       };
     }
   );
+
+  if (resolution.requiresTransfer) {
+    await UpdateTicketService({
+      ticketId: resolution.ticketId,
+      ticketData: {
+        status: "open",
+        userId,
+        whatsappId,
+        applyUserDefaultWhatsappOnTransfer: true
+      }
+    });
+  }
 
   const ticket = await ShowTicketService(resolution.ticketId);
 
