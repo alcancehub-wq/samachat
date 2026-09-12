@@ -4,6 +4,7 @@ import AppError from "../../errors/AppError";
 import sequelize from "../../database";
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
+import User from "../../models/User";
 import CreateOrUpdateContactService from "../ContactServices/CreateOrUpdateContactService";
 import ResolveOperationalTicketService from "../TicketServices/ResolveOperationalTicketService";
 import ShowTicketService from "../TicketServices/ShowTicketService";
@@ -78,11 +79,22 @@ const ResolveEduzzContactTicketService = async ({
             existingTicket.status !== "open"
         };
       }
+      const targetUser = await User.findByPk(userId, {
+        include: ["queues"],
+        transaction
+      });
+
+      const queueId =
+        targetUser?.queues?.length === 1
+          ? targetUser.queues[0].id
+          : undefined;
+
       const ticket = await Ticket.create(
         {
           contactId: lockedContact.id,
           whatsappId,
           userId,
+          queueId,
           status: "open",
           isGroup: false,
           unreadMessages: 0

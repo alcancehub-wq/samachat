@@ -1,6 +1,7 @@
 import sequelize from "../../../database";
 import Contact from "../../../models/Contact";
 import Ticket from "../../../models/Ticket";
+import User from "../../../models/User";
 import CreateOrUpdateContactService from "../../ContactServices/CreateOrUpdateContactService";
 import ResolveOperationalTicketService from "../../TicketServices/ResolveOperationalTicketService";
 import ShowTicketService from "../../TicketServices/ShowTicketService";
@@ -20,6 +21,10 @@ jest.mock("../../../models/Ticket", () => ({
   create: jest.fn()
 }));
 
+jest.mock("../../../models/User", () => ({
+  findByPk: jest.fn()
+}));
+
 jest.mock("../../ContactServices/CreateOrUpdateContactService", () => jest.fn());
 jest.mock("../../TicketServices/ResolveOperationalTicketService", () => jest.fn());
 jest.mock("../../TicketServices/ShowTicketService", () => jest.fn());
@@ -29,6 +34,7 @@ jest.mock("../ValidateEduzzRuleOwnershipService", () => jest.fn());
 const transactionMock = sequelize.transaction as jest.Mock;
 const contactFindByPkMock = Contact.findByPk as jest.Mock;
 const ticketCreateMock = Ticket.create as jest.Mock;
+const userFindByPkMock = User.findByPk as jest.Mock;
 const createOrUpdateContactMock = CreateOrUpdateContactService as jest.Mock;
 const resolveOperationalTicketMock = ResolveOperationalTicketService as jest.Mock;
 const showTicketServiceMock = ShowTicketService as jest.Mock;
@@ -65,6 +71,11 @@ describe("ResolveEduzzContactTicketService ownership", () => {
 
     createOrUpdateContactMock.mockResolvedValue(contact);
     contactFindByPkMock.mockResolvedValue(contact);
+
+    userFindByPkMock.mockResolvedValue({
+      id: 30,
+      queues: [{ id: 5 }]
+    });
 
     transactionMock.mockImplementation(async (callback: any) =>
       callback(transaction)
@@ -198,6 +209,39 @@ describe("ResolveEduzzContactTicketService ownership", () => {
     expect(ticketCreateMock).not.toHaveBeenCalled();
   });
 
+  it("does not choose an arbitrary queue when the configured user has multiple queues", async () => {
+    resolveOperationalTicketMock.mockResolvedValue(null);
+
+    userFindByPkMock.mockResolvedValue({
+      id: 30,
+      queues: [{ id: 5 }, { id: 6 }]
+    });
+
+    ticketCreateMock.mockResolvedValue({
+      id: 3507
+    });
+
+    await ResolveEduzzContactTicketService({
+      buyerName: "GABRIELLE ERTAL",
+      buyerEmail: "alcancehub@gmail.com",
+      buyerPhone: "+5541997837839",
+      userId: 30,
+      whatsappId: 36
+    });
+
+    expect(ticketCreateMock).toHaveBeenCalledWith(
+      {
+        contactId: 16963,
+        whatsappId: 36,
+        userId: 30,
+        queueId: undefined,
+        status: "open",
+        isGroup: false,
+        unreadMessages: 0
+      },
+      { transaction }
+    );
+  });
   it("creates a new open ticket when no operational ticket exists", async () => {
     resolveOperationalTicketMock.mockResolvedValue(null);
 
@@ -220,6 +264,7 @@ describe("ResolveEduzzContactTicketService ownership", () => {
         contactId: 16963,
         whatsappId: 36,
         userId: 30,
+        queueId: 5,
         status: "open",
         isGroup: false,
         unreadMessages: 0
