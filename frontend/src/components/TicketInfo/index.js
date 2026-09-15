@@ -60,6 +60,22 @@ const useStyles = makeStyles((theme) => ({
         color: "#b45309",
         backgroundColor: "rgba(245, 158, 11, 0.14)",
     },
+    completeBadge: {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flex: "none",
+        width: 17,
+        height: 17,
+        marginLeft: theme.spacing(0.25),
+        backgroundColor: "#1d9bf0",
+        color: "#ffffff",
+        fontSize: "0.68rem",
+        fontWeight: 900,
+        lineHeight: 1,
+        clipPath:
+            "polygon(50% 0%, 61% 7%, 74% 4%, 82% 16%, 96% 24%, 93% 38%, 100% 50%, 93% 62%, 96% 76%, 82% 84%, 74% 96%, 61% 93%, 50% 100%, 39% 93%, 26% 96%, 18% 84%, 4% 76%, 7% 62%, 0% 50%, 7% 38%, 4% 24%, 18% 16%, 26% 4%, 39% 7%)",
+    },
     subtitle: {
         marginTop: theme.spacing(0.25),
         fontSize: "0.84rem",
@@ -102,9 +118,17 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
                         {contact.name}
                     </span>
 
-                    {registrationPending && (
+                    {registrationPending ? (
                         <span className={classes.pendingBadge}>
                             Cadastro pendente
+                        </span>
+                    ) : (
+                        <span
+                            className={classes.completeBadge}
+                            title="Cadastro completo"
+                            aria-label="Cadastro completo"
+                        >
+                            ✓
                         </span>
                     )}
                 </div>
