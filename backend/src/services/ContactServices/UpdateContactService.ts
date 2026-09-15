@@ -15,6 +15,15 @@ interface ContactData {
   extraInfo?: ExtraInfo[];
   tagIds?: number[];
   allowMultipleConversations?: boolean;
+  city?: string | null;
+  state?: string | null;
+  captureChannel?: string | null;
+  wasReferred?: boolean | null;
+  referralType?: string | null;
+  referralContactId?: number | null;
+  referralUserId?: number | null;
+  referralPartnerName?: string | null;
+  referralNote?: string | null;
 }
 
 interface Request {
@@ -32,12 +41,36 @@ const UpdateContactService = async ({
     number,
     extraInfo,
     tagIds,
-    allowMultipleConversations
+    allowMultipleConversations,
+    city,
+    state,
+    captureChannel,
+    wasReferred,
+    referralType,
+    referralContactId,
+    referralUserId,
+    referralPartnerName,
+    referralNote
   } = contactData;
 
   const contact = await Contact.findOne({
     where: { id: contactId },
-    attributes: ["id", "name", "number", "email", "profilePicUrl"],
+    attributes: [
+      "id",
+      "name",
+      "number",
+      "email",
+      "profilePicUrl",
+      "city",
+      "state",
+      "captureChannel",
+      "wasReferred",
+      "referralType",
+      "referralContactId",
+      "referralUserId",
+      "referralPartnerName",
+      "referralNote"
+    ],
     include: ["extraInfo", "tags"]
   });
 
@@ -66,7 +99,16 @@ const UpdateContactService = async ({
   const updatePayload: Partial<ContactData> = {
     name,
     number,
-    email
+    email,
+    city,
+    state,
+    captureChannel,
+    wasReferred,
+    referralType,
+    referralContactId,
+    referralUserId,
+    referralPartnerName,
+    referralNote
   };
 
   if (typeof allowMultipleConversations === "boolean") {
@@ -80,7 +122,22 @@ const UpdateContactService = async ({
   }
 
   await contact.reload({
-    attributes: ["id", "name", "number", "email", "profilePicUrl"],
+    attributes: [
+      "id",
+      "name",
+      "number",
+      "email",
+      "profilePicUrl",
+      "city",
+      "state",
+      "captureChannel",
+      "wasReferred",
+      "referralType",
+      "referralContactId",
+      "referralUserId",
+      "referralPartnerName",
+      "referralNote"
+    ],
     include: ["extraInfo", "tags"]
   });
 

@@ -314,6 +314,7 @@ const TicketOptionsMenu = ({
                                 onClose={handleCloseTransferTicketModal}
                                 ticketid={ticket.id}
                                 ticketWhatsappId={ticket.whatsappId}
+                                contactId={contactId || ticket?.contactId || ticket?.contact?.id}
                         />
                         <MergeContactModal
                                 open={mergeContactModalOpen}

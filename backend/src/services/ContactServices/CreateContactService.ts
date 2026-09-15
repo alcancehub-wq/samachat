@@ -15,6 +15,15 @@ interface Request {
   extraInfo?: ExtraInfo[];
   tagIds?: number[];
   allowMultipleConversations?: boolean;
+  city?: string;
+  state?: string;
+  captureChannel?: string;
+  wasReferred?: boolean | null;
+  referralType?: string | null;
+  referralContactId?: number | null;
+  referralUserId?: number | null;
+  referralPartnerName?: string | null;
+  referralNote?: string | null;
 }
 
 const CreateContactService = async ({
@@ -23,7 +32,16 @@ const CreateContactService = async ({
   email = "",
   extraInfo = [],
   tagIds = [],
-  allowMultipleConversations
+  allowMultipleConversations,
+  city,
+  state,
+  captureChannel,
+  wasReferred,
+  referralType,
+  referralContactId,
+  referralUserId,
+  referralPartnerName,
+  referralNote
 }: Request): Promise<Contact> => {
   const numberExists = await Contact.findOne({
     where: { number }
@@ -39,7 +57,16 @@ const CreateContactService = async ({
       number,
       email,
       extraInfo,
-      allowMultipleConversations
+      allowMultipleConversations,
+      city,
+      state,
+      captureChannel,
+      wasReferred,
+      referralType,
+      referralContactId,
+      referralUserId,
+      referralPartnerName,
+      referralNote
     },
     {
       include: ["extraInfo"]

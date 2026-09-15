@@ -21,7 +21,23 @@ const ShowTicketService = async (
       {
         model: Contact,
         as: "contact",
-        attributes: ["id", "name", "number", "email", "lid", "profilePicUrl"],
+        attributes: [
+          "id",
+          "name",
+          "number",
+          "email",
+          "lid",
+          "profilePicUrl",
+          "city",
+          "state",
+          "captureChannel",
+          "wasReferred",
+          "referralType",
+          "referralContactId",
+          "referralUserId",
+          "referralPartnerName",
+          "referralNote"
+        ],
         include: ["extraInfo"]
       },
       {

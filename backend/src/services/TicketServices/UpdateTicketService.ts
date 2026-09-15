@@ -10,6 +10,7 @@ import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import GetDefaultWhatsAppByUser from "../../helpers/GetDefaultWhatsAppByUser";
 import ShowTicketService, { TicketAccessData } from "./ShowTicketService";
 import { FOLLOW_UP_TAG_COLOR, FOLLOW_UP_TAG_NAME } from "../../utils/followUpTag";
+import EvaluateContactRegistrationCompletenessService from "../ContactServices/EvaluateContactRegistrationCompletenessService";
 
 interface TicketData {
   status?: string;
@@ -95,6 +96,51 @@ const UpdateTicketService = async ({
   const ticket = await ShowTicketService(ticketId, accessData);
   const oldStatus = ticket.status;
   const oldUserId = ticket.user?.id;
+
+  const hasExplicitUserSelection = Object.prototype.hasOwnProperty.call(
+    ticketData,
+    "userId"
+  );
+  const hasExplicitQueueSelection = Object.prototype.hasOwnProperty.call(
+    ticketData,
+    "queueId"
+  );
+  const hasExplicitWhatsappField = Object.prototype.hasOwnProperty.call(
+    ticketData,
+    "whatsappId"
+  );
+
+  const changesUser =
+    hasExplicitUserSelection &&
+    (userId ?? null) !== (ticket.userId ?? null);
+  const changesQueue =
+    hasExplicitQueueSelection &&
+    (queueId ?? null) !== (ticket.queueId ?? null);
+  const changesWhatsapp =
+    hasExplicitWhatsappField &&
+    (whatsappId ?? null) !== (ticket.whatsappId ?? null);
+
+  const isPendingAcceptance =
+    status === "open" &&
+    ticket.status === "pending" &&
+    !ticket.userId &&
+    hasValue(userId);
+
+  const isAdmin =
+    String(accessData?.profile || "").toLowerCase() === "admin";
+  const isUserInitiatedTransfer =
+    Boolean(accessData) &&
+    !isPendingAcceptance &&
+    (changesUser || changesQueue || changesWhatsapp);
+
+  if (isUserInitiatedTransfer && !isAdmin) {
+    const registration =
+      EvaluateContactRegistrationCompletenessService(ticket.contact);
+
+    if (!registration.complete) {
+      throw new AppError("ERR_CONTACT_REGISTRATION_INCOMPLETE");
+    }
+  }
 
   if (
     status === "open" &&

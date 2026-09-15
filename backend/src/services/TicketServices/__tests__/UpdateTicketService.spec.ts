@@ -1,4 +1,4 @@
-﻿import Tag from "../../../models/Tag";
+import Tag from "../../../models/Tag";
 import Ticket from "../../../models/Ticket";
 import User from "../../../models/User";
 import { getIO } from "../../../libs/socket";
@@ -291,5 +291,162 @@ describe("UpdateTicketService", () => {
       { status: "open", userId: 9 },
       { where: { id: 41, status: "pending", userId: null } }
     );
+  });
+
+  it("blocks a non-admin user transfer when contact registration is incomplete", async () => {
+    const ticket = buildTicket({
+      contact: { id: 99, name: "Maria", number: "5511999999999" }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await expect(
+      UpdateTicketService({
+        ticketId: 41,
+        ticketData: { userId: 21, applyUserDefaultWhatsappOnTransfer: true },
+        accessData: { userId: 3, profile: "user" }
+      })
+    ).rejects.toMatchObject({
+      message: "ERR_CONTACT_REGISTRATION_INCOMPLETE"
+    });
+
+    expect(ticket.update).not.toHaveBeenCalled();
+  });
+
+  it("blocks a non-admin queue-only transfer when contact registration is incomplete", async () => {
+    const ticket = buildTicket({
+      queueId: 4,
+      contact: { id: 99, name: "Maria", number: "5511999999999" }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await expect(
+      UpdateTicketService({
+        ticketId: 41,
+        ticketData: { queueId: 8 },
+        accessData: { userId: 3, profile: "user" }
+      })
+    ).rejects.toMatchObject({
+      message: "ERR_CONTACT_REGISTRATION_INCOMPLETE"
+    });
+  });
+
+  it("blocks a non-admin whatsapp-only transfer when contact registration is incomplete", async () => {
+    const ticket = buildTicket({
+      whatsappId: 13,
+      contact: { id: 99, name: "Maria", number: "5511999999999" }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await expect(
+      UpdateTicketService({
+        ticketId: 41,
+        ticketData: { whatsappId: 22 },
+        accessData: { userId: 3, profile: "user" }
+      })
+    ).rejects.toMatchObject({
+      message: "ERR_CONTACT_REGISTRATION_INCOMPLETE"
+    });
+  });
+
+  it("allows an admin to transfer an incomplete contact", async () => {
+    const ticket = buildTicket({
+      contact: { id: 99, name: "Maria", number: "5511999999999" }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await expect(
+      UpdateTicketService({
+        ticketId: 41,
+        ticketData: { userId: 21 },
+        accessData: { userId: 1, profile: "admin" }
+      })
+    ).resolves.toMatchObject({ ticket });
+
+    expect(ticket.update).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 21 })
+    );
+  });
+
+  it("keeps pending ticket acceptance nonblocking for incomplete contacts", async () => {
+    const ticket = buildTicket({
+      status: "pending",
+      user: null,
+      userId: null,
+      contact: { id: 99, name: "Maria", number: "5511999999999" }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+    ticketStaticUpdateMock.mockResolvedValue([1]);
+
+    await expect(
+      UpdateTicketService({
+        ticketId: 41,
+        ticketData: { status: "open", userId: 8 },
+        accessData: { userId: 8, profile: "user" }
+      })
+    ).resolves.toMatchObject({ ticket });
+
+    expect(ticketStaticUpdateMock).toHaveBeenCalledWith(
+      { status: "open", userId: 8 },
+      { where: { id: 41, status: "pending", userId: null } }
+    );
+  });
+
+  it("does not classify a status-only update as a transfer", async () => {
+    const ticket = buildTicket({
+      contact: { id: 99, name: "Maria", number: "5511999999999" }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await expect(
+      UpdateTicketService({
+        ticketId: 41,
+        ticketData: { status: "lost" },
+        accessData: { userId: 3, profile: "user" }
+      })
+    ).resolves.toMatchObject({ ticket });
+  });
+
+  it("allows a non-admin transfer when contact registration is complete", async () => {
+    const ticket = buildTicket({
+      contact: {
+        id: 99,
+        name: "Maria",
+        number: "5511999999999",
+        captureChannel: "WhatsApp",
+        wasReferred: false
+      }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await expect(
+      UpdateTicketService({
+        ticketId: 41,
+        ticketData: { userId: 21 },
+        accessData: { userId: 3, profile: "user" }
+      })
+    ).resolves.toMatchObject({ ticket });
+  });
+
+  it("keeps internal queue automation nonblocking without accessData", async () => {
+    const ticket = buildTicket({
+      queueId: 4,
+      contact: { id: 99, name: "Maria", number: "5511999999999" }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await expect(
+      UpdateTicketService({
+        ticketId: 41,
+        ticketData: { queueId: 8 }
+      })
+    ).resolves.toMatchObject({ ticket });
   });
 });

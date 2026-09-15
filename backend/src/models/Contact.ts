@@ -9,6 +9,7 @@ import {
   AllowNull,
   Unique,
   Default,
+  DataType,
   HasMany,
   BelongsToMany
 } from "sequelize-typescript";
@@ -50,6 +51,33 @@ class Contact extends Model<Contact> {
   @Default(false)
   @Column
   allowMultipleConversations: boolean;
+
+  @Column
+  city: string;
+
+  @Column
+  state: string;
+
+  @Column
+  captureChannel: string;
+
+  @Column
+  wasReferred: boolean;
+
+  @Column
+  referralType: string;
+
+  @Column
+  referralContactId: number;
+
+  @Column
+  referralUserId: number;
+
+  @Column
+  referralPartnerName: string;
+
+  @Column(DataType.TEXT)
+  referralNote: string;
 
   @CreatedAt
   createdAt: Date;

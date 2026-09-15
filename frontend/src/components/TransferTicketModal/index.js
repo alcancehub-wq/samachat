@@ -26,6 +26,7 @@ import useQueues from "../../hooks/useQueues";
 import useWhatsApps from "../../hooks/useWhatsApps";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
+import ContactModal from "../ContactModal";
 
 const useStyles = makeStyles((theme) => ({
   maxWidth: {
@@ -37,7 +38,13 @@ const filterOptions = createFilterOptions({
 	trim: true,
 });
 
-const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId }) => {
+const TransferTicketModal = ({
+    modalOpen,
+    onClose,
+    ticketid,
+    ticketWhatsappId,
+    contactId,
+}) => {
 	const history = useHistory();
 	const [options, setOptions] = useState([]);
 	const [queues, setQueues] = useState([]);
@@ -47,6 +54,7 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [selectedQueue, setSelectedQueue] = useState('');
 	const [selectedWhatsapp, setSelectedWhatsapp] = useState(ticketWhatsappId);
+    const [completionContactModalOpen, setCompletionContactModalOpen] = useState(false);
 	const classes = useStyles();
 	const { findAll: findAllQueues } = useQueues();
 	const { loadingWhatsapps, whatsApps } = useWhatsApps();
@@ -153,16 +161,35 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 
                         await api.put(`/tickets/${ticketid}`, data);
 
-			setLoading(false);
-			history.push(`/tickets`);
-		} catch (err) {
-			setLoading(false);
-			toastError(err);
-		}
+            setLoading(false);
+            history.push(`/tickets`);
+        } catch (err) {
+            setLoading(false);
+
+            const errorCode =
+                err.response?.data?.message ||
+                err.response?.data?.error;
+
+            if (
+                errorCode === "ERR_CONTACT_REGISTRATION_INCOMPLETE" &&
+                contactId
+            ) {
+                setCompletionContactModalOpen(true);
+                return;
+            }
+
+            toastError(err);
+        }
 	};
 
 	return (
-		<Dialog open={modalOpen} onClose={handleClose} maxWidth="lg" scroll="paper">
+		<>
+            <Dialog
+                open={modalOpen && !completionContactModalOpen}
+                onClose={handleClose}
+                maxWidth="lg"
+                scroll="paper"
+            >
 			<form onSubmit={handleSaveTicket}>
 				<DialogTitle id="form-dialog-title">
 					{i18n.t("transferTicketModal.title")}
@@ -261,7 +288,16 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 				</DialogActions>
 			</form>
 		</Dialog>
-	);
+
+            <ContactModal
+                open={completionContactModalOpen}
+                onClose={() => setCompletionContactModalOpen(false)}
+                contactId={contactId}
+                requireCompleteRegistration
+                onSave={() => setCompletionContactModalOpen(false)}
+            />
+        </>
+    );
 };
 
 export default TransferTicketModal;

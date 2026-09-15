@@ -17,6 +17,7 @@ import GetUserScopedWhatsappId from "../helpers/GetUserScopedWhatsappId";
 import FindDuplicatedContactByNumberService from "../services/ContactServices/FindDuplicatedContactByNumberService";
 import MergeContactService from "../services/ContactServices/MergeContactService";
 import ListDuplicatedContactsByNumberService from "../services/ContactServices/ListDuplicatedContactsByNumberService";
+import EvaluateContactRegistrationCompletenessService from "../services/ContactServices/EvaluateContactRegistrationCompletenessService";
 
 type IndexQuery = {
   searchParam: string;
@@ -40,6 +41,15 @@ interface ContactData {
   extraInfo?: ExtraInfo[];
   tagIds?: number[];
   allowMultipleConversations?: boolean;
+  city?: string;
+  state?: string;
+  captureChannel?: string;
+  wasReferred?: boolean | null;
+  referralType?: string | null;
+  referralContactId?: number | null;
+  referralUserId?: number | null;
+  referralPartnerName?: string | null;
+  referralNote?: string | null;
 }
 
 const CONTACT_WHATSAPP_LOOKUP_TIMEOUT_MS = 12000;
@@ -139,6 +149,13 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError(err.message);
   }
 
+  const registration =
+    EvaluateContactRegistrationCompletenessService(newContact);
+
+  if (!registration.complete) {
+    throw new AppError("ERR_CONTACT_REGISTRATION_INCOMPLETE");
+  }
+
   const existingDuplicatedContact = await FindDuplicatedContactByNumberService({
     number: newContact.number
   });
@@ -192,6 +209,15 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   let extraInfo = newContact.extraInfo;
   let tagIds = newContact.tagIds;
   let allowMultipleConversations = newContact.allowMultipleConversations;
+  let city = newContact.city;
+  let state = newContact.state;
+  let captureChannel = newContact.captureChannel;
+  let wasReferred = newContact.wasReferred;
+  let referralType = newContact.referralType;
+  let referralContactId = newContact.referralContactId;
+  let referralUserId = newContact.referralUserId;
+  let referralPartnerName = newContact.referralPartnerName;
+  let referralNote = newContact.referralNote;
 
   const contact = await CreateContactService({
     name,
@@ -200,7 +226,16 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     extraInfo,
     profilePicUrl,
     tagIds,
-    allowMultipleConversations
+    allowMultipleConversations,
+    city,
+    state,
+    captureChannel,
+    wasReferred,
+    referralType,
+    referralContactId,
+    referralUserId,
+    referralPartnerName,
+    referralNote
   });
 
   const scopedWhatsappId = await GetUserScopedWhatsappId(
