@@ -653,6 +653,163 @@ describe(
       }
     );
     it(
+      "keeps targeted repair independent from the global checkpoint",
+      async () => {
+        const missingMessageAt =
+          new Date(
+            "2026-09-15T13:10:00.000Z"
+          );
+
+        const capturedBoundaryAt =
+          new Date(
+            "2026-09-15T23:07:00.000Z"
+          );
+
+        const globalCheckpointAt =
+          new Date(
+            "2026-09-15T22:42:43.108Z"
+          );
+
+        const rawMessage: any = {
+          id: {
+            id: "joice-mobile-message"
+          },
+          timestamp:
+            Math.floor(
+              missingMessageAt.getTime() /
+                1000
+            ),
+          type: "chat",
+          body:
+            "Vou deixar seu contato aqui",
+          from:
+            "5511978424212@c.us",
+          to:
+            "5516997095650@c.us",
+          fromMe: true
+        };
+
+        const fetchMessages =
+          jest.fn(
+            async () => [
+              rawMessage
+            ]
+          );
+
+        const getCheckpoint =
+          jest.fn(
+            async () =>
+              globalCheckpointAt
+          );
+
+        const saveCheckpoint =
+          jest.fn(
+            async () =>
+              undefined
+          );
+
+        const orchestrator =
+          createWWebJsReconciliationAdapter({
+            whatsappId: 36,
+
+            session: {
+              getChats:
+                async () => [
+                  {
+                    id: {
+                      _serialized:
+                        "5516997095650@c.us"
+                    },
+                    lastMessage:
+                      rawMessage,
+                    fetchMessages
+                  }
+                ],
+
+              getContacts:
+                async () => []
+            },
+
+            targetChatIds: [
+              "5516997095650@c.us"
+            ],
+
+            captureBoundaryAt:
+              () =>
+                capturedBoundaryAt,
+
+            resolveMessageId:
+              message =>
+                (message as any)
+                  .id.id,
+
+            shouldHandleMessage:
+              () => true,
+
+            resolveMessageMetadata:
+              async () => ({
+                number:
+                  "5516997095650",
+                isGroup: false
+              }),
+
+            processNewMessage:
+              async () =>
+                undefined,
+
+            services: {
+              getCheckpoint,
+              saveCheckpoint,
+
+              classifyMessage:
+                async () =>
+                  "new",
+
+              classifyMessages:
+                async () =>
+                  new Set<string>()
+            }
+          });
+
+        const signal =
+          makeSignal() as any;
+
+        const work =
+          await orchestrator.collectWork(
+            signal
+          );
+
+        /*
+         * The global checkpoint is later than the missing message.
+         * Targeted repair must ignore it and therefore still collect
+         * this message from the canonical seven-day recovery window.
+         */
+        expect(
+          getCheckpoint
+        ).not.toHaveBeenCalled();
+
+        expect(
+          fetchMessages
+        ).toHaveBeenCalled();
+
+        expect(
+          work.messages
+        ).toHaveLength(1);
+
+        await orchestrator.finalizeWork(
+          signal
+        );
+
+        /*
+         * Targeted repair must not advance the global session
+         * checkpoint either.
+         */
+        expect(
+          saveCheckpoint
+        ).not.toHaveBeenCalled();
+      }
+    );
+    it(
       "filters message work through the injected production eligibility policy",
       async () => {
         const rawMessage: any = {

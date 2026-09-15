@@ -286,6 +286,21 @@ const createWWebJsReconciliationAdapter = <
         ) => {
           signal.throwIfAborted();
 
+          /*
+           * A targeted/manual ticket repair is an explicit recovery
+           * request for one contact. It must not inherit the global
+           * session checkpoint, because that checkpoint may have
+           * advanced after messages that still need recovery.
+           *
+           * Returning null intentionally makes the canonical boundary
+           * resolver use its bounded bootstrap window (currently
+           * seven days) while global reconciliation remains
+           * incremental through the persisted checkpoint.
+           */
+          if (hasTargetChatScope) {
+            return null;
+          }
+
           const checkpoint =
             await services.getCheckpoint(
               requestedWhatsappId
@@ -937,6 +952,15 @@ const createWWebJsReconciliationAdapter = <
           signal
         }) => {
           signal.throwIfAborted();
+
+          /*
+           * A targeted repair must also be checkpoint-neutral.
+           * Advancing the global checkpoint from one selected ticket
+           * could hide older missing messages from other contacts.
+           */
+          if (hasTargetChatScope) {
+            return;
+          }
 
           await services.saveCheckpoint(
             requestedWhatsappId,
