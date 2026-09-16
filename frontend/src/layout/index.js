@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import clsx from "clsx";
-import { useHistory, useLocation } from "react-router-dom";
+import { matchPath, useHistory, useLocation } from "react-router-dom";
 import {
   makeStyles,
   Drawer,
@@ -345,6 +345,21 @@ const LoggedInLayout = ({ children }) => {
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
+
+  const reconciliationTicketMatch = matchPath(location.pathname, {
+    path: "/tickets/:ticketId?",
+    exact: true
+  });
+
+  const parsedReconciliationTicketId = Number(
+    reconciliationTicketMatch?.params?.ticketId
+  );
+
+  const reconciliationTicketId =
+    Number.isInteger(parsedReconciliationTicketId) &&
+    parsedReconciliationTicketId > 0
+      ? parsedReconciliationTicketId
+      : null;
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -570,7 +585,9 @@ const LoggedInLayout = ({ children }) => {
     try {
       const { data } = await api.post(
         `/whatsapp/${reconciliationWhatsApp.id}/reconcile`,
-        {}
+        reconciliationTicketId
+          ? { ticketId: reconciliationTicketId }
+          : {}
       );
 
       if (data?.state) {
