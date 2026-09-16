@@ -27,6 +27,13 @@ metaMessageTemplateRoutes.post(
   MetaMessageTemplateController.store
 );
 
+metaMessageTemplateRoutes.put(
+  "/meta-message-templates/:whatsappId/:name/:language/variable-mapping",
+  isAuth,
+  checkSectorPermission("metaTemplates.create"),
+  MetaMessageTemplateController.updateVariableMapping
+);
+
 metaMessageTemplateRoutes.delete(
   "/meta-message-templates/:whatsappId/:name",
   isAuth,

@@ -9,6 +9,12 @@ export type MetaMessageTemplateCategory =
   | "UTILITY"
   | "AUTHENTICATION";
 
+export interface MetaMessageTemplateVariableMapping {
+  componentType: string;
+  position: number;
+  variableKey: string;
+}
+
 export interface MetaMessageTemplateComponent {
   type: string;
   format?: string;
@@ -24,16 +30,19 @@ export interface MetaMessageTemplate {
   status?: string;
   category?: MetaMessageTemplateCategory | string;
   components?: MetaMessageTemplateComponent[];
+  samachatVariableMapping?: MetaMessageTemplateVariableMapping[];
 }
 
 export interface MetaMessageTemplateDeleteResponse {
   success: boolean;
 }
+
 export interface MetaMessageTemplateCreateResponse {
   id?: string;
   status?: string;
   category?: MetaMessageTemplateCategory | string;
 }
+
 export interface MetaMessageTemplateListResponse {
   data?: MetaMessageTemplate[];
   paging?: {

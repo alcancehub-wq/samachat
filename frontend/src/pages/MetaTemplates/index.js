@@ -128,12 +128,15 @@ const META_TEMPLATE_VARIABLE_EXAMPLES = {
   hora_atual: "10:00"
 };
 
-const buildMetaBodyComponent = body => {
+const buildMetaBodyDefinition = body => {
   const availableKeys = new Set(
-    AVAILABLE_MESSAGE_VARIABLES.map(variable => variable.key)
+    AVAILABLE_MESSAGE_VARIABLES.map(
+      variable => variable.key
+    )
   );
 
   const examples = [];
+  const variableMapping = [];
   let position = 0;
 
   const text = String(body || "").replace(
@@ -144,9 +147,17 @@ const buildMetaBodyComponent = body => {
       }
 
       position += 1;
+
       examples.push(
-        META_TEMPLATE_VARIABLE_EXAMPLES[key] || match
+        META_TEMPLATE_VARIABLE_EXAMPLES[key] ||
+          match
       );
+
+      variableMapping.push({
+        componentType: "BODY",
+        position,
+        variableKey: key
+      });
 
       return `{{${position}}}`;
     }
@@ -163,9 +174,57 @@ const buildMetaBodyComponent = body => {
     };
   }
 
-  return component;
+  return {
+    component,
+    variableMapping
+  };
 };
 
+const getTemplateParameterPositions = template => {
+  const result = [];
+
+  (template?.components || []).forEach(
+    component => {
+      const componentType = String(
+        component?.type || ""
+      ).toUpperCase();
+
+      const seen = new Set();
+      const pattern = /{{(\d+)}}/g;
+      const text = String(
+        component?.text || ""
+      );
+
+      let match;
+
+      while (
+        (match = pattern.exec(text)) !== null
+      ) {
+        const position =
+          Number(match[1]);
+
+        if (
+          !Number.isInteger(position) ||
+          position <= 0 ||
+          seen.has(position)
+        ) {
+          continue;
+        }
+
+        seen.add(position);
+
+        result.push({
+          componentType,
+          position,
+          key:
+            `${componentType}:${position}`
+        });
+      }
+    }
+  );
+
+  return result;
+};
 const MetaTemplates = () => {
   const classes = useStyles();
   const { user } = useContext(AuthContext);
@@ -186,6 +245,11 @@ const MetaTemplates = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState(null);
+
+  const [mappingModalOpen, setMappingModalOpen] = useState(false);
+  const [mappingTemplateKey, setMappingTemplateKey] = useState("");
+  const [mappingValues, setMappingValues] = useState({});
+  const [mappingSaving, setMappingSaving] = useState(false);
 
   const permissions = user?.permissions || [];
   const isAdmin = user?.profile?.toLowerCase() === "admin";
@@ -285,6 +349,13 @@ const MetaTemplates = () => {
 
     setCreating(true);
 
+    const {
+      component,
+      variableMapping
+    } = buildMetaBodyDefinition(
+      cleanBody
+    );
+
     try {
       await api.post(
         `/meta-message-templates/${selectedWhatsappId}`,
@@ -293,8 +364,10 @@ const MetaTemplates = () => {
           language: templateLanguage.trim(),
           category: templateCategory,
           components: [
-            buildMetaBodyComponent(cleanBody)
-          ]
+            component
+          ],
+          samachatVariableMapping:
+            variableMapping
         }
       );
 
@@ -352,6 +425,147 @@ const MetaTemplates = () => {
       toastError(err);
     } finally {
       setDeleting(false);
+    }
+  };
+  const mappingTemplates =
+    templates.filter(
+      template =>
+        getTemplateParameterPositions(
+          template
+        ).length > 0
+    );
+
+  const mappingTemplate =
+    mappingTemplates.find(
+      template =>
+        `${template.name}:${template.language}` ===
+        mappingTemplateKey
+    ) || null;
+
+  const mappingParameters =
+    getTemplateParameterPositions(
+      mappingTemplate
+    );
+
+  const handleOpenMappingModal = () => {
+    setMappingTemplateKey("");
+    setMappingValues({});
+    setMappingModalOpen(true);
+  };
+
+  const handleCloseMappingModal = () => {
+    if (mappingSaving) {
+      return;
+    }
+
+    setMappingModalOpen(false);
+    setMappingTemplateKey("");
+    setMappingValues({});
+  };
+
+  const handleSelectMappingTemplate = key => {
+    const template =
+      mappingTemplates.find(
+        item =>
+          `${item.name}:${item.language}` ===
+          key
+      );
+
+    const nextValues = {};
+
+    if (template) {
+      const existing =
+        Array.isArray(
+          template.samachatVariableMapping
+        )
+          ? template.samachatVariableMapping
+          : [];
+
+      getTemplateParameterPositions(
+        template
+      ).forEach(parameter => {
+        const current =
+          existing.find(
+            mapping =>
+              String(
+                mapping.componentType || ""
+              ).toUpperCase() ===
+                parameter.componentType &&
+              Number(mapping.position) ===
+                parameter.position
+          );
+
+        nextValues[parameter.key] =
+          current?.variableKey || "";
+      });
+    }
+
+    setMappingTemplateKey(key);
+    setMappingValues(nextValues);
+  };
+
+  const mappingComplete =
+    Boolean(mappingTemplate) &&
+    mappingParameters.length > 0 &&
+    mappingParameters.every(
+      parameter =>
+        Boolean(
+          mappingValues[
+            parameter.key
+          ]
+        )
+    );
+
+  const handleSaveVariableMapping = async () => {
+    if (
+      !selectedWhatsappId ||
+      !mappingTemplate ||
+      !mappingComplete
+    ) {
+      return;
+    }
+
+    const samachatVariableMapping =
+      mappingParameters.map(
+        parameter => ({
+          componentType:
+            parameter.componentType,
+          position:
+            parameter.position,
+          variableKey:
+            mappingValues[
+              parameter.key
+            ]
+        })
+      );
+
+    setMappingSaving(true);
+
+    try {
+      await api.put(
+        `/meta-message-templates/${selectedWhatsappId}/${encodeURIComponent(
+          mappingTemplate.name
+        )}/${encodeURIComponent(
+          mappingTemplate.language
+        )}/variable-mapping`,
+        {
+          samachatVariableMapping
+        }
+      );
+
+      toast.success(
+        "Mapeamento de variáveis salvo."
+      );
+
+      setMappingModalOpen(false);
+      setMappingTemplateKey("");
+      setMappingValues({});
+
+      await fetchTemplates();
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setMappingSaving(false);
     }
   };
   const createFormValid =
@@ -481,6 +695,146 @@ const MetaTemplates = () => {
         </DialogActions>
       </Dialog>
 
+      <Dialog
+        open={mappingModalOpen}
+        onClose={handleCloseMappingModal}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          Mapear variáveis do template
+        </DialogTitle>
+
+        <DialogContent dividers>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            style={{ marginBottom: 12 }}
+          >
+            Esta configuração é feita uma única vez por template. Campanhas, Agendamentos e Fluxos usarão o mapeamento automaticamente.
+          </Typography>
+
+          <FormControl
+            variant="outlined"
+            fullWidth
+            margin="dense"
+          >
+            <InputLabel>
+              Template
+            </InputLabel>
+
+            <Select
+              value={mappingTemplateKey}
+              onChange={event =>
+                handleSelectMappingTemplate(
+                  event.target.value
+                )
+              }
+              label="Template"
+            >
+              <MenuItem value="">
+                Selecione o template
+              </MenuItem>
+
+              {mappingTemplates.map(
+                template => (
+                  <MenuItem
+                    key={`${template.name}:${template.language}`}
+                    value={`${template.name}:${template.language}`}
+                  >
+                    {[
+                      template.name,
+                      template.category,
+                      template.language
+                    ]
+                      .filter(Boolean)
+                      .join(" - ")}
+                  </MenuItem>
+                )
+              )}
+            </Select>
+          </FormControl>
+
+          {mappingParameters.map(
+            parameter => {
+              const label =
+                `${parameter.componentType} - variável ${parameter.position}`;
+
+              return (
+                <FormControl
+                  key={parameter.key}
+                  variant="outlined"
+                  fullWidth
+                  margin="dense"
+                >
+                  <InputLabel>
+                    {label}
+                  </InputLabel>
+
+                  <Select
+                    value={
+                      mappingValues[
+                        parameter.key
+                      ] || ""
+                    }
+                    onChange={event =>
+                      setMappingValues(
+                        current => ({
+                          ...current,
+                          [parameter.key]:
+                            event.target.value
+                        })
+                      )
+                    }
+                    label={label}
+                  >
+                    <MenuItem value="">
+                      Selecione a variável SamaChat
+                    </MenuItem>
+
+                    {AVAILABLE_MESSAGE_VARIABLES.map(
+                      variable => (
+                        <MenuItem
+                          key={variable.key}
+                          value={variable.key}
+                        >
+                          {variable.label ||
+                            `{{${variable.key}}}`}
+                        </MenuItem>
+                      )
+                    )}
+                  </Select>
+                </FormControl>
+              );
+            }
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={handleCloseMappingModal}
+            color="secondary"
+            variant="outlined"
+            disabled={mappingSaving}
+          >
+            Cancelar
+          </Button>
+
+          <Button
+            onClick={handleSaveVariableMapping}
+            color="primary"
+            variant="contained"
+            disabled={
+              mappingSaving ||
+              !mappingComplete
+            }
+          >
+            {mappingSaving
+              ? <CircularProgress size={18} />
+              : "Salvar mapeamento"}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <MainHeader>
         <div className={classes.headerTitle}>
           <Title>{i18n.t("metaTemplates.title")}</Title>
@@ -510,6 +864,20 @@ const MetaTemplates = () => {
             </Select>
           </FormControl>
 
+          {canCreateTemplate && (
+            <Button
+              variant="outlined"
+              color="primary"
+              className={classes.createButton}
+              onClick={handleOpenMappingModal}
+              disabled={
+                !selectedWhatsappId ||
+                mappingTemplates.length === 0
+              }
+            >
+              Mapear variáveis
+            </Button>
+          )}
           {canCreateTemplate && (
             <Button
               variant="contained"

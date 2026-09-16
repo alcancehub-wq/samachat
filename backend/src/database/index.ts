@@ -41,6 +41,7 @@ import ScheduleLog from "../models/ScheduleLog";
 import OpenAISetting from "../models/OpenAISetting";
 import OpenAILog from "../models/OpenAILog";
 import OfficialOutboundOrigin from "../models/OfficialOutboundOrigin";
+import MetaMessageTemplateVariableMapping from "../models/MetaMessageTemplateVariableMapping";
 import OfficialInboundMessage from "../models/OfficialInboundMessage";
 import EduzzIntegrationRule from "../models/EduzzIntegrationRule";
 import EduzzWebhookEvent from "../models/EduzzWebhookEvent";
@@ -95,6 +96,7 @@ const models = [
   OpenAISetting,
   OpenAILog,
   OfficialOutboundOrigin,
+  MetaMessageTemplateVariableMapping,
   OfficialInboundMessage,
   EduzzIntegrationRule,
   EduzzWebhookEvent,
