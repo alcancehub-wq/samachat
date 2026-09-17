@@ -11,6 +11,19 @@ import Title from "../../components/Title";
 
 const releases = [
   {
+    version: "2026.09.17 / Seletor de conexao mobile",
+    label: "Ajuste visual do seletor de conexao",
+    summary:
+      "Ajuste visual no cabecalho dos Chats em telas mobile, substituindo o seletor de conexao por um botao compacto e preservando integralmente a logica existente de escolha do canal de envio.",
+    changes: [
+      "No mobile, o seletor de conexao foi substituido por um botao de icone compacto, liberando espaco no cabecalho do atendimento.",
+      "Mantidas integralmente as opcoes Minha conexao e API Oficial, os valores STANDARD e OFFICIAL e o fluxo existente de selecao do canal de resposta.",
+      "O layout desktop permanece com o seletor original Enviar por, sem alteracao visual ou funcional.",
+      "O indicador Cadastro pendente permanece inalterado e deixou de disputar espaco com o seletor no mobile.",
+      "Alteracao validada por build local, verificacao visual, build e publicacao da imagem frontend e confirmacao do bundle ativo em producao.",
+    ],
+  },
+  {
     version: "2026.08.26 / Templates oficiais da Meta - Fundacao",
     label: "Fundacao de templates oficiais da Meta",
     summary:
