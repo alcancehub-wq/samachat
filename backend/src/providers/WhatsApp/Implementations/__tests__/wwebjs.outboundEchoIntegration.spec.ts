@@ -143,6 +143,41 @@ describe("wwebjs outbound echo integration", () => {
     );
   });
 
+  it("sanitizes the private wwebjs media id before physical media send", () => {
+    const compatibilityGuard = extractBetween(
+      "const ensureWWebJsMediaIdCompatibility = async (",
+      "const sendMedia = async ("
+    );
+
+    expect(compatibilityGuard).toContain(
+      'hasOwnProperty.call(\n          mediaOptions,\n          "__x_id"'
+    );
+    expect(compatibilityGuard).toContain(
+      "delete mediaOptions.__x_id;"
+    );
+
+    const sendMedia = extractBetween(
+      "const sendMedia = async (",
+      "const checkNumberLookup = async ("
+    );
+
+    const guardPosition = sendMedia.indexOf(
+      "await ensureWWebJsMediaIdCompatibility(wbot);"
+    );
+
+    const physicalSendPosition = sendMedia.indexOf(
+      "await wbot.sendMessage(to, messageMedia, mediaOptions)"
+    );
+
+    expect(guardPosition).toBeGreaterThanOrEqual(0);
+    expect(physicalSendPosition).toBeGreaterThan(guardPosition);
+
+    const sends =
+      sendMedia.match(/wbot\.sendMessage\(/g) || [];
+
+    expect(sends).toHaveLength(1);
+  });
+
   it("checks message_create suppression before message persistence", () => {
     const listener = extractListener("message_create");
 
@@ -155,7 +190,7 @@ describe("wwebjs outbound echo integration", () => {
     expect(listener).toContain('kind: "text"');
 
     const payloadPosition = listener.indexOf(
-      "await getMessageData(msg, wbot)"
+      "await getMessageData(msg, wbot, \"message_create\")"
     );
 
     const handlerPosition = listener.indexOf(
@@ -175,7 +210,7 @@ describe("wwebjs outbound echo integration", () => {
     );
 
     const payloadPosition = listener.indexOf(
-      "await getMessageData(msg, wbot)"
+      "await getMessageData(msg, wbot, \"media_uploaded\")"
     );
 
     const handlerPosition = listener.indexOf(

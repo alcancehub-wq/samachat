@@ -1884,6 +1884,54 @@ const sendMessage = async (
   }
 };
 
+const ensureWWebJsMediaIdCompatibility = async (
+  wbot: Session
+): Promise<void> => {
+  const pupPage = (wbot as any)?.pupPage;
+
+  if (!pupPage) {
+    throw new Error("WWEBJS_MEDIA_COMPAT_PAGE_UNAVAILABLE");
+  }
+
+  await pupPage.evaluate(() => {
+    const wwebjs = (window as any).WWebJS;
+    const currentProcessMediaData = wwebjs?.processMediaData;
+
+    if (typeof currentProcessMediaData !== "function") {
+      throw new Error("WWEBJS_PROCESS_MEDIA_DATA_UNAVAILABLE");
+    }
+
+    if (
+      (currentProcessMediaData as any).__samachatMediaIdGuard === true
+    ) {
+      return;
+    }
+
+    const originalProcessMediaData =
+      currentProcessMediaData.bind(wwebjs);
+
+    const guardedProcessMediaData = async (...args: any[]) => {
+      const mediaOptions = await originalProcessMediaData(...args);
+
+      if (
+        mediaOptions &&
+        typeof mediaOptions === "object" &&
+        Object.prototype.hasOwnProperty.call(
+          mediaOptions,
+          "__x_id"
+        )
+      ) {
+        delete mediaOptions.__x_id;
+      }
+
+      return mediaOptions;
+    };
+
+    (guardedProcessMediaData as any).__samachatMediaIdGuard = true;
+    wwebjs.processMediaData = guardedProcessMediaData;
+  });
+};
+
 const sendMedia = async (
   sessionId: number,
   to: string,
@@ -1909,6 +1957,8 @@ const sendMedia = async (
   if (options?.sendMediaAsDocument !== undefined) {
     mediaOptions.sendMediaAsDocument = options.sendMediaAsDocument;
   }
+
+  await ensureWWebJsMediaIdCompatibility(wbot);
 
   const outboundReservation = reserveOutboundEcho(sessionId);
 
