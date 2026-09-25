@@ -156,6 +156,14 @@ describe("wwebjs outbound echo integration", () => {
       "delete mediaOptions.__x_id;"
     );
 
+    expect(compatibilityGuard).toContain(
+      'Object.defineProperty(mediaOptions, "toJSON"'
+    );
+
+    expect(compatibilityGuard).toContain(
+      "delete sanitizedSerialized.__x_id;"
+    );
+
     const sendMedia = extractBetween(
       "const sendMedia = async (",
       "const checkNumberLookup = async ("

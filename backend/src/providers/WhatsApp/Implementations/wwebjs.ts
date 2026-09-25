@@ -1913,15 +1913,50 @@ const ensureWWebJsMediaIdCompatibility = async (
     const guardedProcessMediaData = async (...args: any[]) => {
       const mediaOptions = await originalProcessMediaData(...args);
 
+      if (!mediaOptions || typeof mediaOptions !== "object") {
+        return mediaOptions;
+      }
+
       if (
-        mediaOptions &&
-        typeof mediaOptions === "object" &&
         Object.prototype.hasOwnProperty.call(
           mediaOptions,
           "__x_id"
         )
       ) {
         delete mediaOptions.__x_id;
+      }
+
+      const originalToJSON =
+        typeof mediaOptions.toJSON === "function"
+          ? mediaOptions.toJSON.bind(mediaOptions)
+          : null;
+
+      if (originalToJSON) {
+        Object.defineProperty(mediaOptions, "toJSON", {
+          configurable: true,
+          enumerable: false,
+          writable: true,
+          value: () => {
+            const serialized = originalToJSON();
+
+            if (!serialized || typeof serialized !== "object") {
+              return serialized;
+            }
+
+            const sanitizedSerialized = { ...serialized };
+
+            if (
+              Object.prototype.hasOwnProperty.call(
+                sanitizedSerialized,
+                "__x_id"
+              )
+            ) {
+              delete sanitizedSerialized.__x_id;
+            }
+
+            return sanitizedSerialized;
+          }
+        });
       }
 
       return mediaOptions;
