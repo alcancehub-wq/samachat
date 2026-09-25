@@ -684,7 +684,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
         <Block
           fontSize="small"
           className={classes.ackErrorIcon}
-          titleAccess="N?o enviado"
+          titleAccess="Não enviado"
         />
       );
     }
@@ -694,7 +694,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
         <AccessTime
           fontSize="small"
           className={classes.ackUnconfirmedIcon}
-          titleAccess="Envio n?o confirmado"
+          titleAccess="Envio não confirmado"
         />
       );
     }
@@ -725,7 +725,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
       return (
         <div className={clsx(classes.audioDeliveryStatus, classes.audioDeliveryError)}>
           <Block fontSize="small" />
-          <span>N?o enviado</span>
+          <span>Não enviado</span>
         </div>
       );
     }
@@ -734,7 +734,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
       return (
         <div className={clsx(classes.audioDeliveryStatus, classes.audioDeliveryUnconfirmed)}>
           <AccessTime fontSize="small" />
-          <span>Envio n?o confirmado</span>
+          <span>Envio não confirmado</span>
         </div>
       );
     }
