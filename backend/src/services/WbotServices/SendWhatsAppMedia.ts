@@ -10,7 +10,11 @@ import NormalizeProviderCheckNumber from "../../helpers/NormalizeProviderCheckNu
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
-import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
+import {
+  whatsappProvider,
+  ProviderMessage,
+  MessageAck
+} from "../../providers/WhatsApp";
 
 import formatBody from "../../helpers/Mustache";
 import ResolveMessageVariablesService from "../Variables/ResolveMessageVariablesService";
@@ -755,7 +759,7 @@ const SendWhatsAppMedia = async ({
                 originalName: media.originalname,
                 mimetype: media.mimetype
               },
-              "SendWhatsAppMedia recorded-audio send is ambiguous after provider error; short-circuiting success to avoid duplicate resend"
+              "SendWhatsAppMedia recorded-audio send is ambiguous after provider error; marking delivery unconfirmed to avoid duplicate resend"
             );
           }
 
@@ -771,7 +775,7 @@ const SendWhatsAppMedia = async ({
           return {
             id:
               recordedAudioEcho?.id ||
-              `recorded-audio-accepted-${ticket.id}-${Date.now()}`,
+              `recorded-audio-unconfirmed-${ticket.id}-${Date.now()}`,
             body: resolvedBody || media.filename,
             fromMe: true,
             hasMedia: true,
@@ -780,7 +784,7 @@ const SendWhatsAppMedia = async ({
             from: "",
             to: chatId,
             hasQuotedMsg: false,
-            ack: 1
+            ack: recordedAudioEcho ? (recordedAudioEcho.ack as MessageAck) : -2
           } as ProviderMessage;
         }
 

@@ -139,6 +139,7 @@ const TEMPORARY_OUTBOUND_ID_PREFIXES = [
   "wwebjs-accepted-",
   "evt_me_",
   "recorded-audio-accepted-",
+  "recorded-audio-unconfirmed-",
   "recorded-audio-echo-"
 ];
 
@@ -848,8 +849,17 @@ export const handleMessageAck = async (
       return;
     }
 
-    const nextAck = Math.max(Number(messageToUpdate.ack) || 0, Number(ack) || 0);
-    if (nextAck === messageToUpdate.ack) {
+    const currentAck = Number(messageToUpdate.ack) || 0;
+    const incomingAck = Number(ack);
+    let nextAck = currentAck;
+
+    if (incomingAck === -1 && currentAck <= 0) {
+      nextAck = -1;
+    } else if (incomingAck > 0) {
+      nextAck = Math.max(currentAck, incomingAck);
+    }
+
+    if (nextAck === currentAck) {
       return;
     }
 

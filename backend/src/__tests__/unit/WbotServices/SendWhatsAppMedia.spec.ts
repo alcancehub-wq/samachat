@@ -218,6 +218,7 @@ describe("SendWhatsAppMedia", () => {
       ticketId: 1001,
       mediaType: "audio",
       fromMe: true,
+      ack: 1,
       createdAt: new Date()
     });
 
@@ -234,7 +235,7 @@ describe("SendWhatsAppMedia", () => {
     expect(startWhatsAppSessionMock).not.toHaveBeenCalled();
   });
 
-  it("short-circuits recorded composer audio as accepted when no echo is detected", async () => {
+  it("marks recorded composer audio as unconfirmed when no echo is detected", async () => {
     const media = {
       filename: "recorded_1752680000000.webm",
       originalname: "recorded_1752680000000.webm",
@@ -259,8 +260,10 @@ describe("SendWhatsAppMedia", () => {
       fromMe: true,
       hasMedia: true,
       type: "audio",
-      ack: 1
+      ack: -2
     });
+
+    expect(sendMediaMock).toHaveBeenCalledTimes(1);
 
     expect(sendMediaMock).toHaveBeenCalledTimes(1);
     expect(startWhatsAppSessionMock).not.toHaveBeenCalled();

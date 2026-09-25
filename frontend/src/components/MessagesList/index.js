@@ -303,6 +303,37 @@ const useStyles = makeStyles((theme) => ({
     marginLeft: 4,
   },
 
+  ackErrorIcon: {
+    color: "#d32f2f",
+    fontSize: 18,
+    verticalAlign: "middle",
+    marginLeft: 4,
+  },
+
+  ackUnconfirmedIcon: {
+    color: "#ed6c02",
+    fontSize: 18,
+    verticalAlign: "middle",
+    marginLeft: 4,
+  },
+
+  audioDeliveryStatus: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    padding: "2px 6px 4px",
+    fontSize: 11,
+    fontWeight: 600,
+  },
+
+  audioDeliveryError: {
+    color: "#d32f2f",
+  },
+
+  audioDeliveryUnconfirmed: {
+    color: "#ed6c02",
+  },
+
   downloadMedia: {
     display: "flex",
     alignItems: "center",
@@ -648,6 +679,26 @@ const MessagesList = ({ ticketId, isGroup }) => {
       return null;
     }
 
+    if (message.ack === -1) {
+      return (
+        <Block
+          fontSize="small"
+          className={classes.ackErrorIcon}
+          titleAccess="N?o enviado"
+        />
+      );
+    }
+
+    if (message.ack === -2) {
+      return (
+        <AccessTime
+          fontSize="small"
+          className={classes.ackUnconfirmedIcon}
+          titleAccess="Envio n?o confirmado"
+        />
+      );
+    }
+
     if (message.ack === 0) {
       return <AccessTime fontSize="small" className={classes.ackIcons} />;
     }
@@ -660,6 +711,35 @@ const MessagesList = ({ ticketId, isGroup }) => {
     if (message.ack === 3 || message.ack === 4) {
       return <DoneAll fontSize="small" className={classes.ackDoneAllIcon} />;
     }
+  };
+
+  const renderAudioDeliveryStatus = (message) => {
+    if (
+      message.isInternal ||
+      (message.mediaType !== "audio" && message.mediaType !== "ptt")
+    ) {
+      return null;
+    }
+
+    if (message.ack === -1) {
+      return (
+        <div className={clsx(classes.audioDeliveryStatus, classes.audioDeliveryError)}>
+          <Block fontSize="small" />
+          <span>N?o enviado</span>
+        </div>
+      );
+    }
+
+    if (message.ack === -2) {
+      return (
+        <div className={clsx(classes.audioDeliveryStatus, classes.audioDeliveryUnconfirmed)}>
+          <AccessTime fontSize="small" />
+          <span>Envio n?o confirmado</span>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   const renderDailyTimestamps = (message, index) => {
@@ -814,6 +894,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
                 {(message.mediaUrl || message.mediaType === "location" || message.mediaType === "vcard"
                   //|| message.mediaType === "multi_vcard" 
                 ) && checkMessageMedia(message)}
+                {renderAudioDeliveryStatus(message)}
                 <div
                   className={clsx(classes.textContentItem, {
                     [classes.textContentItemDeleted]: message.isDeleted,

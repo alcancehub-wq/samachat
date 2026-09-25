@@ -416,7 +416,7 @@ describe("handleWhatsappEvents group guard", () => {
     });
   });
 
-  it("reuses the persisted recorded-audio synthetic id when provider echo arrives with a different id", async () => {
+  it("reuses the persisted recorded-audio unconfirmed id when provider echo arrives with a different id", async () => {
     const contact = { id: 16, name: "Larissa" } as any;
     const ticketUpdateMock = jest.fn().mockResolvedValue(undefined);
     const ticket = {
@@ -430,7 +430,7 @@ describe("handleWhatsappEvents group guard", () => {
 
     const nowSeconds = Math.floor(Date.now() / 1000);
     const duplicateCandidate = {
-      id: "recorded-audio-accepted-118-1784161342000",
+      id: "recorded-audio-unconfirmed-118-1784161342000",
       createdAt: new Date(nowSeconds * 1000)
     } as any;
 
@@ -530,6 +530,57 @@ describe("handleWhatsappEvents group guard", () => {
       matchedMessage.id
     );
     expect(updateMock).toHaveBeenCalledWith({ ack: 2 });
+  });
+
+  it("persists provider ACK_ERROR for a pending outbound message", async () => {
+    const updateMock = jest.fn().mockResolvedValue(undefined);
+    const persistedMessage = {
+      id: "wamid.status.error",
+      ack: 0,
+      ticketId: 118,
+      update: updateMock
+    } as any;
+
+    jest.spyOn(Message, "findByPk").mockResolvedValue(persistedMessage);
+
+    await handleMessageAck("wamid.status.error", -1 as any);
+
+    expect(updateMock).toHaveBeenCalledWith({ ack: -1 });
+  });
+
+  it("promotes an unconfirmed outbound message when a real ack arrives", async () => {
+    const updateMock = jest.fn().mockResolvedValue(undefined);
+    const persistedMessage = {
+      id: "recorded-audio-unconfirmed-118-test",
+      ack: -2,
+      ticketId: 118,
+      update: updateMock
+    } as any;
+
+    jest.spyOn(Message, "findByPk").mockResolvedValue(persistedMessage);
+
+    await handleMessageAck(
+      "recorded-audio-unconfirmed-118-test",
+      1 as any
+    );
+
+    expect(updateMock).toHaveBeenCalledWith({ ack: 1 });
+  });
+
+  it("does not downgrade a confirmed ack to ACK_ERROR", async () => {
+    const updateMock = jest.fn().mockResolvedValue(undefined);
+    const persistedMessage = {
+      id: "wamid.status.confirmed",
+      ack: 2,
+      ticketId: 118,
+      update: updateMock
+    } as any;
+
+    jest.spyOn(Message, "findByPk").mockResolvedValue(persistedMessage);
+
+    await handleMessageAck("wamid.status.confirmed", -1 as any);
+
+    expect(updateMock).not.toHaveBeenCalled();
   });
 
   it("does not regress a persisted acknowledgement", async () => {
