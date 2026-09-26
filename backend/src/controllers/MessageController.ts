@@ -15,6 +15,7 @@ import ShowUserService from "../services/UserServices/ShowUserService";
 import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessage";
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
+import ResendFailedMessageService from "../services/MessageServices/ResendFailedMessageService";
 import ResolveOutboundChannelService from "../services/OutboundChannelServices/ResolveOutboundChannelService";
 import { AssertOfficialFreeTextAllowedService } from "../services/OutboundChannelServices/OfficialCustomerServiceWindowService";
 
@@ -266,6 +267,39 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   }
 
   return res.send();
+};
+
+export const resend = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { messageId } = req.params;
+
+  const {
+    previousMessageId,
+    message
+  } = await ResendFailedMessageService({
+    messageId,
+    accessData: {
+      userId: req.user.id,
+      profile: req.user.profile
+    }
+  });
+
+  const io = getIO();
+
+  io.to(
+    message.ticketId.toString()
+  ).emit("appMessage", {
+    action: "replace",
+    previousMessageId,
+    message
+  });
+
+  return res.status(200).json({
+    previousMessageId,
+    message
+  });
 };
 
 export const remove = async (

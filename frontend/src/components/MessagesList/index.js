@@ -409,6 +409,46 @@ const reducer = (state, action) => {
     return [...state];
   }
 
+  if (action.type === "REPLACE_MESSAGE") {
+    const {
+      previousMessageId,
+      message
+    } = action.payload;
+
+    if (!message) {
+      return [...state];
+    }
+
+    const previousIndex = state.findIndex(
+      currentMessage =>
+        currentMessage.id === previousMessageId
+    );
+
+    const insertionIndex =
+      previousIndex === -1
+        ? state.length
+        : state
+            .slice(0, previousIndex)
+            .filter(
+              currentMessage =>
+                currentMessage.id !== message.id
+            ).length;
+
+    const nextState = state.filter(
+      currentMessage =>
+        currentMessage.id !== previousMessageId &&
+        currentMessage.id !== message.id
+    );
+
+    nextState.splice(
+      Math.min(insertionIndex, nextState.length),
+      0,
+      message
+    );
+
+    return [...nextState];
+  }
+
   if (action.type === "UPDATE_MESSAGE") {
     const messageToUpdate = action.payload;
     const messageIndex = state.findIndex((m) => m.id === messageToUpdate.id);
@@ -551,7 +591,20 @@ const MessagesList = ({ ticketId, isGroup }) => {
       }
 
       if (data.action === "update") {
-        dispatch({ type: "UPDATE_MESSAGE", payload: data.message });
+        dispatch({
+          type: "UPDATE_MESSAGE",
+          payload: data.message
+        });
+      }
+
+      if (data.action === "replace") {
+        dispatch({
+          type: "REPLACE_MESSAGE",
+          payload: {
+            previousMessageId: data.previousMessageId,
+            message: data.message
+          }
+        });
       }
     });
 
@@ -594,6 +647,19 @@ const MessagesList = ({ ticketId, isGroup }) => {
 
   const handleCloseMessageOptionsMenu = (e) => {
     setAnchorEl(null);
+  };
+
+  const handleMessageReplaced = (
+    previousMessageId,
+    message
+  ) => {
+    dispatch({
+      type: "REPLACE_MESSAGE",
+      payload: {
+        previousMessageId,
+        message
+      }
+    });
   };
 
   const checkMessageMedia = (message) => {
@@ -1003,6 +1069,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
         anchorEl={anchorEl}
         menuOpen={messageOptionsMenuOpen}
         handleClose={handleCloseMessageOptionsMenu}
+        onMessageReplaced={handleMessageReplaced}
       />
       <div
         id="messagesList"

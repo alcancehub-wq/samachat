@@ -1880,6 +1880,8 @@ const messages = {
       },
       messageOptionsMenu: {
         delete: "Deletar",
+        resend: "Reenviar",
+        resending: "Reenviando...",
         reply: "Responder",
         confirmationModal: {
           title: "Apagar mensagem?",

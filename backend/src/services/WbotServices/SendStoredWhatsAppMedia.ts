@@ -4,6 +4,7 @@ import path from "path";
 import AppError from "../../errors/AppError";
 import uploadConfig from "../../config/upload";
 import Ticket from "../../models/Ticket";
+import Whatsapp from "../../models/Whatsapp";
 import SendWhatsAppMedia from "./SendWhatsAppMedia";
 
 interface Request {
@@ -12,6 +13,8 @@ interface Request {
   originalName?: string | null;
   mimetype?: string | null;
   body?: string | null;
+  whatsapp?: Whatsapp;
+  forceSendAudioAsVoice?: boolean;
 }
 
 const inferMimeType = (fileName: string): string => {
@@ -57,7 +60,9 @@ const SendStoredWhatsAppMedia = async ({
   fileName,
   originalName,
   mimetype,
-  body
+  body,
+  whatsapp,
+  forceSendAudioAsVoice
 }: Request) => {
   const normalizedFileName = path.basename(fileName);
   const sourcePath = path.resolve(uploadConfig.directory, normalizedFileName);
@@ -79,6 +84,8 @@ const SendStoredWhatsAppMedia = async ({
   return SendWhatsAppMedia({
     ticket,
     body: body || undefined,
+    whatsapp,
+    forceSendAudioAsVoice,
     media: {
       filename: originalName || normalizedFileName,
       originalname: originalName || normalizedFileName,

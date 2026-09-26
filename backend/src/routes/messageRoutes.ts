@@ -25,6 +25,13 @@ messageRoutes.post(
   MessageController.store
 );
 
+messageRoutes.post(
+  "/messages/:messageId/resend",
+  isAuth,
+  checkSectorPermission("messages.create"),
+  MessageController.resend
+);
+
 messageRoutes.delete(
   "/messages/:messageId",
   isAuth,

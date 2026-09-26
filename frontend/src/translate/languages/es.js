@@ -1852,6 +1852,8 @@ const messages = {
       },
       messageOptionsMenu: {
         delete: "Borrar",
+        resend: "Reenviar",
+        resending: "Reenviando...",
         reply: "Responder",
         confirmationModal: {
           title: "¿Borrar mensaje?",

@@ -1856,6 +1856,8 @@ const messages = {
       },
       messageOptionsMenu: {
         delete: "Delete",
+        resend: "Resend",
+        resending: "Resending...",
         reply: "Reply",
         confirmationModal: {
           title: "Delete message?",
