@@ -109,36 +109,61 @@ describe(
     });
 
     it(
-      "blocks ack -2 because delivery is ambiguous",
+      "allows explicit manual resend of ack -2",
       async () => {
-        findByPkMock.mockResolvedValueOnce(
-          buildMessage({
-            ack: -2
-          })
-        );
+        const unconfirmedMessage =
+          buildMessage({ ack: -2 });
 
-        await expect(
-          ResendFailedMessageService({
-            messageId: "failed-1",
-            accessData
-          })
-        ).rejects.toMatchObject({
-          message:
-            "ERR_MESSAGE_RESEND_NOT_ALLOWED",
-          statusCode: 409
+        const finalMessage = {
+          ...unconfirmedMessage,
+          id: "provider-retry-2",
+          ack: 1
+        };
+
+        findByPkMock
+          .mockResolvedValueOnce(
+            unconfirmedMessage
+          )
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(
+            finalMessage
+          );
+
+        updateMock
+          .mockResolvedValueOnce([1])
+          .mockResolvedValueOnce([1]);
+
+        sendTextMock.mockResolvedValue({
+          id: "provider-retry-2",
+          body: "hello",
+          fromMe: true,
+          hasMedia: false,
+          type: "chat",
+          timestamp: 123,
+          from: "",
+          to: "",
+          ack: 1
         });
 
-        expect(
-          sendTextMock
-        ).not.toHaveBeenCalled();
+        await ResendFailedMessageService({
+          messageId: "failed-1",
+          accessData
+        });
 
-        expect(
-          sendMediaMock
-        ).not.toHaveBeenCalled();
+        expect(updateMock)
+          .toHaveBeenNthCalledWith(
+            1,
+            { ack: 0 },
+            {
+              where: {
+                id: "failed-1",
+                ack: -2
+              }
+            }
+          );
 
-        expect(
-          updateMock
-        ).not.toHaveBeenCalled();
+        expect(sendTextMock)
+          .toHaveBeenCalled();
       }
     );
 

@@ -1882,6 +1882,10 @@ const messages = {
         delete: "Deletar",
         resend: "Reenviar",
         resending: "Reenviando...",
+        resendConfirmationModal: {
+          title: "Reenviar mensagem?",
+          message: "O envio anterior não pôde ser confirmado. Se ele já tiver sido entregue, reenviar poderá gerar uma mensagem duplicada. Deseja reenviar mesmo assim?",
+        },
         reply: "Responder",
         confirmationModal: {
           title: "Apagar mensagem?",

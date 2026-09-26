@@ -1858,6 +1858,10 @@ const messages = {
         delete: "Delete",
         resend: "Resend",
         resending: "Resending...",
+        resendConfirmationModal: {
+          title: "Resend message?",
+          message: "The previous delivery could not be confirmed. If it was already delivered, resending may create a duplicate message. Do you want to resend anyway?",
+        },
         reply: "Reply",
         confirmationModal: {
           title: "Delete message?",

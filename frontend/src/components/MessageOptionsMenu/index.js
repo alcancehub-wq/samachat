@@ -19,6 +19,7 @@ const MessageOptionsMenu = ({
   const { setReplyingMessage } = useContext(ReplyMessageContext);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resendConfirmationOpen, setResendConfirmationOpen] = useState(false);
 
   const handleDeleteMessage = async () => {
     try {
@@ -28,11 +29,23 @@ const MessageOptionsMenu = ({
     }
   };
 
+  const handleResendRequest = () => {
+    handleClose();
+
+    if (Number(message.ack) === -2) {
+      setResendConfirmationOpen(true);
+      return;
+    }
+
+    handleResendMessage();
+  };
+
   const handleResendMessage = async () => {
     if (resending) {
       return;
     }
 
+    setResendConfirmationOpen(false);
     setResending(true);
     handleClose();
 
@@ -80,6 +93,16 @@ const MessageOptionsMenu = ({
       >
         {i18n.t("messageOptionsMenu.confirmationModal.message")}
       </ConfirmationModal>
+
+      <ConfirmationModal
+        title={i18n.t("messageOptionsMenu.resendConfirmationModal.title")}
+        open={resendConfirmationOpen}
+        onClose={setResendConfirmationOpen}
+        onConfirm={handleResendMessage}
+      >
+        {i18n.t("messageOptionsMenu.resendConfirmationModal.message")}
+      </ConfirmationModal>
+
       <Menu
         anchorEl={anchorEl}
         getContentAnchorEl={null}
@@ -97,9 +120,9 @@ const MessageOptionsMenu = ({
         {message.fromMe &&
           !message.isInternal &&
           !message.isDeleted &&
-          Number(message.ack) === -1 && (
+          [-1, -2].includes(Number(message.ack)) && (
             <MenuItem
-              onClick={handleResendMessage}
+              onClick={handleResendRequest}
               disabled={resending}
             >
               {resending

@@ -111,11 +111,15 @@ const ResendFailedMessageService = async ({
     );
   }
 
+  const originalAck = Number(message.ack);
+  const isManualResendAllowed =
+    originalAck === -1 || originalAck === -2;
+
   if (
     !message.fromMe ||
     message.isInternal ||
     message.isDeleted ||
-    Number(message.ack) !== -1
+    !isManualResendAllowed
   ) {
     throw new AppError(
       "ERR_MESSAGE_RESEND_NOT_ALLOWED",
@@ -153,14 +157,15 @@ const ResendFailedMessageService = async ({
     );
   }
 
-  // Atomic -1 -> 0 claim prevents double-click resend.
+  // Atomic failed/unconfirmed -> pending claim
+  // prevents two manual resends of the same bubble.
   const [claimedRows] =
     await Message.update(
       { ack: 0 },
       {
         where: {
           id: message.id,
-          ack: -1
+          ack: originalAck
         }
       }
     );
@@ -355,7 +360,7 @@ const ResendFailedMessageService = async ({
     const recoveryAck =
       deliveryUncertain
         ? -2
-        : -1;
+        : originalAck;
 
     await Message.update(
       {
