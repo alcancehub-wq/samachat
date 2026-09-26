@@ -417,6 +417,49 @@ const reducer = (state, action) => {
   }
 };
 
+const getVisibleMessageBody = message => {
+  const body =
+    typeof message?.body === "string"
+      ? message.body.trim()
+      : "";
+
+  if (!body) {
+    return "";
+  }
+
+  const isMediaMessage =
+    Boolean(message?.mediaUrl) ||
+    ["audio", "ptt", "image", "video"].includes(message?.mediaType);
+
+  if (!isMediaMessage) {
+    return body;
+  }
+
+  const filename = body
+    .split(/[\\/]/)
+    .pop()
+    ?.split("?")[0]
+    ?.trim();
+
+  if (!filename) {
+    return body;
+  }
+
+  const technicalFilenamePatterns = [
+    /^recorded[_-]\d{10,}\.[a-z0-9]{2,8}$/i,
+    /^\d{10,}\.[a-z0-9]{2,8}$/i,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{2,8}$/i,
+    /^[0-9a-f]{24,}\.[a-z0-9]{2,8}$/i
+  ];
+
+  const isTechnicalFilename =
+    technicalFilenamePatterns.some(pattern =>
+      pattern.test(filename)
+    );
+
+  return isTechnicalFilename ? "" : body;
+};
+
 const MessagesList = ({ ticketId, isGroup }) => {
   const classes = useStyles();
 
@@ -811,7 +854,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
               {message.quotedMsg?.contact?.name}
             </span>
           )}
-          {message.quotedMsg?.body}
+          {getVisibleMessageBody(message.quotedMsg)}
         </div>
       </div>
     );
@@ -862,7 +905,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
                 ) && checkMessageMedia(message)}
                 <div className={classes.textContentItem}>
                   {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  <MarkdownWrapper>{getVisibleMessageBody(message)}</MarkdownWrapper>
                   <span className={classes.timestamp}>
                     {format(parseISO(message.createdAt), "HH:mm")}
                   </span>
@@ -908,7 +951,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
                     />
                   )}
                   {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  <MarkdownWrapper>{getVisibleMessageBody(message)}</MarkdownWrapper>
                   <span className={classes.timestamp}>
                     {format(parseISO(message.createdAt), "HH:mm")}
                     {renderMessageAck(message)}
