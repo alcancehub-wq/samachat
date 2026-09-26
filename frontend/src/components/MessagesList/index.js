@@ -324,6 +324,14 @@ const useStyles = makeStyles((theme) => ({
     padding: "2px 6px 4px",
     fontSize: 11,
     fontWeight: 600,
+    whiteSpace: "nowrap",
+  },
+
+  audioDeliveryStatusTime: {
+    marginLeft: "auto",
+    paddingLeft: 12,
+    color: "#999",
+    fontWeight: 400,
   },
 
   audioDeliveryError: {
@@ -756,6 +764,11 @@ const MessagesList = ({ ticketId, isGroup }) => {
     }
   };
 
+  const hasAudioDeliveryIssue = message =>
+    !message.isInternal &&
+    (message.mediaType === "audio" || message.mediaType === "ptt") &&
+    (message.ack === -1 || message.ack === -2);
+
   const renderAudioDeliveryStatus = (message) => {
     if (
       message.isInternal ||
@@ -769,6 +782,9 @@ const MessagesList = ({ ticketId, isGroup }) => {
         <div className={clsx(classes.audioDeliveryStatus, classes.audioDeliveryError)}>
           <Block fontSize="small" />
           <span>Não enviado</span>
+          <span className={classes.audioDeliveryStatusTime}>
+            {format(parseISO(message.createdAt), "HH:mm")}
+          </span>
         </div>
       );
     }
@@ -778,6 +794,9 @@ const MessagesList = ({ ticketId, isGroup }) => {
         <div className={clsx(classes.audioDeliveryStatus, classes.audioDeliveryUnconfirmed)}>
           <AccessTime fontSize="small" />
           <span>Envio não confirmado</span>
+          <span className={classes.audioDeliveryStatusTime}>
+            {format(parseISO(message.createdAt), "HH:mm")}
+          </span>
         </div>
       );
     }
@@ -938,25 +957,34 @@ const MessagesList = ({ ticketId, isGroup }) => {
                   //|| message.mediaType === "multi_vcard" 
                 ) && checkMessageMedia(message)}
                 {renderAudioDeliveryStatus(message)}
-                <div
-                  className={clsx(classes.textContentItem, {
-                    [classes.textContentItemDeleted]: message.isDeleted,
-                  })}
-                >
-                  {message.isDeleted && (
-                    <Block
-                      color="disabled"
-                      fontSize="small"
-                      className={classes.deletedIcon}
-                    />
-                  )}
-                  {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{getVisibleMessageBody(message)}</MarkdownWrapper>
-                  <span className={classes.timestamp}>
-                    {format(parseISO(message.createdAt), "HH:mm")}
-                    {renderMessageAck(message)}
-                  </span>
-                </div>
+                {(
+                  !hasAudioDeliveryIssue(message) ||
+                  message.isDeleted ||
+                  message.quotedMsg ||
+                  Boolean(getVisibleMessageBody(message))
+                ) && (
+                  <div
+                    className={clsx(classes.textContentItem, {
+                      [classes.textContentItemDeleted]: message.isDeleted,
+                    })}
+                  >
+                    {message.isDeleted && (
+                      <Block
+                        color="disabled"
+                        fontSize="small"
+                        className={classes.deletedIcon}
+                      />
+                    )}
+                    {message.quotedMsg && renderQuotedMessage(message)}
+                    <MarkdownWrapper>{getVisibleMessageBody(message)}</MarkdownWrapper>
+                    {!hasAudioDeliveryIssue(message) && (
+                      <span className={classes.timestamp}>
+                        {format(parseISO(message.createdAt), "HH:mm")}
+                        {renderMessageAck(message)}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </React.Fragment>
           );
