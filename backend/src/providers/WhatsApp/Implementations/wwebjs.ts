@@ -1910,56 +1910,48 @@ const ensureWWebJsMediaIdCompatibility = async (
     const originalProcessMediaData =
       currentProcessMediaData.bind(wwebjs);
 
-    const guardedProcessMediaData = async (...args: any[]) => {
-      const mediaOptions = await originalProcessMediaData(...args);
-
-      if (!mediaOptions || typeof mediaOptions !== "object") {
-        return mediaOptions;
-      }
-
-      if (
-        Object.prototype.hasOwnProperty.call(
-          mediaOptions,
-          "__x_id"
-        )
-      ) {
-        delete mediaOptions.__x_id;
-      }
-
-      const originalToJSON =
-        typeof mediaOptions.toJSON === "function"
-          ? mediaOptions.toJSON.bind(mediaOptions)
-          : null;
-
-      if (originalToJSON) {
-        Object.defineProperty(mediaOptions, "toJSON", {
-          configurable: true,
-          enumerable: false,
-          writable: true,
-          value: () => {
-            const serialized = originalToJSON();
-
-            if (!serialized || typeof serialized !== "object") {
-              return serialized;
-            }
-
-            const sanitizedSerialized = { ...serialized };
-
-            if (
-              Object.prototype.hasOwnProperty.call(
-                sanitizedSerialized,
-                "__x_id"
-              )
-            ) {
-              delete sanitizedSerialized.__x_id;
-            }
-
-            return sanitizedSerialized;
+    const guardedProcessMediaData = function() {
+      return originalProcessMediaData
+        .apply(wwebjs, arguments)
+        .then(function(mediaOptions: any) {
+          if (!mediaOptions || typeof mediaOptions !== "object") {
+            return mediaOptions;
           }
-        });
-      }
 
-      return mediaOptions;
+          const sanitizedMediaOptions = Object.assign(
+            {},
+            mediaOptions
+          );
+
+          const serialized =
+            typeof mediaOptions.toJSON === "function"
+              ? mediaOptions.toJSON()
+              : null;
+
+          if (serialized && typeof serialized === "object") {
+            Object.assign(sanitizedMediaOptions, serialized);
+          }
+
+          if (
+            Object.prototype.hasOwnProperty.call(
+              sanitizedMediaOptions,
+              "__x_id"
+            )
+          ) {
+            delete sanitizedMediaOptions.__x_id;
+          }
+
+          if (
+            Object.prototype.hasOwnProperty.call(
+              sanitizedMediaOptions,
+              "toJSON"
+            )
+          ) {
+            delete sanitizedMediaOptions.toJSON;
+          }
+
+          return sanitizedMediaOptions;
+        });
     };
 
     (guardedProcessMediaData as any).__samachatMediaIdGuard = true;

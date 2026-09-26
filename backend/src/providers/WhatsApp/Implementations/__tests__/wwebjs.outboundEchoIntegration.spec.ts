@@ -150,18 +150,38 @@ describe("wwebjs outbound echo integration", () => {
     );
 
     expect(compatibilityGuard).toContain(
-      'hasOwnProperty.call(\n          mediaOptions,\n          "__x_id"'
+      'hasOwnProperty.call(\n              sanitizedMediaOptions,\n              "__x_id"'
     );
     expect(compatibilityGuard).toContain(
-      "delete mediaOptions.__x_id;"
-    );
-
-    expect(compatibilityGuard).toContain(
-      'Object.defineProperty(mediaOptions, "toJSON"'
+      "delete sanitizedMediaOptions.__x_id;"
     );
 
     expect(compatibilityGuard).toContain(
-      "delete sanitizedSerialized.__x_id;"
+      "const guardedProcessMediaData = function() {"
+    );
+
+    expect(compatibilityGuard).toContain(
+      ".apply(wwebjs, arguments)"
+    );
+
+    expect(compatibilityGuard).toContain(
+      "Object.assign(\n            {},\n            mediaOptions"
+    );
+
+    expect(compatibilityGuard).toContain(
+      "Object.assign(sanitizedMediaOptions, serialized);"
+    );
+
+    expect(compatibilityGuard).toContain(
+      "delete sanitizedMediaOptions.__x_id;"
+    );
+
+    expect(compatibilityGuard).toContain(
+      "delete sanitizedMediaOptions.toJSON;"
+    );
+
+    expect(compatibilityGuard).not.toContain(
+      "const guardedProcessMediaData = async"
     );
 
     const sendMedia = extractBetween(
