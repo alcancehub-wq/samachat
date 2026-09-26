@@ -1,6 +1,7 @@
 jest.mock("../../models/Contact", () => ({
   findAll: jest.fn(),
   findOne: jest.fn(),
+  findByPk: jest.fn(),
   create: jest.fn()
 }));
 
@@ -17,6 +18,17 @@ jest.mock("../../models/Tag", () => ({
 
 jest.mock("../../models/TicketTag", () => ({
   destroy: jest.fn()
+}));
+
+jest.mock("../../database", () => ({
+  __esModule: true,
+  default: {
+    transaction: jest.fn(async (callback: any) =>
+      callback({
+        LOCK: { UPDATE: "UPDATE" }
+      })
+    )
+  }
 }));
 
 jest.mock("../../libs/socket", () => ({
@@ -63,6 +75,7 @@ import HandleIncomingFlowMessageService from "../../services/FlowExecutionServic
 import { handleMessage } from "../handleWhatsappEvents";
 
 const contactFindAllMock = Contact.findAll as jest.Mock;
+const contactFindByPkMock = Contact.findByPk as jest.Mock;
 const contactFindOneMock = Contact.findOne as jest.Mock;
 const contactCreateMock = Contact.create as jest.Mock;
 const ticketFindOneMock = Ticket.findOne as jest.Mock;
@@ -156,6 +169,11 @@ describe("handleWhatsappEvents manual contact echo flow", () => {
     ticketState = [manualTicket];
     messageState = [];
 
+    contactFindByPkMock.mockImplementation(
+      async (id: number) =>
+        contactState.find(contact => contact.id === id) || null
+    );
+
     contactFindAllMock.mockImplementation(async ({ where }: any) => {
       const numbers = where?.number?.[Op.in] || [];
 
@@ -193,15 +211,38 @@ describe("handleWhatsappEvents manual contact echo flow", () => {
     });
     ticketFindAllMock.mockImplementation(async ({ where }: any) => {
       const statuses = where?.status?.[Op.in] || [];
-      const contactIds = where?.contactId?.[Op.in] || [];
+      const contactFilter = where?.contactId;
+      const contactIds =
+        contactFilter?.[Op.in] ||
+        (contactFilter !== undefined && contactFilter !== null
+          ? [contactFilter]
+          : []);
 
       return ticketState
-        .filter(ticket =>
-          contactIds.includes(ticket.contactId) &&
-          ticket.whatsappId === where.whatsappId &&
-          statuses.includes(ticket.status)
-        )
-        .sort((left, right) => +new Date(right.updatedAt) - +new Date(left.updatedAt));
+        .filter(ticket => {
+          const contactMatches =
+            !contactIds.length ||
+            contactIds.includes(ticket.contactId);
+
+          const whatsappMatches =
+            where?.whatsappId === undefined ||
+            ticket.whatsappId === where.whatsappId;
+
+          const statusMatches =
+            !statuses.length ||
+            statuses.includes(ticket.status);
+
+          return (
+            contactMatches &&
+            whatsappMatches &&
+            statusMatches
+          );
+        })
+        .sort(
+          (left, right) =>
+            +new Date(right.updatedAt) -
+            +new Date(left.updatedAt)
+        );
     });
     ticketCreateMock.mockImplementation(async (data: Record<string, unknown>) => {
       const created = attachUpdate({
