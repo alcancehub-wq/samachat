@@ -12,6 +12,7 @@ import AppError from "../errors/AppError";
 type IndexQuery = {
   searchParam: string;
   pageNumber: string;
+  searchField?: "message" | "shortcut";
 };
 
 type QuickAnswerData = {
@@ -30,12 +31,13 @@ const getAuthenticatedUserId = (req: Request): number => {
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber } = req.query as IndexQuery;
+  const { searchParam, pageNumber, searchField } = req.query as IndexQuery;
   const userId = getAuthenticatedUserId(req);
 
   const { quickAnswers, count, hasMore } = await ListQuickAnswerService({
     searchParam,
     pageNumber,
+    searchField,
     userId
   });
 

@@ -994,7 +994,10 @@ const MessageInput = ({ ticketStatus }) => {
     if (value && value.indexOf("/") === 0) {
       try {
         const { data } = await api.get("/quickAnswers/", {
-          params: { searchParam: inputMessage.substring(1) },
+          params: {
+            searchParam: inputMessage.substring(1),
+            searchField: "shortcut"
+          },
         });
         setQuickAnswer(data.quickAnswers);
         if (data.quickAnswers.length > 0) {

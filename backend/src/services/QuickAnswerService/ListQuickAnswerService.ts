@@ -4,6 +4,7 @@ import QuickAnswer from "../../models/QuickAnswer";
 interface Request {
   searchParam?: string;
   pageNumber?: string;
+  searchField?: "message" | "shortcut";
   userId: number;
 }
 
@@ -16,16 +17,19 @@ interface Response {
 const ListQuickAnswerService = async ({
   searchParam = "",
   pageNumber = "1",
+  searchField = "message",
   userId
 }: Request): Promise<Response> => {
+  const searchColumn = searchField === "shortcut" ? "shortcut" : "message";
+
   const whereCondition = {
     [Op.and]: [
       {
         [Op.or]: [{ userId }, { userId: null }]
       },
       {
-        message: Sequelize.where(
-          Sequelize.fn("LOWER", Sequelize.col("message")),
+        [searchColumn]: Sequelize.where(
+          Sequelize.fn("LOWER", Sequelize.col(searchColumn)),
           "LIKE",
           `%${searchParam.toLowerCase().trim()}%`
         )
