@@ -53,7 +53,14 @@ const ListContactsService = async ({
           `%${normalizedSearchParam}%`
         )
       },
-      { number: { [Op.like]: `%${normalizedSearchParam}%` } }
+      { number: { [Op.like]: `%${normalizedSearchParam}%` } },
+      {
+        email: Sequelize.where(
+          Sequelize.fn("LOWER", Sequelize.col("Contact.email")),
+          "LIKE",
+          `%${normalizedSearchParam}%`
+        )
+      }
     ]
   };
 

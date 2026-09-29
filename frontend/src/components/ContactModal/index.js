@@ -55,6 +55,7 @@ const normalizeContactValues = source => ({
             : null,
     referralType: source?.referralType || "",
     referralContactId: source?.referralContactId || null,
+    referralContactName: source?.referralContactName || "",
     referralUserId: source?.referralUserId || null,
     referralPartnerName: source?.referralPartnerName || "",
     referralNote: source?.referralNote || "",
@@ -194,12 +195,20 @@ const buildContactSchema = requireCompleteRegistration =>
                         return true;
                     }
 
-                    return (
+                    const hasSelectedContact =
                         Number.isInteger(Number(value)) &&
-                        Number(value) > 0
-                    );
+                        Number(value) > 0;
+
+                    const hasManualContactName =
+                        typeof this.parent.referralContactName === "string" &&
+                        this.parent.referralContactName.trim().length > 0;
+
+                    return hasSelectedContact || hasManualContactName;
                 }
             ),
+        referralContactName: Yup.string()
+            .nullable()
+            .max(255, "Too Long!"),
         referralUserId: Yup.mixed()
             .nullable()
             .test(
@@ -268,6 +277,7 @@ const ContactModal = ({
         wasReferred: null,
         referralType: "",
         referralContactId: null,
+        referralContactName: "",
         referralUserId: null,
         referralPartnerName: "",
         referralNote: "",
@@ -372,6 +382,12 @@ const ContactModal = ({
                 values.wasReferred === true &&
                 values.referralType === "cliente"
                     ? values.referralContactId || null
+                    : null,
+            referralContactName:
+                values.wasReferred === true &&
+                values.referralType === "cliente" &&
+                !values.referralContactId
+                    ? values.referralContactName?.trim() || null
                     : null,
             referralUserId:
                 values.wasReferred === true &&
@@ -605,6 +621,11 @@ const ContactModal = ({
                                             );
 
                                             setFieldValue(
+                                                "referralContactName",
+                                                ""
+                                            );
+
+                                            setFieldValue(
                                                 "referralUserId",
                                                 null
                                             );
@@ -669,6 +690,11 @@ const ContactModal = ({
                                                 setFieldValue(
                                                     "referralContactId",
                                                     null
+                                                );
+
+                                                setFieldValue(
+                                                    "referralContactName",
+                                                    ""
                                                 );
 
                                                 setFieldValue(
@@ -746,6 +772,8 @@ const ContactModal = ({
                                                             ]
                                                             : []
                                                     }
+                                                    minSearchLength={2}
+                                                    searchDebounceMs={400}
                                                     onChange={ids => {
                                                         const nextId =
                                                             ids.length > 0
@@ -759,19 +787,60 @@ const ContactModal = ({
                                                             "referralContactId",
                                                             nextId
                                                         );
+
+                                                        if (nextId) {
+                                                            setFieldValue(
+                                                                "referralContactName",
+                                                                ""
+                                                            );
+                                                        }
                                                     }}
                                                 />
 
-                                                {errors.referralContactId && (
-                                                    <Typography
-                                                        variant="caption"
-                                                        color="error"
-                                                    >
-                                                        {
-                                                            errors.referralContactId
+                                                <TextField
+                                                    label={i18n.t(
+                                                        "contactModal.form.referralContactName"
+                                                    )}
+                                                    value={
+                                                        values.referralContactName ||
+                                                        ""
+                                                    }
+                                                    onChange={event => {
+                                                        const nextValue =
+                                                            event.target.value;
+
+                                                        setFieldValue(
+                                                            "referralContactName",
+                                                            nextValue
+                                                        );
+
+                                                        if (
+                                                            nextValue.trim().length > 0 &&
+                                                            values.referralContactId
+                                                        ) {
+                                                            setFieldValue(
+                                                                "referralContactId",
+                                                                null
+                                                            );
                                                         }
-                                                    </Typography>
-                                                )}
+                                                    }}
+                                                    error={Boolean(
+                                                        errors.referralContactName ||
+                                                        errors.referralContactId
+                                                    )}
+                                                    helperText={
+                                                        errors.referralContactName
+                                                            ? errors.referralContactName
+                                                            : errors.referralContactId
+                                                                ? errors.referralContactId
+                                                                : i18n.t(
+                                                                    "contactModal.form.referralContactNameHelper"
+                                                                )
+                                                    }
+                                                    variant="outlined"
+                                                    margin="dense"
+                                                    fullWidth
+                                                />
                                             </div>
                                         )}
 

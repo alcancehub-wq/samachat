@@ -56,7 +56,7 @@ describe("EvaluateContactRegistrationCompletenessService", () => {
     expect(result.missingFields).toEqual(["referralType"]);
   });
 
-  it("requires referralContactId for cliente referral", () => {
+  it("accepts cliente referral by contact id or manual name", () => {
     const incomplete = EvaluateContactRegistrationCompletenessService({
       ...base,
       wasReferred: true,
@@ -66,15 +66,33 @@ describe("EvaluateContactRegistrationCompletenessService", () => {
     expect(incomplete.complete).toBe(false);
     expect(incomplete.missingFields).toEqual(["referralContactId"]);
 
-    const complete = EvaluateContactRegistrationCompletenessService({
+    const byId = EvaluateContactRegistrationCompletenessService({
       ...base,
       wasReferred: true,
       referralType: "cliente",
       referralContactId: 15
     });
 
-    expect(complete.complete).toBe(true);
-    expect(complete.missingFields).toEqual([]);
+    expect(byId.complete).toBe(true);
+
+    const byName = EvaluateContactRegistrationCompletenessService({
+      ...base,
+      wasReferred: true,
+      referralType: "cliente",
+      referralContactName: "Cliente indicador"
+    });
+
+    expect(byName.complete).toBe(true);
+
+    const blank = EvaluateContactRegistrationCompletenessService({
+      ...base,
+      wasReferred: true,
+      referralType: "cliente",
+      referralContactName: "   "
+    });
+
+    expect(blank.complete).toBe(false);
+    expect(blank.missingFields).toEqual(["referralContactId"]);
   });
 
   it("requires referralUserId for usuario referral", () => {

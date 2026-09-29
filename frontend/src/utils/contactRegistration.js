@@ -30,7 +30,10 @@ export const isContactRegistrationComplete = contact => {
   }
 
   if (referralType === "cliente") {
-    return hasPositiveId(contact?.referralContactId);
+    return (
+      hasPositiveId(contact?.referralContactId) ||
+      hasText(contact?.referralContactName)
+    );
   }
 
   if (referralType === "usuario") {

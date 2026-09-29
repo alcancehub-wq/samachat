@@ -313,6 +313,8 @@ const messages = {
           referralType: "Referral type",
           referralTypeHelper: "Select who made the referral.",
           referralContact: "Referring client",
+          referralContactName: "Or enter the referring client's name",
+          referralContactNameHelper: "Use this only if you cannot find the client in the search above.",
           referralUser: "Referring user",
           referralUserHelper: "Type at least 2 characters to search for a user.",
           referralPartner: "Referring partner",
@@ -1198,6 +1200,7 @@ const messages = {
       },
       contactSelect: {
         searchPlaceholder: "Search contacts...",
+        minimumSearch: "Type at least {{count}} characters to search.",
         loadMore: "Load more",
         empty: "No contacts found.",
         selected: "Selected ({{count}})",

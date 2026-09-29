@@ -71,6 +71,9 @@ class Contact extends Model<Contact> {
   referralContactId: number;
 
   @Column
+  referralContactName: string;
+
+  @Column
   referralUserId: number;
 
   @Column

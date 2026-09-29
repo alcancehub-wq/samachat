@@ -315,6 +315,8 @@ const messages = {
           referralType: "Tipo de indicação",
           referralTypeHelper: "Selecione quem realizou a indicação.",
           referralContact: "Cliente que indicou",
+          referralContactName: "Ou informe o nome do cliente que indicou",
+          referralContactNameHelper: "Use esta opção apenas se não encontrar o cliente na busca acima.",
           referralUser: "Usuário que indicou",
           referralUserHelper: "Digite pelo menos 2 caracteres para buscar o usuário.",
           referralPartner: "Parceiro que indicou",
@@ -1214,6 +1216,7 @@ const messages = {
       },
       contactSelect: {
         searchPlaceholder: "Pesquisar contatos...",
+        minimumSearch: "Digite pelo menos {{count}} caracteres para pesquisar.",
         loadMore: "Carregar mais",
         empty: "Nenhum contato encontrado.",
         selected: "Selecionados ({{count}})",

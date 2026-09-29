@@ -58,10 +58,15 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
+const EMPTY_CONTACT_IDS = [];
+const EMPTY_CONTACTS = [];
+
 const ContactSelect = ({
-  selectedContactIds = [],
-  selectedContacts = [],
-  onChange
+  selectedContactIds = EMPTY_CONTACT_IDS,
+  selectedContacts = EMPTY_CONTACTS,
+  onChange,
+  minSearchLength = 0,
+  searchDebounceMs = 0
 }) => {
   const classes = useStyles();
   const [contacts, setContacts] = useState([]);
@@ -97,27 +102,69 @@ const ContactSelect = ({
   }, [searchParam]);
 
   useEffect(() => {
+    const normalizedSearchParam = searchParam.trim();
+
+    if (normalizedSearchParam.length < minSearchLength) {
+      setContacts([]);
+      setHasMore(false);
+      setLoading(false);
+      return undefined;
+    }
+
+    let active = true;
+
     const fetchContacts = async () => {
       setLoading(true);
+
       try {
         const { data } = await api.get("/contacts", {
-          params: { searchParam, pageNumber }
+          params: {
+            searchParam: normalizedSearchParam,
+            pageNumber
+          }
         });
+
+        if (!active) return;
 
         setContacts(prevState =>
           pageNumber === 1
             ? data.contacts
             : [...prevState, ...data.contacts]
         );
+
         setHasMore(data.hasMore);
       } catch (err) {
-        toastError(err);
+        if (active) {
+          toastError(err);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
-    fetchContacts();
-  }, [searchParam, pageNumber]);
+    let timer;
+
+    if (searchDebounceMs > 0) {
+      timer = setTimeout(fetchContacts, searchDebounceMs);
+    } else {
+      fetchContacts();
+    }
+
+    return () => {
+      active = false;
+
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [
+    searchParam,
+    pageNumber,
+    minSearchLength,
+    searchDebounceMs
+  ]);
 
   const toggleContact = contactId => {
     if (typeof onChange !== "function") return;
@@ -207,10 +254,18 @@ const ContactSelect = ({
         onChange={event => setSearchParam(event.target.value)}
       />
       <List dense className={classes.list}>
-        {contacts.length === 0 && !loading && (
+        {searchParam.trim().length < minSearchLength ? (
           <Typography className={classes.empty}>
-            {i18n.t("contactSelect.empty")}
+            {i18n.t("contactSelect.minimumSearch", {
+              count: minSearchLength
+            })}
           </Typography>
+        ) : (
+          contacts.length === 0 && !loading && (
+            <Typography className={classes.empty}>
+              {i18n.t("contactSelect.empty")}
+            </Typography>
+          )
         )}
         {contacts.map(contact => (
           <ListItem

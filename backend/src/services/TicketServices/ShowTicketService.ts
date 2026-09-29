@@ -34,6 +34,7 @@ const ShowTicketService = async (
           "wasReferred",
           "referralType",
           "referralContactId",
+          "referralContactName",
           "referralUserId",
           "referralPartnerName",
           "referralNote"

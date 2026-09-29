@@ -15,6 +15,7 @@ export interface ContactRegistrationData {
   wasReferred?: boolean | null;
   referralType?: string | null;
   referralContactId?: number | null;
+  referralContactName?: string | null;
   referralUserId?: number | null;
   referralPartnerName?: string | null;
 }
@@ -77,7 +78,8 @@ const EvaluateContactRegistrationCompletenessService = (
       missingFields.push("referralType");
     } else if (
       referralType === "cliente" &&
-      !hasPositiveId(contact.referralContactId)
+      !hasPositiveId(contact.referralContactId) &&
+      !hasText(contact.referralContactName)
     ) {
       missingFields.push("referralContactId");
     } else if (

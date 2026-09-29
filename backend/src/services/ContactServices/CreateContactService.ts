@@ -21,6 +21,7 @@ interface Request {
   wasReferred?: boolean | null;
   referralType?: string | null;
   referralContactId?: number | null;
+  referralContactName?: string | null;
   referralUserId?: number | null;
   referralPartnerName?: string | null;
   referralNote?: string | null;
@@ -39,6 +40,7 @@ const CreateContactService = async ({
   wasReferred,
   referralType,
   referralContactId,
+  referralContactName,
   referralUserId,
   referralPartnerName,
   referralNote
@@ -64,6 +66,7 @@ const CreateContactService = async ({
       wasReferred,
       referralType,
       referralContactId,
+      referralContactName,
       referralUserId,
       referralPartnerName,
       referralNote

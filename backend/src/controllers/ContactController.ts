@@ -47,6 +47,7 @@ interface ContactData {
   wasReferred?: boolean | null;
   referralType?: string | null;
   referralContactId?: number | null;
+  referralContactName?: string | null;
   referralUserId?: number | null;
   referralPartnerName?: string | null;
   referralNote?: string | null;
@@ -215,6 +216,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   let wasReferred = newContact.wasReferred;
   let referralType = newContact.referralType;
   let referralContactId = newContact.referralContactId;
+  let referralContactName = newContact.referralContactName;
   let referralUserId = newContact.referralUserId;
   let referralPartnerName = newContact.referralPartnerName;
   let referralNote = newContact.referralNote;
@@ -233,6 +235,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     wasReferred,
     referralType,
     referralContactId,
+    referralContactName,
     referralUserId,
     referralPartnerName,
     referralNote
