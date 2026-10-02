@@ -1,5 +1,15 @@
 # Release Notes
 
+## 2026-10-02
+
+### P02-R09 - Fundacao M2M isolada, sem promocao
+
+- Adaptador puro R08/R07 com rejeicao de history, echo, outbound, ACK, reconciliation e origem desconhecida; nenhuma mudanca nos providers/handlers.
+- Envelope contato v1 explicito, HMAC de timestamp/evento/corpo, transporte HTTPS de tentativa unica com deadline de 8s e confirmacao por recibo validado; readback separado.
+- Cliente desconectado, sem bootstrap, credenciais provisionadas, journal/worker ou envio real. Admissao comercial bloqueada no CRM; contato nao implica oportunidade.
+- Testes sinteticos e prova conjunta com gateway/SQL CRM em laboratorio descartavel; compilacao estrita do novo recorte, sem alegar build/typecheck geral.
+- Branches de trabalho exclusivas, sem promocao para legacy-prod, deploy ou mutacao produtiva.
+
 ## 2026-08-11
 
 ### Pre-promocao controlada - fix/media-event-lifecycle-20260811

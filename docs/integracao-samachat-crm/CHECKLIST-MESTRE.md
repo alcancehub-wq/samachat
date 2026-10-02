@@ -147,3 +147,16 @@ Metadata: kind=realtime|history|echo|outbound|reconciliation|ack|unknown; provid
 Rollback previsto: retirar somente o delta deste commit de trabalho mediante autorizacao, preservando a base R07; nenhuma mudanca de dados ou ambiente real a desfazer. Nenhum rollback ou promocao executado.
 
 TXT_R08=D:/Samacon/auditorias/SAMACHAT-CRM-P02-R08-CONSOLIDADO-20261002.txt
+
+## P02-R09 - Fundacao M2M integrada isolada
+
+- Baselines: SamaChat R08 `36058bf7e35f6bc3cf5f07d99af6f2a0ad0a04c9`; CRM P03 `a9491e859265b4208d042e444cd7f8133054b149`.
+- Contato M2M, org vinculada, binding externo, idempotencia e recibo/readback: implementados e validados em laboratorio sintetico, sem ativacao real.
+- R07/R08 preservados: adaptador puro reutiliza builder e metadata; nenhum provider/handler produtivo importa o novo caminho.
+- Admissao comercial: bloqueada por ausencia de inicializacao/autorizacao M2M de raiz homologada; RPC P03 nao cria a raiz e gateways piloto nao sao credenciais de maquina.
+- Journal/worker/origem duravel: pendente; atomicidade com atendimento nao comprovada, portanto nao houve wiring produtivo ou nova migration SamaChat.
+- Novas credenciais, contas SDR, rotacao, politica comercial e ativacao real: gates futuros explicitos, nao executados.
+- P03 funcional concluido permanece declaracao do usuario; laboratorio nao certifica seu ambiente real nem retoma auditoria geral.
+- PES/SAMACON completos indisponiveis; regras mestras explicitas seguidas, sem falsa certificacao dos textos ausentes.
+- Status esperado apos preflight/publicacao exclusiva: `P02_R09_CONTACT_SYNC_PASS_ADMISSION_BLOCKED`; nenhuma integracao produtiva declarada.
+- TXT consolidado externo: `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R09-M2M-CONSOLIDADO-20261002.txt`.
