@@ -46,6 +46,8 @@ import OfficialInboundMessage from "../models/OfficialInboundMessage";
 import EduzzIntegrationRule from "../models/EduzzIntegrationRule";
 import EduzzWebhookEvent from "../models/EduzzWebhookEvent";
 import IntegrationCredential from "../models/IntegrationCredential";
+import CrmOriginJournal from "../models/CrmOriginJournal";
+import CrmOriginCaptureCommand from "../models/CrmOriginCaptureCommand";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -100,7 +102,9 @@ const models = [
   OfficialInboundMessage,
   EduzzIntegrationRule,
   EduzzWebhookEvent,
-  IntegrationCredential
+  IntegrationCredential,
+  CrmOriginJournal,
+  CrmOriginCaptureCommand
 ];
 
 sequelize.addModels(models);

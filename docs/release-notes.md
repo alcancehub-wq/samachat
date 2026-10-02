@@ -1,5 +1,13 @@
 # Release Notes
 
+## 2026-10-02 - P02-R10 journal de origem, sem promocao
+
+- Fundacao aditiva InnoDB/Sequelize de comandos idempotentes e journal cadastral; source create/update minimo e intencao compartilham a mesma transacao no servico isolado.
+- Reuso R07/R08/R09, revisao monotona, evento/corpo/hash imutaveis, leitura scoped, estados independentes, CAS/lease e recuperacao local sem envio automatico.
+- 194 testes distintos aprovados; rollback e concorrencia em MariaDB portatil sintetico, alem de recovery apos restart fisico. Compilacao estrita direcionada aprovada; build geral nao executado.
+- Modelos registrados sem hooks globais ou wiring ao atendimento. CRM/P04, Vivian/Agente SDR, providers, handlers, tickets/sockets e dados reais preservados.
+- Migration nova apenas validada no laboratorio; rollback bloqueia remocao de dados persistidos. Transporte, worker, schema real, deploy/promocao e R11 nao autorizados.
+
 ## 2026-10-02
 
 ### P02-R09 - Fundacao M2M isolada, sem promocao

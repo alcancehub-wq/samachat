@@ -160,3 +160,17 @@ TXT_R08=D:/Samacon/auditorias/SAMACHAT-CRM-P02-R08-CONSOLIDADO-20261002.txt
 - PES/SAMACON completos indisponiveis; regras mestras explicitas seguidas, sem falsa certificacao dos textos ausentes.
 - Status esperado apos preflight/publicacao exclusiva: `P02_R09_CONTACT_SYNC_PASS_ADMISSION_BLOCKED`; nenhuma integracao produtiva declarada.
 - TXT consolidado externo: `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R09-M2M-CONSOLIDADO-20261002.txt`.
+
+## P02-R10 - Journal transacional de origem isolado
+
+- Base R09 `2f7f93328ba5d1c2dcd5239c3e77b1a9fff89f20`; branch exclusiva `feature/samachat-crm-p02-r10-origin-journal-20261002`.
+- JOURNAL_FOUNDATION_IMPLEMENTED=TRUE; modelos, migration aditiva e repository Sequelize no banco SamaChat, sem nova infraestrutura produtiva.
+- SOURCE_CAPTURE_ATOMIC_VERIFIED=TRUE_IN_ISOLATED_SERVICE; rollback de origem/journal/pre-commit e concorrencia comprovados sobre InnoDB real no laboratorio.
+- PRODUCTIVE_WIRING_ENABLED=FALSE; produtores de atendimento existentes, Vivian/Agente SDR, CRM/P03/P04 e configuracoes reais intactos.
+- R07/R08/R09 reutilizados, sem segundo motor de elegibilidade ou transporte ativado. Corpo/evento/revisao/identidade imutaveis, replay por captureKey, estados por componente e recovery de lease.
+- Testes finais: 7 suites,194 distintos PASS,0 FAIL,0 SKIP; reinicio fisico/readback adicional aprovado, nao somado a contagem. Reruns e302 testes R09 historicos nao somados.
+- Typecheck/compilacao estritos do recorte PASS; build/typecheck geral nao executado/certificado.
+- Atomicidade dos servicos legados/tag/extraInfo/merge nao alegada; wiring, worker/retry, retenção/aliases e qualquer ativacao produtiva exigem autorizacao futura.
+- PES1.0/SAMACON completos nao acessiveis; regras explicitas e contrato R06/checklist lidos sem falsa certificacao integral.
+- Classificacao apos preflight/publicacao: `P02_R10_JOURNAL_ATOMIC_FOUNDATION_PASS`, exclusivamente fundacao isolada, sem entrega/ativacao real e sem R11 automatico.
+- Evidencia unica externa: `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R10-ORIGIN-JOURNAL-CONSOLIDADO-20261002.txt`.
