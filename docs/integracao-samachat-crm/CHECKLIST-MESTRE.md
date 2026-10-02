@@ -112,3 +112,38 @@ Todas as decisoes retornam transport=not_released, commercialOperation=not_reque
 Os 24 cenarios E2E de R06 continuam apenas definidos; nao foram executados. Pendencias exclusivas da futura integracao: homologacao M2M, autorizacao do journal e transporte/recibos, conexao produtiva e validacao funcional em pacote autorizado. P02 continua em andamento; promocao bloqueada.
 
 TXT_R07=D:/Samacon/worktrees/samachat-crm-p02-r07-20261002/auditorias/SAMACHAT-CRM-P02-R07-CONSOLIDADO-20261002.txt
+
+## Registro P02-R08 - Fundacao Independente de Proveniencia
+
+Historico R06/R07 acima herdado integralmente do commit 65c1ff728ad8f9f401767615af902524f2187466, sem recopia, reescrita ou modificacao do nucleo R07. R08 e micropasso de P02, nao conclusao da integracao ou do pacote P07 historico.
+
+WORKTREE_R08=D:/Samacon/worktrees/samachat-crm-p02-r08-20261002
+BRANCH_R08=feature/samachat-crm-p02-r08-20261002
+BASE_R08=65c1ff728ad8f9f401767615af902524f2187466
+STATUS_LOCAL_R08=P02_R08_LOCAL_PASS
+PUSH_R07=VERIFICADO_NO_SHA_65c1ff728ad8f9f401767615af902524f2187466
+PUSH_R08=AUTORIZADO_SOMENTE_APOS_PREFLIGHT_E_COMMIT; resultado final documentado no TXT externo, sem alegar aqui um push ainda nao ocorrido.
+P02_INTEGRACAO=EM_ANDAMENTO
+INTEGRACAO_FUNCIONAL=NAO_IMPLEMENTADA
+CONTRATO_M2M_CRM=PENDENTE_DE_VALIDACAO_CRM
+PROMOCAO=NAO_AUTORIZADA
+
+- [x] R07 confirmado limpo no commit aprovado, parent correto e cinco arquivos; branch remota ausente antes do push.
+- [x] Automacao versionada conferida: feature/* nao aciona workflows de publicacao/deploy; politica documentada de producao legacy-prod preservada.
+- [x] Push exclusivo R07 sem force/rebase/merge, remoto confirmado no SHA autorizado e legacy-prod inalterada.
+- [x] Nova branch/worktree R08 criada limpa no commit R07; nenhuma worktree anterior alterada ou CRM acessado.
+- [x] Auditoria dirigida dos quatro consumidores diretos, com oito chamadas handleMessage: Cloud (1), wwebjs (5), whaileys (1) e bridge (1).
+- [x] Tipo MessageProvenance e classificador/resolvedor puros; metadata opcional messageProvenance no contexto; ausencia/invalidez resolve unknown, nunca realtime por default.
+- [x] Proveniencia anotada apenas onde comprovada: wwebjs eventName, whaileys notify/append, Cloud change.field e callback preparado de reconciliacao.
+- [x] History, echo, outbound, reconciliation, ack e unknown permanecem sem elegibilidade comercial; grupos continuam sujeitos ao guard e R07, sem regra nova de grupo.
+- [x] Corpo e assinatura decisoria do handler inalterados; AST confirma codigo operacional identico a R07 ao remover somente imports/tipos/metadata novos.
+- [x] Regressao final dirigida: 163 PASS em 13 suites; roteamento Cloud mockado: 4 PASS; total 167 testes distintos, 0 FAIL na validacao final.
+- [x] Typecheck estrito dos novos componentes/testes PASS; arquivos compartilhados com 17 diagnosticos herdados iguais a R07, zero novos; typecheck/build geral NAO declarado PASS.
+- [x] Nenhum journal/transporte/webhook/worker/credencial/endpoint/negocio/opportunity/Agente SDR; nenhum import produtivo do builder R07.
+- [ ] Encerramento de commit/push R08 e verificacao do SHA remoto; resultado deve constar no TXT unico externo.
+
+Metadata: kind=realtime|history|echo|outbound|reconciliation|ack|unknown; provider=wwebjs|whaileys|cloud_api|unknown. Source/receiver/direction/group/ticket/read/storage/socket/merge/roteamento permanecem com suas regras anteriores. ACK e historico Cloud continuam nos processadores existentes fora de handleMessage; nenhum novo caminho operacional criado.
+
+Rollback previsto: retirar somente o delta deste commit de trabalho mediante autorizacao, preservando a base R07; nenhuma mudanca de dados ou ambiente real a desfazer. Nenhum rollback ou promocao executado.
+
+TXT_R08=D:/Samacon/auditorias/SAMACHAT-CRM-P02-R08-CONSOLIDADO-20261002.txt

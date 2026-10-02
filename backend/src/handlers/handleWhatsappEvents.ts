@@ -31,6 +31,7 @@ import { ResolveOfficialInboundCorrelationService } from "../services/OutboundCh
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
+import type { MessageProvenance } from "../providers/WhatsApp/MessageProvenance";
 
 const writeFileAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
@@ -123,6 +124,7 @@ export interface WhatsappContextPayload {
   unreadMessages: number;
   groupContact?: ContactPayload;
   isGroupMessage?: boolean;
+  messageProvenance?: MessageProvenance;
 }
 
 interface MessageAckContext {
