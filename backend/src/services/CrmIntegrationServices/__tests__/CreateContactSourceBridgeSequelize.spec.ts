@@ -1,18 +1,12 @@
 import "reflect-metadata";
 import { randomUUID } from "crypto";
 import { QueryTypes } from "sequelize";
+import { Sequelize } from "sequelize-typescript";
 import {
-  AutoIncrement,
-  BelongsToMany,
-  Column,
-  DataType,
-  ForeignKey,
-  HasMany,
-  Model,
-  PrimaryKey,
-  Sequelize,
-  Table
-} from "sequelize-typescript";
+  ContactFixture,
+  InfoFixture,
+  InitializeContactSourceBridgeLab
+} from "./fixtures/ContactSourceBridgeLab";
 import CreateContactService from "../../ContactServices/CreateContactService";
 import UpdateContactService from "../../ContactServices/UpdateContactService";
 import { CreateContactSourceContext } from "../CaptureCreateContactSourceBridge";
@@ -40,47 +34,6 @@ jest.mock("../../WebhookServices/TriggerWebhooksService", () => ({
   __esModule: true,
   default: jest.fn(async () => undefined)
 }));
-
-@Table({ tableName: "Contacts" })
-class ContactFixture extends Model<ContactFixture> {
-  @PrimaryKey @AutoIncrement @Column id!: number;
-  @Column name!: string;
-  @Column({ unique: true, type: DataType.STRING }) number!: string | null;
-  @Column({ unique: true, type: DataType.STRING }) lid!: string | null;
-  @Column({ defaultValue: false }) isGroup!: boolean;
-  @Column({ defaultValue: false }) allowMultipleConversations!: boolean;
-  @Column email!: string;
-  @Column profilePicUrl!: string;
-  @Column city!: string;
-  @Column state!: string;
-  @Column captureChannel!: string;
-  @Column wasReferred!: boolean;
-  @Column referralType!: string;
-  @Column referralContactId!: number;
-  @Column referralContactName!: string;
-  @Column referralUserId!: number;
-  @Column referralPartnerName!: string;
-  @Column referralNote!: string;
-  @HasMany(() => InfoFixture) extraInfo!: InfoFixture[];
-  @BelongsToMany(() => TagFixture, () => ContactTagFixture) tags!: TagFixture[];
-}
-@Table({ tableName: "ContactCustomFields" })
-class InfoFixture extends Model<InfoFixture> {
-  @PrimaryKey @AutoIncrement @Column id!: number;
-  @Column name!: string;
-  @Column value!: string;
-  @ForeignKey(() => ContactFixture) @Column contactId!: number;
-}
-@Table({ tableName: "Tags" })
-class TagFixture extends Model<TagFixture> {
-  @PrimaryKey @Column id!: number;
-  @Column name!: string;
-}
-@Table({ tableName: "ContactTags", timestamps: false })
-class ContactTagFixture extends Model<ContactTagFixture> {
-  @ForeignKey(() => ContactFixture) @Column contactId!: number;
-  @ForeignKey(() => TagFixture) @Column tagId!: number;
-}
 
 const identity = {
   integrationId: "synthetic-integration",
@@ -116,7 +69,6 @@ laboratory("R11 real CreateContactService with R10 transaction", () => {
   let database: Sequelize;
   let httpsRequest: jest.SpyInstance;
   let httpRequest: jest.SpyInstance;
-  const migration = require("../../../database/migrations/20261002173000-create-crm-origin-journal");
   beforeAll(async () => {
     httpsRequest = jest
       .spyOn(require("https"), "request")
@@ -128,66 +80,9 @@ laboratory("R11 real CreateContactService with R10 transaction", () => {
       .mockImplementation(() => {
         throw new Error("EXTERNAL_HTTP_FORBIDDEN");
       });
-    const mysql = require("mysql2/promise");
-    const admin = await mysql.createConnection({
-      host: "127.0.0.1",
-      port: 55442,
-      user: "root",
-      password: ""
-    });
-    try {
-      const [rows] = await admin.query(
-        "SELECT @@datadir AS directory,VERSION() AS version"
-      );
-      if (
-        !String(rows[0].directory)
-          .replace(/\\/g, "/")
-          .includes(
-            "samachat-crm-p02-r11-source-bridge-20261003/backend/node_modules/.cache/r11-source-lab/data/"
-          ) ||
-        !String(rows[0].version).startsWith("10.11.10-MariaDB")
-      )
-        throw new Error("REFUSING_NON_R11_LAB_DATABASE");
-      await admin.query("DROP DATABASE IF EXISTS r11_source_lab");
-      await admin.query(
-        "CREATE DATABASE r11_source_lab CHARACTER SET utf8mb4 COLLATE utf8mb4_bin"
-      );
-    } finally {
-      await admin.end();
-    }
-    database = new Sequelize({
-      database: "r11_source_lab",
-      username: "root",
-      password: "",
-      host: "127.0.0.1",
-      port: 55442,
-      dialect: "mysql",
-      dialectModule: require("mysql2"),
-      logging: false,
-      models: [
-        ContactFixture,
-        InfoFixture,
-        TagFixture,
-        ContactTagFixture,
-        CrmOriginJournal,
-        CrmOriginCaptureCommand
-      ]
-    });
+    database = await InitializeContactSourceBridgeLab();
     mockContact = ContactFixture;
     mockExtraInfo = InfoFixture;
-    for (const model of [
-      ContactFixture,
-      InfoFixture,
-      TagFixture,
-      ContactTagFixture
-    ])
-      await model.sync();
-    await TagFixture.create({ id: 1, name: "Synthetic Tag" });
-    await database.query(
-      "CREATE TABLE Tickets(id INT PRIMARY KEY,status VARCHAR(30),userId INT,queueId INT,whatsappId INT,unreadMessages INT) ENGINE=InnoDB"
-    );
-    await database.query("INSERT INTO Tickets VALUES(1,'open',10,20,30,3)");
-    await migration.up(database.getQueryInterface());
   }, 30000);
   beforeEach(async () => {
     for (const table of [
@@ -248,11 +143,11 @@ laboratory("R11 real CreateContactService with R10 transaction", () => {
   it("legacy webhook starts only after source and journal are visible outside transaction", async () => {
     const observer = require("mysql2/promise");
     const probe = await observer.createConnection({
-      host: "127.0.0.1",
-      port: 55442,
-      user: "root",
-      password: "",
-      database: "r11_source_lab"
+      host: database.config.host,
+      port: database.config.port,
+      user: database.config.username,
+      password: database.config.password,
+      database: database.config.database
     });
     const visible: number[] = [];
     (TriggerWebhooksService as jest.Mock).mockImplementationOnce(async () => {

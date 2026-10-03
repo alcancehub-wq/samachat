@@ -187,3 +187,15 @@ TXT_R08=D:/Samacon/auditorias/SAMACHAT-CRM-P02-R08-CONSOLIDADO-20261002.txt
 - Typecheck strict novo PASS; comparacao produtor/teste SQL1 antes/1 depois/0 novo, sem build geral certificado. Tentativa MySQL herdada bloqueada igualmente nas regressoes base/R11 e registrada, sem conexao real.
 - Encerramento apos preflight/commit/push exclusivo e TXT externo: `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R11-SOURCE-BRIDGE-CONSOLIDADO-20261003.txt`; sem R12 automatico.
 - Gates finais:80 testes distintos PASS/0 FAIL/0 SKIP em7 suites, sem somar194/R10 ou reruns; guard InnoDB fechado comprovado, AST preserva writer legado/default R10, programa ampliado31 diagnosticos antes/depois/0 novos.
+
+## P02-R12 - Ponte opt-in de atualizacao
+
+- Base R11 `7562653c251752bbf0f630b1a40212a209558e36`; branch exclusiva `feature/samachat-crm-p02-r12-update-bridge-20261003`.
+- UpdateContactService integra contato completo locked, extraInfo/remoções scoped, tags/reload, snapshots reais antes/depois e journal/command na mesma transaction R10/R11; default parcial legado mantido.
+- Telefone anterior/posterior tem evidencia distinta; R10 respeita phoneE164 proprio do snapshot sem mudar R07/R09 ou envelope. Claim posterior incompatível fica pendente, sem pessoa/telefone ficticio.
+- Mesmo comando devolve projecao original duravel, sem reaplicar updates/remover associacoes/repetir webhook; resultado limitado e imutavel no command existente, nenhuma migration nova.
+- Fixture/guard InnoDB R11 reutilizados, laboratorio R12 proprio com identificacao fisica e zero HTTP real; criacao R11 verificada por regressao direcionada, demais produtores/CRM/Vivian intactos.
+- PRODUCTIVE_CAPTURE=FALSE;PRODUCTIVE_DELIVERY_ENABLED=FALSE;CRM_MUTATION=NONE;AGENT_SDR_MUTATION=NONE. Nenhum caller/controller habilitado.
+- Detalhes e limites em `P02-R12-PONTE-ATUALIZACAO.md`; gate final/contagens/commit/push/hashes no TXT externo unico `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R12-UPDATE-BRIDGE-CONSOLIDADO-20261003.txt`.
+- PES/SAMACON integrais indisponiveis, sem falsa certificacao; encerrar apos TXT, sem R13 automatico.
+- Gates finais:69 testes distintos aprovados em6 suites,0 FAIL;20 R11 excluidos por selecao explicitados,sem somar pacotes antigos/reruns. Typecheck strict novo PASS,1 diagnostico herdado antes/depois/0 novo;AST default equivalente e rollback/concorrencia/snapshots/replay original SQL comprovados.

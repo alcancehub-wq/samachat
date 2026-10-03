@@ -1,5 +1,12 @@
 # Release Notes
 
+## 2026-10-03 - P02-R12 update cadastral opt-in, sem promocao
+
+- UpdateContactService compartilha mutacao canonica, extraInfo/remoções/tags e journal R10/R11 sob uma transacao, com snapshots completos locked e escopo de associacoes protegido.
+- Default/callers permanecem legados; opt-in somente segundo argumento server-side. Provas separadas de telefone anterior/posterior, replay original duravel e webhook legado apenas apos commit efetivo.
+- Guard/fixture R11 reutilizados e testes SQL em datadir R12 sintetico com identificacao fisica, sem HTTP/CRM/WhatsApp real, migration nova, worker ou alteracao comercial/SDR.
+- 69 testes distintos aprovados, typecheck estrito/regressoes direcionadas sem certificar build geral ou ambiente produtivo;20 R11 excluidos por selecao registrados. Limites/rollback em P02-R12-PONTE-ATUALIZACAO.md e TXT externo final. Nenhum deploy/promocao/R13 automatico.
+
 ## 2026-10-03 - P02-R11 ponte cadastral opt-in, sem promocao
 
 - CreateContactService pode compartilhar sua criacao canonica, extraInfo, tags/reload e journal R10 em uma transacao por configuracao/contexto server-side explicitos; ausente/desligado mantem caminho legado.

@@ -241,9 +241,22 @@ export default class CrmOriginJournalService {
         throw new Error("ORIGIN_CONTACT_IDENTITY_CONFLICT");
       const decision = AdaptCrmContactIntentService(
         {
-          contact: { ...after, phoneE164: request.phoneE164 },
+          contact: {
+            ...after,
+            phoneE164: Object.prototype.hasOwnProperty.call(after, "phoneE164")
+              ? after.phoneE164
+              : request.phoneE164
+          },
           previousContact: before
-            ? { ...before, phoneE164: request.phoneE164 }
+            ? {
+                ...before,
+                phoneE164: Object.prototype.hasOwnProperty.call(
+                  before,
+                  "phoneE164"
+                )
+                  ? before.phoneE164
+                  : request.phoneE164
+              }
             : null,
           resolution: before ? "reused" : "created",
           bindingStatus: request.bindingStatus,
