@@ -55,22 +55,22 @@ const uuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const snapshot = (row: Model): CrmContactSnapshot =>
   row.get({ plain: true }) as CrmContactSnapshot;
-const decode = (row: CrmOriginJournal): OriginJournalEntry => {
+const decode = (row: CrmOriginJournal, verify = true): OriginJournalEntry => {
   const data = row.get({ plain: true }) as Record<string, unknown>;
   const entry = {
     ...data,
     sourceRevision: Number(data.sourceRevision),
     receipt: typeof data.receipt === "string" ? JSON.parse(data.receipt) : null
   } as unknown as OriginJournalEntry;
-  VerifyOriginJournalEntry(entry);
+  if (verify) VerifyOriginJournalEntry(entry);
   return entry;
 };
 export type OriginJournalTransition =
   | { kind: "begin_attempt"; attemptId: string; leaseExpiresAt: string }
   | { kind: "transport_accepted"; attemptId: string }
-  | { kind: "uncertain"; attemptId: string; code: string }
-  | { kind: "terminal_failure"; code: string }
-  | { kind: "receipt"; value: unknown };
+  | { kind: "uncertain"; attemptId: string; code: string; notBefore?: string }
+  | { kind: "terminal_failure"; code: string; attemptId?: string }
+  | { kind: "receipt"; value: unknown; attemptId?: string; notBefore?: string };
 
 export default class SequelizeCrmOriginJournalRepository
   implements OriginJournalRepository
@@ -244,7 +244,95 @@ export default class SequelizeCrmOriginJournalRepository
         ["eventId", "ASC"]
       ]
     });
-    return rows.map(decode);
+    return rows.map(row => decode(row));
+  }
+  async deliveryCandidate(
+    identity: CrmM2mIdentity,
+    now: Date,
+    maxOperations: number
+  ): Promise<OriginJournalEntry | null> {
+    const scope = this.scope(identity);
+    if (
+      !Number.isFinite(+now) ||
+      !Number.isSafeInteger(maxOperations) ||
+      maxOperations < 1 ||
+      maxOperations > 10
+    )
+      throw new Error("ORIGIN_DELIVERY_POLICY_INVALID");
+    const rows = await this.database.query(
+      `SELECT candidate.* FROM CrmOriginJournals candidate
+       WHERE candidate.sourceInstanceId=:sourceInstanceId AND candidate.integrationId=:integrationId AND candidate.organizationId=:organizationId
+         AND (candidate.lastErrorCode IS NULL OR candidate.lastErrorCode <> 'journal_integrity_requires_review')
+         AND (candidate.attemptCount < :maxOperations OR candidate.state IN ('attempt_started','transport_accepted'))
+         AND candidate.state IN ('intent_persisted','reconciliation_required','receipt_validated','attempt_started','transport_accepted')
+         AND (candidate.leaseExpiresAt IS NULL OR candidate.leaseExpiresAt <= :now)
+         AND NOT EXISTS (SELECT 1 FROM CrmOriginJournals earlier
+           WHERE earlier.sourceInstanceId=candidate.sourceInstanceId AND earlier.sourceContactId=candidate.sourceContactId
+             AND earlier.sourceRevision < candidate.sourceRevision AND earlier.state <> 'contact_confirmed')
+       ORDER BY candidate.createdAt,candidate.eventId LIMIT 1`,
+      {
+        type: QueryTypes.SELECT,
+        replacements: { ...scope, maxOperations, now: now.toISOString() }
+      }
+    );
+    return rows[0]
+      ? decode(
+          CrmOriginJournal.build(rows[0], { isNewRecord: false, raw: true }),
+          false
+        )
+      : null;
+  }
+  async rejectInvalidCandidate(
+    identity: CrmM2mIdentity,
+    entry: OriginJournalEntry,
+    now: Date
+  ): Promise<boolean> {
+    if (
+      entry.organizationId !== identity.organizationId ||
+      entry.integrationId !== identity.integrationId ||
+      entry.sourceInstanceId !== identity.sourceInstanceId
+    )
+      return false;
+    if (
+      !uuid.test(entry.eventId) ||
+      !Number.isSafeInteger(entry.stateVersion) ||
+      entry.stateVersion < 0
+    )
+      return false;
+    const [count] = await CrmOriginJournal.update(
+      {
+        state: "reconciliation_required",
+        lastErrorCode: "journal_integrity_requires_review",
+        leaseExpiresAt: null,
+        stateVersion: Sequelize.literal("stateVersion + 1") as unknown as number
+      },
+      {
+        where: {
+          ...this.scope(identity),
+          eventId: entry.eventId,
+          stateVersion: entry.stateVersion,
+          bodyHash: entry.bodyHash,
+          canonicalBody: entry.canonicalBody,
+          [Op.or]: [
+            {
+              state: {
+                [Op.in]: [
+                  "intent_persisted",
+                  "reconciliation_required",
+                  "receipt_validated"
+                ]
+              }
+            },
+            {
+              state: { [Op.in]: ["attempt_started", "transport_accepted"] },
+              leaseExpiresAt: { [Op.lte]: now.toISOString() }
+            }
+          ]
+        },
+        fields: ["state", "lastErrorCode", "leaseExpiresAt", "stateVersion"]
+      }
+    );
+    return count === 1;
   }
   async transition(
     identity: CrmM2mIdentity,
@@ -261,6 +349,18 @@ export default class SequelizeCrmOriginJournalRepository
       });
       if (!row) throw new Error("ORIGIN_JOURNAL_NOT_FOUND");
       const entry = decode(row);
+      if (entry.state === "contact_confirmed" && change.kind === "receipt") {
+        const late = ValidateOriginJournalReceipt(change.value, entry);
+        if (
+          ["created", "reused", "enriched"].includes(
+            late.contact_result.status
+          ) &&
+          late.contact_result.crm_contact_id !==
+            entry.receipt?.contact_result.crm_contact_id
+        )
+          throw new Error("ORIGIN_CONFIRMED_RECEIPT_CONFLICT");
+        return entry;
+      }
       if (entry.stateVersion !== expectedVersion)
         throw new Error("ORIGIN_STATE_VERSION_CONFLICT");
       const timestamp = now.toISOString();
@@ -270,6 +370,22 @@ export default class SequelizeCrmOriginJournalRepository
       )
         throw new Error("ORIGIN_STATE_TERMINAL");
       if (change.kind === "begin_attempt") {
+        if (
+          entry.leaseExpiresAt &&
+          Date.parse(entry.leaseExpiresAt) > now.getTime()
+        )
+          throw new Error("ORIGIN_ATTEMPT_INVALID");
+        const earlier = await CrmOriginJournal.findOne({
+          where: {
+            sourceInstanceId: entry.sourceInstanceId,
+            sourceContactId: entry.sourceContactId,
+            sourceRevision: { [Op.lt]: entry.sourceRevision },
+            state: { [Op.ne]: "contact_confirmed" }
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE
+        });
+        if (earlier) throw new Error("ORIGIN_EVENT_ORDER_BLOCKED");
         if (
           ![
             "intent_persisted",
@@ -286,8 +402,21 @@ export default class SequelizeCrmOriginJournalRepository
         entry.state = "attempt_started";
         entry.attemptId = change.attemptId;
         entry.attemptCount++;
-        entry.leaseExpiresAt = change.leaseExpiresAt;
+        entry.leaseExpiresAt = new Date(change.leaseExpiresAt).toISOString();
       } else if (change.kind === "receipt") {
+        if (
+          change.attemptId &&
+          (change.attemptId !== entry.attemptId ||
+            !["attempt_started", "transport_accepted"].includes(entry.state))
+        )
+          throw new Error("ORIGIN_ATTEMPT_ID_CONFLICT");
+        if (
+          change.notBefore &&
+          (!Number.isFinite(Date.parse(change.notBefore)) ||
+            Date.parse(change.notBefore) <= now.getTime() ||
+            Date.parse(change.notBefore) > now.getTime() + 3600000)
+        )
+          throw new Error("ORIGIN_BACKOFF_INVALID");
         const receipt = ValidateOriginJournalReceipt(change.value, entry);
         entry.receipt = receipt;
         entry.receiptValidatedAt = entry.receiptValidatedAt || timestamp;
@@ -301,9 +430,19 @@ export default class SequelizeCrmOriginJournalRepository
           : "reconciliation_required";
         if (confirmed)
           entry.contactConfirmedAt = entry.contactConfirmedAt || timestamp;
-        entry.leaseExpiresAt = null;
+        entry.leaseExpiresAt = confirmed
+          ? null
+          : change.notBefore
+          ? new Date(change.notBefore).toISOString()
+          : null;
         entry.lastErrorCode = receipt.error?.code || null;
       } else if (change.kind === "terminal_failure") {
+        if (
+          change.attemptId &&
+          (change.attemptId !== entry.attemptId ||
+            !["attempt_started", "transport_accepted"].includes(entry.state))
+        )
+          throw new Error("ORIGIN_ATTEMPT_ID_CONFLICT");
         if (!/^[a-z][a-z0-9_]{0,99}$/.test(change.code))
           throw new Error("ORIGIN_ERROR_CODE_INVALID");
         entry.state = "terminal_failure";
@@ -323,7 +462,16 @@ export default class SequelizeCrmOriginJournalRepository
             throw new Error("ORIGIN_ERROR_CODE_INVALID");
           entry.state = "reconciliation_required";
           entry.lastErrorCode = change.code;
-          entry.leaseExpiresAt = null;
+          if (
+            change.notBefore &&
+            (!Number.isFinite(Date.parse(change.notBefore)) ||
+              Date.parse(change.notBefore) <= now.getTime() ||
+              Date.parse(change.notBefore) > now.getTime() + 3600000)
+          )
+            throw new Error("ORIGIN_BACKOFF_INVALID");
+          entry.leaseExpiresAt = change.notBefore
+            ? new Date(change.notBefore).toISOString()
+            : null;
         }
       }
       entry.stateVersion++;
@@ -341,7 +489,11 @@ export default class SequelizeCrmOriginJournalRepository
       return decode(row);
     });
   }
-  async recoverExpired(identity: CrmM2mIdentity, now: Date): Promise<number> {
+  async recoverExpired(
+    identity: CrmM2mIdentity,
+    now: Date,
+    eventId?: string
+  ): Promise<number> {
     const [count] = await CrmOriginJournal.update(
       {
         state: "reconciliation_required",
@@ -352,6 +504,7 @@ export default class SequelizeCrmOriginJournalRepository
       {
         where: {
           ...this.scope(identity),
+          ...(eventId ? { eventId } : {}),
           state: { [Op.in]: ["attempt_started", "transport_accepted"] },
           leaseExpiresAt: { [Op.lte]: now.toISOString() }
         },

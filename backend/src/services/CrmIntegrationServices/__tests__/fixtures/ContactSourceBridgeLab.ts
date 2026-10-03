@@ -56,12 +56,19 @@ class ContactTagFixture extends Model<ContactTagFixture> {
 }
 
 export async function InitializeContactSourceBridgeLab(): Promise<Sequelize> {
+  const delivery = process.env.CRM_DELIVERY_COORDINATOR_LAB_ENABLED === "1";
   const update = process.env.CRM_UPDATE_BRIDGE_LAB_ENABLED === "1";
-  if (!update && process.env.CRM_SOURCE_BRIDGE_LAB_ENABLED !== "1")
+  if (!delivery && !update && process.env.CRM_SOURCE_BRIDGE_LAB_ENABLED !== "1")
     throw new Error("LAB_OPT_IN_REQUIRED");
-  const port = update ? 55443 : 55442;
-  const name = update ? "r12_update_lab" : "r11_source_lab";
-  const expected = update
+  const port = delivery ? 55444 : update ? 55443 : 55442;
+  const name = delivery
+    ? "r13_delivery_lab"
+    : update
+    ? "r12_update_lab"
+    : "r11_source_lab";
+  const expected = delivery
+    ? "D:/Samacon/worktrees/samachat-crm-p02-r13-delivery-coordinator-20261003/backend/node_modules/.cache/r13-delivery-lab/data/"
+    : update
     ? "D:/Samacon/worktrees/samachat-crm-p02-r12-update-bridge-20261003/backend/node_modules/.cache/r12-update-lab/data/"
     : "D:/Samacon/worktrees/samachat-crm-p02-r11-source-bridge-20261003/backend/node_modules/.cache/r11-source-lab/data/";
   const mysql = require("mysql2/promise");

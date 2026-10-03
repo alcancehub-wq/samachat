@@ -199,3 +199,14 @@ TXT_R08=D:/Samacon/auditorias/SAMACHAT-CRM-P02-R08-CONSOLIDADO-20261002.txt
 - Detalhes e limites em `P02-R12-PONTE-ATUALIZACAO.md`; gate final/contagens/commit/push/hashes no TXT externo unico `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R12-UPDATE-BRIDGE-CONSOLIDADO-20261003.txt`.
 - PES/SAMACON integrais indisponiveis, sem falsa certificacao; encerrar apos TXT, sem R13 automatico.
 - Gates finais:69 testes distintos aprovados em6 suites,0 FAIL;20 R11 excluidos por selecao explicitados,sem somar pacotes antigos/reruns. Typecheck strict novo PASS,1 diagnostico herdado antes/depois/0 novo;AST default equivalente e rollback/concorrencia/snapshots/replay original SQL comprovados.
+
+## P02-R13 - Coordenador single-run isolado
+
+- Base R12 `e5c3005d554a3daaabe19eac93b14b94feb74b9d`;branch exclusiva `feature/samachat-crm-p02-r13-delivery-coordinator-20261003`.
+- CrmDeliveryCoordinator.runOnce reutiliza cliente R09/repository R10,transporte obrigatorio injetado,identity/config/policy/clock explicitos;default disabled,sem bootstrap/caller/worker/scheduler/loop/polling.
+- Claim CAS/lease com fencing,ordenacao por identidade/revisao,cooldown/budget persistidos e readback obrigatorio apos incerteza;404 query nao autoriza re-upsert/nova intencao.
+- Recibo2xx validado confirma apenas contato;accepted recuperavel,tardio nao regride confirmado,corrupcao isolada para revisao sem destruir dados ou bloquear contatos independentes.
+- 50 testes distintos PASS/0 FAIL finais (5 contrato+36SQL+9cliente),26 R09 excluidos por selecao;sem somar pacotes completos/reruns. Restart logico com repository novo comprovado,nao producao.
+- PRODUCTIVE_CAPTURE=FALSE;PRODUCTIVE_DELIVERY_ENABLED=FALSE;CRM_MUTATION=NONE;AGENT_SDR_MUTATION=NONE. Modelos/schema/transport/algoritmos R09-R12 e Vivian/P05 preservados salvo consultas/transicoes aditivas explicitadas.
+- Politica/limites/rollback em `P02-R13-COORDENADOR-ENTREGA.md`;TXT unico externo `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R13-DELIVERY-COORDINATOR-CONSOLIDADO-20261003.txt`;sem R14 automatico.
+- Typecheck strict/noUnused novo PASS;programa afetado1 diagnostico herdado antes/depois/0 novo. Build/typecheck geral nao certificado;remote feature nao aciona CI/deploy existente,nenhuma alegacao ficticia de CI PASS.

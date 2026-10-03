@@ -1,5 +1,12 @@
 # Release Notes
 
+## 2026-10-03 - P02-R13 coordenador isolado, sem ativacao
+
+- runOnce scoped/single-unit,cliente R09 injetado e journal R10 com CAS/lease/fencing,ordenacao de revisao,cooldown/budget e readback antes de qualquer reconsideracao de upsert incerto.
+- Sem retry oculto,worker/cron/polling,caller/servidor habilitado ou HTTP real. Recibos cadastrais separados de comercio,404 query inconclusivo,confirmacao tardia nao regressiva,eventos corruptos preservados para revisao.
+- 50 testes distintos aprovados em contrato/SQL real sintetico/cliente selecionado,26 excluidos registrados;typecheck direcionado,nao build geral/E2E/producao.
+- Nenhuma tabela/model/migration nova,credencial real,alteracao CRM/P05/Vivian/SDR/deploy/promocao;rollback preserva journal/commands/recibos. Nao iniciar R14.
+
 ## 2026-10-03 - P02-R12 update cadastral opt-in, sem promocao
 
 - UpdateContactService compartilha mutacao canonica, extraInfo/remoções/tags e journal R10/R11 sob uma transacao, com snapshots completos locked e escopo de associacoes protegido.
