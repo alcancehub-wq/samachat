@@ -85,6 +85,54 @@ const nullableText = (value: unknown, maximum: number) =>
     value.trim().length > 0 &&
     value.length <= maximum);
 
+export function ValidateCrmDeliveryConfiguration(
+  identity: CrmM2mIdentity,
+  configuration: DeliveryCoordinatorConfiguration
+): { leaseMs: number; backoffMs: number; maxOperations: number } {
+  ValidateOriginJournalIdentity(identity);
+  ValidateOriginJournalIdentity(configuration.identity!);
+  if (
+    identity.organizationId !== configuration.identity!.organizationId ||
+    identity.integrationId !== configuration.identity!.integrationId ||
+    identity.sourceInstanceId !== configuration.identity!.sourceInstanceId
+  )
+    throw new Error("DELIVERY_SCOPE_INVALID");
+  const m2m = configuration.m2m;
+  if (
+    !m2m ||
+    typeof configuration.transport !== "function" ||
+    !(Buffer.isBuffer(m2m.secret) || m2m.secret instanceof Uint8Array) ||
+    m2m.secret.byteLength < 32 ||
+    !/^[A-Za-z0-9._:-]{1,100}$/.test(m2m.keyId)
+  )
+    throw new Error("DELIVERY_CONFIGURATION_INVALID");
+  const endpoint = new URL(m2m.endpoint);
+  if (
+    endpoint.protocol !== "https:" ||
+    endpoint.username ||
+    endpoint.password ||
+    endpoint.hash ||
+    m2m.endpoint !== m2m.approvedEndpoint
+  )
+    throw new Error("DELIVERY_CONFIGURATION_INVALID");
+  const leaseMs = configuration.policy?.leaseMs ?? 30000;
+  const backoffMs = configuration.policy?.backoffMs ?? 60000;
+  const maxOperations = configuration.policy?.maxOperations ?? 5;
+  if (
+    !Number.isSafeInteger(leaseMs) ||
+    leaseMs < 15000 ||
+    leaseMs > 300000 ||
+    !Number.isSafeInteger(backoffMs) ||
+    backoffMs < 30000 ||
+    backoffMs > 3600000 ||
+    !Number.isSafeInteger(maxOperations) ||
+    maxOperations < 1 ||
+    maxOperations > 10
+  )
+    throw new Error("DELIVERY_POLICY_INVALID");
+  return { leaseMs, backoffMs, maxOperations };
+}
+
 export function VerifyDeliveryEnvelope(
   entry: OriginJournalEntry,
   identity: CrmM2mIdentity
@@ -200,49 +248,11 @@ export default class CrmDeliveryCoordinator {
     let candidate: OriginJournalEntry | null = null;
     let operationSent = false;
     try {
-      ValidateOriginJournalIdentity(identity);
       const configuration = this.configuration;
-      ValidateOriginJournalIdentity(configuration.identity!);
-      if (
-        identity.organizationId !== configuration.identity!.organizationId ||
-        identity.integrationId !== configuration.identity!.integrationId ||
-        identity.sourceInstanceId !== configuration.identity!.sourceInstanceId
-      )
-        throw new Error("DELIVERY_SCOPE_INVALID");
-      const m2m = configuration.m2m;
-      const transport = configuration.transport;
-      if (
-        !m2m ||
-        typeof transport !== "function" ||
-        !(Buffer.isBuffer(m2m.secret) || m2m.secret instanceof Uint8Array) ||
-        m2m.secret.byteLength < 32 ||
-        !/^[A-Za-z0-9._:-]{1,100}$/.test(m2m.keyId)
-      )
-        throw new Error("DELIVERY_CONFIGURATION_INVALID");
-      const endpoint = new URL(m2m.endpoint);
-      if (
-        endpoint.protocol !== "https:" ||
-        endpoint.username ||
-        endpoint.password ||
-        endpoint.hash ||
-        m2m.endpoint !== m2m.approvedEndpoint
-      )
-        throw new Error("DELIVERY_CONFIGURATION_INVALID");
-      const leaseMs = configuration.policy?.leaseMs ?? 30000;
-      const backoffMs = configuration.policy?.backoffMs ?? 60000;
-      const maxOperations = configuration.policy?.maxOperations ?? 5;
-      if (
-        !Number.isSafeInteger(leaseMs) ||
-        leaseMs < 15000 ||
-        leaseMs > 300000 ||
-        !Number.isSafeInteger(backoffMs) ||
-        backoffMs < 30000 ||
-        backoffMs > 3600000 ||
-        !Number.isSafeInteger(maxOperations) ||
-        maxOperations < 1 ||
-        maxOperations > 10
-      )
-        throw new Error("DELIVERY_POLICY_INVALID");
+      const { leaseMs, backoffMs, maxOperations } =
+        ValidateCrmDeliveryConfiguration(identity, configuration);
+      const m2m = configuration.m2m!;
+      const transport = configuration.transport!;
       const now = this.clock();
       if (!Number.isFinite(+now)) throw new Error("DELIVERY_CLOCK_INVALID");
       candidate = await this.repository.deliveryCandidate(

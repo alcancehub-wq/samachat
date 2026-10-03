@@ -513,3 +513,16 @@
 - RED PAD SPACE reproduzido;52 SQL A-E e28 regressoes unitarias R10-R13 dirigidas. Legitimas transicoes/recibos/replay preservados;zero HTTP externo/comercial.
 - Pre/post-verificacao fail-closed;DDL nao atomico,controle de writers/backup/manutencao exigidos para aplicacao futura;down automatico bloqueado.
 - Feature-only,sem migration/deploy/ativacao produtiva,CRM ou SDR. Nove arquivos R15 protegidos;R15 continua BLOCKED e sua reconciliacao/R16 nao foi iniciada.
+
+## 2026-10-03 - P02-R15 prontidao operacional: BLOCKED, nao publicado
+
+- Gate diagnostico parcial isolado, default disabled, metadata read-only e config reutilizando R13; sem ativacao ou caller produtivo.
+- Prova sintetica encontrou PAD SPACE no trigger R10: trailing whitespace muda canonicalBody sem rejeicao e invalida bodyHash. Imutabilidade efetiva nao homologada; nao se alterou migration/trigger para forcar PASS.
+- 35 PASS/1 FAIL/0 SKIP em 36 casos distintos executados; strict direcionado PASS/zero diagnostico novo. Sem commit/push R15, deploy/CRM/SDR/comercial ou R16; matriz produtiva permanece NOT_VERIFIED/FORBIDDEN.
+
+## 2026-10-03 - P02-R15-R1 reconciliacao H01 e gate local,sem ativacao
+
+- Nova feature baseada exclusivamente em H01 recupera/reconcilia o R15 sem alterar seus9 arquivos locais/status BLOCKED ou sobrescrever historicos H01.
+- Gate diagnostico disabled por default,reutiliza H01.verify somente read-only econfig R13;nao instala/corrige schema ou liga runtime. R10 original/misto/no-op/ausente sao recusados.
+- Provas impeditivas e40 SQL/31 puros completos,mais28 regressoes reais R10-R13;strict direcionado PASS/zero diagnostico novo. Contagens finais/cleanup/preflight noTXT.
+- LAB_PREFLIGHT_PASS nao ePRODUCTION_READY:remoto NOT_VERIFIED,comercial fora deescopo,captura/entrega/autorizacao produtivas FALSE. Sem deploy/CRM/Vivian/WhatsApp/R16.

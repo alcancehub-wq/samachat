@@ -1,15 +1,27 @@
 import { QueryTypes, Sequelize } from "sequelize";
 
+export const ContactSourceBridgeTables = [
+  "Contacts",
+  "ContactCustomFields",
+  "ContactTags",
+  "CrmOriginJournals",
+  "CrmOriginCaptureCommands"
+] as const;
+
+export function SourceBridgeTableMatches(
+  actual: string,
+  expected: string,
+  caseMode: number
+): boolean {
+  return [1, 2].includes(Number(caseMode))
+    ? actual.toLowerCase() === expected.toLowerCase()
+    : actual === expected;
+}
+
 export default async function VerifyContactSourceBridgeSchema(
   database: Sequelize
 ): Promise<void> {
-  const tables = [
-    "Contacts",
-    "ContactCustomFields",
-    "ContactTags",
-    "CrmOriginJournals",
-    "CrmOriginCaptureCommands"
-  ];
+  const tables = [...ContactSourceBridgeTables];
   const engines = await database.query<{
     tableName: string;
     engine: string;
@@ -24,9 +36,7 @@ export default async function VerifyContactSourceBridgeSchema(
         !engines.some(
           row =>
             row.engine === "InnoDB" &&
-            ([1, 2].includes(Number(row.caseMode))
-              ? row.tableName.toLowerCase() === table.toLowerCase()
-              : row.tableName === table)
+            SourceBridgeTableMatches(row.tableName, table, row.caseMode)
         )
     )
   )

@@ -229,3 +229,24 @@ TXT_R08=D:/Samacon/auditorias/SAMACHAT-CRM-P02-R08-CONSOLIDADO-20261002.txt
 - Preflight schema/corrupcao e post-check integrais;DDL sequencial nao atomico,falha exige writers congelados;down bloqueado sem restaurar vulnerabilidade/apagar dados.
 - Operacao produtiva/CRM/Vivian/SDR/WhatsApp/R15/R16 nao ativada;reconciliacao futura R15 exige pacote autorizado e preservar witness/nove paths.
 - Documento P02-R15H01-IMUTABILIDADE-BINARIA.md e TXT externo D:/Samacon/auditorias/SAMACHAT-CRM-P02-R15H01-IMMUTABILITY-CONSOLIDADO-20261003.txt registram gates finais/commit/remoto/cleanup,sem concluir R15.
+
+## P02-R15 - Gate de prontidao: BLOCKED
+
+- Base R14 exata f1cb4d6590d560eb6d979b90f9ecdccb298f82c9; worktree/feature R15 isoladas, sem commit/push.
+- Gate diagnostico parcial default disabled/read-only; config reutiliza R13; schema reutiliza case/engine guard existente. Nenhum wiring produtivo.
+- Bloqueio efetivo R10: trigger permite trailing space em canonicalBody via igualdade PAD SPACE utf8mb4_bin; changedRows=1 e hash armazenado invalido, comprovados no lab R15 novo/guardado.
+- Metadata sozinha nao certifica imutabilidade. Gate corrigido para BLOCKED; trigger/migration/collation nao reparados para forcar PASS.
+- 36 casos distintos executados:35 PASS/1 FAIL/0 SKIP (29 novos puros +2 novos SQL +5 R13). Negativos SQL completos e demais regressoes nao executados apos bloqueio; nao somados.
+- Strict direcionado PASS; baseline/current1/1,zero novo. Sem homologacao global ou produtiva; dependencias CRM operacionais NOT_VERIFIED.
+- R15 exige gate humano separado para comparacoes R10 antes de retomar. Sem autorizacao de producao, CRM/Vivian/ONE DEAL ou R16.
+- Documento P02-R15-PRONTIDAO-OPERACIONAL.md e TXT externo D:/Samacon/auditorias/SAMACHAT-CRM-P02-R15-RUNTIME-READINESS-CONSOLIDADO-20261003.txt registram limites e cleanup.
+
+## P02-R15-R1 - Gate reconciliado com H01
+
+- Base exclusiva H01 0fc9c4905aac613701a77829d04b144f11a9aaa5,pai R14 exato; nova worktree/feature R15 reconciled. Origem R15 BLOCKED historica com9 paths/hashes/status preservados.
+- Recuperados6 TS+doc R15 byte-identicos inicialmente;checklist/release receberam apenas deltas exclusivos R15 apos prefixo H01,sem sobrescrever historicos.
+- Gate exige H01.verify read-only existente,sem chamar up/down;retorna LAB_PREFLIGHT_PASS apenas local,config PASS_LAB_ONLY eguards H01. Nenhuma nova migration ou mudanca H01.
+- A/B/C impeditivos aprovados antes de ampliar:original R10 bloqueado/witness preservado,H01 protege linha inteira/outcome ePASS sem autorizacao produtiva.
+- Matriz SQL40 casos e31 puros/default/config/autorizacao;28 regressoes unitarias R10-R13 efetivamente executadas. Strict direcionado PASS,comparativo H01 baseline/current1/1,zero novo.
+- M2M remoto NOT_VERIFIED,callers NOT_ENABLED,ONE DEAL/SDR OUT_OF_SCOPE;captura/entrega/autorizacao produtivas FALSE em todo retorno. Sem CRM/WhatsApp/producao/R16.
+- Documento R15 historico tem secao R15-R1 separada;TXT externo D:/Samacon/auditorias/SAMACHAT-CRM-P02-R15-RECONCILED-CONSOLIDADO-20261003.txt registra gates finais,commit/remoto/cleanup.
