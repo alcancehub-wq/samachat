@@ -220,3 +220,12 @@ TXT_R08=D:/Samacon/auditorias/SAMACHAT-CRM-P02-R08-CONSOLIDADO-20261002.txt
 - COMMERCIAL_OPERATION=NOT_REQUESTED;PRODUCTION_MUTATION=NONE;CRM_REPOSITORY_MUTATION=NONE;AGENT_SDR_MUTATION=NONE;PRODUCTIVE_CAPTURE=FALSE;PRODUCTIVE_DELIVERY_ENABLED=FALSE.
 - Limites/ordemfixtures/gates em `P02-R14-HOMOLOGACAO-SINTETICA.md`;TXTunicofisico `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R14-INTEGRATED-E2E-CONSOLIDADO-20261003.txt`;nao iniciarR15.
 - Gates finais:20 testes novos distintos PASS/0 FAIL/0 SKIP,strict fixtures PASS e1 diagnostico herdado antes/depois/0 novo no programa afetado;build geral nao executado. Nenhuma incompatibilidade funcional exigiu patch SamaChat/CRM.
+
+## P02-R15-H01 - Hardening aditivo de imutabilidade R10
+
+- Base exclusiva R14 f1cb4d6590d560eb6d979b90f9ecdccb298f82c9; feature fix/samachat-crm-p02-r15h01-immutability-20261003. Nove arquivos locais R15 protegidos,nao usados como base nem integrados.
+- Witness PAD SPACE/RED preservado; migration nova 20261003125100-harden-crm-origin-immutability.ts troca so comparacoes textuais dos dois triggers por CAST AS BINARY NULL-safe. R10 original intocado.
+- Provas SQL A-E:52 casos;regressoes unitarias R10-R13 executadas:28. Transicoes/CAS/lease/fencing/receipts/replay/source preservados,sem HTTP externo ou operacao comercial.
+- Preflight schema/corrupcao e post-check integrais;DDL sequencial nao atomico,falha exige writers congelados;down bloqueado sem restaurar vulnerabilidade/apagar dados.
+- Operacao produtiva/CRM/Vivian/SDR/WhatsApp/R15/R16 nao ativada;reconciliacao futura R15 exige pacote autorizado e preservar witness/nove paths.
+- Documento P02-R15H01-IMUTABILIDADE-BINARIA.md e TXT externo D:/Samacon/auditorias/SAMACHAT-CRM-P02-R15H01-IMMUTABILITY-CONSOLIDADO-20261003.txt registram gates finais/commit/remoto/cleanup,sem concluir R15.

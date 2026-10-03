@@ -506,3 +506,10 @@
 - Regressao de carteira: usuarios com o mesmo whatsappId continuam sem acesso aos tickets atribuidos uns aos outros.
 - Validacao local: 8 suites / 57 testes aprovados; backend TypeScript build PASS; frontend Vite build PASS.
 - Contratos selados de P02, P03 e P04 permanecem fora de escopo e sem alteracao funcional.
+
+## 2026-10-03 - P02-R15-H01 imutabilidade binaria aditiva,sem ativacao
+
+- Nova migration endurece os dois triggers R10 com igualdade NULL-safe byte a byte para textos/outcome,sem reescrever R10 ou mudar tabelas/indices/estados/runtime.
+- RED PAD SPACE reproduzido;52 SQL A-E e28 regressoes unitarias R10-R13 dirigidas. Legitimas transicoes/recibos/replay preservados;zero HTTP externo/comercial.
+- Pre/post-verificacao fail-closed;DDL nao atomico,controle de writers/backup/manutencao exigidos para aplicacao futura;down automatico bloqueado.
+- Feature-only,sem migration/deploy/ativacao produtiva,CRM ou SDR. Nove arquivos R15 protegidos;R15 continua BLOCKED e sua reconciliacao/R16 nao foi iniciada.
