@@ -174,3 +174,16 @@ TXT_R08=D:/Samacon/auditorias/SAMACHAT-CRM-P02-R08-CONSOLIDADO-20261002.txt
 - PES1.0/SAMACON completos nao acessiveis; regras explicitas e contrato R06/checklist lidos sem falsa certificacao integral.
 - Classificacao apos preflight/publicacao: `P02_R10_JOURNAL_ATOMIC_FOUNDATION_PASS`, exclusivamente fundacao isolada, sem entrega/ativacao real e sem R11 automatico.
 - Evidencia unica externa: `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R10-ORIGIN-JOURNAL-CONSOLIDADO-20261002.txt`.
+
+## P02-R11 - Ponte explicita de criacao cadastral
+
+- Base R10 `a1b0037d49263c30027b5b3b39f1c45bca35b740`; branch exclusiva `feature/samachat-crm-p02-r11-source-bridge-20261003`.
+- SOURCE_BRIDGE_IMPLEMENTED=TRUE_EXPLICIT_CREATE_CONTACT_OPT_IN; atomicidade de CreateContactService+extraInfo+tags+journal/command comprovada em SQL sintetico compativel.
+- Callback opcional aditivo no repository R10; API/default anteriores preservados, sem migration nova ou motor/contrato M2M refeito.
+- Config/contexto por segundo argumento server-side, ausente/desligado por padrao. Body HTTP nao ativa; controllers atuais nao injetam contexto.
+- Replay preserva contato/event/body/hash/revision/associacoes; webhook legado somente para criacao efetiva apos commit. Nenhum HTTP novo/CRM ou entrega produtiva.
+- UpdateContactService, CreateOrUpdateContactService/LID/merge, CreateMessageService/handler continuam sem wiring; limites por produtor em P02-R11-PONTE-ORIGEM.md, sem prometer cobertura geral.
+- PRODUCTIVE_DELIVERY_ENABLED=FALSE; CRM/P05/Vivian/SDR, tickets/filas/sockets/conversas e worktrees anteriores nao mutados por esta execucao.
+- Typecheck strict novo PASS; comparacao produtor/teste SQL1 antes/1 depois/0 novo, sem build geral certificado. Tentativa MySQL herdada bloqueada igualmente nas regressoes base/R11 e registrada, sem conexao real.
+- Encerramento apos preflight/commit/push exclusivo e TXT externo: `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R11-SOURCE-BRIDGE-CONSOLIDADO-20261003.txt`; sem R12 automatico.
+- Gates finais:80 testes distintos PASS/0 FAIL/0 SKIP em7 suites, sem somar194/R10 ou reruns; guard InnoDB fechado comprovado, AST preserva writer legado/default R10, programa ampliado31 diagnosticos antes/depois/0 novos.

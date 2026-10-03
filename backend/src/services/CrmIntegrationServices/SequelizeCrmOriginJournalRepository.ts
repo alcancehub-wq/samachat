@@ -89,7 +89,14 @@ export default class SequelizeCrmOriginJournalRepository
   }
 
   async transaction<Result>(
-    work: (unit: OriginJournalUnitOfWork) => Promise<Result>
+    work: (unit: OriginJournalUnitOfWork) => Promise<Result>,
+    sourceMutation?: (
+      mutation: OriginContactMutation,
+      transaction: Transaction
+    ) => Promise<{
+      before: CrmContactSnapshot | null;
+      after: CrmContactSnapshot;
+    }>
   ): Promise<Result> {
     return this.database.transaction(
       { isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED },
@@ -97,7 +104,10 @@ export default class SequelizeCrmOriginJournalRepository
         const unit: OriginJournalUnitOfWork = {
           lockCommand: (request, identity, inputHash) =>
             this.lockCommand(request, identity, inputHash, transaction),
-          mutateContact: mutation => this.mutateContact(mutation, transaction),
+          mutateContact: mutation =>
+            sourceMutation
+              ? sourceMutation(mutation, transaction)
+              : this.mutateContact(mutation, transaction),
           latest: async (sourceInstanceId, sourceContactId) => {
             const row = await CrmOriginJournal.findOne({
               where: { sourceInstanceId, sourceContactId },

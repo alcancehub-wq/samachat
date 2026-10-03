@@ -1,5 +1,13 @@
 # Release Notes
 
+## 2026-10-03 - P02-R11 ponte cadastral opt-in, sem promocao
+
+- CreateContactService pode compartilhar sua criacao canonica, extraInfo, tags/reload e journal R10 em uma transacao por configuracao/contexto server-side explicitos; ausente/desligado mantem caminho legado.
+- Reuso R07/R08/R09/R10 com callback opcional compativel; nenhuma migration, contrato M2M, worker ou envio CRM novo. Replay nao recria identidade/evento nem repete webhook de criacao.
+- Atomicidade, rollback, concorrencia, guard InnoDB e preservacao de atendimento validados em laboratorio MariaDB sintetico;80 testes distintos aprovados, checks direcionados sem alegar build geral ou cobertura de outros produtores.
+- Atualizacao, resolucao automatica/LID/merge, mensagens, handlers/provedores e callers/controllers continuam sem wiring; CRM P05 em andamento, Vivian/SDR e ambientes reais preservados.
+- Habilitacao de callers/entrega/schema produtivo e demais produtores exigem outro gate; nenhum deploy/promocao ou R12 automatico.
+
 ## 2026-10-02 - P02-R10 journal de origem, sem promocao
 
 - Fundacao aditiva InnoDB/Sequelize de comandos idempotentes e journal cadastral; source create/update minimo e intencao compartilham a mesma transacao no servico isolado.
