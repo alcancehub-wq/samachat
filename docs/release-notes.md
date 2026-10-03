@@ -1,5 +1,11 @@
 # Release Notes
 
+## 2026-10-03 - P02-R14 homologacao integrada sintetica, sem ativacao
+
+- Harness Create/Update opt-in -> journal R10 -> coordenador R13 -> HMAC R09 -> gateway CRM R09 imutavel -> PostgreSQL -> recibo -> journal confirmado, com MariaDB/PostgreSQL proprios em loopback.
+- 20 casos distintos A-E aprovados, com confrontos SQL independentes, curadoria/binding preservados, resposta perdida/readback/idempotencia, seguranca/rollback e zero deals/opportunities. Nenhum HTTP externo ou status baseado apenas em mock/log.
+- Somente fixtures/testes/docs; sem runtime SamaChat/CRM modificado, migration produtiva, chave real, caller/worker/IA/SDR/ONE DEAL/deploy/promocao. Nao homologa producao e nao inicia R15.
+
 ## 2026-10-03 - P02-R13 coordenador isolado, sem ativacao
 
 - runOnce scoped/single-unit,cliente R09 injetado e journal R10 com CAS/lease/fencing,ordenacao de revisao,cooldown/budget e readback antes de qualquer reconsideracao de upsert incerto.

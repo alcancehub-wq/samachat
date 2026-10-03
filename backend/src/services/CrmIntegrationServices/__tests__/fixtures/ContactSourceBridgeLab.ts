@@ -56,17 +56,27 @@ class ContactTagFixture extends Model<ContactTagFixture> {
 }
 
 export async function InitializeContactSourceBridgeLab(): Promise<Sequelize> {
+  const integrated = process.env.CRM_INTEGRATED_LAB_ENABLED === "1";
   const delivery = process.env.CRM_DELIVERY_COORDINATOR_LAB_ENABLED === "1";
   const update = process.env.CRM_UPDATE_BRIDGE_LAB_ENABLED === "1";
-  if (!delivery && !update && process.env.CRM_SOURCE_BRIDGE_LAB_ENABLED !== "1")
+  if (
+    !integrated &&
+    !delivery &&
+    !update &&
+    process.env.CRM_SOURCE_BRIDGE_LAB_ENABLED !== "1"
+  )
     throw new Error("LAB_OPT_IN_REQUIRED");
-  const port = delivery ? 55444 : update ? 55443 : 55442;
-  const name = delivery
+  const port = integrated ? 55445 : delivery ? 55444 : update ? 55443 : 55442;
+  const name = integrated
+    ? "r14_source_lab"
+    : delivery
     ? "r13_delivery_lab"
     : update
     ? "r12_update_lab"
     : "r11_source_lab";
-  const expected = delivery
+  const expected = integrated
+    ? "D:/Samacon/worktrees/samachat-crm-p02-r14-integrated-e2e-20261003/backend/node_modules/.cache/r14-integrated-lab/mariadb-data/"
+    : delivery
     ? "D:/Samacon/worktrees/samachat-crm-p02-r13-delivery-coordinator-20261003/backend/node_modules/.cache/r13-delivery-lab/data/"
     : update
     ? "D:/Samacon/worktrees/samachat-crm-p02-r12-update-bridge-20261003/backend/node_modules/.cache/r12-update-lab/data/"
@@ -80,7 +90,7 @@ export async function InitializeContactSourceBridgeLab(): Promise<Sequelize> {
   });
   try {
     const [rows] = await admin.query(
-      "SELECT @@datadir AS directory,VERSION() AS version"
+      "SELECT @@datadir AS directory,VERSION() AS version,@@port AS port,@@bind_address AS host,DATABASE() AS currentDatabase"
     );
     if (
       String(rows[0].directory).replace(/\\/g, "/").toLowerCase() !==
@@ -88,6 +98,14 @@ export async function InitializeContactSourceBridgeLab(): Promise<Sequelize> {
       !String(rows[0].version).startsWith("10.11.10-MariaDB")
     )
       throw new Error("REFUSING_NON_BRIDGE_LAB_DATABASE");
+    if (
+      integrated &&
+      (Number(rows[0].port) !== 55445 ||
+        rows[0].host !== "127.0.0.1" ||
+        rows[0].currentDatabase !== null ||
+        name !== "r14_source_lab")
+    )
+      throw new Error("REFUSING_NON_R14_MARIADB_ENDPOINT");
     await admin.query(`DROP DATABASE IF EXISTS ${name}`);
     await admin.query(
       `CREATE DATABASE ${name} CHARACTER SET utf8mb4 COLLATE utf8mb4_bin`
@@ -114,6 +132,22 @@ export async function InitializeContactSourceBridgeLab(): Promise<Sequelize> {
     ]
   });
   try {
+    if (integrated) {
+      const metadata = (await database.query(
+        "SELECT DATABASE() AS database,@@datadir AS directory,@@port AS port,@@bind_address AS host,VERSION() AS version",
+        { type: require("sequelize").QueryTypes.SELECT }
+      )) as unknown as Record<string, unknown>[];
+      const row = metadata[0];
+      if (
+        row.database !== "r14_source_lab" ||
+        Number(row.port) !== 55445 ||
+        row.host !== "127.0.0.1" ||
+        String(row.directory).replace(/\\/g, "/").toLowerCase() !==
+          expected.toLowerCase() ||
+        !String(row.version).startsWith("10.11.10-MariaDB")
+      )
+        throw new Error("REFUSING_NON_R14_MARIADB_SCHEMA_CONNECTION");
+    }
     for (const model of [
       ContactFixture,
       InfoFixture,

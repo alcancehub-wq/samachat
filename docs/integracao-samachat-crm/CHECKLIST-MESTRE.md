@@ -210,3 +210,13 @@ TXT_R08=D:/Samacon/auditorias/SAMACHAT-CRM-P02-R08-CONSOLIDADO-20261002.txt
 - PRODUCTIVE_CAPTURE=FALSE;PRODUCTIVE_DELIVERY_ENABLED=FALSE;CRM_MUTATION=NONE;AGENT_SDR_MUTATION=NONE. Modelos/schema/transport/algoritmos R09-R12 e Vivian/P05 preservados salvo consultas/transicoes aditivas explicitadas.
 - Politica/limites/rollback em `P02-R13-COORDENADOR-ENTREGA.md`;TXT unico externo `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R13-DELIVERY-COORDINATOR-CONSOLIDADO-20261003.txt`;sem R14 automatico.
 - Typecheck strict/noUnused novo PASS;programa afetado1 diagnostico herdado antes/depois/0 novo. Build/typecheck geral nao certificado;remote feature nao aciona CI/deploy existente,nenhuma alegacao ficticia de CI PASS.
+
+## P02-R14 - Homologacao integrada sintetica
+
+- Base SamaChatR13 `a2432a98ade7576e996a10fc2434767813212dc8`;CRMfonteR09 `49e3279009c2f2fd681f194c034e92adcf1d43ff` read-only,branch exclusiva `feature/samachat-crm-p02-r14-integrated-e2e-20261003`.
+- Harness liga produtores opt-in reais/journal/coordinator/clientHMAC/gatewayCRMreal/RPCsPostgreSQL/receipt/journalconfirmed com Request/Response emmemoria e doisbancos proprios identificadosfisicamente.
+- A-E20 testesnovosPASS:criacao/update/curadoria/binding,replay/perdadereposta+readback,seguranca/rollbacklocais/CRM ezero operacoescomerciais. NaoHTTP200ficticio/Pgmock;nenhuma suitehistorica recontada.
+- Somenteharness/fixtures/docs alterados;copiasCRM pinadasSHA emdiretorioignorado,fontesCRM/algoritmos/transporte/produtoresSamaChat protegidos semcorrecaofuncional.
+- COMMERCIAL_OPERATION=NOT_REQUESTED;PRODUCTION_MUTATION=NONE;CRM_REPOSITORY_MUTATION=NONE;AGENT_SDR_MUTATION=NONE;PRODUCTIVE_CAPTURE=FALSE;PRODUCTIVE_DELIVERY_ENABLED=FALSE.
+- Limites/ordemfixtures/gates em `P02-R14-HOMOLOGACAO-SINTETICA.md`;TXTunicofisico `D:/Samacon/auditorias/SAMACHAT-CRM-P02-R14-INTEGRATED-E2E-CONSOLIDADO-20261003.txt`;nao iniciarR15.
+- Gates finais:20 testes novos distintos PASS/0 FAIL/0 SKIP,strict fixtures PASS e1 diagnostico herdado antes/depois/0 novo no programa afetado;build geral nao executado. Nenhuma incompatibilidade funcional exigiu patch SamaChat/CRM.
