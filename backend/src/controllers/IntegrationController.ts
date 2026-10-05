@@ -8,6 +8,8 @@ import CreateIntegrationService from "../services/IntegrationServices/CreateInte
 import ShowIntegrationService from "../services/IntegrationServices/ShowIntegrationService";
 import UpdateIntegrationService from "../services/IntegrationServices/UpdateIntegrationService";
 import DeleteIntegrationService from "../services/IntegrationServices/DeleteIntegrationService";
+import Integration from "../models/Integration";
+import ListCrmIntegrationRuntimeStatus from "../services/CrmIntegrationServices/ListCrmIntegrationRuntimeStatus";
 
 
 type IndexQuery = {
@@ -27,6 +29,21 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const integrations = await ListIntegrationsService({ searchParam });
 
   return res.json(integrations);
+};
+
+export const crmM2mStatus = async (
+  _req: Request,
+  res: Response
+): Promise<Response> => {
+  const integrations = await Integration.findAll({
+    where: { type: "crm" },
+    attributes: ["id"],
+    order: [["id", "ASC"]]
+  });
+  const status = await ListCrmIntegrationRuntimeStatus(
+    integrations.map(integration => integration.id)
+  );
+  return res.json(status);
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {

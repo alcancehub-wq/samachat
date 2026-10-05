@@ -62,6 +62,7 @@ import {
   shouldSuppressOutboundEcho
 } from "./wwebjsOutboundEchoGuard";
 import { shouldProcessWwebjsIncomingEvent } from "./wwebjsEventDedup";
+import { IdentifyMessageProvenance } from "../MessageProvenance";
 import type {
   WbotGroupContextChat,
   WbotGroupContextSource
@@ -1130,7 +1131,12 @@ const getMessageData = async (
     whatsappId: wbot.id!,
     unreadMessages,
     groupContact,
-    isGroupMessage: groupContext.isGroupMessage
+    isGroupMessage: groupContext.isGroupMessage,
+    messageProvenance: IdentifyMessageProvenance({
+      provider: "wwebjs",
+      event: eventName,
+      fromMe: msg.fromMe
+    })
   };
 
   return {

@@ -7,6 +7,14 @@ import IsPlausiblePhoneNumber from "../../helpers/IsPlausiblePhoneNumber";
 import ResolveContactName from "../../helpers/ResolveContactName";
 import GetProfilePicUrl from "../WbotServices/GetProfilePicUrl";
 import { logger } from "../../utils/logger";
+import CaptureCreateContactSourceBridge, {
+  CreateContactSourceContext
+} from "../CrmIntegrationServices/CaptureCreateContactSourceBridge";
+import CaptureUpdateContactSourceBridge, {
+  UpdateContactSourceContext
+} from "../CrmIntegrationServices/CaptureUpdateContactSourceBridge";
+import { CrmContactSnapshot } from "../CrmIntegrationServices/BuildCrmContactIntentService";
+import { NormalizeCrmM2mPhone } from "../CrmIntegrationServices/CrmM2mRuntimeConfiguration";
 
 interface ExtraInfo {
   name: string;
@@ -124,17 +132,20 @@ const selectPreferredEquivalentContact = async (
   return rankedContacts[0]?.contact || contacts[0];
 };
 
-const CreateOrUpdateContactService = async ({
-  name,
-  number: rawNumber,
-  lid,
-  profilePicUrl,
-  isGroup,
-  email = "",
-  extraInfo = [],
-  whatsappId,
-  profilePhotoProbe
-}: Request): Promise<Contact> => {
+const CreateOrUpdateContactService = async (
+  {
+    name,
+    number: rawNumber,
+    lid,
+    profilePicUrl,
+    isGroup,
+    email = "",
+    extraInfo = [],
+    whatsappId,
+    profilePhotoProbe
+  }: Request,
+  sourceContext?: CreateContactSourceContext
+): Promise<Contact> => {
   const sanitizedRawNumber = rawNumber || "";
   const normalizedLid = normalizeLid(lid);
   const bareLid = normalizedLid?.replace(/@lid$/i, "");
@@ -207,6 +218,42 @@ const CreateOrUpdateContactService = async ({
     }
 
     return undefined;
+  };
+
+  const updateResolvedContact = async (
+    contact: Contact,
+    update: Record<string, unknown>
+  ): Promise<Contact> => {
+    if (!sourceContext?.enabled) {
+      await contact.update(update);
+      return contact;
+    }
+
+    const context: UpdateContactSourceContext = {
+      ...sourceContext,
+      previousPhoneE164: NormalizeCrmM2mPhone(contact.number)
+    };
+    const result = await CaptureUpdateContactSourceBridge(
+      Contact,
+      context,
+      String(contact.id),
+      { contactId: contact.id, update },
+      async transaction => {
+        const before = {
+          ...contact.get({ plain: true }),
+          phoneE164: context.previousPhoneE164
+        } as CrmContactSnapshot;
+        await contact.update(update, { transaction });
+        await contact.reload({ transaction });
+        const after = {
+          ...contact.get({ plain: true }),
+          phoneE164: context.phoneE164
+        } as CrmContactSnapshot;
+        return { contact, before, after };
+      },
+      async id => Contact.findByPk(id)
+    );
+    return result.contact;
   };
 
   const logProfilePhotoProbe = (
@@ -299,7 +346,7 @@ const CreateOrUpdateContactService = async ({
       contactByNumber.profilePicUrl
     );
 
-    await contactByNumber.update({
+    const update = {
       name: ResolveContactName({
         currentName: contactByNumber.name,
         incomingName: name,
@@ -308,18 +355,19 @@ const CreateOrUpdateContactService = async ({
       }),
       lid: normalizedLid || contactByNumber.lid,
       profilePicUrl: resolvedProfilePicUrl
-    });
+    };
+    const updated = await updateResolvedContact(contactByNumber, update);
 
-    EmitContactEvent({ action: "update", contact: contactByNumber, whatsappId });
+    EmitContactEvent({ action: "update", contact: updated, whatsappId });
 
     logProfilePhotoProbe(
-      contactByNumber,
-      contactByNumber.profilePicUrl ||
+      updated,
+      updated.profilePicUrl ||
         resolvedContactByLid?.profilePicUrl,
       resolvedProfilePicUrl
     );
 
-    return contactByNumber;
+    return updated;
   }
 
   if (resolvedContactByLid) {
@@ -327,7 +375,7 @@ const CreateOrUpdateContactService = async ({
       resolvedContactByLid.profilePicUrl
     );
 
-    await resolvedContactByLid.update({
+    const update = {
       name: ResolveContactName({
         currentName: resolvedContactByLid.name,
         incomingName: name,
@@ -342,20 +390,21 @@ const CreateOrUpdateContactService = async ({
           ? null
           : resolvedContactByLid.number),
       profilePicUrl: resolvedProfilePicUrl
-    });
+    };
+    const updated = await updateResolvedContact(resolvedContactByLid, update);
 
-    EmitContactEvent({ action: "update", contact: resolvedContactByLid, whatsappId });
+    EmitContactEvent({ action: "update", contact: updated, whatsappId });
     logProfilePhotoProbe(
-      resolvedContactByLid,
-      resolvedContactByLid.profilePicUrl,
+      updated,
+      updated.profilePicUrl,
       resolvedProfilePicUrl
     );
-    return resolvedContactByLid;
+    return updated;
   }
 
   const resolvedProfilePicUrl = await resolveProfilePicUrl();
 
-  const created = await Contact.create({
+  const createData = {
     name: ResolveContactName({
       incomingName: name,
       number,
@@ -363,11 +412,22 @@ const CreateOrUpdateContactService = async ({
     }),
     number: number || null,
     lid: normalizedLid,
-		profilePicUrl: resolvedProfilePicUrl,
+    profilePicUrl: resolvedProfilePicUrl,
     email,
     isGroup,
     extraInfo
-  });
+  };
+  const created = sourceContext?.enabled
+    ? (
+        await CaptureCreateContactSourceBridge(
+          Contact,
+          sourceContext,
+          createData,
+          async transaction =>
+            await Contact.create(createData, { transaction })
+        )
+      ).contact
+    : await Contact.create(createData);
 
   EmitContactEvent({ action: "create", contact: created, whatsappId });
   logProfilePhotoProbe(

@@ -1,6 +1,31 @@
 import NormalizeCloudApiWebhook from "../NormalizeCloudApiWebhook";
 
 describe("NormalizeCloudApiWebhook", () => {
+  it("does not infer realtime from a legacy change with no field", () => {
+    const result = NormalizeCloudApiWebhook({
+      entry: [{ changes: [{ value: {
+        messages: [{ id: "synthetic-legacy", from: "12025550123", timestamp: "1", type: "text", text: { body: "synthetic" } }]
+      } }] }]
+    }, 1);
+    expect(result).toHaveLength(1);
+    expect(result[0].contextPayload).toEqual({
+      whatsappId: 1, unreadMessages: 1,
+      messageProvenance: { kind: "unknown", provider: "cloud_api" }
+    });
+    expect(result[0].messagePayload.body).toBe("synthetic");
+    expect(result[0].messagePayload.fromMe).toBe(false);
+  });
+
+  it("keeps explicit history metadata non-realtime without changing normalization", () => {
+    const result = NormalizeCloudApiWebhook({
+      entry: [{ changes: [{ field: "history", value: {
+        messages: [{ id: "synthetic-history", from: "12025550123", timestamp: "1", type: "text", text: { body: "synthetic" } }]
+      } }] }]
+    }, 1);
+    expect(result[0].contextPayload.messageProvenance).toEqual({ kind: "history", provider: "cloud_api" });
+    expect(result[0].messagePayload.body).toBe("synthetic");
+  });
+
   it("preserves the existing official text contract", () => {
     const result = NormalizeCloudApiWebhook(
       {
@@ -63,7 +88,8 @@ describe("NormalizeCloudApiWebhook", () => {
         }),
         contextPayload: {
           whatsappId: 35,
-          unreadMessages: 1
+          unreadMessages: 1,
+          messageProvenance: { kind: "realtime", provider: "cloud_api" }
         }
       })
     );
@@ -129,7 +155,8 @@ describe("NormalizeCloudApiWebhook", () => {
         }),
         contextPayload: {
           whatsappId: 35,
-          unreadMessages: 0
+          unreadMessages: 0,
+          messageProvenance: { kind: "echo", provider: "cloud_api" }
         },
         isCoexistenceMessageEcho: true
       })
@@ -370,7 +397,8 @@ describe("NormalizeCloudApiWebhook coexistence message echoes", () => {
         }),
         contextPayload: {
           whatsappId: 35,
-          unreadMessages: 0
+          unreadMessages: 0,
+          messageProvenance: { kind: "echo", provider: "cloud_api" }
         },
         isCoexistenceMessageEcho: true
       })

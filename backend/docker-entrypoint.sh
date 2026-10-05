@@ -13,8 +13,8 @@ if npx sequelize db:migrate; then
 	npx sequelize db:migrate:status
 	export RUN_WORKERS=true
 else
-	echo "Migration failed; workers disabled"
-	export RUN_WORKERS=false
+	echo "Migration failed; refusing to start backend"
+	exit 1
 fi
 
 echo "Starting backend"
