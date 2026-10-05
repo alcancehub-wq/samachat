@@ -18,10 +18,6 @@ import FindDuplicatedContactByNumberService from "../services/ContactServices/Fi
 import MergeContactService from "../services/ContactServices/MergeContactService";
 import ListDuplicatedContactsByNumberService from "../services/ContactServices/ListDuplicatedContactsByNumberService";
 import EvaluateContactRegistrationCompletenessService from "../services/ContactServices/EvaluateContactRegistrationCompletenessService";
-import {
-  BuildManualCreateContactSourceContext,
-  BuildManualUpdateContactSourceContext
-} from "../services/CrmIntegrationServices/BuildCrmM2mSourceContext";
 
 type IndexQuery = {
   searchParam: string;
@@ -225,32 +221,25 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   let referralPartnerName = newContact.referralPartnerName;
   let referralNote = newContact.referralNote;
 
-  const sourceContext = await BuildManualCreateContactSourceContext({
+  const contact = await CreateContactService({
+    name,
     number,
-    isGroup: false
+    email,
+    extraInfo,
+    profilePicUrl,
+    tagIds,
+    allowMultipleConversations,
+    city,
+    state,
+    captureChannel,
+    wasReferred,
+    referralType,
+    referralContactId,
+    referralContactName,
+    referralUserId,
+    referralPartnerName,
+    referralNote
   });
-  const contact = await CreateContactService(
-    {
-      name,
-      number,
-      email,
-      extraInfo,
-      profilePicUrl,
-      tagIds,
-      allowMultipleConversations,
-      city,
-      state,
-      captureChannel,
-      wasReferred,
-      referralType,
-      referralContactId,
-      referralContactName,
-      referralUserId,
-      referralPartnerName,
-      referralNote
-    },
-    sourceContext || undefined
-  );
 
   const scopedWhatsappId = await GetUserScopedWhatsappId(
     req.user.id,
@@ -346,15 +335,7 @@ export const update = async (
     contactData.number = currentContact.number;
   }
 
-  const sourceContext = await BuildManualUpdateContactSourceContext({
-    number: contactData.number || currentContact.number,
-    previousNumber: currentContact.number,
-    isGroup: Boolean(currentContact.isGroup)
-  });
-  const contact = await UpdateContactService(
-    { contactData, contactId },
-    sourceContext || undefined
-  );
+  const contact = await UpdateContactService({ contactData, contactId });
 
   const scopedWhatsappId = await GetUserScopedWhatsappId(
     req.user.id,

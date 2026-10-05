@@ -60,7 +60,6 @@ import {
   MediaPayload,
   WhatsappContextPayload
 } from "../../../handlers/handleWhatsappEvents";
-import { IdentifyMessageProvenance } from "../MessageProvenance";
 
 type WALogger = NonNullable<Parameters<typeof makeInMemoryStore>[0]["logger"]>;
 
@@ -1053,14 +1052,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
           await handleMessage(
             messagePayload,
             contactPayload,
-            {
-              ...contextPayload,
-              messageProvenance: IdentifyMessageProvenance({
-                provider: "whaileys",
-                event: type,
-                fromMe: typeof msg.key.fromMe === "boolean" ? msg.key.fromMe : undefined
-              })
-            },
+            contextPayload,
             mediaPayload
           );
         } catch (err) {

@@ -15,7 +15,6 @@ import {
   WhatsAppReconciliationCancellationSignal,
   WhatsAppReconciliationTrigger
 } from "../../../services/WhatsappService/WhatsAppReconciliationRuntime";
-import { IdentifyMessageProvenance } from "../MessageProvenance";
 
 export interface WWebJsReconciliationPreparedMessage {
   messagePayload: MessagePayload;
@@ -55,14 +54,7 @@ const buildMessageWorkItem = (
     await handleMessage(
       item.messagePayload,
       item.contactPayload,
-      {
-        ...item.contextPayload,
-        messageProvenance: IdentifyMessageProvenance({
-          provider: "wwebjs",
-          event: "reconciliation",
-          fromMe: item.messagePayload.fromMe
-        })
-      },
+      item.contextPayload,
       item.mediaPayload
     );
   }

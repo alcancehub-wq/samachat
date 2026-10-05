@@ -3,7 +3,6 @@ import {
   MessagePayload,
   WhatsappContextPayload
 } from "../../handlers/handleWhatsappEvents";
-import { IdentifyMessageProvenance } from "../../providers/WhatsApp/MessageProvenance";
 
 interface CloudApiContact {
   profile?: {
@@ -239,12 +238,7 @@ const NormalizeCloudApiWebhook = (
           },
           contextPayload: {
             whatsappId,
-            unreadMessages: isMessageEchoChange ? 0 : 1,
-            messageProvenance: IdentifyMessageProvenance({
-              provider: "cloud_api",
-              event: change.field,
-              fromMe: isMessageEchoChange
-            })
+            unreadMessages: isMessageEchoChange ? 0 : 1
           },
           ...(isMessageEchoChange
             ? { isCoexistenceMessageEcho: true }

@@ -150,8 +150,6 @@ const Integrations = ({ embedded = false }) => {
 
   const [integrations, dispatchIntegrations] = useReducer(integrationReducer, []);
   const [webhooks, dispatchWebhooks] = useReducer(webhookReducer, []);
-  const [crmM2mStatuses, setCrmM2mStatuses] = useState({});
-  const [loadingCrmM2mStatus, setLoadingCrmM2mStatus] = useState(true);
 
   const [loadingIntegrations, setLoadingIntegrations] = useState(false);
   const [loadingWebhooks, setLoadingWebhooks] = useState(false);
@@ -191,41 +189,6 @@ const Integrations = ({ embedded = false }) => {
       }
     })();
   }, [integrationSearch]);
-
-  useEffect(() => {
-    if (!integrations.some(integration => integration.type === "crm")) {
-      setCrmM2mStatuses({});
-      setLoadingCrmM2mStatus(false);
-      return undefined;
-    }
-
-    let active = true;
-    setCrmM2mStatuses({});
-    setLoadingCrmM2mStatus(true);
-    (async () => {
-      try {
-        const { data } = await api.get("/integrations/crm-m2m-status");
-        if (active) {
-          setCrmM2mStatuses(
-            data.reduce((statuses, status) => {
-              statuses[status.integrationId] = status;
-              return statuses;
-            }, {})
-          );
-          setLoadingCrmM2mStatus(false);
-        }
-      } catch (err) {
-        if (active) {
-          toastError(err);
-          setLoadingCrmM2mStatus(false);
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [integrations]);
 
   useEffect(() => {
     (async () => {
@@ -464,144 +427,45 @@ const Integrations = ({ embedded = false }) => {
           </TableHead>
           <TableBody>
             <>
-              {integrations.map(integration => {
-                const crmStatus = crmM2mStatuses[integration.id];
-                return (
-                  <React.Fragment key={integration.id}>
-                    <TableRow>
-                      <TableCell align="center">{integration.name}</TableCell>
-                      <TableCell align="center">
-                        {i18n.t(`integrationModal.type.${integration.type || "custom"}`)}
-                      </TableCell>
-                      <TableCell align="center">
-                        {integration.isActive
-                          ? i18n.t("integrations.table.active")
-                          : i18n.t("integrations.table.inactive")}
-                      </TableCell>
-                      <TableCell align="center">
-                        {integration.type === "eduzz" && (
-                          <Tooltip title="Configurar Eduzz">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenEduzzConfig(integration)}
-                            >
-                              <Settings />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        <IconButton size="small" onClick={() => handleEditIntegration(integration)}>
-                          <Edit />
-                        </IconButton>
+              {integrations.map(integration => (
+                <TableRow key={integration.id}>
+                  <TableCell align="center">{integration.name}</TableCell>
+                  <TableCell align="center">
+                    {i18n.t(`integrationModal.type.${integration.type || "custom"}`)}
+                  </TableCell>
+                  <TableCell align="center">
+                    {integration.isActive
+                      ? i18n.t("integrations.table.active")
+                      : i18n.t("integrations.table.inactive")}
+                  </TableCell>
+                  <TableCell align="center">
+                    {integration.type === "eduzz" && (
+                      <Tooltip title="Configurar Eduzz">
                         <IconButton
                           size="small"
-                          onClick={() => {
-                            setSelectedIntegration(integration);
-                            setConfirmIntegrationOpen(true);
-                          }}
+                          onClick={() =>
+                            handleOpenEduzzConfig(integration)
+                          }
                         >
-                          <DeleteOutline />
+                          <Settings />
                         </IconButton>
-                      </TableCell>
-                    </TableRow>
-                    {integration.type === "crm" && (
-                      <TableRow>
-                        <TableCell colSpan={4}>
-                          <Typography variant="caption" component="div">
-                            <strong>{i18n.t("integrations.crmM2m.title")}</strong>
-                            {crmStatus ? (
-                              <>
-                                {" · "}
-                                {i18n.t(
-                                  crmStatus.configured
-                                    ? "integrations.crmM2m.configured"
-                                    : "integrations.crmM2m.notConfigured"
-                                )}
-                                {" · "}
-                                {i18n.t("integrations.crmM2m.readiness")}:{" "}
-                                {i18n.t(
-                                  `integrations.crmM2m.readinessStates.${crmStatus.readiness}`
-                                )}
-                                {" · "}
-                                {i18n.t("integrations.crmM2m.capture")}:{" "}
-                                {i18n.t(
-                                  crmStatus.captureEnabled
-                                    ? "integrations.crmM2m.enabled"
-                                    : "integrations.crmM2m.disabled"
-                                )}
-                                {" · "}
-                                {i18n.t("integrations.crmM2m.delivery")}:{" "}
-                                {i18n.t(
-                                  crmStatus.deliveryEnabled
-                                    ? "integrations.crmM2m.enabled"
-                                    : "integrations.crmM2m.disabled"
-                                )}
-                                {" · "}
-                                {i18n.t("integrations.crmM2m.executor")}:{" "}
-                                {crmStatus.executor.state} (
-                                {i18n.t(
-                                  crmStatus.executor.enabled
-                                    ? "integrations.crmM2m.enabled"
-                                    : "integrations.crmM2m.disabled"
-                                )}
-                                )
-                                {crmStatus.mapping && (
-                                  <>
-                                    {" · "}
-                                    {i18n.t("integrations.crmM2m.mapping")}:{" "}
-                                    {crmStatus.mapping.m2mIntegrationId} /{" "}
-                                    {crmStatus.mapping.organizationId} /{" "}
-                                    {crmStatus.mapping.sourceInstanceId} /{" "}
-                                    {crmStatus.mapping.keyId} / v
-                                    {crmStatus.mapping.mappingVersion} (
-                                    {i18n.t(
-                                      crmStatus.mapping.m2mEnabled
-                                        ? "integrations.crmM2m.enabled"
-                                        : "integrations.crmM2m.disabled"
-                                    )}
-                                    )
-                                  </>
-                                )}
-                                {" · "}
-                                {i18n.t("integrations.crmM2m.lastProcessing")}:{" "}
-                                {crmStatus.lastProcessing
-                                  ? `${crmStatus.lastProcessing.state} (${new Date(
-                                      crmStatus.lastProcessing.processedAt
-                                    ).toLocaleString()})`
-                                  : i18n.t("integrations.crmM2m.none")}
-                                {" · "}
-                                {i18n.t("integrations.crmM2m.lastReceipt")}:{" "}
-                                {crmStatus.lastProcessing &&
-                                crmStatus.lastProcessing.receiptAt
-                                  ? new Date(
-                                      crmStatus.lastProcessing.receiptAt
-                                    ).toLocaleString()
-                                  : i18n.t("integrations.crmM2m.none")}
-                                {(crmStatus.lastProcessing &&
-                                  crmStatus.lastProcessing.errorCode) ||
-                                crmStatus.executor.lastErrorCode
-                                  ? ` · ${i18n.t(
-                                      "integrations.crmM2m.lastError"
-                                    )}: ${
-                                      (crmStatus.lastProcessing &&
-                                        crmStatus.lastProcessing.errorCode) ||
-                                      crmStatus.executor.lastErrorCode
-                                    }`
-                                  : ""}
-                              </>
-                            ) : (
-                              ` · ${i18n.t(
-                                loadingCrmM2mStatus
-                                  ? "integrations.crmM2m.loading"
-                                  : "integrations.crmM2m.unavailable"
-                              )}`
-                            )}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
+                      </Tooltip>
                     )}
-                  </React.Fragment>
-                );
-              })}
+                    <IconButton size="small" onClick={() => handleEditIntegration(integration)}>
+                      <Edit />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSelectedIntegration(integration);
+                        setConfirmIntegrationOpen(true);
+                      }}
+                    >
+                      <DeleteOutline />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
               {loadingIntegrations && <TableRowSkeleton columns={4} />}
             </>
           </TableBody>

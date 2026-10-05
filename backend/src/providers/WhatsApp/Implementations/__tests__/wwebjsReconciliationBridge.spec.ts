@@ -159,45 +159,9 @@ describe("wwebjsReconciliationBridge", () => {
     ).toHaveBeenCalledWith(
       prepared.messagePayload,
       prepared.contactPayload,
-      {
-        ...prepared.contextPayload,
-        messageProvenance: { kind: "reconciliation", provider: "wwebjs" }
-      },
+      prepared.contextPayload,
       prepared.mediaPayload
     );
-    expect(prepared.contextPayload).not.toHaveProperty("messageProvenance");
-  });
-
-  it("does not let a prepared realtime or outbound payload escape reconciliation provenance", async () => {
-    for (const fromMe of [false, true]) {
-      const prepared = {
-        messagePayload: {
-          id: "synthetic-message", body: "synthetic", fromMe,
-          hasMedia: false, type: "chat", timestamp: 1,
-          from: "12025550123@c.us", to: "12025550124@c.us"
-        },
-        contactPayload: { name: "Synthetic", number: "12025550123", isGroup: false },
-        contextPayload: {
-          whatsappId: 101, unreadMessages: 0,
-          messageProvenance: { kind: "realtime", provider: "wwebjs" }
-        },
-        mediaPayload: undefined
-      };
-      await RunWWebJsReconciliationBridge({
-        whatsappId: 101, trigger: "manual", preparedMessages: [prepared as any]
-      });
-      const request = runReconciliationMock.mock.calls[runReconciliationMock.mock.calls.length - 1][0];
-      await request.messages[0].processNewMessage();
-      const forwarded = handleMessageMock.mock.calls[handleMessageMock.mock.calls.length - 1];
-      expect(forwarded[0]).toBe(prepared.messagePayload);
-      expect(forwarded[1]).toBe(prepared.contactPayload);
-      expect(forwarded[2]).toEqual({
-        ...prepared.contextPayload,
-        messageProvenance: { kind: "reconciliation", provider: "wwebjs" }
-      });
-      expect(forwarded[3]).toBe(prepared.mediaPayload);
-      expect(prepared.contextPayload.messageProvenance.kind).toBe("realtime");
-    }
   });
 
   it("does not expose any read or seen operation", async () => {
