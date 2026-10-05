@@ -1,4 +1,4 @@
-import { Sequelize } from "sequelize-typescript";
+﻿import { Sequelize } from "sequelize-typescript";
 import User from "../models/User";
 import Setting from "../models/Setting";
 import Contact from "../models/Contact";
@@ -48,6 +48,7 @@ import EduzzWebhookEvent from "../models/EduzzWebhookEvent";
 import IntegrationCredential from "../models/IntegrationCredential";
 import CrmOriginJournal from "../models/CrmOriginJournal";
 import CrmOriginCaptureCommand from "../models/CrmOriginCaptureCommand";
+import CrmIntegrationMapping from "../models/CrmIntegrationMapping";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -104,7 +105,8 @@ const models = [
   EduzzWebhookEvent,
   IntegrationCredential,
   CrmOriginJournal,
-  CrmOriginCaptureCommand
+  CrmOriginCaptureCommand,
+  CrmIntegrationMapping
 ];
 
 sequelize.addModels(models);
