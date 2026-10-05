@@ -18,6 +18,7 @@ import Message from "../models/Message";
 
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
+import { BuildRealtimeInboundContactSourceContext } from "../services/CrmIntegrationServices/BuildCrmM2mSourceContext";
 import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTicketService";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
@@ -467,14 +468,23 @@ export const handleMessage = async (
       return;
     }
 
-    const contact = await CreateOrUpdateContactService({
-      name: contactPayload.name,
+    const sourceContext = await BuildRealtimeInboundContactSourceContext({
       number: contactPayload.number,
-      lid: contactPayload.lid,
-      profilePicUrl: contactPayload.profilePicUrl,
       isGroup: contactPayload.isGroup,
-      whatsappId: contextPayload.whatsappId
+      fromMe: processedMessage.fromMe,
+      messageProvenance: contextPayload.messageProvenance
     });
+    const contact = await CreateOrUpdateContactService(
+      {
+        name: contactPayload.name,
+        number: contactPayload.number,
+        lid: contactPayload.lid,
+        profilePicUrl: contactPayload.profilePicUrl,
+        isGroup: contactPayload.isGroup,
+        whatsappId: contextPayload.whatsappId
+      },
+      sourceContext || undefined
+    );
 
     let groupContact: Contact | undefined;
     if (contextPayload.groupContact) {

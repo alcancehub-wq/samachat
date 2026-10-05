@@ -14,6 +14,13 @@ integrationRoutes.get(
 );
 
 integrationRoutes.get(
+  "/integrations/crm-m2m-status",
+  isAuth,
+  checkSectorPermission("integrations.view"),
+  IntegrationController.crmM2mStatus
+);
+
+integrationRoutes.get(
   "/integrations/:integrationId",
   isAuth,
   checkSectorPermission("integrations.view"),

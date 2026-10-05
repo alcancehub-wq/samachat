@@ -250,3 +250,14 @@ TXT_R08=D:/Samacon/auditorias/SAMACHAT-CRM-P02-R08-CONSOLIDADO-20261002.txt
 - Matriz SQL40 casos e31 puros/default/config/autorizacao;28 regressoes unitarias R10-R13 efetivamente executadas. Strict direcionado PASS,comparativo H01 baseline/current1/1,zero novo.
 - M2M remoto NOT_VERIFIED,callers NOT_ENABLED,ONE DEAL/SDR OUT_OF_SCOPE;captura/entrega/autorizacao produtivas FALSE em todo retorno. Sem CRM/WhatsApp/producao/R16.
 - Documento R15 historico tem secao R15-R1 separada;TXT externo D:/Samacon/auditorias/SAMACHAT-CRM-P02-R15-RECONCILED-CONSOLIDADO-20261003.txt registra gates finais,commit/remoto/cleanup.
+
+## Fechamento local candidato - 2026-10-05
+
+- Status permanece `P02_INTEGRACAO=EM_ANDAMENTO` e `PROMOCAO=NAO_AUTORIZADA`. Este registro cobre somente os worktrees isolados; nao altera os selos historicos acima.
+- SamaChat: candidato `feature/samachat-p02-closure-20261005`, baseado no baseline R19 `24cfe3e401f53d972cf7fac7b8bf559c425ed03f`. Captura manual autorizada e inbound realtime elegivel ligadas as bridges transacionais existentes; grupos, outbound, echo, history, ACK, reconciliation, provenance desconhecida e telefone nao confirmado permanecem excluidos.
+- Runtime SamaChat: captura, entrega e executor possuem flags independentes default-OFF. Executor single-run limitado ao processo legado, sem scheduler duplicado; segredo aceito somente por provider server-side da variavel documentada. Read model autenticado em Integracoes nao retorna segredo, payload, telefone, endpoint ou recibo bruto.
+- CRM: candidato `feat/crm-samachat-p02-closure-20261005`, baseado no `main` `4af6aebdd8389f6e591f0f15e1fa1e856613c828`; somente o delta R09 foi aplicado localmente como commit `36c579f`. Nenhum push, deploy ou migration foi executado.
+- Validacoes locais: typecheck direcionado SamaChat com libs ES2020 PASS; 37 testes em 6 suites de captura/runtime/contatos PASS; regressao do handler WhatsApp 24/24 PASS; build frontend PASS; `deno check` da Edge Function PASS; gateway CRM isolado 16/16 PASS.
+- Limitacoes: build/typecheck padrao do backend nao foi certificado (o tsconfig ES6 encontra APIs ES2019 preexistentes); lint frontend indisponivel por plugins ESLint ausentes; E2E PostgreSQL conjunto, MariaDB real e E2E produtivo nao executados.
+- Bloqueios produtivos mantidos: projeto Supabase CRM esperado nao esta acessivel pela CLI autenticada; acesso/configuracao MariaDB alvo e rollback verificavel ausentes; os quatro hooks de push continuam sem mapeamento operacional comprovado e ha evidencia de deploy em branches nao produtivas. Nenhuma credencial foi provisionada e nenhum hook foi alterado.
+- Proximo gate: obter acesso verificavel aos alvos e snapshot/rollback, provar/quarentenar reversivelmente os hooks e executar homologacao isolada completa antes de qualquer autorizacao separada de promocao.

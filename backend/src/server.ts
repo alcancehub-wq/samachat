@@ -9,6 +9,7 @@ import { initRedis } from "./libs/redisStore";
 import { StartAllWhatsAppsSessions } from "./services/WbotServices/StartAllWhatsAppsSessions";
 import startScheduleWorker from "./services/ScheduleServices/RunScheduleWorker";
 import startCampaignWorker from "./services/CampaignServices/RunCampaignWorker";
+import StartCrmM2mDeliveryExecutor from "./services/CrmIntegrationServices/CrmM2mDeliveryExecutor";
 
 const ensureDir = (dirPath: string) => {
   try {
@@ -52,6 +53,7 @@ const safeKillChrome = () => {
 };
 
 const runWorkers = process.env.RUN_WORKERS !== "false";
+let stopCrmM2mDeliveryExecutor: () => void = () => undefined;
 if (runWorkers) {
   logger.warn("Cleaning previous Chrome processes");
   safeKillChrome();
@@ -60,10 +62,13 @@ if (runWorkers) {
   StartAllWhatsAppsSessions();
   startScheduleWorker();
   startCampaignWorker();
+  stopCrmM2mDeliveryExecutor = StartCrmM2mDeliveryExecutor(runWorkers);
 } else {
   logger.warn("Workers disabled until migrations complete");
+  stopCrmM2mDeliveryExecutor = StartCrmM2mDeliveryExecutor(runWorkers);
 }
 
+server.on("close", stopCrmM2mDeliveryExecutor);
 gracefulShutdown(server);
 
 process.on("uncaughtException", err => {
