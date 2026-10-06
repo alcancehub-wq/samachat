@@ -36,6 +36,13 @@ integrationRoutes.put(
 );
 
 integrationRoutes.get(
+  "/integrations/:integrationId/crm-m2m-options",
+  isAuth,
+  checkSectorPermission("integrations.view"),
+  CrmM2mOperationalConfigController.options
+);
+
+integrationRoutes.get(
   "/integrations/:integrationId",
   isAuth,
   checkSectorPermission("integrations.view"),
