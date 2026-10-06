@@ -233,27 +233,41 @@ const CreateOrUpdateContactService = async (
       ...sourceContext,
       previousPhoneE164: NormalizeCrmM2mPhone(contact.number)
     };
-    const result = await CaptureUpdateContactSourceBridge(
-      Contact,
-      context,
-      String(contact.id),
-      { contactId: contact.id, update },
-      async transaction => {
-        const before = {
-          ...contact.get({ plain: true }),
-          phoneE164: context.previousPhoneE164
-        } as CrmContactSnapshot;
-        await contact.update(update, { transaction });
-        await contact.reload({ transaction });
-        const after = {
-          ...contact.get({ plain: true }),
-          phoneE164: context.phoneE164
-        } as CrmContactSnapshot;
-        return { contact, before, after };
-      },
-      async id => Contact.findByPk(id)
-    );
-    return result.contact;
+    try {
+      const result = await CaptureUpdateContactSourceBridge(
+        Contact,
+        context,
+        String(contact.id),
+        { contactId: contact.id, update },
+        async transaction => {
+          const before = {
+            ...contact.get({ plain: true }),
+            phoneE164: context.previousPhoneE164
+          } as CrmContactSnapshot;
+          await contact.update(update, { transaction });
+          await contact.reload({ transaction });
+          const after = {
+            ...contact.get({ plain: true }),
+            phoneE164: context.phoneE164
+          } as CrmContactSnapshot;
+          return { contact, before, after };
+        },
+        async id => Contact.findByPk(id)
+      );
+      return result.contact;
+    } catch (error) {
+      logger.error(
+        {
+          err: error,
+          flow: "crm_source_bridge",
+          operation: "realtime_contact_update",
+          contactId: contact.id
+        },
+        "CRM source bridge failed; preserving realtime contact update"
+      );
+      await contact.update(update);
+      return contact;
+    }
   };
 
   const logProfilePhotoProbe = (
@@ -417,8 +431,10 @@ const CreateOrUpdateContactService = async (
     isGroup,
     extraInfo
   };
-  const created = sourceContext?.enabled
-    ? (
+  let created: Contact;
+  if (sourceContext?.enabled) {
+    try {
+      created = (
         await CaptureCreateContactSourceBridge(
           Contact,
           sourceContext,
@@ -426,8 +442,21 @@ const CreateOrUpdateContactService = async (
           async transaction =>
             await Contact.create(createData, { transaction })
         )
-      ).contact
-    : await Contact.create(createData);
+      ).contact;
+    } catch (error) {
+      logger.error(
+        {
+          err: error,
+          flow: "crm_source_bridge",
+          operation: "realtime_contact_create"
+        },
+        "CRM source bridge failed; preserving realtime contact creation"
+      );
+      created = await Contact.create(createData);
+    }
+  } else {
+    created = await Contact.create(createData);
+  }
 
   EmitContactEvent({ action: "create", contact: created, whatsappId });
   logProfilePhotoProbe(
