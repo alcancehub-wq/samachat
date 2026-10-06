@@ -580,27 +580,27 @@ const Integrations = ({ embedded = false }) => {
                                     {" · "}
                                     {i18n.t("integrations.crmM2m.mapping")}:{" "}
                                     {crmStatus.mapping.m2mEnabled
-                                      ? "Integra??o ativa"
-                                      : "Integra??o inativa"}
-                                    {" ? "}
+                                      ? "Integração ativa"
+                                      : "Integração inativa"}
+                                    {" · "}
                                     {crmStatus.mapping.syncEnabled
-                                      ? "Sincroniza??o ativa"
-                                      : "Sincroniza??o inativa"}
-                                    {" ? "}
+                                      ? "Sincronização ativa"
+                                      : "Sincronização inativa"}
+                                    {" · "}
                                     {crmStatus.mapping.commercialAdmissionEnabled
-                                      ? "Oportunidade SDR autom?tica"
+                                      ? "Oportunidade SDR automática"
                                       : "Oportunidade SDR desativada"}
                                     {crmStatus.mapping.commercialAdmissionEnabled &&
                                     crmStatus.mapping.commercialPipelineName
-                                      ? ` ? Funil: ${crmStatus.mapping.commercialPipelineName}`
+                                      ? ` · Funil: ${crmStatus.mapping.commercialPipelineName}`
                                       : ""}
                                     {crmStatus.mapping.commercialAdmissionEnabled &&
                                     crmStatus.mapping.commercialStageName
-                                      ? ` ? Etapa: ${crmStatus.mapping.commercialStageName}`
+                                      ? ` · Etapa: ${crmStatus.mapping.commercialStageName}`
                                       : ""}
                                     {crmStatus.mapping.commercialAdmissionEnabled &&
                                     crmStatus.mapping.commercialOwnerEmail
-                                      ? ` ? Respons?vel: ${crmStatus.mapping.commercialOwnerEmail}`
+                                      ? ` · Responsável: ${crmStatus.mapping.commercialOwnerEmail}`
                                       : ""}
                                   </>
                                 )}
