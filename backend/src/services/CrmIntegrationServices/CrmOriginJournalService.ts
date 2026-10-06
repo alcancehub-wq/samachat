@@ -391,7 +391,10 @@ export default class CrmOriginJournalService {
             contactConfirmedAt: null,
             receipt: null,
             lastErrorCode: null,
-            commercialOperation: "not_requested"
+            commercialOperation:
+              request.commercialRequest?.enabled === true
+                ? "ensure_initial_admission"
+                : "not_requested"
           };
           VerifyOriginJournalEntry(entry);
           await unit.insert(entry);
