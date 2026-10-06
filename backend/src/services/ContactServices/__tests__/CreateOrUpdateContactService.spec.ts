@@ -10,6 +10,12 @@ jest.mock("../../../models/Ticket", () => ({
 }));
 
 jest.mock("../../../helpers/EmitContactEvent", () => jest.fn());
+jest.mock("../../CrmIntegrationServices/CaptureCreateContactSourceBridge", () =>
+  jest.fn()
+);
+jest.mock("../../CrmIntegrationServices/CaptureUpdateContactSourceBridge", () =>
+  jest.fn()
+);
 jest.mock("../../WbotServices/GetProfilePicUrl", () => jest.fn());
 jest.mock("../../../utils/logger", () => ({
   logger: {
@@ -24,6 +30,8 @@ import Ticket from "../../../models/Ticket";
 import EmitContactEvent from "../../../helpers/EmitContactEvent";
 import GetProfilePicUrl from "../../WbotServices/GetProfilePicUrl";
 import { logger } from "../../../utils/logger";
+import CaptureCreateContactSourceBridge from "../../CrmIntegrationServices/CaptureCreateContactSourceBridge";
+import CaptureUpdateContactSourceBridge from "../../CrmIntegrationServices/CaptureUpdateContactSourceBridge";
 import CreateOrUpdateContactService from "../CreateOrUpdateContactService";
 
 const contactFindAllMock = Contact.findAll as jest.Mock;
@@ -32,6 +40,8 @@ const contactCreateMock = Contact.create as jest.Mock;
 const ticketFindAllMock = Ticket.findAll as jest.Mock;
 const emitContactEventMock = EmitContactEvent as jest.Mock;
 const getProfilePicUrlMock = GetProfilePicUrl as jest.Mock;
+const captureCreateBridgeMock = CaptureCreateContactSourceBridge as jest.Mock;
+const captureUpdateBridgeMock = CaptureUpdateContactSourceBridge as jest.Mock;
 
 describe("CreateOrUpdateContactService", () => {
   beforeEach(() => {
@@ -347,4 +357,89 @@ describe("CreateOrUpdateContactService", () => {
     expect(contactCreateMock).not.toHaveBeenCalled();
     expect(result).toBe(numberContact);
   });
+
+  it("preserves realtime contact creation when the CRM bridge fails", async () => {
+    const createdContact = {
+      id: 19001,
+      name: "Core Safe",
+      number: "5511999999001"
+    };
+    captureCreateBridgeMock.mockRejectedValueOnce(
+      new Error("synthetic_crm_bridge_failure")
+    );
+    contactCreateMock.mockResolvedValueOnce(createdContact);
+
+    const result = await CreateOrUpdateContactService(
+      {
+        name: "Core Safe",
+        number: "5511999999001",
+        isGroup: false,
+        whatsappId: 35
+      },
+      { enabled: true } as any
+    );
+
+    expect(captureCreateBridgeMock).toHaveBeenCalledTimes(1);
+    expect(contactCreateMock).toHaveBeenCalledTimes(1);
+    expect(result).toBe(createdContact);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        flow: "crm_source_bridge",
+        operation: "realtime_contact_create"
+      }),
+      "CRM source bridge failed; preserving realtime contact creation"
+    );
+  });
+
+  it("preserves realtime contact update when the CRM bridge fails", async () => {
+    const existingContact = {
+      id: 19002,
+      name: "Core Safe",
+      number: "5511999999002",
+      lid: null,
+      profilePicUrl: null,
+      update: jest.fn().mockResolvedValue(undefined),
+      reload: jest.fn().mockResolvedValue(undefined),
+      get: jest.fn(() => ({
+        id: 19002,
+        name: "Core Safe",
+        number: "5511999999002",
+        isGroup: false
+      }))
+    };
+    contactFindAllMock.mockResolvedValue([existingContact]);
+    captureUpdateBridgeMock.mockRejectedValueOnce(
+      new Error("synthetic_crm_bridge_failure")
+    );
+
+    const result = await CreateOrUpdateContactService(
+      {
+        name: "Core Safe",
+        number: "5511999999002",
+        isGroup: false,
+        whatsappId: 35
+      },
+      {
+        enabled: true,
+        phoneE164: "+5511999999002"
+      } as any
+    );
+
+    expect(captureUpdateBridgeMock).toHaveBeenCalledTimes(1);
+    expect(existingContact.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Core Safe"
+      })
+    );
+    expect(result).toBe(existingContact);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        flow: "crm_source_bridge",
+        operation: "realtime_contact_update",
+        contactId: 19002
+      }),
+      "CRM source bridge failed; preserving realtime contact update"
+    );
+  });
+
 });
