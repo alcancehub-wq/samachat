@@ -84,3 +84,41 @@ it("body cannot enable bridge and false second argument remains legacy", async (
   expect(CrmOriginJournal.findOne).not.toHaveBeenCalled();
   expect(Contact.findByPk).not.toHaveBeenCalled();
 });
+it("preserves manual contact update when the CRM bridge fails", async () => {
+  const contact = setup();
+  (CaptureUpdateContactSourceBridge as jest.Mock).mockRejectedValueOnce(
+    new Error("synthetic_crm_bridge_failure")
+  );
+
+  const result = await UpdateContactService(
+    {
+      contactId: "1",
+      contactData: { name: "Synthetic Safe" }
+    },
+    {
+      enabled: true,
+      identity: {
+        integrationId: "synthetic-integration",
+        organizationId: "00000000-0000-4000-8000-000000000001",
+        sourceInstanceId: "synthetic-instance"
+      },
+      captureKey: "00000000-0000-4000-8000-000000000002",
+      correlationId: "00000000-0000-4000-8000-000000000003",
+      phoneE164: "+5511999999999",
+      bindingStatus: "not_linked",
+      context: {
+        channel: "manual",
+        provenance: "manual",
+        fromMe: false,
+        isGroup: false,
+        authorized: true
+      }
+    } as any
+  );
+
+  expect(CaptureUpdateContactSourceBridge).toHaveBeenCalledTimes(1);
+  expect(contact.update).toHaveBeenCalledWith(
+    expect.objectContaining({ name: "Synthetic Safe" })
+  );
+  expect(result).toBe(contact);
+});
