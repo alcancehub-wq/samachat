@@ -4,6 +4,7 @@ import {
   GetCrmM2mOperationalConfig,
   UpdateCrmM2mOperationalConfig
 } from "../services/CrmIntegrationServices/CrmM2mOperationalConfigService";
+import GetCrmM2mCommercialOptions from "../services/CrmIntegrationServices/CrmM2mCommercialOptionsService";
 
 const integrationIdFromRequest = (
   req: Request
@@ -47,4 +48,16 @@ export const update = async (
     );
 
   return res.status(200).json(configuration);
+};
+
+export const options = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const catalog =
+    await GetCrmM2mCommercialOptions(
+      integrationIdFromRequest(req)
+    );
+
+  return res.status(200).json(catalog);
 };
