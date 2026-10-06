@@ -1,6 +1,7 @@
 import AppError from "../../errors/AppError";
 import { Transaction } from "sequelize";
 import Contact from "../../models/Contact";
+import { logger } from "../../utils/logger";
 import ContactCustomField from "../../models/ContactCustomField";
 import CrmOriginJournal from "../../models/CrmOriginJournal";
 import TriggerWebhooksService from "../WebhookServices/TriggerWebhooksService";
@@ -257,67 +258,83 @@ const UpdateContactService = async (
     return { contact, before: null, after: null };
   };
 
-  const result =
-    sourceContext?.enabled === true
-      ? await CaptureUpdateContactSourceBridge(
-          Contact,
-          sourceContext,
+  let result: { contact: Contact; updated: boolean };
+
+  if (sourceContext?.enabled === true) {
+    try {
+      result = await CaptureUpdateContactSourceBridge(
+        Contact,
+        sourceContext,
+        contactId,
+        {
           contactId,
-          {
-            contactId,
-            contactData: {
-              email,
-              name,
-              number,
-              extraInfo,
-              tagIds,
-              allowMultipleConversations,
-              city,
-              state,
-              captureChannel,
-              wasReferred,
-              referralType,
-              referralContactId,
-              referralContactName,
-              referralUserId,
-              referralPartnerName,
-              referralNote
-            }
-          },
-          async transaction => {
-            const persisted = await persistSource(transaction);
-            if (!persisted.before || !persisted.after)
-              throw new Error("SOURCE_UPDATE_SNAPSHOTS_MISSING");
-            return {
-              contact: persisted.contact,
-              before: persisted.before,
-              after: persisted.after
-            };
-          },
-          async id =>
-            Contact.findOne({
-              where: { id },
-              attributes: [
-                "id",
-                "name",
-                "number",
-                "email",
-                "profilePicUrl",
-                "city",
-                "state",
-                "captureChannel",
-                "wasReferred",
-                "referralType",
-                "referralContactId",
-                "referralContactName",
-                "referralUserId",
-                "referralPartnerName",
-                "referralNote"
-              ],
-              include: ["extraInfo", "tags"]
-            })
-        )
-      : { contact: (await persistSource()).contact, updated: true };
+          contactData: {
+            email,
+            name,
+            number,
+            extraInfo,
+            tagIds,
+            allowMultipleConversations,
+            city,
+            state,
+            captureChannel,
+            wasReferred,
+            referralType,
+            referralContactId,
+            referralContactName,
+            referralUserId,
+            referralPartnerName,
+            referralNote
+          }
+        },
+        async transaction => {
+          const persisted = await persistSource(transaction);
+          if (!persisted.before || !persisted.after)
+            throw new Error("SOURCE_UPDATE_SNAPSHOTS_MISSING");
+          return {
+            contact: persisted.contact,
+            before: persisted.before,
+            after: persisted.after
+          };
+        },
+        async id =>
+          Contact.findOne({
+            where: { id },
+            attributes: [
+              "id",
+              "name",
+              "number",
+              "email",
+              "profilePicUrl",
+              "city",
+              "state",
+              "captureChannel",
+              "wasReferred",
+              "referralType",
+              "referralContactId",
+              "referralContactName",
+              "referralUserId",
+              "referralPartnerName",
+              "referralNote"
+            ],
+            include: ["extraInfo", "tags"]
+          })
+      );
+    } catch (error) {
+      logger.error(
+        {
+          err: error,
+          flow: "crm_source_bridge",
+          operation: "contact_update",
+          contactId
+        },
+        "CRM source bridge failed; preserving local contact update"
+      );
+      result = { contact: (await persistSource()).contact, updated: true };
+    }
+  } else {
+    result = { contact: (await persistSource()).contact, updated: true };
+  }
   const { contact } = result;
 
   if (result.updated) {
