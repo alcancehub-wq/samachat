@@ -192,7 +192,7 @@ const CrmM2mConfigModal = ({
       );
 
       toast.success(
-        "Configura??o do CRM salva."
+        "Configuração do CRM salva."
       );
 
       onClose();
@@ -222,9 +222,9 @@ const CrmM2mConfigModal = ({
           color="textSecondary"
           style={{ marginBottom: 16 }}
         >
-          Gerencie a integra??o sem acessar
-          chaves, APIs ou configura??es
-          t?cnicas do servidor.
+          Gerencie a integração sem acessar
+          chaves, APIs ou configurações
+          técnicas do servidor.
         </Typography>
 
         <FormControlLabel
@@ -242,7 +242,7 @@ const CrmM2mConfigModal = ({
               }
             />
           }
-          label="Integra??o CRM ativa"
+          label="Integração CRM ativa"
         />
 
         <FormControlLabel
@@ -331,7 +331,7 @@ const CrmM2mConfigModal = ({
               fullWidth
               margin="normal"
               type="email"
-              label="Respons?vel SDR"
+              label="Responsável SDR"
               value={
                 configuration
                   .commercialOwnerEmail
