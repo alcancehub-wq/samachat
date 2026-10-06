@@ -23,6 +23,11 @@ const valid: CrmIntegrationMappingInput = {
   keyId: "samachat.crm.primary.v1",
   secretReference: "vault://samachat/crm/m2m/primary",
   enabled: false,
+  syncEnabled: false,
+  commercialAdmissionEnabled: false,
+  commercialPipelineName: null,
+  commercialStageName: null,
+  commercialOwnerEmail: null,
   mappingVersion: 1
 };
 
@@ -121,6 +126,11 @@ it("loader returns only the typed mapping snapshot", async () => {
     keyId: valid.keyId,
     secretReference: valid.secretReference,
     m2mEnabled: false,
+    syncEnabled: false,
+    commercialAdmissionEnabled: false,
+    commercialPipelineName: null,
+    commercialStageName: null,
+    commercialOwnerEmail: null,
     mappingVersion: 1
   });
 
@@ -148,6 +158,11 @@ it("persisted invalid mapping fails closed", async () => {
     keyId: valid.keyId,
     secretReference: valid.secretReference,
     m2mEnabled: false,
+    syncEnabled: false,
+    commercialAdmissionEnabled: false,
+    commercialPipelineName: null,
+    commercialStageName: null,
+    commercialOwnerEmail: null,
     mappingVersion: 1
   });
 

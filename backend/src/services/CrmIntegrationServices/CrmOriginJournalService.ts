@@ -11,6 +11,7 @@ import {
 } from "./BuildCrmContactIntentService";
 import {
   BuildCrmM2mEnvelope,
+  CrmM2mCommercialRequest,
   CrmM2mIdentity,
   CrmM2mReceipt,
   ParseCrmM2mReceipt
@@ -40,6 +41,7 @@ export interface OriginCaptureRequest {
   readonly bindingStatus: CrmContactIntentInput["bindingStatus"];
   readonly context: CrmContactIntentContext;
   readonly metadata?: { readonly messageProvenance?: MessageProvenance } | null;
+  readonly commercialRequest?: CrmM2mCommercialRequest | null;
 }
 export type OriginJournalState =
   | "intent_persisted"
@@ -75,7 +77,9 @@ export interface OriginJournalEntry {
   contactConfirmedAt: string | null;
   receipt: CrmM2mReceipt | null;
   lastErrorCode: string | null;
-  readonly commercialOperation: "not_requested";
+  readonly commercialOperation:
+    | "not_requested"
+    | "ensure_initial_admission";
 }
 export interface OriginCaptureOutcome {
   readonly source: "committed";
@@ -158,7 +162,12 @@ export function VerifyOriginJournalEntry(entry: OriginJournalEntry): void {
     envelope.operation !== "upsert_contact" ||
     envelope.schema_version !== 1 ||
     entry.operation !== "upsert_contact" ||
-    entry.commercialOperation !== "not_requested" ||
+    entry.commercialOperation !==
+      (
+        envelope.data?.commercial_request?.enabled === true
+          ? "ensure_initial_admission"
+          : "not_requested"
+      ) ||
     OriginJournalHash(JSON.stringify(stableInput(envelope.data))) !==
       entry.semanticHash
   )
@@ -188,9 +197,11 @@ export function ValidateOriginJournalReceipt(
       persisted_at: parsed.contact_result.persisted_at
     },
     commercial_result: {
-      status: "not_requested",
-      primary_deal_id: null,
-      opportunity_id: null
+      status: parsed.commercial_result.status,
+      primary_deal_id:
+        parsed.commercial_result.primary_deal_id,
+      opportunity_id:
+        parsed.commercial_result.opportunity_id
     },
     error: parsed.error
       ? { code: parsed.error.code, retryable: parsed.error.retryable }
@@ -296,7 +307,9 @@ export default class CrmOriginJournalService {
                 complete: decision.candidate.data.registration.complete,
                 missing_fields:
                   decision.candidate.data.registration.missingFields
-              }
+              },
+              commercial_request:
+                request.commercialRequest || undefined
             })
           )
         );
@@ -313,7 +326,7 @@ export default class CrmOriginJournalService {
           if (!Number.isSafeInteger(sourceRevision))
             throw new Error("ORIGIN_REVISION_EXHAUSTED");
           const occurredAt = this.clock().toISOString();
-          const envelope = BuildCrmM2mEnvelope(
+          const envelopeBase = BuildCrmM2mEnvelope(
             decision,
             identity,
             {
@@ -330,6 +343,19 @@ export default class CrmOriginJournalService {
               is_group: false
             }
           );
+
+          const envelope =
+            envelopeBase && request.commercialRequest
+              ? {
+                  ...envelopeBase,
+                  data: {
+                    ...envelopeBase.data,
+                    commercial_request:
+                      request.commercialRequest
+                  }
+                }
+              : envelopeBase;
+
           if (
             !envelope ||
             (envelope.data.display_name?.length || 0) > 200 ||

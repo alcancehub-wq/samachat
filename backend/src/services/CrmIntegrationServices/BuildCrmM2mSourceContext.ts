@@ -30,7 +30,27 @@ const loadCaptureContext = async (
   const localIntegrationId = ReadCrmM2mLocalIntegrationId();
   if (!localIntegrationId) return null;
   const mapping = await LoadCrmIntegrationMapping(localIntegrationId);
-  if (!mapping || !mapping.enabled) return null;
+
+  if (
+    !mapping ||
+    !mapping.enabled ||
+    !mapping.syncEnabled
+  ) {
+    return null;
+  }
+
+  const commercialRequest =
+    mapping.commercialAdmissionEnabled
+      ? {
+          enabled: true as const,
+          pipeline_name:
+            mapping.commercialPipelineName!,
+          stage_name:
+            mapping.commercialStageName!,
+          owner_email:
+            mapping.commercialOwnerEmail
+        }
+      : null;
 
   return {
     enabled: true,
@@ -40,7 +60,8 @@ const loadCaptureContext = async (
     phoneE164: NormalizeCrmM2mPhone(input.number),
     bindingStatus: "not_linked",
     context,
-    metadata
+    metadata,
+    commercialRequest
   };
 };
 

@@ -34,6 +34,11 @@ const mapping = {
   keyId: "synthetic-key",
   secretReference: "env:SAMACHAT_CRM_M2M_HMAC_SECRET",
   enabled: true,
+  syncEnabled: true,
+  commercialAdmissionEnabled: true,
+  commercialPipelineName: "SDR",
+  commercialStageName: "NOVO LEAD",
+  commercialOwnerEmail: null,
   mappingVersion: 1
 };
 
@@ -79,6 +84,14 @@ describe("CRM M2M source context gates", () => {
       isGroup: false
     });
     expect(created?.phoneE164).toBe("+12025550101");
+
+    expect(created?.commercialRequest).toEqual({
+      enabled: true,
+      pipeline_name: "SDR",
+      stage_name: "NOVO LEAD",
+      owner_email: null
+    });
+
     expect(updated?.previousPhoneE164).toBe("+12025550100");
     expect(loadMappingMock).toHaveBeenCalledTimes(2);
   });

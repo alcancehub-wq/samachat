@@ -7,6 +7,13 @@ export interface CrmM2mIdentity {
   readonly organizationId: string;
   readonly sourceInstanceId: string;
 }
+
+export interface CrmM2mCommercialRequest {
+  readonly enabled: true;
+  readonly pipeline_name: string;
+  readonly stage_name: string;
+  readonly owner_email: string | null;
+}
 export interface CrmM2mEnvelope {
   readonly schema_version: 1;
   readonly event_id: string;
@@ -37,6 +44,7 @@ export interface CrmM2mEnvelope {
       readonly complete: boolean;
       readonly missing_fields: readonly string[];
     };
+    readonly commercial_request?: CrmM2mCommercialRequest;
   };
 }
 export interface CrmM2mReceipt {
@@ -63,9 +71,13 @@ export interface CrmM2mReceipt {
     readonly persisted_at: string | null;
   };
   readonly commercial_result: {
-    readonly status: "not_requested";
-    readonly primary_deal_id: null;
-    readonly opportunity_id: null;
+    readonly status:
+      | "not_requested"
+      | "created"
+      | "reused"
+      | "deferred";
+    readonly primary_deal_id: string | null;
+    readonly opportunity_id: string | null;
   };
   readonly error: { readonly code: string; readonly retryable: boolean } | null;
 }
@@ -153,6 +165,41 @@ export function ParseCrmM2mReceipt(
   const confirmed = ["created", "reused", "enriched"].includes(
     String(contact.status)
   );
+
+  const commercialRequested =
+    envelope.data.commercial_request?.enabled === true;
+
+  const commercialStatus =
+    String(commercial.status);
+
+  const commercialValid =
+    (
+      !commercialRequested &&
+      commercialStatus === "not_requested" &&
+      commercial.primary_deal_id === null &&
+      commercial.opportunity_id === null
+    ) ||
+    (
+      commercialRequested &&
+      ["created", "reused"].includes(commercialStatus) &&
+      typeof commercial.primary_deal_id === "string" &&
+      uuid.test(commercial.primary_deal_id) &&
+      typeof commercial.opportunity_id === "string" &&
+      uuid.test(commercial.opportunity_id)
+    ) ||
+    (
+      commercialRequested &&
+      commercialStatus === "deferred" &&
+      (
+        commercial.primary_deal_id === null ||
+        (
+          typeof commercial.primary_deal_id === "string" &&
+          uuid.test(commercial.primary_deal_id)
+        )
+      ) &&
+      commercial.opportunity_id === null
+    );
+
   if (
     value.schema_version !== 1 ||
     value.event_id !== envelope.event_id ||
@@ -176,9 +223,7 @@ export function ParseCrmM2mReceipt(
         !uuid.test(contact.crm_contact_id) ||
         !utc(contact.persisted_at)
       : contact.crm_contact_id !== null || contact.persisted_at !== null) ||
-    commercial.status !== "not_requested" ||
-    commercial.primary_deal_id !== null ||
-    commercial.opportunity_id !== null ||
+    !commercialValid ||
     !(
       value.error === null ||
       (record(value.error) &&
@@ -331,11 +376,15 @@ export async function SendCrmM2mAttempt(
       code: "invalid_receipt"
     };
   return {
-    state: ["created", "reused", "enriched"].includes(
-      receipt.contact_result.status
-    )
-      ? "contact_confirmed"
-      : "reconciliation_required",
+    state:
+      ["created", "reused", "enriched"].includes(
+        receipt.contact_result.status
+      ) &&
+      ["not_requested", "created", "reused"].includes(
+        receipt.commercial_result.status
+      )
+        ? "contact_confirmed"
+        : "reconciliation_required",
     transportAccepted: true,
     receipt
   };

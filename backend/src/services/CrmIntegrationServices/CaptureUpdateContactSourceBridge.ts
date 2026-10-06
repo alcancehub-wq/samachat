@@ -99,6 +99,8 @@ export default async function CaptureUpdateContactSourceBridge<
     bindingStatus: context.bindingStatus,
     context: context.context,
     metadata: context.metadata,
+    commercialRequest:
+      context.commercialRequest,
     previousPhoneE164: context.previousPhoneE164,
     producer: "UpdateContactService",
     producerInput,

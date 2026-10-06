@@ -11,6 +11,11 @@ export interface CrmIntegrationMappingInput {
   readonly keyId: string;
   readonly secretReference: string;
   readonly enabled: boolean;
+  readonly syncEnabled: boolean;
+  readonly commercialAdmissionEnabled: boolean;
+  readonly commercialPipelineName: string | null;
+  readonly commercialStageName: string | null;
+  readonly commercialOwnerEmail: string | null;
   readonly mappingVersion: number;
 }
 
@@ -22,6 +27,11 @@ export interface CrmIntegrationMappingSnapshot {
   readonly keyId: string;
   readonly secretReference: string;
   readonly enabled: boolean;
+  readonly syncEnabled: boolean;
+  readonly commercialAdmissionEnabled: boolean;
+  readonly commercialPipelineName: string | null;
+  readonly commercialStageName: string | null;
+  readonly commercialOwnerEmail: string | null;
   readonly mappingVersion: number;
 }
 
@@ -70,6 +80,19 @@ export function ValidateCrmIntegrationMapping(
     !Number.isSafeInteger(value.localIntegrationId) ||
     value.localIntegrationId < 1 ||
     typeof value.enabled !== "boolean" ||
+    typeof value.syncEnabled !== "boolean" ||
+    typeof value.commercialAdmissionEnabled !== "boolean" ||
+    (value.commercialAdmissionEnabled &&
+      (!value.enabled ||
+        !value.syncEnabled ||
+        value.commercialPipelineName === null ||
+        value.commercialStageName === null)) ||
+    (value.commercialPipelineName !== null &&
+      !validBoundedText(value.commercialPipelineName, 150)) ||
+    (value.commercialStageName !== null &&
+      !validBoundedText(value.commercialStageName, 150)) ||
+    (value.commercialOwnerEmail !== null &&
+      !validBoundedText(value.commercialOwnerEmail, 255)) ||
     !Number.isSafeInteger(value.mappingVersion) ||
     value.mappingVersion < 1 ||
     !validBoundedText(value.m2mIntegrationId, 100) ||
@@ -117,6 +140,11 @@ export function ValidateCrmIntegrationMapping(
     keyId: value.keyId,
     secretReference: value.secretReference,
     enabled: value.enabled,
+    syncEnabled: value.syncEnabled,
+    commercialAdmissionEnabled: value.commercialAdmissionEnabled,
+    commercialPipelineName: value.commercialPipelineName,
+    commercialStageName: value.commercialStageName,
+    commercialOwnerEmail: value.commercialOwnerEmail,
     mappingVersion: value.mappingVersion
   };
 }
@@ -149,6 +177,11 @@ export async function LoadCrmIntegrationMapping(
       "keyId",
       "secretReference",
       "m2mEnabled",
+      "syncEnabled",
+      "commercialAdmissionEnabled",
+      "commercialPipelineName",
+      "commercialStageName",
+      "commercialOwnerEmail",
       "mappingVersion"
     ]
   });
@@ -167,6 +200,11 @@ export async function LoadCrmIntegrationMapping(
     keyId: mapping.keyId,
     secretReference: mapping.secretReference,
     enabled: mapping.m2mEnabled,
+    syncEnabled: mapping.syncEnabled,
+    commercialAdmissionEnabled: mapping.commercialAdmissionEnabled,
+    commercialPipelineName: mapping.commercialPipelineName,
+    commercialStageName: mapping.commercialStageName,
+    commercialOwnerEmail: mapping.commercialOwnerEmail,
     mappingVersion: mapping.mappingVersion
   });
 }

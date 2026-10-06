@@ -32,6 +32,7 @@ import ConfirmationModal from "../../components/ConfirmationModal";
 import SearchIcon from "@material-ui/icons/Search";
 import IntegrationModal from "../../components/IntegrationModal";
 import EduzzRuleConfigModal from "../../components/EduzzRuleConfigModal";
+import CrmM2mConfigModal from "../../components/CrmM2mConfigModal";
 import WebhookModal from "../../components/WebhookModal";
 import WebhookLogsModal from "../../components/WebhookLogsModal";
 import buildMenuListPageStyles from "../../styles/menuListPageStyles";
@@ -164,6 +165,7 @@ const Integrations = ({ embedded = false }) => {
   const [logsModalOpen, setLogsModalOpen] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState(null);
   const [eduzzConfigOpen, setEduzzConfigOpen] = useState(false);
+  const [crmM2mConfigOpen, setCrmM2mConfigOpen] = useState(false);
   const [selectedWebhook, setSelectedWebhook] = useState(null);
   const [confirmIntegrationOpen, setConfirmIntegrationOpen] = useState(false);
   const [confirmWebhookOpen, setConfirmWebhookOpen] = useState(false);
@@ -305,6 +307,16 @@ const Integrations = ({ embedded = false }) => {
     setSelectedIntegration(null);
   };
 
+  const handleOpenCrmM2mConfig = integration => {
+    setSelectedIntegration(integration);
+    setCrmM2mConfigOpen(true);
+  };
+
+  const handleCloseCrmM2mConfig = () => {
+    setCrmM2mConfigOpen(false);
+    setSelectedIntegration(null);
+  };
+
   const handleEditWebhook = webhook => {
     setSelectedWebhook(webhook);
     setWebhookModalOpen(true);
@@ -391,6 +403,11 @@ const Integrations = ({ embedded = false }) => {
       <EduzzRuleConfigModal
         open={eduzzConfigOpen}
         onClose={handleCloseEduzzConfig}
+        integration={selectedIntegration}
+      />
+      <CrmM2mConfigModal
+        open={crmM2mConfigOpen}
+        onClose={handleCloseCrmM2mConfig}
         integration={selectedIntegration}
       />
       <WebhookModal
@@ -489,6 +506,20 @@ const Integrations = ({ embedded = false }) => {
                             </IconButton>
                           </Tooltip>
                         )}
+                        {integration.type === "crm" && (
+                          <Tooltip title="Configurar CRM">
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                handleOpenCrmM2mConfig(
+                                  integration
+                                )
+                              }
+                            >
+                              <Settings />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                         <IconButton size="small" onClick={() => handleEditIntegration(integration)}>
                           <Edit />
                         </IconButton>
@@ -548,17 +579,29 @@ const Integrations = ({ embedded = false }) => {
                                   <>
                                     {" · "}
                                     {i18n.t("integrations.crmM2m.mapping")}:{" "}
-                                    {crmStatus.mapping.m2mIntegrationId} /{" "}
-                                    {crmStatus.mapping.organizationId} /{" "}
-                                    {crmStatus.mapping.sourceInstanceId} /{" "}
-                                    {crmStatus.mapping.keyId} / v
-                                    {crmStatus.mapping.mappingVersion} (
-                                    {i18n.t(
-                                      crmStatus.mapping.m2mEnabled
-                                        ? "integrations.crmM2m.enabled"
-                                        : "integrations.crmM2m.disabled"
-                                    )}
-                                    )
+                                    {crmStatus.mapping.m2mEnabled
+                                      ? "Integra??o ativa"
+                                      : "Integra??o inativa"}
+                                    {" ? "}
+                                    {crmStatus.mapping.syncEnabled
+                                      ? "Sincroniza??o ativa"
+                                      : "Sincroniza??o inativa"}
+                                    {" ? "}
+                                    {crmStatus.mapping.commercialAdmissionEnabled
+                                      ? "Oportunidade SDR autom?tica"
+                                      : "Oportunidade SDR desativada"}
+                                    {crmStatus.mapping.commercialAdmissionEnabled &&
+                                    crmStatus.mapping.commercialPipelineName
+                                      ? ` ? Funil: ${crmStatus.mapping.commercialPipelineName}`
+                                      : ""}
+                                    {crmStatus.mapping.commercialAdmissionEnabled &&
+                                    crmStatus.mapping.commercialStageName
+                                      ? ` ? Etapa: ${crmStatus.mapping.commercialStageName}`
+                                      : ""}
+                                    {crmStatus.mapping.commercialAdmissionEnabled &&
+                                    crmStatus.mapping.commercialOwnerEmail
+                                      ? ` ? Respons?vel: ${crmStatus.mapping.commercialOwnerEmail}`
+                                      : ""}
                                   </>
                                 )}
                                 {" · "}

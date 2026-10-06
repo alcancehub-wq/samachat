@@ -263,6 +263,75 @@ describe("typed envelope and one-attempt delivery", () => {
       ).toBeNull();
     }
   );
+  it("accepts a valid requested commercial admission receipt", () => {
+    const value = envelope();
+
+    const commercialEnvelope = {
+      ...value,
+      data: {
+        ...value.data,
+        commercial_request: {
+          enabled: true as const,
+          pipeline_name: "SDR",
+          stage_name: "NOVO LEAD",
+          owner_email: null
+        }
+      }
+    };
+
+    expect(
+      ParseCrmM2mReceipt(
+        {
+          ...receipt(),
+          commercial_result: {
+            status: "created",
+            primary_deal_id:
+              "00000000-0000-4000-8000-000000000006",
+            opportunity_id:
+              "00000000-0000-4000-8000-000000000007"
+          }
+        },
+        commercialEnvelope
+      )
+    ).not.toBeNull();
+  });
+
+  it("does not treat deferred commercial admission as success", () => {
+    const value = envelope();
+
+    const commercialEnvelope = {
+      ...value,
+      data: {
+        ...value.data,
+        commercial_request: {
+          enabled: true as const,
+          pipeline_name: "SDR",
+          stage_name: "NOVO LEAD",
+          owner_email: null
+        }
+      }
+    };
+
+    expect(
+      ParseCrmM2mReceipt(
+        {
+          ...receipt(),
+          processing_state: "partial",
+          commercial_result: {
+            status: "deferred",
+            primary_deal_id: null,
+            opportunity_id: null
+          },
+          error: {
+            code: "commercial_admission_failed",
+            retryable: false
+          }
+        },
+        commercialEnvelope
+      )?.commercial_result.status
+    ).toBe("deferred");
+  });
+
   it("rejects fake contact and unexpected commercial confirmation", () => {
     expect(
       ParseCrmM2mReceipt(

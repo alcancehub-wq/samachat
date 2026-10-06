@@ -52,6 +52,8 @@ export default async function CaptureCreateContactSourceBridge<
     bindingStatus: context.bindingStatus,
     context: context.context,
     metadata: context.metadata,
+    commercialRequest:
+      context.commercialRequest,
     producer: "CreateContactService",
     producerInput,
     mutation: {

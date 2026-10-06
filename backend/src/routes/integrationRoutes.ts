@@ -3,6 +3,7 @@ import isAuth from "../middleware/isAuth";
 import checkSectorPermission from "../middleware/checkSectorPermission";
 
 import * as IntegrationController from "../controllers/IntegrationController";
+import * as CrmM2mOperationalConfigController from "../controllers/CrmM2mOperationalConfigController";
 
 const integrationRoutes = express.Router();
 
@@ -18,6 +19,20 @@ integrationRoutes.get(
   isAuth,
   checkSectorPermission("integrations.view"),
   IntegrationController.crmM2mStatus
+);
+
+integrationRoutes.get(
+  "/integrations/:integrationId/crm-m2m-config",
+  isAuth,
+  checkSectorPermission("integrations.view"),
+  CrmM2mOperationalConfigController.show
+);
+
+integrationRoutes.put(
+  "/integrations/:integrationId/crm-m2m-config",
+  isAuth,
+  checkSectorPermission("integrations.update"),
+  CrmM2mOperationalConfigController.update
 );
 
 integrationRoutes.get(

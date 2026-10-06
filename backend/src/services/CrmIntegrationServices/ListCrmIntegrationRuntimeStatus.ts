@@ -17,6 +17,11 @@ export interface CrmIntegrationRuntimeStatus {
     readonly keyId: string;
     readonly mappingVersion: number;
     readonly m2mEnabled: boolean;
+    readonly syncEnabled: boolean;
+    readonly commercialAdmissionEnabled: boolean;
+    readonly commercialPipelineName: string | null;
+    readonly commercialStageName: string | null;
+    readonly commercialOwnerEmail: string | null;
     readonly endpointConfigured: boolean;
     readonly secretReferenceConfigured: boolean;
   };
@@ -144,14 +149,32 @@ export default async function ListCrmIntegrationRuntimeStatus(
           keyId: loaded.keyId,
           mappingVersion: loaded.mappingVersion,
           m2mEnabled: loaded.enabled,
+          syncEnabled: loaded.syncEnabled,
+          commercialAdmissionEnabled:
+            loaded.commercialAdmissionEnabled,
+          commercialPipelineName:
+            loaded.commercialPipelineName,
+          commercialStageName:
+            loaded.commercialStageName,
+          commercialOwnerEmail:
+            loaded.commercialOwnerEmail,
           endpointConfigured: Boolean(loaded.endpoint),
           secretReferenceConfigured: Boolean(loaded.secretReference)
         },
-        captureEnabled: flags.captureEnabled,
-        deliveryEnabled: flags.deliveryEnabled,
+        captureEnabled:
+          flags.captureEnabled &&
+          loaded.enabled &&
+          loaded.syncEnabled,
+        deliveryEnabled:
+          flags.deliveryEnabled &&
+          loaded.enabled &&
+          loaded.syncEnabled,
         readiness,
         executor: {
-          enabled: flags.executorEnabled,
+          enabled:
+            flags.executorEnabled &&
+            loaded.enabled &&
+            loaded.syncEnabled,
           state: executor.state,
           lastTickAt: executor.lastTickAt,
           lastResult: executor.lastResult,

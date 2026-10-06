@@ -149,7 +149,13 @@ export function VerifyDeliveryEnvelope(
   const context = body.context;
   const data = body.data;
   const registration = data.registration;
-  if (!record(registration)) throw new Error("DELIVERY_ENVELOPE_INVALID");
+  const commercialRequest =
+    data.commercial_request;
+
+  if (!record(registration)) {
+    throw new Error("DELIVERY_ENVELOPE_INVALID");
+  }
+
   if (
     !exactKeys(body, [
       "schema_version",
@@ -178,7 +184,8 @@ export function VerifyDeliveryEnvelope(
       "phone_e164",
       "display_name",
       "capture_channel",
-      "registration"
+      "registration",
+      "commercial_request"
     ]) ||
     !exactKeys(registration, ["complete", "missing_fields"]) ||
     body.schema_version !== 1 ||
@@ -220,7 +227,32 @@ export function VerifyDeliveryEnvelope(
     registration.missing_fields.length > 20 ||
     !registration.missing_fields.every(
       (field: unknown) =>
-        typeof field === "string" && field.length > 0 && field.length <= 100
+        typeof field === "string" &&
+        field.length > 0 &&
+        field.length <= 100
+    ) ||
+    (
+      commercialRequest !== undefined &&
+      (
+        !record(commercialRequest) ||
+        !exactKeys(commercialRequest, [
+          "enabled",
+          "pipeline_name",
+          "stage_name",
+          "owner_email"
+        ]) ||
+        commercialRequest.enabled !== true ||
+        typeof commercialRequest.pipeline_name !== "string" ||
+        commercialRequest.pipeline_name.trim().length < 1 ||
+        commercialRequest.pipeline_name.length > 150 ||
+        typeof commercialRequest.stage_name !== "string" ||
+        commercialRequest.stage_name.trim().length < 1 ||
+        commercialRequest.stage_name.length > 150 ||
+        !nullableText(
+          commercialRequest.owner_email,
+          255
+        )
+      )
     ) ||
     !Number.isSafeInteger(entry.stateVersion) ||
     entry.stateVersion < 0 ||

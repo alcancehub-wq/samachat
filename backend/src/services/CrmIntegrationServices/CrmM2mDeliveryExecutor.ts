@@ -132,7 +132,11 @@ export default function StartCrmM2mDeliveryExecutor(
     running = true;
     try {
       const mapping = await LoadCrmIntegrationMapping(integrationId);
-      if (!mapping || !mapping.enabled) {
+      if (
+        !mapping ||
+        !mapping.enabled ||
+        !mapping.syncEnabled
+      ) {
         status = {
           ...status,
           state: "WAITING_CONFIGURATION",

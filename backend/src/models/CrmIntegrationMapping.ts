@@ -57,6 +57,25 @@ class CrmIntegrationMapping extends Model<CrmIntegrationMapping> {
   m2mEnabled: boolean;
 
   @AllowNull(false)
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  syncEnabled: boolean;
+
+  @AllowNull(false)
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  commercialAdmissionEnabled: boolean;
+
+  @Column(DataType.STRING(150))
+  commercialPipelineName: string | null;
+
+  @Column(DataType.STRING(150))
+  commercialStageName: string | null;
+
+  @Column(DataType.STRING(255))
+  commercialOwnerEmail: string | null;
+
+  @AllowNull(false)
   @Default(1)
   @Column(DataType.INTEGER)
   mappingVersion: number;

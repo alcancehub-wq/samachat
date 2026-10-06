@@ -420,9 +420,20 @@ export default class SequelizeCrmOriginJournalRepository
         const receipt = ValidateOriginJournalReceipt(change.value, entry);
         entry.receipt = receipt;
         entry.receiptValidatedAt = entry.receiptValidatedAt || timestamp;
-        const confirmed = ["created", "reused", "enriched"].includes(
-          receipt.contact_result.status
-        );
+        const contactConfirmed =
+          ["created", "reused", "enriched"].includes(
+            receipt.contact_result.status
+          );
+
+        const commercialConfirmed =
+          ["not_requested", "created", "reused"].includes(
+            receipt.commercial_result.status
+          );
+
+        const confirmed =
+          contactConfirmed &&
+          commercialConfirmed;
+
         entry.state = confirmed
           ? "contact_confirmed"
           : receipt.processing_state === "accepted"
