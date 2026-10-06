@@ -1,6 +1,7 @@
 import AppError from "../../errors/AppError";
 import { Transaction } from "sequelize";
 import Contact from "../../models/Contact";
+import { logger } from "../../utils/logger";
 import TriggerWebhooksService from "../WebhookServices/TriggerWebhooksService";
 import CaptureCreateContactSourceBridge, {
   CreateContactSourceContext
@@ -98,32 +99,47 @@ const CreateContactService = async (
     return contact;
   };
 
-  const result =
-    sourceContext?.enabled === true
-      ? await CaptureCreateContactSourceBridge(
-          Contact,
-          sourceContext,
-          {
-            name,
-            number,
-            email,
-            extraInfo,
-            tagIds,
-            allowMultipleConversations,
-            city,
-            state,
-            captureChannel,
-            wasReferred,
-            referralType,
-            referralContactId,
-            referralContactName,
-            referralUserId,
-            referralPartnerName,
-            referralNote
-          },
-          transaction => persistSource(transaction)
-        )
-      : { contact: await persistSource(), created: true };
+  let result: { contact: Contact; created: boolean };
+
+  if (sourceContext?.enabled === true) {
+    try {
+      result = await CaptureCreateContactSourceBridge(
+        Contact,
+        sourceContext,
+        {
+          name,
+          number,
+          email,
+          extraInfo,
+          tagIds,
+          allowMultipleConversations,
+          city,
+          state,
+          captureChannel,
+          wasReferred,
+          referralType,
+          referralContactId,
+          referralContactName,
+          referralUserId,
+          referralPartnerName,
+          referralNote
+        },
+        transaction => persistSource(transaction)
+      );
+    } catch (error) {
+      logger.error(
+        {
+          err: error,
+          flow: "crm_source_bridge",
+          operation: "contact_create"
+        },
+        "CRM source bridge failed; preserving local contact creation"
+      );
+      result = { contact: await persistSource(), created: true };
+    }
+  } else {
+    result = { contact: await persistSource(), created: true };
+  }
   const { contact } = result;
 
   if (result.created) {
