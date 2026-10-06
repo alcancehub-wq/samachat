@@ -73,6 +73,31 @@ it("persists an eligible R09 envelope without sending or commercial admission", 
   expect(entry.commercialOperation).toBe("not_requested");
   VerifyOriginJournalEntry(entry);
 });
+it("persists commercial admission metadata consistently with the envelope", async () => {
+  const { entries, service } = fixture();
+  const value = request();
+  const outcome = await service.capture({
+    ...value,
+    commercialRequest: {
+      enabled: true,
+      pipeline_name: "SDR",
+      stage_name: "NOVO LEAD",
+      owner_email: "agentesdr@samacon.com.br"
+    }
+  });
+  expect(outcome.intent).toBe("persisted");
+  expect(entries).toHaveLength(1);
+  const entry = entries[0];
+  const envelope = JSON.parse(entry.canonicalBody);
+  expect(entry.commercialOperation).toBe("ensure_initial_admission");
+  expect(envelope.data.commercial_request).toEqual({
+    enabled: true,
+    pipeline_name: "SDR",
+    stage_name: "NOVO LEAD",
+    owner_email: "agentesdr@samacon.com.br"
+  });
+  expect(() => VerifyOriginJournalEntry(entry)).not.toThrow();
+});
 it("closed by default means no source write or transaction", async () => {
   const { repository } = fixture();
   const service = new CrmOriginJournalService(repository, {
