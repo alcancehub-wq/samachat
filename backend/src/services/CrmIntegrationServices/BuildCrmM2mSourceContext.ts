@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { logger } from "../../utils/logger";
 import { MessageProvenance } from "../../providers/WhatsApp/MessageProvenance";
 import {
   BuildCrmM2mIdentityFromMapping,
@@ -24,45 +25,57 @@ const loadCaptureContext = async (
   context: CreateContactSourceContext["context"],
   metadata?: CreateContactSourceContext["metadata"]
 ): Promise<CreateContactSourceContext | null> => {
-  if (input.isGroup || !NormalizeCrmM2mPhone(input.number)) return null;
-  if (!ReadCrmM2mRuntimeFlags().captureEnabled) return null;
+  try {
+    if (input.isGroup || !NormalizeCrmM2mPhone(input.number)) return null;
+    if (!ReadCrmM2mRuntimeFlags().captureEnabled) return null;
 
-  const localIntegrationId = ReadCrmM2mLocalIntegrationId();
-  if (!localIntegrationId) return null;
-  const mapping = await LoadCrmIntegrationMapping(localIntegrationId);
+    const localIntegrationId = ReadCrmM2mLocalIntegrationId();
+    if (!localIntegrationId) return null;
+    const mapping = await LoadCrmIntegrationMapping(localIntegrationId);
 
-  if (
-    !mapping ||
-    !mapping.enabled ||
-    !mapping.syncEnabled
-  ) {
+    if (
+      !mapping ||
+      !mapping.enabled ||
+      !mapping.syncEnabled
+    ) {
+      return null;
+    }
+
+    const commercialRequest =
+      mapping.commercialAdmissionEnabled
+        ? {
+            enabled: true as const,
+            pipeline_name:
+              mapping.commercialPipelineName!,
+            stage_name:
+              mapping.commercialStageName!,
+            owner_email:
+              mapping.commercialOwnerEmail
+          }
+        : null;
+
+    return {
+      enabled: true,
+      identity: BuildCrmM2mIdentityFromMapping(mapping),
+      captureKey: randomUUID(),
+      correlationId: randomUUID(),
+      phoneE164: NormalizeCrmM2mPhone(input.number),
+      bindingStatus: "not_linked",
+      context,
+      metadata,
+      commercialRequest
+    };
+  } catch (error) {
+    logger.error(
+      {
+        err: error,
+        flow: "crm_source_context",
+        channel: context.channel
+      },
+      "CRM source context failed; preserving SamaChat core flow"
+    );
     return null;
   }
-
-  const commercialRequest =
-    mapping.commercialAdmissionEnabled
-      ? {
-          enabled: true as const,
-          pipeline_name:
-            mapping.commercialPipelineName!,
-          stage_name:
-            mapping.commercialStageName!,
-          owner_email:
-            mapping.commercialOwnerEmail
-        }
-      : null;
-
-  return {
-    enabled: true,
-    identity: BuildCrmM2mIdentityFromMapping(mapping),
-    captureKey: randomUUID(),
-    correlationId: randomUUID(),
-    phoneE164: NormalizeCrmM2mPhone(input.number),
-    bindingStatus: "not_linked",
-    context,
-    metadata,
-    commercialRequest
-  };
 };
 
 export async function BuildManualCreateContactSourceContext(
