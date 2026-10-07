@@ -629,8 +629,8 @@ export async function GetCrmM2mCloserAvailability(
     !receipt ||
     receipt.organizationId !==
       context.mapping.identity.organizationId ||
-    receipt.startAt !== input.startAt ||
-    receipt.endAt !== input.endAt
+    Date.parse(receipt.startAt) !== Date.parse(input.startAt) ||
+    Date.parse(receipt.endAt) !== Date.parse(input.endAt)
   ) {
     return {
       state: "reconciliation_required",
@@ -765,8 +765,8 @@ export async function ScheduleCrmM2mCloserMeeting(
     receipt.meetingId !== input.requestId ||
     receipt.closerEmail !==
       input.closerEmail.trim().toLowerCase() ||
-    receipt.startAt !== input.startAt ||
-    receipt.endAt !== input.endAt ||
+    Date.parse(receipt.startAt) !== Date.parse(input.startAt) ||
+    Date.parse(receipt.endAt) !== Date.parse(input.endAt) ||
     receipt.handoffReady !== true
   ) {
     return {
