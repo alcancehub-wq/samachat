@@ -39,6 +39,10 @@ import FlowExecutionLog from "../models/FlowExecutionLog";
 import Schedule from "../models/Schedule";
 import ScheduleLog from "../models/ScheduleLog";
 import OpenAISetting from "../models/OpenAISetting";
+import IntegrationSetting from "../models/IntegrationSetting";
+import SdrAgentSetting from "../models/SdrAgentSetting";
+import SdrKnowledgeFile from "../models/SdrKnowledgeFile";
+import SdrKnowledgeChunk from "../models/SdrKnowledgeChunk";
 import OpenAILog from "../models/OpenAILog";
 import OfficialOutboundOrigin from "../models/OfficialOutboundOrigin";
 import MetaMessageTemplateVariableMapping from "../models/MetaMessageTemplateVariableMapping";
@@ -98,6 +102,10 @@ const models = [
   ScheduleLog,
   OpenAISetting,
   OpenAILog,
+  IntegrationSetting,
+  SdrAgentSetting,
+  SdrKnowledgeFile,
+  SdrKnowledgeChunk,
   OfficialOutboundOrigin,
   MetaMessageTemplateVariableMapping,
   OfficialInboundMessage,

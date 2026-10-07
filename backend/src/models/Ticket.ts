@@ -42,6 +42,15 @@ class Ticket extends Model<Ticket> {
   @Column
   isGroup: boolean;
 
+  // Agente SDR: null = regra automatica da configuracao; true/false = decisao
+  // explicita para este ticket.
+  @Column(DataType.BOOLEAN)
+  sdrAgentEnabled: boolean | null;
+
+  // Etapa atual do lead no funil SDR do CRM (gravada apos o CRM confirmar o avanco).
+  @Column(DataType.STRING)
+  sdrCrmStage: string | null;
+
   @CreatedAt
   createdAt: Date;
 
