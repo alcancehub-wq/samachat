@@ -1,6 +1,6 @@
 interface Timeout {
   id: number;
-  timeout: NodeJS.Timeout;
+  timeout: ReturnType<typeof setTimeout>;
 }
 
 const timeouts: Timeout[] = [];
