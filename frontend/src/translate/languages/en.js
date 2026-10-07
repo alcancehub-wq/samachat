@@ -566,6 +566,7 @@ const messages = {
           placeholder: "Search...",
         },
         listItems: {
+          sdrAgent: "AI Training",
           dashboard: "Dashboard",
           connections: "Connections",
           tickets: "Chats",

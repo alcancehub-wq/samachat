@@ -22,6 +22,7 @@ import toastError from "../../errors/toastError";
 import OpenAI from "../OpenAI";
 import ApiAdmin from "../ApiAdmin";
 import Integrations from "../Integrations";
+import SdrApis from "./SdrApis";
 
 const LOST_TICKET_PURGE_DEFAULTS = {
 	lostTicketPurgeEnabled: "false",
@@ -206,7 +207,9 @@ const Settings = () => {
 	const classes = useStyles();
 
 	const [settings, setSettings] = useState([]);
-	const [activeTab, setActiveTab] = useState("general");
+	const [activeTab, setActiveTab] = useState(() =>
+		new URLSearchParams(window.location.search).get("secao") === "apis" ? "motores" : "general"
+	);
 	const [lostTicketPurgeForm, setLostTicketPurgeForm] = useState(LOST_TICKET_PURGE_DEFAULTS);
 	const [contactVisibilityForm, setContactVisibilityForm] = useState(CONTACT_VISIBILITY_DEFAULTS);
 	const [users, setUsers] = useState([]);
@@ -498,6 +501,7 @@ const Settings = () => {
 					>
 						<Tab value="general" label={i18n.t("settings.tabs.general")} className={classes.tabRoot} />
 						<Tab value="ia" label={i18n.t("settings.tabs.ia")} className={classes.tabRoot} />
+						<Tab value="motores" label="Motores de IA e voz" className={classes.tabRoot} />
 						<Tab value="apiAdmin" label={i18n.t("settings.tabs.apiAdmin")} className={classes.tabRoot} />
 						<Tab value="integrations" label={i18n.t("settings.tabs.integrations")} className={classes.tabRoot} />
 					</Tabs>
@@ -720,6 +724,12 @@ const Settings = () => {
 							</div>
 						</Paper>
 					</>
+				)}
+
+				{activeTab === "motores" && (
+					<Box mt={2}>
+						<SdrApis />
+					</Box>
 				)}
 
 				{activeTab === "ia" && (

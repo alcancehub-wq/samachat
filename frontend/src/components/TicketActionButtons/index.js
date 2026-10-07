@@ -10,6 +10,7 @@ import api from '../../services/api';
 import TicketOptionsMenu from '../TicketOptionsMenu';
 import ButtonWithSpinner from '../ButtonWithSpinner';
 import TicketReplyChannelSelect from '../TicketReplyChannelSelect';
+import SdrHandoffButtons from '../SdrHandoffButtons';
 import toastError from '../../errors/toastError';
 import { AuthContext } from '../../context/Auth/AuthContext';
 
@@ -223,6 +224,7 @@ const TicketActionButtons = ({ ticket, contactId, contactName, onTicketUpdated }
 
   return (
     <div className={classes.actionButtons}>
+      <SdrHandoffButtons ticket={ticket} />
       {ticket.status === 'pending' && (
         <ButtonWithSpinner
           loading={loading}

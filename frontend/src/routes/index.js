@@ -28,6 +28,7 @@ import Schedules from "../pages/Schedules/";
 import Flows from "../pages/Flows/";
 import FlowBuilder from "../pages/FlowBuilder/";
 import OpenAI from "../pages/OpenAI/";
+import SdrAgent from "../pages/SdrAgent";
 import Lgpd from "../pages/Lgpd/";
 import Manual from "../pages/Manual/";
 import ReleaseNotes from "../pages/ReleaseNotes/";
@@ -86,6 +87,7 @@ const Routes = () => {
                 <Route exact path="/informatives" component={Informatives} isPrivate />
                 <Route exact path="/integrations" component={Integrations} isPrivate />
                 <Route exact path="/openai" component={OpenAI} isPrivate />
+                <Route exact path="/sdr-agent" component={SdrAgent} isPrivate />
                 <Route exact path="/lgpd" component={Lgpd} isPrivate />
                 <Route exact path="/manual" component={Manual} isPrivate />
                 <Route exact path="/release-notes" component={ReleaseNotes} isPrivate />
