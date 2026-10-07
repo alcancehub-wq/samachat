@@ -526,3 +526,16 @@
 - Gate diagnostico disabled por default,reutiliza H01.verify somente read-only econfig R13;nao instala/corrige schema ou liga runtime. R10 original/misto/no-op/ausente sao recusados.
 - Provas impeditivas e40 SQL/31 puros completos,mais28 regressoes reais R10-R13;strict direcionado PASS/zero diagnostico novo. Contagens finais/cleanup/preflight noTXT.
 - LAB_PREFLIGHT_PASS nao ePRODUCTION_READY:remoto NOT_VERIFIED,comercial fora deescopo,captura/entrega/autorizacao produtivas FALSE. Sem deploy/CRM/Vivian/WhatsApp/R16.
+
+## 2026-10-06 - SamaChat CRM P07 - production promotion
+
+<!-- SAMACHAT-CRM-P07-PRODUCTION-PROMOTION-20261006 -->
+
+- Integracao SamaChat CRM: composicao final de producao preparada para promover os servicos M2M de avancar etapa SDR, consultar/agendar closer e handoff para closer, preservando a fundacao de contato, recibos, idempotencia e reconciliacao ja existente.
+- Escopo backend desta promocao: CrmM2mSdrStageAdvanceService, CrmM2mCloserSchedulingService e CrmM2mCloserHandoffService, com suas suites de regressao, mais a correcao baseline de tipagem em backend/src/helpers/Debounce.ts.
+- Escopo total funcional validado contra legacy-prod: 7 arquivos backend; package.json, tsconfig e workflows permanecem inalterados.
+- Validacao canonica: GitHub Actions Node 14, run 37559594473, npm run build PASS e backend stability regression suite PASS.
+- Lineage antes da nota: release 1ab885edb16247a2713b0b5856c0d4f90246e80b, 4 commits a frente e 0 atras de legacy-prod 30d7f2604fbab4fc6e665c984a51b813abb24ce3.
+- CRM: main 0bdc669d901e89726e2c2e3b759b83ca7a1158ac com superficie M2M reconciliada; migrations M2M P02-P06 presentes em producao e Edge Function samachat-m2m ativa.
+- Seguranca de ativacao: integracao produtiva permanece DESATIVADA neste momento. Este registro nao autoriza nem executa ativacao M2M, mutacao de dados comerciais ou E2E produtivo.
+- Deploy: a promocao posterior para legacy-prod segue o fluxo produtivo existente do Easypanel; esta etapa registra apenas a nota obrigatoria antes do push de producao.
