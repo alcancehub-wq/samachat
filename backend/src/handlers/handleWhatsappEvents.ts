@@ -25,6 +25,7 @@ import UpdateTicketService from "../services/TicketServices/UpdateTicketService"
 import AssignInboundTicketByDistributionService from "../services/WhatsappService/AssignInboundTicketByDistributionService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
 import HandleIncomingFlowMessageService from "../services/FlowExecutionServices/HandleIncomingFlowMessageService";
+import HandleIncomingSdrMessageService from "../services/SdrAgentServices/HandleIncomingSdrMessageService";
 import ResolveOfficialInboundOriginService from "../services/OutboundChannelServices/ResolveOfficialInboundOriginService";
 import { PersistOfficialInboundFactsService } from "../services/OutboundChannelServices/OfficialInboundCorrelationService";
 import ResolveOfficialInboundCrossProviderDuplicateService from "../services/WhatsappService/ResolveOfficialInboundCrossProviderDuplicateService";
@@ -735,8 +736,23 @@ export const handleMessage = async (
       }
     }
 
+    // Agente SDR: so assume quando ligado e permitido pela politica (desligado por
+    // padrao). Se assumir, a saudacao/fila de atendimento nao dispara.
+    let sdrHandled = false;
+    if (!flowHandled && !contextPayload.groupContact && !processedMessage.fromMe) {
+      const sdr = await HandleIncomingSdrMessageService({
+        ticket,
+        contactNumber: contact.number,
+        messageBody: processedMessage.body,
+        mediaType: processedMessage.type,
+        fromMe: processedMessage.fromMe
+      });
+      sdrHandled = sdr.handled;
+    }
+
     if (
       !flowHandled &&
+      !sdrHandled &&
       !ticket.queue &&
       !contextPayload.groupContact &&
       !processedMessage.fromMe &&
