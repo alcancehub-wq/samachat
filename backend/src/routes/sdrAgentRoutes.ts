@@ -12,7 +12,6 @@ const manage = [isAuth, checkSectorPermission("sdrAgent.manage")];
 
 sdrAgentRoutes.get("/sdr-agent/settings", ...view, SdrAgentController.showSettings);
 sdrAgentRoutes.put("/sdr-agent/settings", ...manage, SdrAgentController.updateSettings);
-sdrAgentRoutes.post("/sdr-agent/simulate", ...manage, SdrAgentController.simulate);
 sdrAgentRoutes.post("/sdr-agent/generate-prompt", ...manage, SdrAgentController.generatePrompt);
 
 // Quem atende cada conversa (IA ou humano). Qualquer atendente pode consultar e

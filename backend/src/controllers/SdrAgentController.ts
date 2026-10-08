@@ -3,7 +3,6 @@ import { Request, Response } from "express";
 
 import AppError from "../errors/AppError";
 import GenerateSdrPromptService from "../services/SdrAgentServices/GenerateSdrPromptService";
-import SimulateSdrAgentService from "../services/SdrAgentServices/SimulateSdrAgentService";
 import { parseAllowedNumbers } from "../services/SdrAgentServices/policy";
 import {
   getHandoffState,
@@ -83,26 +82,6 @@ export const setTicketHandoff = async (req: Request, res: Response) => {
   return res.json(
     await setHandoff(Number(req.params.ticketId), req.body.mode, Number(req.user.id))
   );
-};
-
-export const simulate = async (req: Request, res: Response) => {
-  await validate(
-    Yup.object().shape({
-      messages: Yup.array()
-        .of(
-          Yup.object().shape({
-            role: Yup.string().oneOf(["user", "assistant"]).required(),
-            content: Yup.string().required()
-          })
-        )
-        .min(1)
-        .required(),
-      contactName: Yup.string(),
-      contactNumber: Yup.string()
-    }),
-    req.body
-  );
-  return res.json(await SimulateSdrAgentService(req.body));
 };
 
 // Gerador de prompt com IA (mesmo formulario da BIA SDR).
