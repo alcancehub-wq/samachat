@@ -69,9 +69,19 @@ export const publicStatus = async (_req: Request, res: Response) => {
   });
 };
 
+const ticketAccessData = (req: Request) => ({
+  userId: req.user.id,
+  profile: req.user.profile
+});
+
 // Quem esta atendendo esta conversa (IA ou humano) e por que.
 export const showTicketHandoff = async (req: Request, res: Response) =>
-  res.json(await getHandoffState(Number(req.params.ticketId)));
+  res.json(
+    await getHandoffState(
+      Number(req.params.ticketId),
+      ticketAccessData(req)
+    )
+  );
 
 // Passa a conversa para a IA ("ai") ou para um humano ("human").
 export const setTicketHandoff = async (req: Request, res: Response) => {
@@ -80,7 +90,12 @@ export const setTicketHandoff = async (req: Request, res: Response) => {
     req.body
   );
   return res.json(
-    await setHandoff(Number(req.params.ticketId), req.body.mode, Number(req.user.id))
+    await setHandoff(
+      Number(req.params.ticketId),
+      req.body.mode,
+      Number(req.user.id),
+      ticketAccessData(req)
+    )
   );
 };
 

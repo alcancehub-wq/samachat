@@ -224,6 +224,34 @@ describe("executeTool (BIA usa os servicos do CRM, sem agenda propria)", () => {
     expect(r.handoff_done).toBe(true);
   });
 
+  it("reuniao criada mas handoff falha: nao declara sucesso e transfere para humano", async () => {
+    const api = crmApi({
+      handoffCloser: jest.fn(async () => ({
+        state: "reconciliation_required",
+        code: "handoff_transport_pending"
+      }))
+    });
+    const c = ctx(api);
+
+    const r: any = await executeTool(
+      "create_appointment",
+      { title: "Apresentacao", date: "2026-10-06", time: "14:00" },
+      c,
+      NOW
+    );
+
+    expect(api.scheduleMeeting).toHaveBeenCalled();
+    expect(api.handoffCloser).toHaveBeenCalled();
+    expect(r.error).toBe("handoff_pending");
+    expect(r.meeting_created).toBe(true);
+    expect(r.handoff_done).toBe(false);
+    expect(c.onTransfer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: "duvida_sem_resposta"
+      })
+    );
+  });
+
   it("sem closer livre nao agenda", async () => {
     const api = crmApi({
       getAvailability: jest.fn(async () => ({

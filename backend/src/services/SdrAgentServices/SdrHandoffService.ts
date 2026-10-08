@@ -1,5 +1,7 @@
 import AppError from "../../errors/AppError";
-import ShowTicketService from "../TicketServices/ShowTicketService";
+import ShowTicketService, {
+  TicketAccessData
+} from "../TicketServices/ShowTicketService";
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
 import { isEngineReady } from "../AiEngineServices/engines";
 import { decideSdrReply } from "./policy";
@@ -19,9 +21,12 @@ export interface HandoffState {
 // Quem esta atendendo ESTA conversa agora, pela mesma regra que o agente usa
 // para decidir se responde (policy.ts): a tela nunca mostra algo diferente do
 // que de fato acontece.
-export const getHandoffState = async (ticketId: number): Promise<HandoffState> => {
+export const getHandoffState = async (
+  ticketId: number,
+  accessData?: TicketAccessData
+): Promise<HandoffState> => {
   const settings = await getSdrAgentSettings();
-  const ticket = await ShowTicketService(ticketId);
+  const ticket = await ShowTicketService(ticketId, accessData);
 
   const decision = decideSdrReply({
     settings,
@@ -47,9 +52,10 @@ export const getHandoffState = async (ticketId: number): Promise<HandoffState> =
 export const setHandoff = async (
   ticketId: number,
   mode: HandoffMode,
-  userId?: number
+  userId?: number,
+  accessData?: TicketAccessData
 ): Promise<HandoffState> => {
-  const ticket = await ShowTicketService(ticketId);
+  const ticket = await ShowTicketService(ticketId, accessData);
 
   if (mode === "ai") {
     // Confere o modulo Treinamento da IA na hora: agente ligado e com prompt.
@@ -61,7 +67,8 @@ export const setHandoff = async (
     await ticket.update({ sdrAgentEnabled: true });
     await UpdateTicketService({
       ticketData: { status: "pending", userId: null as any },
-      ticketId
+      ticketId,
+      accessData
     });
   } else if (mode === "human") {
     // Assumir: a IA para e a conversa passa para quem clicou, ja liberada para
@@ -69,11 +76,12 @@ export const setHandoff = async (
     await ticket.update({ sdrAgentEnabled: false });
     await UpdateTicketService({
       ticketData: { status: "open", userId },
-      ticketId
+      ticketId,
+      accessData
     });
   } else {
     throw new AppError("ERR_SDR_INVALID_HANDOFF_MODE", 400);
   }
 
-  return getHandoffState(ticketId);
+  return getHandoffState(ticketId, accessData);
 };

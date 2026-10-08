@@ -365,6 +365,37 @@ export const executeTool = async (
           meetingId: meeting.meetingId
         });
 
+        if (handoff.state !== "handed_off") {
+          const handoffCode =
+            (handoff as any).code || "handoff_not_confirmed";
+
+          await ctx.onTransfer({
+            reason: "duvida_sem_resposta",
+            summary:
+              `Reunião ${meeting.meetingId} criada com ${meeting.closerName}, ` +
+              `mas o handoff para o Closer ficou pendente (${handoffCode}). ` +
+              "Necessária reconciliação humana antes de considerar a entrega concluída."
+          });
+
+          return {
+            error: "handoff_pending",
+            code: handoffCode,
+            meeting_created: true,
+            handoff_done: false,
+            appointment: {
+              id: meeting.meetingId,
+              title,
+              date: window.date,
+              time: window.time,
+              duration_minutes: window.durationMinutes,
+              closer: meeting.closerName
+            },
+            note:
+              "A reunião foi criada, mas a entrega ao Closer não foi confirmada. " +
+              "O atendimento foi encaminhado para reconciliação humana."
+          };
+        }
+
         return {
           ok: true,
           appointment: {
@@ -375,11 +406,9 @@ export const executeTool = async (
             duration_minutes: window.durationMinutes,
             closer: meeting.closerName
           },
-          handoff_done: handoff.state === "handed_off",
+          handoff_done: true,
           note:
-            handoff.state === "handed_off"
-              ? "Reunião agendada e atendimento passado ao closer. Confirme ao cliente com suas palavras."
-              : "Reunião agendada. A passagem ao closer ficou pendente no CRM; confirme a reunião ao cliente normalmente."
+            "Reunião agendada e atendimento passado ao closer. Confirme ao cliente com suas palavras."
         };
       }
 

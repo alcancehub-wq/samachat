@@ -1,15 +1,16 @@
 import { QueryInterface, DataTypes } from "sequelize";
 
-// A IA passa a atender primeiro por padrao (a equipe assume pelo botao IA | Humano).
+// Rollout controlado: a equipe atende primeiro por padrao.
+// A IA so assume automaticamente quando essa opcao for habilitada explicitamente.
 module.exports = {
   up: async (queryInterface: QueryInterface) => {
     await queryInterface.changeColumn("SdrAgentSettings", "autoEnableForNewTickets", {
       type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: true
+      defaultValue: false
     });
     await queryInterface.sequelize.query(
-      "UPDATE SdrAgentSettings SET autoEnableForNewTickets = 1"
+      "UPDATE SdrAgentSettings SET autoEnableForNewTickets = 0"
     );
   },
 
