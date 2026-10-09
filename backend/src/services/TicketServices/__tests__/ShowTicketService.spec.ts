@@ -153,6 +153,56 @@ describe("ShowTicketService access control", () => {
     ).rejects.toEqual(new AppError("ERR_NO_PERMISSION", 403));
   });
 
+  it("allows queue members to load an AI-active unassigned open ticket", async () => {
+    const ticket = {
+      id: 3765,
+      userId: null,
+      queueId: 11,
+      whatsappId: 56,
+      status: "open",
+      sdrAgentEnabled: true
+    };
+
+    ticketFindByPkMock.mockResolvedValue(ticket);
+
+    showUserServiceMock.mockResolvedValue({
+      id: 7,
+      whatsappId: null,
+      queues: [{ id: 11 }]
+    });
+
+    await expect(
+      ShowTicketService(3765, {
+        userId: 7,
+        profile: "user"
+      })
+    ).resolves.toBe(ticket);
+  });
+
+  it("still blocks a generic unassigned open ticket", async () => {
+    ticketFindByPkMock.mockResolvedValue({
+      id: 3766,
+      userId: null,
+      queueId: 11,
+      whatsappId: 56,
+      status: "open",
+      sdrAgentEnabled: false
+    });
+
+    showUserServiceMock.mockResolvedValue({
+      id: 7,
+      whatsappId: null,
+      queues: [{ id: 11 }]
+    });
+
+    await expect(
+      ShowTicketService(3766, {
+        userId: 7,
+        profile: "user"
+      })
+    ).rejects.toEqual(new AppError("ERR_NO_PERMISSION", 403));
+  });
+
   it("blocks non-admin users from loading other users open tickets", async () => {
     ticketFindByPkMock.mockResolvedValue({
       id: 104,

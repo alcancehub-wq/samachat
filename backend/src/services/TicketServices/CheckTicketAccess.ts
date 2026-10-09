@@ -39,6 +39,34 @@ const canPreviewPendingTicket = (ticket: Ticket, user: any): boolean => {
   return hasQueueAccess || hasDirectWhatsappAccess;
 };
 
+const canAccessAiActiveOpenTicket = (
+  ticket: Ticket,
+  user: any
+): boolean => {
+  if (
+    ticket.status !== "open" ||
+    ticket.userId !== null ||
+    ticket.sdrAgentEnabled !== true
+  ) {
+    return false;
+  }
+
+  const userWhatsappId = getUserScopedWhatsappId(user);
+  const userQueueIds = getUserQueueIds(user);
+
+  const hasQueueAccess =
+    ticket.queueId !== null &&
+    ticket.queueId !== undefined &&
+    userQueueIds.includes(Number(ticket.queueId));
+
+  const hasDirectWhatsappAccess =
+    ticket.queueId === null &&
+    Boolean(userWhatsappId) &&
+    Number(ticket.whatsappId) === Number(userWhatsappId);
+
+  return hasQueueAccess || hasDirectWhatsappAccess;
+};
+
 const CheckTicketAccess = async ({
   ticket,
   userId,
@@ -61,7 +89,10 @@ const CheckTicketAccess = async ({
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
-  if (canPreviewPendingTicket(ticket, user)) {
+  if (
+    canPreviewPendingTicket(ticket, user) ||
+    canAccessAiActiveOpenTicket(ticket, user)
+  ) {
     return;
   }
 

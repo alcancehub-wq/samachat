@@ -283,7 +283,7 @@ describe("ListTicketsService visibility", () => {
     );
   });
 
-  it("keeps own open tickets visible regardless of queue or whatsapp scope", async () => {
+  it("keeps own open tickets visible while AI-active tickets use scoped shared access", async () => {
     showUserServiceMock.mockResolvedValue({
       id: 21,
       whatsappId: 38,
@@ -300,6 +300,103 @@ describe("ListTicketsService visibility", () => {
 
     const whereCondition = ticketFindAndCountAllMock.mock.calls[0][0].where;
     const conditions = extractConditions(whereCondition);
+    const visibilityBranches = extractVisibilityBranches(whereCondition);
+
+    expect(conditions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ status: "open" })
+      ])
+    );
+
+    expect(
+      visibilityBranches.some(branch =>
+        branch.some(condition =>
+          condition &&
+          typeof condition === "object" &&
+          "userId" in (condition as Record<PropertyKey, unknown>) &&
+          (condition as Record<PropertyKey, unknown>).userId === "21"
+        )
+      )
+    ).toBe(true);
+
+    expect(
+      visibilityBranches.some(branch =>
+        branch.some(condition =>
+          condition &&
+          typeof condition === "object" &&
+          "userId" in (condition as Record<PropertyKey, unknown>) &&
+          (condition as Record<PropertyKey, unknown>).userId === null
+        ) &&
+        branch.some(condition =>
+          condition &&
+          typeof condition === "object" &&
+          "sdrAgentEnabled" in (condition as Record<PropertyKey, unknown>) &&
+          (condition as Record<PropertyKey, unknown>).sdrAgentEnabled === true
+        ) &&
+        branch.some(condition =>
+          condition &&
+          typeof condition === "object" &&
+          "queueId" in (condition as Record<PropertyKey, unknown>)
+        )
+      )
+    ).toBe(true);
+  });
+
+  it("shows an AI-active open ticket only through an authorized queue", async () => {
+    showUserServiceMock.mockResolvedValue({
+      id: 21,
+      whatsappId: null,
+      whatsapp: null,
+      queues: [{ id: 6 }]
+    });
+
+    await ListTicketsService({
+      userId: "21",
+      profile: "user",
+      status: "open",
+      queueIds: [6]
+    });
+
+    const whereCondition = ticketFindAndCountAllMock.mock.calls[0][0].where;
+    const visibilityBranches = extractVisibilityBranches(whereCondition);
+
+    expect(visibilityBranches).toHaveLength(2);
+
+    expect(visibilityBranches).toEqual(
+      expect.arrayContaining([
+        expect.arrayContaining([
+          expect.objectContaining({ userId: "21" })
+        ]),
+        expect.arrayContaining([
+          expect.objectContaining({
+            userId: null,
+            sdrAgentEnabled: true
+          }),
+          authorizedQueueVisibilityMatcher([6])
+        ])
+      ])
+    );
+  });
+
+  it("does not share AI-active open tickets through unauthorized queues", async () => {
+    showUserServiceMock.mockResolvedValue({
+      id: 21,
+      whatsappId: null,
+      whatsapp: null,
+      queues: [{ id: 6 }]
+    });
+
+    await ListTicketsService({
+      userId: "21",
+      profile: "user",
+      status: "open",
+      queueIds: [99]
+    });
+
+    const whereCondition = ticketFindAndCountAllMock.mock.calls[0][0].where;
+    const conditions = extractConditions(whereCondition);
+
+    expect(extractVisibilityBranches(whereCondition)).toHaveLength(0);
 
     expect(conditions).toEqual(
       expect.arrayContaining([
@@ -309,15 +406,9 @@ describe("ListTicketsService visibility", () => {
     );
 
     expect(conditions).not.toEqual(
-      expect.arrayContaining([authorizedQueueVisibilityMatcher([6])])
-    );
-
-    expect(conditions).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ whatsappId: 38 })])
-    );
-
-    expect(conditions).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ userId: null })])
+      expect.arrayContaining([
+        expect.objectContaining({ userId: null })
+      ])
     );
   });
 

@@ -222,7 +222,31 @@ const buildVisibilityScope = ({
   }
 
   if (status === "open") {
-    return assignedVisibilityScope || {};
+    const aiActiveQueueScope = queueVisibilityScope
+      ? combineWhere(
+          {
+            userId: null,
+            sdrAgentEnabled: true
+          },
+          queueVisibilityScope,
+          whatsappVisibilityScope
+        )
+      : undefined;
+
+    const aiActiveWhatsappScope = scopedWhatsappId
+      ? ({
+          userId: null,
+          sdrAgentEnabled: true,
+          queueId: null,
+          whatsappId: scopedWhatsappId
+        } as WhereOptions)
+      : undefined;
+
+    return buildPendingVisibilityScope(
+      assignedVisibilityScope,
+      aiActiveQueueScope,
+      aiActiveWhatsappScope
+    );
   }
 
   return combineWhere(

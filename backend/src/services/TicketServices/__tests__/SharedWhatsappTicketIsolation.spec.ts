@@ -148,6 +148,89 @@ describe("shared WhatsApp ticket isolation", () => {
     });
   });
 
+  it("allows an AI-active unassigned open ticket through an authorized queue", async () => {
+    showUserServiceMock.mockResolvedValue(buildUser(USER_A_ID));
+
+    const ticket = buildTicket({
+      status: "open",
+      userId: null,
+      queueId: SHARED_QUEUE_ID,
+      sdrAgentEnabled: true
+    });
+
+    await expect(
+      CheckTicketAccess({
+        ticket,
+        userId: USER_A_ID,
+        profile: "user"
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  it("allows a queue-null AI-active open ticket through the scoped whatsapp", async () => {
+    showUserServiceMock.mockResolvedValue(buildUser(USER_A_ID));
+
+    const ticket = buildTicket({
+      status: "open",
+      userId: null,
+      queueId: null,
+      whatsappId: SHARED_WHATSAPP_ID,
+      sdrAgentEnabled: true
+    });
+
+    await expect(
+      CheckTicketAccess({
+        ticket,
+        userId: USER_A_ID,
+        profile: "user"
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  it("denies a generic unassigned open ticket even inside an authorized queue", async () => {
+    showUserServiceMock.mockResolvedValue(buildUser(USER_A_ID));
+
+    const ticket = buildTicket({
+      status: "open",
+      userId: null,
+      queueId: SHARED_QUEUE_ID,
+      sdrAgentEnabled: false
+    });
+
+    await expect(
+      CheckTicketAccess({
+        ticket,
+        userId: USER_A_ID,
+        profile: "user"
+      })
+    ).rejects.toMatchObject({
+      message: "ERR_NO_PERMISSION",
+      statusCode: 403
+    });
+  });
+
+  it("denies an AI-active open ticket from an unauthorized queue", async () => {
+    showUserServiceMock.mockResolvedValue(buildUser(USER_A_ID));
+
+    const ticket = buildTicket({
+      status: "open",
+      userId: null,
+      queueId: 9999,
+      sdrAgentEnabled: true
+    });
+
+    await expect(
+      CheckTicketAccess({
+        ticket,
+        userId: USER_A_ID,
+        profile: "user"
+      })
+    ).rejects.toMatchObject({
+      message: "ERR_NO_PERMISSION",
+      statusCode: 403
+    });
+  });
+
   it("keeps admin access broad without loading user scope", async () => {
     const ticket = buildTicket({
       status: "closed",
