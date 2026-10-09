@@ -83,5 +83,5 @@ export const setHandoff = async (
     throw new AppError("ERR_SDR_INVALID_HANDOFF_MODE", 400);
   }
 
-  return getHandoffState(ticketId, accessData);
+  return getHandoffState(ticketId);
 };
