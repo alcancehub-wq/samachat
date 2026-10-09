@@ -26,6 +26,7 @@ interface Request {
   ticketData: TicketData;
   ticketId: string | number;
   accessData?: TicketAccessData;
+  sdrAgentEnabled?: boolean;
 }
 
 interface Response {
@@ -81,7 +82,8 @@ const resolveTransferQueueId = async ({
 const UpdateTicketService = async ({
   ticketData,
   ticketId,
-  accessData
+  accessData,
+  sdrAgentEnabled
 }: Request): Promise<Response> => {
   const {
     status,
@@ -217,7 +219,10 @@ const UpdateTicketService = async ({
     pendingSince:
       nextStatus === "pending" && oldStatus !== "pending"
         ? new Date()
-        : ticket.pendingSince
+        : ticket.pendingSince,
+    ...(typeof sdrAgentEnabled === "boolean"
+      ? { sdrAgentEnabled }
+      : {})
   });
 
   if (nextWhatsappId) {

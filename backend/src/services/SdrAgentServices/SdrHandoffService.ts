@@ -48,14 +48,14 @@ export const getHandoffState = async (
 // Passa a conversa para a IA ou para um humano (so o ticket: o funil comercial e do CRM).
 // - human: a IA para de responder e a conversa passa para quem clicou.
 // - ai: a IA volta a responder; se um atendente estava com a conversa, ela sai
-//   do nome dele e volta para "Aguardando".
+//   do nome dele e permanece em "Atendendo", agora sob responsabilidade da IA.
 export const setHandoff = async (
   ticketId: number,
   mode: HandoffMode,
   userId?: number,
   accessData?: TicketAccessData
 ): Promise<HandoffState> => {
-  const ticket = await ShowTicketService(ticketId, accessData);
+  await ShowTicketService(ticketId, accessData);
 
   if (mode === "ai") {
     // Confere o modulo Treinamento da IA na hora: agente ligado e com prompt.
@@ -64,20 +64,20 @@ export const setHandoff = async (
     if (!effectivePrompt(settings)) throw new AppError("ERR_SDR_NO_PROMPT", 400);
     if (!(await isEngineReady(settings.aiEngine))) throw new AppError("ERR_AI_NO_ENGINE", 400);
 
-    await ticket.update({ sdrAgentEnabled: true });
     await UpdateTicketService({
       ticketData: { status: "open", userId: null as any },
       ticketId,
-      accessData
+      accessData,
+      sdrAgentEnabled: true
     });
   } else if (mode === "human") {
     // Assumir: a IA para e a conversa passa para quem clicou, ja liberada para
     // responder (nao existe mais o passo de "aceitar").
-    await ticket.update({ sdrAgentEnabled: false });
     await UpdateTicketService({
       ticketData: { status: "open", userId },
       ticketId,
-      accessData
+      accessData,
+      sdrAgentEnabled: false
     });
   } else {
     throw new AppError("ERR_SDR_INVALID_HANDOFF_MODE", 400);

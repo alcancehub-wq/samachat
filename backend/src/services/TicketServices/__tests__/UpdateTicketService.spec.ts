@@ -449,4 +449,91 @@ describe("UpdateTicketService", () => {
       })
     ).resolves.toMatchObject({ ticket });
   });
+
+  it("atomically assigns an AI-active ticket to a human while disabling the SDR agent", async () => {
+    const ticket = buildTicket({
+      status: "open",
+      user: null,
+      userId: null,
+      queueId: 5,
+      whatsappId: 56,
+      sdrAgentEnabled: true,
+      contact: {
+        id: 99,
+        name: "Ju Pessoal",
+        number: "5511968560273",
+        captureChannel: "WhatsApp",
+        wasReferred: false
+      }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await UpdateTicketService({
+      ticketId: 41,
+      ticketData: {
+        status: "open",
+        userId: 32
+      },
+      accessData: {
+        userId: 32,
+        profile: "user"
+      },
+      sdrAgentEnabled: false
+    });
+
+    expect(showTicketServiceMock).toHaveBeenCalledTimes(1);
+
+    expect(ticket.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "open",
+        userId: 32,
+        sdrAgentEnabled: false
+      })
+    );
+  });
+
+  it("atomically returns a human-owned ticket to AI while removing the human owner", async () => {
+    const ticket = buildTicket({
+      status: "open",
+      user: { id: 32 },
+      userId: 32,
+      queueId: 5,
+      whatsappId: 56,
+      sdrAgentEnabled: false,
+      contact: {
+        id: 99,
+        name: "Ju Pessoal",
+        number: "5511968560273",
+        captureChannel: "WhatsApp",
+        wasReferred: false
+      }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await UpdateTicketService({
+      ticketId: 41,
+      ticketData: {
+        status: "open",
+        userId: null
+      },
+      accessData: {
+        userId: 32,
+        profile: "user"
+      },
+      sdrAgentEnabled: true
+    });
+
+    expect(showTicketServiceMock).toHaveBeenCalledTimes(1);
+
+    expect(ticket.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "open",
+        userId: null,
+        sdrAgentEnabled: true
+      })
+    );
+  });
+
 });
