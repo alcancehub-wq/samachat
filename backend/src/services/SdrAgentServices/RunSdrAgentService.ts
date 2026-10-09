@@ -16,6 +16,7 @@ import Ticket from "../../models/Ticket";
 import { DEFAULT_TIMEZONE } from "./timezone";
 import CreateOpenAILogService from "../OpenAILogServices/CreateOpenAILogService";
 import ShowTicketService from "../TicketServices/ShowTicketService";
+import CreateMessageService from "../MessageServices/CreateMessageService";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import { AgentLoopResult, ChatFn, ChatMessage, runAgentLoop } from "./agentLoop";
 import { createEngineChat } from "../AiEngineServices/engines";
@@ -229,7 +230,24 @@ export const runSdrAgentForTicket = async (ticketId: number): Promise<void> => {
 
     if (!sentAsVoice) {
       for (let i = 0; i < chunks.length; i += 1) {
-        await SendWhatsAppMessage({ body: chunks[i], ticket });
+        const providerMessage = await SendWhatsAppMessage({
+          body: chunks[i],
+          ticket
+        });
+
+        await CreateMessageService({
+          messageData: {
+            id:
+              providerMessage.id ||
+              `sdr-accepted-${ticket.whatsappId || "na"}-${Date.now()}-${i}`,
+            ticketId: ticket.id,
+            body: providerMessage.body || chunks[i],
+            fromMe: true,
+            read: true,
+            mediaType: providerMessage.type || "chat",
+            ack: providerMessage.ack ?? 1
+          }
+        });
         if (i < chunks.length - 1) await sleep(CHUNK_DELAY_MS);
       }
     }

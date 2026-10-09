@@ -66,7 +66,7 @@ export const setHandoff = async (
 
     await ticket.update({ sdrAgentEnabled: true });
     await UpdateTicketService({
-      ticketData: { status: "pending", userId: null as any },
+      ticketData: { status: "open", userId: null as any },
       ticketId,
       accessData
     });

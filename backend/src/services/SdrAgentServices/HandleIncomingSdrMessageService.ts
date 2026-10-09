@@ -4,10 +4,12 @@ import { isEngineReady } from "../AiEngineServices/engines";
 import { decideSdrReply } from "./policy";
 import { SdrScheduler } from "./scheduler";
 import { getSdrAgentSettings } from "./SdrAgentSettingsService";
+import UpdateTicketService from "../TicketServices/UpdateTicketService";
 
 interface Request {
   ticket: {
     id: number;
+    status?: string;
     isGroup: boolean;
     userId?: number | null;
     sdrAgentEnabled?: boolean | null;
@@ -61,6 +63,15 @@ const HandleIncomingSdrMessageService = async ({
     // normal (fila de atendentes) cuidar do lead.
     if (!(await isEngineReady(settings.aiEngine))) {
       return { handled: false, reason: "nenhuma_ia_ativa" };
+    }
+
+    // Se a IA assumiu, a conversa esta sendo atendida.
+    // Mantem OPEN e sem usuario humano.
+    if (ticket.status !== "open") {
+      await UpdateTicketService({
+        ticketData: { status: "open", userId: null },
+        ticketId: ticket.id
+      });
     }
 
     (await getScheduler()).schedule(ticket.id, settings.replyDelaySeconds);
