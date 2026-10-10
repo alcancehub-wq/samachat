@@ -67,10 +67,14 @@ const HandleIncomingSdrMessageService = async ({
 
     // Se a IA assumiu, a conversa esta sendo atendida.
     // Mantem OPEN e sem usuario humano.
-    if (ticket.status !== "open") {
+    if (ticket.status !== "open" || ticket.sdrAgentEnabled !== true) {
       await UpdateTicketService({
-        ticketData: { status: "open", userId: null },
-        ticketId: ticket.id
+        ticketData: {
+          status: "open",
+          userId: null
+        },
+        ticketId: ticket.id,
+        sdrAgentEnabled: true
       });
     }
 
