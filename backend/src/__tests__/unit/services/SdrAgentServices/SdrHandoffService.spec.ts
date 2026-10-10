@@ -84,9 +84,7 @@ describe("SdrHandoffService canonical ticket state", () => {
       accessData
     );
 
-    expect(ticket.update).toHaveBeenCalledWith({
-      sdrAgentEnabled: true
-    });
+    expect(ticket.update).not.toHaveBeenCalled();
 
     expect(updateTicketMock).toHaveBeenCalledWith({
       ticketData: {
@@ -94,7 +92,8 @@ describe("SdrHandoffService canonical ticket state", () => {
         userId: null
       },
       ticketId: 3765,
-      accessData
+      accessData,
+      sdrAgentEnabled: true
     });
 
     expect(showTicketMock).toHaveBeenNthCalledWith(
@@ -141,9 +140,7 @@ describe("SdrHandoffService canonical ticket state", () => {
       accessData
     );
 
-    expect(ticket.update).toHaveBeenCalledWith({
-      sdrAgentEnabled: false
-    });
+    expect(ticket.update).not.toHaveBeenCalled();
 
     expect(updateTicketMock).toHaveBeenCalledWith({
       ticketData: {
@@ -151,7 +148,8 @@ describe("SdrHandoffService canonical ticket state", () => {
         userId: 32
       },
       ticketId: 3765,
-      accessData
+      accessData,
+      sdrAgentEnabled: false
     });
 
     expect(showTicketMock).toHaveBeenNthCalledWith(

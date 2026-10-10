@@ -449,4 +449,216 @@ describe("UpdateTicketService", () => {
       })
     ).resolves.toMatchObject({ ticket });
   });
+
+  it("updates owner and AI flag in one write during human reclaim", async () => {
+    const ticket = buildTicket({
+      id: 3765,
+      status: "open",
+      user: null,
+      userId: null,
+      queueId: 5,
+      whatsappId: 56,
+      sdrAgentEnabled: true,
+      contact: {
+        id: 99,
+        name: "Ju Pessoal",
+        number: "5511968560273",
+        captureChannel: "WhatsApp",
+        wasReferred: false
+      }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await UpdateTicketService({
+      ticketId: 3765,
+      ticketData: { status: "open", userId: 32 },
+      accessData: { userId: 32, profile: "user" },
+      sdrAgentEnabled: false
+    });
+
+    expect(ticket.update).toHaveBeenCalledTimes(1);
+    expect(ticket.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "open",
+        userId: 32,
+        sdrAgentEnabled: false
+      })
+    );
+  });
+
+  it("does not partially disable AI when registration validation fails", async () => {
+    const ticket = buildTicket({
+      status: "open",
+      user: null,
+      userId: null,
+      queueId: 5,
+      whatsappId: 56,
+      sdrAgentEnabled: true,
+      contact: { id: 99, name: "Incomplete" }
+    });
+
+    showTicketServiceMock.mockResolvedValue(ticket);
+
+    await expect(
+      UpdateTicketService({
+        ticketId: 41,
+        ticketData: { status: "open", userId: 32 },
+        accessData: { userId: 32, profile: "user" },
+        sdrAgentEnabled: false
+      })
+    ).rejects.toMatchObject({
+      message: "ERR_CONTACT_REGISTRATION_INCOMPLETE"
+    });
+
+    expect(ticket.update).not.toHaveBeenCalled();
+    expect(ticket.sdrAgentEnabled).toBe(true);
+    expect(ticket.userId).toBeNull();
+  });
+
+  it("R54R11 corrected real service chain: human AI human", async () => {
+    const { setHandoff } = require(
+      "../../SdrAgentServices/SdrHandoffService"
+    );
+
+    const CheckTicketAccess = require(
+      "../CheckTicketAccess"
+    ).default;
+
+    const ShowUserService = require(
+      "../../UserServices/ShowUserService"
+    ).default;
+
+    const settings = require(
+      "../../SdrAgentServices/SdrAgentSettingsService"
+    );
+
+    const engines = require(
+      "../../AiEngineServices/engines"
+    );
+
+    const policy = require(
+      "../../SdrAgentServices/policy"
+    );
+
+    const ticket = buildTicket({
+      id: 3765,
+      status: "open",
+      userId: 32,
+      user: { id: 32 },
+      queueId: 5,
+      whatsappId: 56,
+      sdrAgentEnabled: false,
+      contact: {
+        id: 2524,
+        name: "Ju Pessoal",
+        number: "5511968560273",
+        captureChannel: "WhatsApp",
+        wasReferred: false
+      }
+    });
+
+    // Sequelize does not overwrite persisted values with undefined fields.
+    // The previous Object.assign mock incorrectly erased queueId=5.
+    ticket.update = jest.fn().mockImplementation(async (payload: any) => {
+      Object.keys(payload).forEach(key => {
+        if (payload[key] !== undefined) {
+          ticket[key] = payload[key];
+        }
+      });
+
+      ticket.user = ticket.userId
+        ? { id: ticket.userId }
+        : null;
+
+      return ticket;
+    });
+
+    ticket.reload = jest.fn().mockResolvedValue(ticket);
+
+    const accessData = { userId: 32, profile: "user" };
+
+    (ShowUserService as jest.Mock).mockResolvedValue({
+      id: 32,
+      profile: "user",
+      whatsappId: 56,
+      queues: [{ id: 5 }]
+    });
+
+    (settings.getSdrAgentSettings as jest.Mock).mockResolvedValue({
+      isEnabled: true,
+      systemPrompt: "Bia SDR",
+      aiEngine: "openai",
+      testMode: false
+    });
+
+    (settings.effectivePrompt as jest.Mock)
+      .mockReturnValue("Bia SDR");
+
+    (engines.isEngineReady as jest.Mock)
+      .mockResolvedValue(true);
+
+    (policy.decideSdrReply as jest.Mock)
+      .mockImplementation(({ ticket: current }: any) => ({
+        respond: current.sdrAgentEnabled === true,
+        reason: "handoff"
+      }));
+
+    showTicketServiceMock.mockImplementation(
+      async (_id: number, access?: any) => {
+        if (access) {
+          await CheckTicketAccess({
+            ticket,
+            userId: access.userId,
+            profile: access.profile
+          });
+        }
+
+        return ticket;
+      }
+    );
+
+    const ai = await setHandoff(
+      3765, "ai", 32, accessData
+    );
+
+    expect(ai.mode).toBe("ai");
+    expect(ticket.status).toBe("open");
+    expect(ticket.userId).toBeNull();
+    expect(ticket.queueId).toBe(5);
+    expect(ticket.whatsappId).toBe(56);
+    expect(ticket.sdrAgentEnabled).toBe(true);
+
+    const human = await setHandoff(
+      3765, "human", 32, accessData
+    );
+
+    expect(human.mode).toBe("human");
+    expect(ticket.status).toBe("open");
+    expect(ticket.userId).toBe(32);
+    expect(ticket.queueId).toBe(5);
+    expect(ticket.whatsappId).toBe(56);
+    expect(ticket.sdrAgentEnabled).toBe(false);
+
+    expect(ticket.update).toHaveBeenCalledTimes(2);
+  });
 });
+
+
+jest.mock("../../UserServices/ShowUserService", () => ({
+  __esModule: true,
+  default: jest.fn()
+}));
+
+jest.mock("../../SdrAgentServices/SdrAgentSettingsService", () => ({
+  getSdrAgentSettings: jest.fn(),
+  effectivePrompt: jest.fn()
+}));
+
+jest.mock("../../AiEngineServices/engines", () => ({
+  isEngineReady: jest.fn()
+}));
+
+jest.mock("../../SdrAgentServices/policy", () => ({
+  decideSdrReply: jest.fn()
+}));
